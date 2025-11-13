@@ -11,7 +11,7 @@
 
     {# وصف الصفحة (SEO description) #}
     <meta name="description"
-          content="{% block meta_description %}{% endblock %}">
+          content="{% block meta_description %}High-quality aluminum systems, profiles, and solutions by Mazoon Aluminum.{% endblock %}">
 
     {# Canonical + hreflang #}
     {% with cur_path=request.path host=request.get_host scheme=request.scheme %}
@@ -97,7 +97,8 @@
         </button>
 
         <div class="collapse navbar-collapse" id="mainNavbar">
-            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+            {# روابط الموقع العامة #}
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item">
                     <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
                        href="{% url 'home' %}">{% trans "الرئيسية" %}</a>
@@ -122,25 +123,63 @@
                     <a class="nav-link {% if request.resolver_match.url_name == 'contact' %}active{% endif %}"
                        href="{% url 'contact' %}">{% trans "اتصل بنا" %}</a>
                 </li>
+            </ul>
 
-                {% if user.is_authenticated %}
+            {# يمين/يسار: بوابة الزبون + المحاسبة + تسجيل الدخول/الخروج + اللغة #}
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+
+                {# بوابة الزبون (لو عنده Customer مرتبط) #}
+                {% if user.is_authenticated and user.customer_profile %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'accounting:dashboard' %}">
+                        <a class="nav-link {% if request.resolver_match.namespace == 'portal' %}active{% endif %}"
+                           href="{% url 'portal:dashboard' %}">
+                            بوابة الزبون
+                        </a>
+                    </li>
+                {% endif %}
+
+                {# المحاسبة (لموظف أو superuser) #}
+                {% if user.is_authenticated and user.is_staff or user.is_superuser %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.namespace == 'accounting' %}active{% endif %}"
+                           href="{% url 'accounting:dashboard' %}">
                             المحاسبة
                         </a>
                     </li>
                 {% endif %}
-            </ul>
 
-            <!-- Language switcher -->
-            <form action="{% url 'set_language' %}" method="post" class="ms-3">
-                {% csrf_token %}
-                <input name="next" type="hidden" value="{{ request.get_full_path }}"/>
-                <select name="language" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option value="ar" {% if LANGUAGE_CODE == 'ar' %}selected{% endif %}>العربية</option>
-                    <option value="en" {% if LANGUAGE_CODE == 'en' %}selected{% endif %}>English</option>
-                </select>
-            </form>
+                {# تسجيل الدخول / الخروج #}
+          {% if user.is_authenticated %}
+    <li class="nav-item">
+        <form action="{% url 'logout' %}" method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="nav-link btn btn-link p-0">
+                {% trans "تسجيل الخروج" %}
+            </button>
+        </form>
+    </li>
+{% else %}
+    <li class="nav-item">
+        <a class="nav-link"
+           href="{% url 'login' %}?next={{ request.path }}">
+            {% trans "تسجيل الدخول" %}
+        </a>
+    </li>
+{% endif %}
+
+
+                {# Language switcher #}
+                <li class="nav-item ms-2">
+                    <form action="{% url 'set_language' %}" method="post" class="d-flex">
+                        {% csrf_token %}
+                        <input name="next" type="hidden" value="{{ request.get_full_path }}"/>
+                        <select name="language" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="ar" {% if LANGUAGE_CODE == 'ar' %}selected{% endif %}>العربية</option>
+                            <option value="en" {% if LANGUAGE_CODE == 'en' %}selected{% endif %}>English</option>
+                        </select>
+                    </form>
+                </li>
+            </ul>
         </div>
     </div>
 </nav>

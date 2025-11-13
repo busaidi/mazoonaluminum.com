@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}دفعاتي{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h1 class="h4 mb-3">دفعاتي</h1>
+
+  <table class="table table-striped table-hover align-middle">
+    <thead>
+      <tr>
+        <th>التاريخ</th>
+        <th>المبلغ</th>
+        <th>الطريقة</th>
+        <th>الفاتورة</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in payments %}
+      <tr>
+        <td>{{ p.date }}</td>
+        <td>{{ p.amount }}</td>
+        <td>{{ p.get_method_display }}</td>
+        <td>
+          {% if p.invoice %}
+            <a href="{% url 'portal:invoice_detail' number=p.invoice.number %}">
+              {{ p.invoice.number }}
+            </a>
+          {% else %}
+            <span class="text-muted small">دفعة عامة</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="4" class="text-center text-muted">
+          لا توجد دفعات مسجلة حتى الآن.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if is_paginated %}
+  <nav>
+    <ul class="pagination">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">السابق</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">السابق</span></li>
+      {% endif %}
+
+      <li class="page-item disabled">
+        <span class="page-link">
+          صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+        </span>
+      </li>
+
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}">التالي</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">التالي</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

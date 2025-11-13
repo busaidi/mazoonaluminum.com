@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}فاتورة {{ invoice.number }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">فاتورة {{ invoice.number }}</h1>
+    <a href="{% url 'portal:invoice_list' %}" class="btn btn-secondary btn-sm">
+      رجوع للفواتير
+    </a>
+      <a href="{% url 'portal:invoice_print' number=invoice.number %}"
+   class="btn btn-outline-secondary btn-sm"
+   target="_blank">
+  طباعة / PDF
+</a>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">تفاصيل الفاتورة</h5>
+          <p class="mb-1"><strong>التاريخ:</strong> {{ invoice.issued_at }}</p>
+          <p class="mb-1"><strong>تاريخ الاستحقاق:</strong> {{ invoice.due_date|default:"-" }}</p>
+          <p class="mb-1"><strong>الحالة:</strong> {{ invoice.get_status_display }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">المبالغ</h5>
+          <p class="mb-1"><strong>الإجمالي:</strong> {{ invoice.total_amount }}</p>
+          <p class="mb-1"><strong>المدفوع:</strong> {{ invoice.paid_amount }}</p>
+          <p class="mb-1"><strong>المتبقي:</strong> {{ invoice.balance }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if invoice.description %}
+  <div class="card mb-3">
+    <div class="card-body">
+      <h5 class="card-title mb-2">الوصف</h5>
+      <p class="mb-0">{{ invoice.description|linebreaks }}</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title mb-3">الدفعات على هذه الفاتورة</h5>
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>التاريخ</th>
+            <th>المبلغ</th>
+            <th>الطريقة</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in invoice.payments.all %}
+          <tr>
+            <td>{{ p.date }}</td>
+            <td>{{ p.amount }}</td>
+            <td>{{ p.get_method_display }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="text-muted text-center">
+              لا توجد دفعات على هذه الفاتورة.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

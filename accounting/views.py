@@ -14,7 +14,8 @@ from django.views.generic import (
     TemplateView, UpdateView, DeleteView,
 )
 
-from .forms import InvoiceForm, PaymentForInvoiceForm, CustomerForm
+
+from .forms import InvoiceForm, PaymentForInvoiceForm, CustomerForm, CustomerProfileForm
 from .models import Invoice, Payment, Customer
 
 
@@ -283,6 +284,18 @@ class CustomerPaymentCreateView(FormView):
     def get_success_url(self):
         from django.urls import reverse
         return reverse("accounting:customer_detail", kwargs={"pk": self.customer.pk})
+
+
+@method_decorator(accounting_staff_required, name="dispatch")
+class InvoicePrintView(DetailView):
+    """
+    صفحة طباعة للفاتورة (للموظف) – تستخدم نفس قالب invoice_print.html
+    """
+    model = Invoice
+    template_name = "accounting/invoice_print.html"
+    context_object_name = "invoice"
+    slug_field = "number"
+    slug_url_kwarg = "number"
 
 
 

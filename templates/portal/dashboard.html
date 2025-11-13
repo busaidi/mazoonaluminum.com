@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}لوحة الزبون{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">مرحبًا، {{ customer.name }}</h1>
+  <a href="{% url 'portal:profile' %}" class="btn btn-outline-primary btn-sm">
+    تحديث بياناتي
+  </a>
+</div>
+
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-4 col-sm-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="text-muted mb-1">إجمالي الفواتير</h6>
+          <div class="fs-5 fw-bold">{{ total_invoices }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 col-sm-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="text-muted mb-1">إجمالي الدفعات</h6>
+          <div class="fs-5 fw-bold">{{ total_paid }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 col-sm-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="text-muted mb-1">الرصيد المتبقي</h6>
+          <div class="fs-5 fw-bold">{{ balance }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <!-- آخر الفواتير -->
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="card-title mb-0">آخر الفواتير</h5>
+            <a href="{% url 'portal:invoice_list' %}" class="btn btn-sm btn-outline-primary">
+              كل الفواتير
+            </a>
+          </div>
+          <table class="table table-sm mb-0">
+            <thead>
+              <tr>
+                <th>رقم</th>
+                <th>التاريخ</th>
+                <th>الإجمالي</th>
+                <th>المتبقي</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for inv in recent_invoices %}
+              <tr>
+                <td>
+                  <a href="{% url 'portal:invoice_detail' number=inv.number %}">
+                    {{ inv.number }}
+                  </a>
+                </td>
+                <td>{{ inv.issued_at }}</td>
+                <td>{{ inv.total_amount }}</td>
+                <td>{{ inv.balance }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-muted text-center">
+                  لا توجد فواتير حتى الآن.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- آخر الدفعات -->
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="card-title mb-0">آخر الدفعات</h5>
+            <a href="{% url 'portal:payment_list' %}" class="btn btn-sm btn-outline-primary">
+              كل الدفعات
+            </a>
+          </div>
+          <table class="table table-sm mb-0">
+            <thead>
+              <tr>
+                <th>التاريخ</th>
+                <th>المبلغ</th>
+                <th>الطريقة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in recent_payments %}
+              <tr>
+                <td>{{ p.date }}</td>
+                <td>{{ p.amount }}</td>
+                <td>{{ p.get_method_display }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="3" class="text-muted text-center">
+                  لا توجد دفعات حتى الآن.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

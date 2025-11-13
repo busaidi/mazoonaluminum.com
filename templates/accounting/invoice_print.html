@@ -1,0 +1,249 @@
+{% load i18n %}
+<!doctype html>
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_CODE == 'ar' %}rtl{% else %}ltr{% endif %}">
+<head>
+  <meta charset="utf-8">
+  <title>فاتورة {{ invoice.number }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .invoice-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 24px 28px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+      gap: 16px;
+    }
+    .company-name {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .company-details {
+      font-size: 12px;
+      color: #555;
+      line-height: 1.5;
+    }
+    .invoice-title {
+      text-align: right;
+    }
+    .invoice-title h1 {
+      font-size: 20px;
+      margin: 0 0 4px 0;
+    }
+    .invoice-meta {
+      font-size: 12px;
+      color: #555;
+      line-height: 1.5;
+    }
+
+    .section-title {
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    .block {
+      margin-bottom: 16px;
+    }
+
+    .box {
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 13px;
+      background: #fafafa;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 8px 6px;
+      border: 1px solid #ddd;
+    }
+    th {
+      background: #f0f0f0;
+      text-align: left;
+    }
+
+    .totals-table {
+      width: 50%;
+      margin-left: auto;
+      margin-top: 10px;
+    }
+    .totals-table th {
+      width: 50%;
+    }
+
+    .text-right {
+      text-align: right;
+    }
+    .text-center {
+      text-align: center;
+    }
+
+    .notes {
+      font-size: 12px;
+      color: #444;
+      white-space: pre-wrap;
+    }
+
+    .print-hint {
+      margin-top: 16px;
+      font-size: 11px;
+      color: #777;
+      text-align: center;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .invoice-wrapper {
+        border: none;
+        border-radius: 0;
+      }
+      .print-hint {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="invoice-wrapper">
+
+  <div class="header">
+    <div>
+      <div class="company-name">Mazoon Aluminum</div>
+      <div class="company-details">
+        سلطنة عمان – ورشة/شركة الألمنيوم<br>
+        هاتف: +968-00000000<br>
+        بريد إلكتروني: info@example.com
+      </div>
+    </div>
+
+    <div class="invoice-title">
+      <h1>فاتورة</h1>
+      <div class="invoice-meta">
+        <div><strong>رقم الفاتورة:</strong> {{ invoice.number }}</div>
+        <div><strong>تاريخ الإصدار:</strong> {{ invoice.issued_at }}</div>
+        <div><strong>تاريخ الاستحقاق:</strong> {{ invoice.due_date|default:"-" }}</div>
+        <div><strong>الحالة:</strong> {{ invoice.get_status_display }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="block">
+    <div class="section-title">بيانات الزبون</div>
+    <div class="box">
+      <div><strong>الاسم:</strong> {{ invoice.customer.name }}</div>
+      {% if invoice.customer.company_name %}
+      <div><strong>الشركة:</strong> {{ invoice.customer.company_name }}</div>
+      {% endif %}
+      {% if invoice.customer.tax_number %}
+      <div><strong>الرقم الضريبي:</strong> {{ invoice.customer.tax_number }}</div>
+      {% endif %}
+      {% if invoice.customer.phone %}
+      <div><strong>الهاتف:</strong> {{ invoice.customer.phone }}</div>
+      {% endif %}
+      {% if invoice.customer.address %}
+      <div><strong>العنوان:</strong> {{ invoice.customer.address }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="block">
+    <div class="section-title">ملخص الفاتورة</div>
+
+    <table class="totals-table">
+      <tbody>
+        <tr>
+          <th>إجمالي الفاتورة</th>
+          <td class="text-right">{{ invoice.total_amount }}</td>
+        </tr>
+        <tr>
+          <th>إجمالي المدفوع</th>
+          <td class="text-right">{{ invoice.paid_amount }}</td>
+        </tr>
+        <tr>
+          <th>المتبقي</th>
+          <td class="text-right">{{ invoice.balance }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  {% if invoice.description %}
+  <div class="block">
+    <div class="section-title">الوصف / التفاصيل</div>
+    <div class="box notes">
+      {{ invoice.description|linebreaksbr }}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="block">
+    <div class="section-title">الدفعات على هذه الفاتورة</div>
+    <table>
+      <thead>
+        <tr>
+          <th>التاريخ</th>
+          <th>المبلغ</th>
+          <th>الطريقة</th>
+          <th>ملاحظات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in invoice.payments.all %}
+        <tr>
+          <td>{{ p.date }}</td>
+          <td>{{ p.amount }}</td>
+          <td>{{ p.get_method_display }}</td>
+          <td>{{ p.notes }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="text-center">
+            لا توجد دفعات مسجلة على هذه الفاتورة.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="print-hint">
+    يمكنك استخدام أمر الطباعة في المتصفح (Ctrl + P) ثم اختيار <strong>Save as PDF</strong>.
+  </div>
+</div>
+
+<script>
+  // خيار: تفعيل الطباعة تلقائيًا عند الفتح (إذا حاب)
+  // window.print();
+</script>
+
+</body>
+</html>

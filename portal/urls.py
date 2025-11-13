@@ -1,11 +1,21 @@
-# accounting/urls.py
-
 from django.urls import path
-from . import views
 
-app_name = "accounting"
+from .views import (
+    PortalDashboardView,
+    PortalInvoiceListView,
+    PortalInvoiceDetailView,
+    PortalPaymentListView,
+    PortalInvoicePrintView,
+    PortalProfileUpdateView,
+)
+
+app_name = "portal"
 
 urlpatterns = [
-    # سنضيف روابط الفواتير والدفعات لاحقاً في المرحلة الثالثة
-    # هذا مجرد placeholder عشان ما يعطي خطأ في تحميل urls
+    path("", PortalDashboardView.as_view(), name="dashboard"),
+    path("profile/", PortalProfileUpdateView.as_view(), name="profile"),
+    path("invoices/", PortalInvoiceListView.as_view(), name="invoice_list"),
+    path("invoices/<str:number>/", PortalInvoiceDetailView.as_view(), name="invoice_detail"),
+    path("invoices/<str:number>/print/", PortalInvoicePrintView.as_view(), name="invoice_print"),
+    path("payments/", PortalPaymentListView.as_view(), name="payment_list"),
 ]

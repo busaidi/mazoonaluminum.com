@@ -3,7 +3,7 @@
 from django.urls import path
 from .views import InvoiceListView, InvoiceCreateView, InvoiceDetailView, InvoicePaymentCreateView, \
     AccountingDashboardView, CustomerListView, CustomerCreateView, CustomerUpdateView, CustomerDeleteView, \
-    CustomerDetailView, CustomerPaymentCreateView
+    CustomerDetailView, CustomerPaymentCreateView, InvoicePrintView
 
 app_name = "accounting"
 
@@ -13,6 +13,7 @@ urlpatterns = [
     path("invoices/new/", InvoiceCreateView.as_view(), name="invoice_create"),
     path("invoices/<str:number>/", InvoiceDetailView.as_view(), name="invoice_detail"),
     path("invoices/<str:number>/payments/new/", InvoicePaymentCreateView.as_view(), name="invoice_add_payment"),
+    path("invoices/<str:number>/print/", InvoicePrintView.as_view(), name="invoice_print"),
 
     path("customers/", CustomerListView.as_view(), name="customer_list"),
     path("customers/new/", CustomerCreateView.as_view(), name="customer_create"),

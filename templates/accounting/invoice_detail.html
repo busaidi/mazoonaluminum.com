@@ -16,6 +16,11 @@
     <a href="{% url 'accounting:invoice_list' %}" class="btn btn-secondary">
       رجوع إلى القائمة
     </a>
+      <a href="{% url 'accounting:invoice_print' number=invoice.number %}"
+   class="btn btn-outline-secondary btn-sm"
+   target="_blank">
+  طباعة / PDF
+</a>
   </div>
 </div>
 

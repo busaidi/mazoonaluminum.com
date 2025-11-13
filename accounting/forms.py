@@ -75,3 +75,28 @@ class CustomerForm(forms.ModelForm):
         for name, field in self.fields.items():
             css = field.widget.attrs.get("class", "")
             field.widget.attrs["class"] = (css + " form-control").strip()
+
+
+class CustomerProfileForm(forms.ModelForm):
+    """
+    فورم تعديل بيانات الزبون من بوابة الزبون (بدون user).
+    """
+
+    class Meta:
+        model = Customer
+        fields = [
+            "name",
+            "company_name",
+            "phone",
+            "email",
+            "tax_number",
+            "address",
+        ]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "company_name": forms.TextInput(attrs={"class": "form-control"}),
+            "phone": forms.TextInput(attrs={"class": "form-control"}),
+            "email": forms.EmailInput(attrs={"class": "form-control"}),
+            "tax_number": forms.TextInput(attrs={"class": "form-control"}),
+            "address": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+        }
