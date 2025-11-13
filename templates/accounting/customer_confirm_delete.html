@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}حذف زبون{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h1 class="h4 mb-3">حذف زبون</h1>
+
+  <div class="alert alert-warning">
+    هل أنت متأكد أنك تريد حذف الزبون:
+    <strong>{{ object.name }}</strong>؟
+    <br>
+    قد يؤثر ذلك على التقارير، لكن الفواتير والدفعات ستظل موجودة.
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">تأكيد الحذف</button>
+    <a href="{% url 'accounting:customer_list' %}" class="btn btn-secondary">
+      إلغاء
+    </a>
+  </form>
+</div>
+{% endblock %}

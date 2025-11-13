@@ -83,4 +83,10 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 
+LOGIN_URL = "login"  # اسم الـ URL وليس المسار النصي
+LOGIN_REDIRECT_URL = "/"      # بعد تسجيل الدخول يوديه وين
+LOGOUT_REDIRECT_URL = "/"     # بعد تسجيل الخروج يوديه وين
+
+
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

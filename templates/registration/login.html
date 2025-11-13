@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}تسجيل الدخول{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 480px;">
+  <h1 class="h3 mb-4 text-center">تسجيل الدخول</h1>
+
+  {% if form.errors %}
+    <div class="alert alert-danger">
+      اسم المستخدم أو كلمة المرور غير صحيحة. حاول مرة أخرى.
+    </div>
+  {% endif %}
+
+  {% if next %}
+    {% if user.is_authenticated %}
+      <div class="alert alert-warning">
+        لديك صلاحية دخول، لكن لا تملك إذن للوصول لهذه الصفحة.
+      </div>
+    {% else %}
+      <p class="text-muted small">
+        الرجاء تسجيل الدخول للوصول إلى الصفحة المطلوبة.
+      </p>
+    {% endif %}
+  {% endif %}
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="mb-3">
+      <label class="form-label" for="{{ form.username.id_for_label }}">اسم المستخدم</label>
+      {{ form.username }}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="{{ form.password.id_for_label }}">كلمة المرور</label>
+      {{ form.password }}
+    </div>
+
+    {% if form.non_field_errors %}
+      <div class="text-danger small mb-2">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <button type="submit" class="btn btn-primary w-100 mb-3">دخول</button>
+
+    <input type="hidden" name="next" value="{{ next }}">
+
+  </form>
+</div>
+{% endblock %}

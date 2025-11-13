@@ -16,11 +16,20 @@ Multilingual (Arabic/English) website for mazoonaluminum.com built with Django a
 ```bash
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-
+```
+```bash
 pip install "Django>=5.2,<5.3"
-
+```
+```bash
+python manage.py makemigrations
+```
+```bash
 python manage.py migrate
+```
+```bash
 python manage.py createsuperuser
+```
+```bash
 python manage.py runserver
 ```
 

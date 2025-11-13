@@ -34,6 +34,8 @@ urlpatterns += i18n_patterns(
     path("accounting/", include("accounting.urls")),
     path("portal/", include("portal.urls")),
 
+    path("accounts/", include("django.contrib.auth.urls")),
+
 )
 
 if settings.DEBUG:

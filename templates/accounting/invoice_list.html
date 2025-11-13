@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}فواتير العملاء{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">📄 الفواتير</h1>
+    <a href="{% url 'accounting:invoice_create' %}" class="btn btn-primary">
+      + فاتورة جديدة
+    </a>
+  </div>
+
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+      <select name="status" class="form-select" onchange="this.form.submit()">
+        <option value="">كل الحالات</option>
+        {% for value,label in invoices.model.Status.choices %}
+          <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+
+  <table class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th>رقم الفاتورة</th>
+        <th>العميل</th>
+        <th>التاريخ</th>
+        <th>الإجمالي</th>
+        <th>المدفوع</th>
+        <th>المتبقي</th>
+        <th>الحالة</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for inv in invoices %}
+      <tr>
+        <td>
+          <a href="{% url 'accounting:invoice_detail' number=inv.number %}">
+            {{ inv.number }}
+          </a>
+        </td>
+        <td>{{ inv.customer.name }}</td>
+        <td>{{ inv.issued_at }}</td>
+        <td>{{ inv.total_amount }}</td>
+        <td>{{ inv.paid_amount }}</td>
+        <td>{{ inv.balance }}</td>
+        <td>{{ inv.get_status_display }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="text-center text-muted">
+          لا توجد فواتير حتى الآن.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if is_paginated %}
+  <nav>
+    <ul class="pagination">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link"
+           href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+          السابق
+        </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">السابق</span></li>
+      {% endif %}
+
+      <li class="page-item disabled">
+        <span class="page-link">
+          صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+        </span>
+      </li>
+
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link"
+           href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+          التالي
+        </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">التالي</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}
