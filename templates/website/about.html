@@ -1,53 +1,132 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "عن Mazoon Aluminum" %}{% endblock %}
+{# ============ SEO ============ #}
 
+{% block meta_title %}
+  {% if LANGUAGE_CODE == "ar" %}
+    مزون المنيوم – من نحن
+  {% else %}
+    Mazoon Aluminum – About Us
+  {% endif %}
+{% endblock %}
+
+{% block meta_description %}
+  {% if LANGUAGE_CODE == "ar" %}
+    مزون المنيوم علامة تجارية عمانية متخصصة في تطوير وتصنيع أنظمة الألمنيوم للنوافذ والأبواب العازلة للحرارة والجودة العالية.
+  {% else %}
+    Mazoon Aluminum is an Omani brand specialized in developing and manufacturing advanced aluminum window and door systems with high thermal and structural performance.
+  {% endif %}
+{% endblock %}
+
+{% block og_title %}
+  {% if LANGUAGE_CODE == "ar" %}
+    مزون المنيوم – من نحن
+  {% else %}
+    Mazoon Aluminum – About Us
+  {% endif %}
+{% endblock %}
+
+{% block og_description %}
+  {% if LANGUAGE_CODE == "ar" %}
+    مزون المنيوم علامة تجارية عمانية متخصصة في تطوير وتصنيع أنظمة الألمنيوم للنوافذ والأبواب العازلة للحرارة والجودة العالية.
+  {% else %}
+    Mazoon Aluminum is an Omani brand specialized in developing and manufacturing advanced aluminum window and door systems with high thermal and structural performance.
+  {% endif %}
+{% endblock %}
+
+{% block og_type %}website{% endblock %}
+{% block og_url %}{{ request.build_absolute_uri }}{% endblock %}
+{% block og_image %}{% endblock %}
+
+{% block twitter_card %}summary_large_image{% endblock %}
+
+{% block twitter_title %}
+  {% if LANGUAGE_CODE == "ar" %}
+    مزون المنيوم – من نحن
+  {% else %}
+    Mazoon Aluminum – About Us
+  {% endif %}
+{% endblock %}
+
+{% block twitter_description %}
+  {% if LANGUAGE_CODE == "ar" %}
+    مزون المنيوم علامة تجارية عمانية متخصصة في تطوير وتصنيع أنظمة الألمنيوم للنوافذ والأبواب العازلة للحرارة والجودة العالية.
+  {% else %}
+    Mazoon Aluminum is an Omani brand specialized in developing and manufacturing advanced aluminum window and door systems with high thermal and structural performance.
+  {% endif %}
+{% endblock %}
+
+{% block twitter_image %}{% endblock %}
+
+{% block title %}
+  {% if LANGUAGE_CODE == "ar" %}
+    {% trans "من نحن" %}
+  {% else %}
+    {% trans "About us" %}
+  {% endif %}
+{% endblock %}
+
+{# ============ CONTENT ============ #}
 {% block content %}
-<div class="row align-items-center mb-4">
-  <div class="col-lg-7">
-    <h1 class="mb-3">{% trans "عن Mazoon Aluminum" %}</h1>
-    <p class="lead text-muted">
-      {% trans "Mazoon Aluminum هي منصة لتطوير وتصنيع أنظمة الألمنيوم للنوافذ والأبواب عالية الجودة، مع التركيز على الأداء والعزل الحراري والتصميم العصري." %}
-    </p>
-  </div>
-  <div class="col-lg-5">
-    <div class="p-4 border rounded-4 bg-light">
-      <h2 class="h6 mb-3">{% trans "معلومات سريعة" %}</h2>
-      <ul class="list-unstyled mb-0 small text-muted">
-        <li>✔ {% trans "تصميم أنظمة خاصة للنوافذ والأبواب" %}</li>
-        <li>✔ {% trans "تطوير حلول للألمنيوم عالية الأداء" %}</li>
-        <li>✔ {% trans "خدمة الورش والعملاء التجاريين" %}</li>
-      </ul>
-    </div>
-  </div>
-</div>
-
 <div class="row g-4">
-  <div class="col-md-4">
-    <div class="h-100 p-3 border rounded-3">
-      <h2 class="h5 mb-2">{% trans "رؤيتنا" %}</h2>
-      <p class="text-muted small">
-        {% trans "أن تكون Mazoon Aluminum مرجعاً في أنظمة الألمنيوم المتطورة في المنطقة، بجودة عالية وتجربة عميل مميزة." %}
-      </p>
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h1 class="h3 fw-bold mb-3">
+          {% if LANGUAGE_CODE == "ar" %}
+            {% trans "من نحن" %}
+          {% else %}
+            {% trans "About Mazoon Aluminum" %}
+          {% endif %}
+        </h1>
+
+        <div class="small text-muted" style="line-height: 1.9;">
+          {% if LANGUAGE_CODE == "ar" %}
+            <p>
+              مزون المنيوم هي علامة تجارية عمانية رائدة في مجال تطوير وتصنيع أنظمة النوافذ والأبواب
+              المصنعة من الألمنيوم والألمنيوم العازل للحرارة، مع تركيز على الأداء العالي والجمال المعماري.
+            </p>
+            <p>
+              منذ عام 2016، مرّت مزون المنيوم بعدة مراحل من التطوير، وصولاً إلى تصميم الأنظمة الخاصة بها
+              بشكل مستقل ابتداءً من عام 2021، مع اعتماد معايير جودة صارمة وشراكات موثوقة في سحب الألمنيوم،
+              الزجاج، والأجهزة.
+            </p>
+            <p>
+              رؤيتنا هي أن نكون الخيار الأول في أنظمة الألمنيوم عالية الجودة في سلطنة عمان والمنطقة،
+              مع التركيز على الابتكار المستمر وخدمة العملاء والشركاء من المعماريين والورش وأصحاب المنازل.
+            </p>
+          {% else %}
+            <p>
+              Mazoon Aluminum is an Omani brand specializing in the development and manufacturing of
+              advanced aluminum window and door systems, including high-performance thermal break systems.
+            </p>
+            <p>
+              Since 2016, we have evolved through multiple stages, reaching the point of designing our
+              own proprietary systems starting from 2021, with strict quality standards and trusted local
+              partners for extrusion, glass, and hardware.
+            </p>
+            <p>
+              Our vision is to become the leading reference for high-quality aluminum systems in Oman and
+              the region, focusing on continuous innovation and dedicated support for architects, workshops,
+              and homeowners.
+            </p>
+          {% endif %}
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="col-md-4">
-    <div class="h-100 p-3 border rounded-3">
-      <h2 class="h5 mb-2">{% trans "رسالتنا" %}</h2>
-      <p class="text-muted small">
-        {% trans "تقديم أنظمة متكاملة وموثوقة للنوافذ والأبواب، تدعمها معرفة هندسية وخبرة عملية في السوق." %}
-      </p>
-    </div>
-  </div>
-
-  <div class="col-md-4">
-    <div class="h-100 p-3 border rounded-3">
-      <h2 class="h5 mb-2">{% trans "قيمنا" %}</h2>
-      <p class="text-muted small">
-        {% trans "الجودة، الشفافية، الالتزام، والابتكار في كل منتج وكل مشروع." %}
-      </p>
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body small text-muted">
+        <h2 class="h6 fw-bold mb-3">{% trans "قيمنا" %}</h2>
+        <ul class="mb-0">
+          <li>{% trans "الجودة والاعتمادية في كل نظام." %}</li>
+          <li>{% trans "الابتكار المستمر في التصميم والأداء." %}</li>
+          <li>{% trans "الشراكة طويلة الأمد مع العملاء والمصنعين." %}</li>
+        </ul>
+      </div>
     </div>
   </div>
 </div>

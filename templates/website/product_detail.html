@@ -1,41 +1,91 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block meta_title %}{{ post.meta_title }}{% endblock %}
-{% block meta_description %}{{ post.meta_description }}{% endblock %}
 
+{# ================== SEO BLOCKS ================== #}
+
+{% block meta_title %}
+  {{ product.meta_title|default:product.name }}
+{% endblock %}
+
+{% block meta_description %}
+  {{ product.meta_description|default:product.description|striptags|truncatechars:180 }}
+{% endblock %}
+
+{% block og_title %}
+  {{ product.meta_title|default:product.name }}
+{% endblock %}
+
+{% block og_description %}
+  {{ product.meta_description|default:product.description|striptags|truncatechars:180 }}
+{% endblock %}
+
+{% block og_type %}product{% endblock %}
+{% block og_url %}{{ request.build_absolute_uri }}{% endblock %}
+{% block og_image %}{% endblock %} {# يمكن تعبئته لاحقاً بصورة المنتج #}
+
+{% block twitter_card %}summary_large_image{% endblock %}
+{% block twitter_title %}
+  {{ product.meta_title|default:product.name }}
+{% endblock %}
+{% block twitter_description %}
+  {{ product.meta_description|default:product.description|striptags|truncatechars:180 }}
+{% endblock %}
+{% block twitter_image %}{% endblock %}
 
 {% block title %}{{ product.name }}{% endblock %}
 
+{# ================== PAGE CONTENT ================== #}
 {% block content %}
 <div class="row g-4">
-  <div class="col-md-5">
-    {% if product.image %}
-      <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded-3 border" />
-    {% else %}
-      <div class="border rounded-3 d-flex align-items-center justify-content-center" style="height:250px;">
-        <span class="text-muted small">{% trans "لا توجد صورة لهذا المنتج حالياً." %}</span>
+  <!-- تفاصيل المنتج -->
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h1 class="h3 fw-bold mb-2">{{ product.name }}</h1>
+
+        <div class="d-flex flex-wrap gap-2 align-items-center text-muted small mb-3">
+          {% if product.is_featured %}
+            <span class="badge bg-warning text-dark">{% trans "منتج مميز" %}</span>
+          {% endif %}
+          <span class="badge bg-success-subtle text-success border">
+            {% trans "متوفر" %}
+          </span>
+        </div>
+
+        {% if product.price %}
+          <p class="h5 fw-bold mb-3">
+            {{ product.price }} <span class="fs-6">{% trans "ر.ع" %}</span>
+          </p>
+        {% endif %}
+
+        <div class="small text-muted" style="line-height: 1.9;">
+          {{ product.description|linebreaks }}
+        </div>
       </div>
-    {% endif %}
+    </div>
   </div>
 
-  <div class="col-md-7">
-    <h1 class="h3 mb-2">{{ product.name }}</h1>
-    <p class="text-muted mb-3">
-      {{ product.description|default_if_none:""|linebreaks }}
-    </p>
+  <!-- شريط جانبي -->
+  <div class="col-lg-4">
+    <aside class="position-sticky" style="top: 80px;">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <h2 class="h6 fw-bold mb-2">{% trans "عن هذا المنتج" %}</h2>
+          <p class="small text-muted mb-0">
+            {% trans "يمكنك استخدام هذه المساحة لإضافة مواصفات فنية، ملفات تحميل (كتالوج PDF)، أو روابط لأنظمة مرتبطة." %}
+          </p>
+        </div>
+      </div>
 
-    <div class="d-flex align-items-center gap-3 mb-3">
-      <span class="fs-4 fw-bold">{{ product.price }} ر.ع</span>
-      {% if product.is_active %}
-        <span class="badge text-bg-success">{% trans "متوفر" %}</span>
-      {% else %}
-        <span class="badge text-bg-secondary">{% trans "غير متوفر" %}</span>
-      {% endif %}
-    </div>
-
-    <a href="{% url 'product_list' %}" class="btn btn-outline-secondary btn-sm">
-      ← {% trans "العودة إلى قائمة المنتجات" %}
-    </a>
+      <div class="card border-0 shadow-sm">
+        <div class="card-body small text-muted">
+          <strong>{% trans "ملاحظة" %}:</strong>
+          <p class="mb-0">
+            {% trans "هذه صفحة عرض للمنتج فقط، ويمكن لاحقاً ربطها بنظام عروض أسعار أو طلبات شراء." %}
+          </p>
+        </div>
+      </div>
+    </aside>
   </div>
 </div>
 {% endblock %}

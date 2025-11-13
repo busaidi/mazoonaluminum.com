@@ -1,32 +1,92 @@
 {% extends "base.html" %}
 {% load i18n %}
 
+{# ================== SEO BLOCKS ================== #}
+
 {% block meta_title %}
   {% if LANGUAGE_CODE == "ar" %}
-    {% trans "اتصل بنا" %} – Mazoon Aluminum
+    اتصل بنا – مزون المنيوم
   {% else %}
-    {% trans "Contact us" %} – Mazoon Aluminum
+    Contact Us – Mazoon Aluminum
   {% endif %}
 {% endblock %}
 
 {% block meta_description %}
   {% if LANGUAGE_CODE == "ar" %}
-    {% trans "تواصل مع مزون ألمنيوم للاستفسار عن الأنظمة، الأسعار، أو التعاون في المشاريع." %}
+    تواصل مع مزون المنيوم للاستفسار عن الأنظمة، الأسعار، أو التعاون في المشاريع.
   {% else %}
-    {% trans "Contact Mazoon Aluminum for inquiries about systems, pricing, or project collaboration." %}
+    Contact Mazoon Aluminum for inquiries about systems, pricing, or project collaboration.
   {% endif %}
 {% endblock %}
 
+{% block og_title %}
+  {% if LANGUAGE_CODE == "ar" %}
+    اتصل بنا – مزون المنيوم
+  {% else %}
+    Contact Us – Mazoon Aluminum
+  {% endif %}
+{% endblock %}
+
+{% block og_description %}
+  {% if LANGUAGE_CODE == "ar" %}
+    تواصل مع مزون المنيوم للاستفسار عن الأنظمة، الأسعار، أو التعاون في المشاريع.
+  {% else %}
+    Contact Mazoon Aluminum for inquiries about systems, pricing, or project collaboration.
+  {% endif %}
+{% endblock %}
+
+{% block og_type %}website{% endblock %}
+{% block og_url %}{{ request.build_absolute_uri }}{% endblock %}
+{% block og_image %}{% endblock %}
+
+{% block twitter_card %}summary_large_image{% endblock %}
+
+{% block twitter_title %}
+  {% if LANGUAGE_CODE == "ar" %}
+    اتصل بنا – مزون المنيوم
+  {% else %}
+    Contact Us – Mazoon Aluminum
+  {% endif %}
+{% endblock %}
+
+{% block twitter_description %}
+  {% if LANGUAGE_CODE == "ar" %}
+    تواصل مع مزون المنيوم للاستفسار عن الأنظمة، الأسعار، أو التعاون في المشاريع.
+  {% else %}
+    Contact Mazoon Aluminum for inquiries about systems, pricing, or project collaboration.
+  {% endif %}
+{% endblock %}
+
+{% block twitter_image %}{% endblock %}
+
+{% block title %}
+  {% if LANGUAGE_CODE == "ar" %}
+    {% trans "اتصل بنا" %}
+  {% else %}
+    {% trans "Contact us" %}
+  {% endif %}
+{% endblock %}
+
+{# ================== PAGE CONTENT ================== #}
 {% block content %}
 <div class="row g-4 align-items-start">
-
-  <!-- ========= نموذج التواصل ========= -->
+  <!-- نموذج التواصل -->
   <div class="col-lg-7">
-    <div class="card border-0 mb-3">
+    <div class="card border-0 shadow-sm mb-3">
       <div class="card-body">
-        <h1 class="h3 fw-bold mb-2">{% trans "اتصل بنا" %}</h1>
+        <h1 class="h3 fw-bold mb-2">
+          {% if LANGUAGE_CODE == "ar" %}
+            {% trans "اتصل بنا" %}
+          {% else %}
+            {% trans "Contact us" %}
+          {% endif %}
+        </h1>
         <p class="text-muted small mb-4">
-          {% trans "يسعدنا تواصلك معنا بخصوص الأنظمة، التسعير، أو التعاون في المشاريع." %}
+          {% if LANGUAGE_CODE == "ar" %}
+            {% trans "يسعدنا تواصلك معنا بخصوص الأنظمة، التسعير، أو التعاون في المشاريع." %}
+          {% else %}
+            {% trans "We are happy to hear from you regarding systems, pricing, or project collaboration." %}
+          {% endif %}
         </p>
 
         <form method="post" class="row g-3">
@@ -57,18 +117,16 @@
     </div>
   </div>
 
-  <!-- ========= معلومات التواصل ========= -->
+  <!-- معلومات التواصل -->
   <div class="col-lg-5">
-    <aside class="card border-0 h-100">
+    <aside class="card border-0 shadow-sm h-100">
       <div class="card-body">
         <h2 class="h6 fw-bold mb-3">{% trans "معلومات التواصل" %}</h2>
-
         <ul class="list-unstyled small text-muted mb-3">
           <li class="mb-1">📍 {% trans "سلطنة عُمان" %}</li>
           <li class="mb-1">📧 info@mazoonaluminum.com</li>
           <li class="mb-1">📞 +968-0000-0000</li>
         </ul>
-
         <p class="small text-muted mb-0">
           {% trans "يمكنك تعديل هذه المعلومات لاحقاً لتطابق بيانات التواصل الحقيقية لشركتك." %}
         </p>
