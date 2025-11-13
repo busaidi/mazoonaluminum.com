@@ -19,6 +19,8 @@ INSTALLED_APPS = [
     "django.contrib.sitemaps",
     #my Website Blog and product
     "website",
+    "accounting",
+    "portal",
 ]
 
 MIDDLEWARE = [

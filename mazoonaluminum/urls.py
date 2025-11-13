@@ -31,6 +31,9 @@ urlpatterns = [
 urlpatterns += i18n_patterns(
     path("admin/", admin.site.urls),
     path("", include("website.urls")),
+    path("accounting/", include("accounting.urls")),
+    path("portal/", include("portal.urls")),
+
 )
 
 if settings.DEBUG:
