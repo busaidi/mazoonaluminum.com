@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block meta_title %}{{ post.meta_title }}{% endblock %}
+{% block meta_description %}{{ post.meta_description }}{% endblock %}
+
+
+{% block title %}{{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-md-5">
+    {% if product.image %}
+      <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded-3 border" />
+    {% else %}
+      <div class="border rounded-3 d-flex align-items-center justify-content-center" style="height:250px;">
+        <span class="text-muted small">{% trans "لا توجد صورة لهذا المنتج حالياً." %}</span>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="col-md-7">
+    <h1 class="h3 mb-2">{{ product.name }}</h1>
+    <p class="text-muted mb-3">
+      {{ product.description|default_if_none:""|linebreaks }}
+    </p>
+
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <span class="fs-4 fw-bold">{{ product.price }} ر.ع</span>
+      {% if product.is_active %}
+        <span class="badge text-bg-success">{% trans "متوفر" %}</span>
+      {% else %}
+        <span class="badge text-bg-secondary">{% trans "غير متوفر" %}</span>
+      {% endif %}
+    </div>
+
+    <a href="{% url 'product_list' %}" class="btn btn-outline-secondary btn-sm">
+      ← {% trans "العودة إلى قائمة المنتجات" %}
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,7 @@
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.navbar .nav-link.active {
+  font-weight: 600;
+}

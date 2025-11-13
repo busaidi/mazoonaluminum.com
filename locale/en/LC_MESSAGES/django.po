@@ -1,0 +1,372 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-11-13 14:26+0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: templates/base.html:38
+msgid "الرئيسية"
+msgstr "Home"
+
+#: templates/base.html:42
+msgid "عنّا"
+msgstr "About"
+
+#: templates/base.html:46 templates/website/lab.html:4
+#: templates/website/lab.html:7
+msgid "المختبر"
+msgstr "Lab"
+
+#: templates/base.html:50 templates/website/blog_list.html:4
+#: templates/website/blog_list.html:9
+msgid "المدونة"
+msgstr "Blog"
+
+#: templates/base.html:54 templates/website/product_list.html:4
+#: templates/website/product_list.html:9
+msgid "المنتجات"
+msgstr "Products"
+
+#: templates/base.html:58 templates/website/contact.html:4
+#: templates/website/contact.html:9
+msgid "اتصل بنا"
+msgstr "Contact"
+
+#: templates/base.html:94
+msgid "جميع الحقوق محفوظة"
+msgstr "All rights reserved"
+
+#: templates/website/about.html:4 templates/website/about.html:9
+msgid "عن Mazoon Aluminum"
+msgstr "About Mazoon Aluminum"
+
+#: templates/website/about.html:11
+msgid ""
+"Mazoon Aluminum هي منصة لتطوير وتصنيع أنظمة الألمنيوم للنوافذ والأبواب عالية "
+"الجودة، مع التركيز على الأداء والعزل الحراري والتصميم العصري."
+msgstr ""
+"Mazoon Aluminum is a platform for developing and manufacturing high-quality "
+"aluminum systems for windows and doors, focusing on performance, thermal "
+"insulation, and modern design."
+
+#: templates/website/about.html:16
+msgid "معلومات سريعة"
+msgstr "Quick info"
+
+#: templates/website/about.html:18
+msgid "تصميم أنظمة خاصة للنوافذ والأبواب"
+msgstr "Designing custom systems for windows and doors"
+
+#: templates/website/about.html:19
+msgid "تطوير حلول للألمنيوم عالية الأداء"
+msgstr "Developing high-performance aluminum solutions"
+
+#: templates/website/about.html:20
+msgid "خدمة الورش والعملاء التجاريين"
+msgstr "Serving workshops and business customers"
+
+#: templates/website/about.html:29
+msgid "رؤيتنا"
+msgstr "Our vision"
+
+#: templates/website/about.html:31
+msgid ""
+"أن تكون Mazoon Aluminum مرجعاً في أنظمة الألمنيوم المتطورة في المنطقة، بجودة "
+"عالية وتجربة عميل مميزة."
+msgstr ""
+"To make Mazoon Aluminum a reference for advanced aluminum systems in the "
+"region, with high quality and a distinguished customer experience."
+
+#: templates/website/about.html:38
+msgid "رسالتنا"
+msgstr "Our mission"
+
+#: templates/website/about.html:40
+msgid ""
+"تقديم أنظمة متكاملة وموثوقة للنوافذ والأبواب، تدعمها معرفة هندسية وخبرة "
+"عملية في السوق."
+msgstr ""
+"To provide integrated and reliable systems for windows and doors, backed by "
+"engineering knowledge and practical market experience."
+
+#: templates/website/about.html:47
+msgid "قيمنا"
+msgstr "Our values"
+
+#: templates/website/about.html:49
+msgid "الجودة، الشفافية، الالتزام، والابتكار في كل منتج وكل مشروع."
+msgstr ""
+"Quality, transparency, commitment, and innovation in every product and "
+"every project."
+
+#: templates/website/blog_detail.html:16 templates/website/blog_list.html:54
+msgid "تعليق"
+msgstr "comment(s)"
+
+#: templates/website/blog_detail.html:30
+#, python-format
+msgid ""
+"\n"
+"          %(count)s تعليق\n"
+"        "
+msgstr ""
+"\n"
+"          %(count)s comment(s)\n"
+"        "
+
+#: templates/website/blog_detail.html:53
+msgid "لا توجد تعليقات بعد. كن أول من يعلق على هذه التدوينة."
+msgstr "No comments yet. Be the first to comment on this post."
+
+#: templates/website/blog_detail.html:60
+msgid "أضف تعليقاً"
+msgstr "Add a comment"
+
+#: templates/website/blog_detail.html:65 templates/website/contact.html:17
+msgid "الاسم"
+msgstr "Name"
+
+#: templates/website/blog_detail.html:69
+msgid "البريد الإلكتروني (اختياري)"
+msgstr "Email (optional)"
+
+#: templates/website/blog_detail.html:73
+msgid "التعليق"
+msgstr "Comment"
+
+#: templates/website/blog_detail.html:78
+msgid "إرسال التعليق"
+msgstr "Submit comment"
+
+#: templates/website/blog_detail.html:89
+msgid "عن هذه التدوينة"
+msgstr "About this post"
+
+#: templates/website/blog_detail.html:91
+msgid ""
+"يمكنك استخدام هذه المنطقة لإضافة وصف مختصر، ملاحظات تقنية، أو روابط لتدوينات "
+"مرتبطة."
+msgstr ""
+"You can use this area to add a short description, technical notes, or links "
+"to related posts."
+
+#: templates/website/blog_detail.html:95
+msgid "ملاحظة"
+msgstr "Note"
+
+#: templates/website/blog_detail.html:97
+msgid ""
+"نموذج التعليقات هنا بسيط، ويمكن لاحقاً ربطه بنظام إشعارات أو موافقة يدوية من "
+"لوحة التحكم."
+msgstr ""
+"The comment form here is simple and can later be linked to a notification "
+"system or manual approval in the admin panel."
+
+#: templates/website/blog_list.html:11
+msgid "أخبار، تدوينات تقنية، وملاحظات حول الأنظمة والمشاريع."
+msgstr "News, technical posts, and notes about systems and projects."
+
+#: templates/website/blog_list.html:20 templates/website/blog_list.html:64
+msgid "التصنيفات"
+msgstr "Categories"
+
+#: templates/website/blog_list.html:24
+msgid "الكل"
+msgstr "All"
+
+#: templates/website/blog_list.html:76
+msgid "اقرأ التدوينة"
+msgstr "Read post"
+
+#: templates/website/blog_list.html:83
+msgid "لا توجد تدوينات منشورة حالياً."
+msgstr "No posts published yet."
+
+#: templates/website/blog_list.html:89
+msgid "صفحات المدونة"
+msgstr "Blog pages"
+
+#: templates/website/blog_list.html:94 templates/website/blog_list.html:98
+msgid "السابق"
+msgstr "Previous"
+
+#: templates/website/blog_list.html:117 templates/website/blog_list.html:121
+msgid "التالي"
+msgstr "Next"
+
+#: templates/website/contact.html:11
+msgid "يسعدنا تواصلك معنا بخصوص الأنظمة، التسعير، أو التعاون في المشاريع."
+msgstr "We are happy to hear from you about systems, pricing, or collaboration."
+
+#: templates/website/contact.html:21
+msgid "البريد الإلكتروني"
+msgstr "Email"
+
+#: templates/website/contact.html:25
+msgid "الموضوع"
+msgstr "Subject"
+
+#: templates/website/contact.html:29
+msgid "الرسالة"
+msgstr "Message"
+
+#: templates/website/contact.html:34
+msgid "إرسال"
+msgstr "Send"
+
+#: templates/website/contact.html:42
+msgid "معلومات التواصل"
+msgstr "Contact info"
+
+#: templates/website/contact.html:44
+msgid "سلطنة عُمان"
+msgstr "Sultanate of Oman"
+
+#: templates/website/contact.html:49
+msgid "يمكنك تعديل هذه المعلومات لاحقاً لتطابق بيانات التواصل الحقيقية لشركتك."
+msgstr "You can edit this information later to match your real company details."
+
+#: templates/website/home.html:9
+msgid "Mazoon Aluminum Systems"
+msgstr "Mazoon Aluminum Systems"
+
+#: templates/website/home.html:11
+msgid "منصة لعرض الأنظمة، المنتجات، وأخبار الشركة."
+msgstr "A platform to showcase systems, products, and company news."
+
+#: templates/website/home.html:16
+msgid "أحدث التدوينات"
+msgstr "Latest posts"
+
+#: templates/website/home.html:27
+msgid "اقرأ المزيد"
+msgstr "Read more"
+
+#: templates/website/home.html:33
+msgid "لا توجد تدوينات حتى الآن."
+msgstr "No posts yet."
+
+#: templates/website/home.html:37
+msgid "منتجات مختارة"
+msgstr "Featured products"
+
+#: templates/website/home.html:49 templates/website/product_detail.html:27
+#: templates/website/product_list.html:36
+msgid "متوفر"
+msgstr "Available"
+
+#: templates/website/home.html:55
+msgid "لا توجد منتجات حتى الآن."
+msgstr "No products yet."
+
+#: templates/website/lab.html:9
+msgid ""
+"هنا مساحة للتجارب التقنية، النماذج الأولية، وأفكار تطوير الأنظمة والبرمجيات "
+"الخاصة بـ Mazoon Aluminum."
+msgstr ""
+"This is a space for technical experiments, prototypes, and ideas for "
+"developing systems and software for Mazoon Aluminum."
+
+#: templates/website/lab.html:15
+msgid "أفكار أنظمة جديدة"
+msgstr "New system ideas"
+
+#: templates/website/lab.html:17
+msgid ""
+"يمكنك استخدام هذه الصفحة لتوثيق تجاربك في تطوير أنظمة ألمنيوم جديدة أو تحسين "
+"الأنظمة الحالية."
+msgstr ""
+"You can use this page to document your experiments in developing new "
+"aluminum systems or improving existing ones."
+
+#: templates/website/lab.html:20
+msgid "اختبار مقاطع ألمنيوم جديدة"
+msgstr "Testing new aluminum profiles"
+
+#: templates/website/lab.html:21
+msgid "محاكاة أداء العزل الحراري"
+msgstr "Simulating thermal insulation performance"
+
+#: templates/website/lab.html:22
+msgid "تجارب تصميم للواجهات الزجاجية"
+msgstr "Design experiments for glass facades"
+
+#: templates/website/lab.html:29
+msgid "تجارب برمجية"
+msgstr "Software experiments"
+
+#: templates/website/lab.html:31
+msgid ""
+"هذه المساحة مناسبة لتوثيق مشاريع Django وGIS والأنظمة الداخلية التي تبنيها "
+"لخدمة العمل."
+msgstr ""
+"This space is suitable for documenting Django, GIS, and internal systems "
+"projects that you build to support your work."
+
+#: templates/website/lab.html:34
+msgid "أنظمة إدارة المخزون والمشاريع"
+msgstr "Inventory and project management systems"
+
+#: templates/website/lab.html:35
+msgid "ربط الخرائط (GIS) مع مواقع المشاريع"
+msgstr "Linking maps (GIS) with project locations"
+
+#: templates/website/lab.html:36
+msgid "لوحات تحكم Dashboard مخصصة"
+msgstr "Custom dashboards"
+
+#: templates/website/product_detail.html:13
+msgid "لا توجد صورة لهذا المنتج حالياً."
+msgstr "There is currently no image for this product."
+
+#: templates/website/product_detail.html:29
+#: templates/website/product_list.html:38
+msgid "غير متوفر"
+msgstr "Not available"
+
+#: templates/website/product_detail.html:34
+msgid "العودة إلى قائمة المنتجات"
+msgstr "Back to product list"
+
+#: templates/website/product_list.html:11
+msgid "مجموعة من أنظمة الألمنيوم والمنتجات المرتبطة بها."
+msgstr "A collection of aluminum systems and related products."
+
+#: templates/website/product_list.html:44
+msgid "لا توجد منتجات مفعّلة حالياً."
+msgstr "No active products at the moment."
+
+#: website/views.py:71
+msgid "تم إضافة تعليقك بنجاح."
+msgstr "Your comment has been added successfully."
+
+#: website/views.py:74
+msgid "الاسم والمحتوى مطلوبان."
+msgstr "Name and content are required."
+
+#: website/views.py:93
+msgid "تم إرسال رسالتك، سنعاود التواصل معك قريباً."
+msgstr "Your message has been sent, we will contact you soon."
+
+msgid "ابحث في التدوينات…"
+msgstr "Search posts…"
+
+msgid "بحث"
+msgstr "Search"
+
+msgid "الوسوم"
+msgstr "Tags"

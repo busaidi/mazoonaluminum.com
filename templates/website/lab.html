@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "المختبر" %}{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">{% trans "المختبر" %}</h1>
+<p class="lead text-muted mb-4">
+  {% trans "هنا مساحة للتجارب التقنية، النماذج الأولية، وأفكار تطوير الأنظمة والبرمجيات الخاصة بـ Mazoon Aluminum." %}
+</p>
+
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="p-3 border rounded-3 h-100">
+      <h2 class="h6 mb-2">{% trans "أفكار أنظمة جديدة" %}</h2>
+      <p class="small text-muted mb-1">
+        {% trans "يمكنك استخدام هذه الصفحة لتوثيق تجاربك في تطوير أنظمة ألمنيوم جديدة أو تحسين الأنظمة الحالية." %}
+      </p>
+      <ul class="small text-muted mb-0">
+        <li>{% trans "اختبار مقاطع ألمنيوم جديدة" %}</li>
+        <li>{% trans "محاكاة أداء العزل الحراري" %}</li>
+        <li>{% trans "تجارب تصميم للواجهات الزجاجية" %}</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="p-3 border rounded-3 h-100">
+      <h2 class="h6 mb-2">{% trans "تجارب برمجية" %}</h2>
+      <p class="small text-muted mb-1">
+        {% trans "هذه المساحة مناسبة لتوثيق مشاريع Django وGIS والأنظمة الداخلية التي تبنيها لخدمة العمل." %}
+      </p>
+      <ul class="small text-muted mb-0">
+        <li>{% trans "أنظمة إدارة المخزون والمشاريع" %}</li>
+        <li>{% trans "ربط الخرائط (GIS) مع مواقع المشاريع" %}</li>
+        <li>{% trans "لوحات تحكم Dashboard مخصصة" %}</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

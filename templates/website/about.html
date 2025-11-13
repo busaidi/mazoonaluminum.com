@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "عن Mazoon Aluminum" %}{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+  <div class="col-lg-7">
+    <h1 class="mb-3">{% trans "عن Mazoon Aluminum" %}</h1>
+    <p class="lead text-muted">
+      {% trans "Mazoon Aluminum هي منصة لتطوير وتصنيع أنظمة الألمنيوم للنوافذ والأبواب عالية الجودة، مع التركيز على الأداء والعزل الحراري والتصميم العصري." %}
+    </p>
+  </div>
+  <div class="col-lg-5">
+    <div class="p-4 border rounded-4 bg-light">
+      <h2 class="h6 mb-3">{% trans "معلومات سريعة" %}</h2>
+      <ul class="list-unstyled mb-0 small text-muted">
+        <li>✔ {% trans "تصميم أنظمة خاصة للنوافذ والأبواب" %}</li>
+        <li>✔ {% trans "تطوير حلول للألمنيوم عالية الأداء" %}</li>
+        <li>✔ {% trans "خدمة الورش والعملاء التجاريين" %}</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-md-4">
+    <div class="h-100 p-3 border rounded-3">
+      <h2 class="h5 mb-2">{% trans "رؤيتنا" %}</h2>
+      <p class="text-muted small">
+        {% trans "أن تكون Mazoon Aluminum مرجعاً في أنظمة الألمنيوم المتطورة في المنطقة، بجودة عالية وتجربة عميل مميزة." %}
+      </p>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="h-100 p-3 border rounded-3">
+      <h2 class="h5 mb-2">{% trans "رسالتنا" %}</h2>
+      <p class="text-muted small">
+        {% trans "تقديم أنظمة متكاملة وموثوقة للنوافذ والأبواب، تدعمها معرفة هندسية وخبرة عملية في السوق." %}
+      </p>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="h-100 p-3 border rounded-3">
+      <h2 class="h5 mb-2">{% trans "قيمنا" %}</h2>
+      <p class="text-muted small">
+        {% trans "الجودة، الشفافية، الالتزام، والابتكار في كل منتج وكل مشروع." %}
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

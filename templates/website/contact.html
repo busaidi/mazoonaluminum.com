@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "اتصل بنا" %}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-7">
+    <h1 class="mb-3">{% trans "اتصل بنا" %}</h1>
+    <p class="text-muted mb-4">
+      {% trans "يسعدنا تواصلك معنا بخصوص الأنظمة، التسعير، أو التعاون في المشاريع." %}
+    </p>
+
+    <form method="post" class="row g-3">
+      {% csrf_token %}
+      <div class="col-md-6">
+        <label class="form-label">{% trans "الاسم" %}</label>
+        <input type="text" name="name" class="form-control" required />
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">{% trans "البريد الإلكتروني" %}</label>
+        <input type="email" name="email" class="form-control" required />
+      </div>
+      <div class="col-12">
+        <label class="form-label">{% trans "الموضوع" %}</label>
+        <input type="text" name="subject" class="form-control" />
+      </div>
+      <div class="col-12">
+        <label class="form-label">{% trans "الرسالة" %}</label>
+        <textarea name="message" rows="4" class="form-control" required></textarea>
+      </div>
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary">
+          {% trans "إرسال" %}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="border rounded-3 p-3 bg-light h-100">
+      <h2 class="h6 mb-3">{% trans "معلومات التواصل" %}</h2>
+      <ul class="list-unstyled small text-muted mb-3">
+        <li>📍 {% trans "سلطنة عُمان" %}</li>
+        <li>📧 info@mazoonaluminum.com</li>
+        <li>📞 +968-0000-0000</li>
+      </ul>
+      <p class="small text-muted mb-0">
+        {% trans "يمكنك تعديل هذه المعلومات لاحقاً لتطابق بيانات التواصل الحقيقية لشركتك." %}
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
