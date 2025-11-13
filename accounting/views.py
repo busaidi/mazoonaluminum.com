@@ -1,3 +1,6 @@
-from django.shortcuts import render
+# accounting/views.py
 
-# Create your views here.
+from django.http import HttpResponse
+
+def ping(request):
+    return HttpResponse("Accounting app is alive.")
