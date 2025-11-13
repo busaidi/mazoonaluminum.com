@@ -1,7 +1,86 @@
-body {
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+/* ====== ألوان الهوية ====== */
+:root {
+  --mazoon-bg-page: #E7E7E7;
+  --mazoon-card-bg: #FFFFFF;
+  --mazoon-text-main: #1A1A1A;
+  --mazoon-text-muted: #555555;
+
+  --mazoon-primary: #0f4c81;       /* أزرق عميق أنيق */
+  --mazoon-accent: #f59e0b;        /* برتقالي/ذهبي */
 }
 
-.navbar .nav-link.active {
-  font-weight: 600;
+/* الخلفية العامة */
+body {
+  background-color: var(--mazoon-bg-page) !important;
+  color: var(--mazoon-text-main) !important;
+}
+
+/* ====== HERO ====== */
+.hero-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 50%, #ffffff 100%);
+  border-radius: 5px;
+  border: 1px solid #dddddd;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+}
+
+.hero-image-card {
+  background-color: #f3f3f3;
+  padding: 1.25rem;
+  border-radius: 5px;
+  border: 1px solid #e0e0e0;
+}
+
+.hero-main-image {
+  object-fit: cover;
+}
+
+/* ====== كروت المزايا / الأنظمة / الشركاء ====== */
+.feature-card,
+.system-card,
+.partner-card,
+.product-card,
+.blog-card {
+  background-color: var(--mazoon-card-bg) !important;
+  border-radius: 5px;
+  border: 1px solid #dedede !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+/* نصوص */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--mazoon-text-main) !important;
+}
+
+.text-muted {
+  color: var(--mazoon-text-muted) !important;
+}
+
+/* ألوان الأزرار */
+.btn-primary {
+  background-color: var(--mazoon-primary) !important;
+  border-color: var(--mazoon-primary) !important;
+}
+
+.btn-outline-primary {
+  color: var(--mazoon-primary) !important;
+  border-color: var(--mazoon-primary) !important;
+}
+
+.text-mazoon {
+  color: var(--mazoon-primary) !important;
+}
+
+.bg-mazoon-accent {
+  background-color: var(--mazoon-accent) !important;
+}
+
+/* navbar & footer تبقى فاتحة */
+.navbar {
+  background-color: #F8F9FA !important;
+  border-bottom: 1px solid #DDDDDD !important;
+}
+
+footer {
+  background-color: #F3F3F3 !important;
+  border-top: 1px solid #CCCCCC !important;
 }

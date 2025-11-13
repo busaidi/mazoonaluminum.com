@@ -1,30 +1,14 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n static %}
 
-{# ======= ثيم داكن لهذه الصفحة فقط (يمكنك حذفه إذا عندك إعداد عام للداكن) ======= #}
-{% block extra_head %}
-  {{ block.super }}
-  <script>
-    document.documentElement.setAttribute('data-bs-theme', 'dark');
-  </script>
-{% endblock %}
-
-{# ======== SEO BLOCKS FOR HOME PAGE ======== #}
-
-{% block meta_title %}
-  Mazoon Aluminum – {% if LANGUAGE_CODE == "ar" %}{% trans "أنظمة الأبواب والنوافذ" %}{% else %}{% trans "Aluminum Window & Door Systems" %}{% endif %}
-{% endblock %}
-
+{# SEO + عناوين السوشال #}
+{% block meta_title %}{% trans "مزون المنيوم - الرئيسية" %}{% endblock %}
 {% block meta_description %}
-  {% if LANGUAGE_CODE == "ar" %}
-    {% trans "مزون ألمنيوم علامة عُمانية متخصصة في تطوير وتصنيع أنظمة النوافذ والأبواب من الألمنيوم والعازل الحراري، مع تركيز على الجودة، العزل، والتصميم العصري." %}
-  {% else %}
-    {% trans "Mazoon Aluminum is an Omani brand focused on developing and manufacturing high-performance aluminum and thermal break window & door systems with strong quality, insulation, and modern design." %}
-  {% endif %}
+{% trans "مزون المنيوم علامة تجارية عمانية متخصصة في تطوير أنظمة النوافذ والأبواب من الألمنيوم والألمنيوم العازل للحرارة، مع تركيز على الجودة والابتكار والشراكات المحلية." %}
 {% endblock %}
 
-{% block og_title %}Mazoon Aluminum{% endblock %}
-{% block og_description %}{{ block.super }}{% endblock %}
+{% block og_title %}{% trans "مزون المنيوم - الرئيسية" %}{% endblock %}
+{% block og_description %}{% endblock %}
 {% block og_type %}website{% endblock %}
 {% block og_url %}{{ request.build_absolute_uri }}{% endblock %}
 {% block og_image %}{% endblock %}
@@ -40,585 +24,278 @@
 {# =================== PAGE CONTENT =================== #}
 {% block content %}
 
-{# ========== HERO + ABOUT ========== #}
-<div class="p-4 p-md-5 mb-4 rounded-4 bg-dark text-light shadow-sm">
-  <div class="row align-items-center g-4">
-    <div class="col-lg-7">
-      <p class="text-warning text-uppercase small fw-semibold mb-2">
-        {% if LANGUAGE_CODE == "ar" %}
-          {% trans "أكثر من عشر سنوات من الخبرة والريادة" %}
-        {% else %}
-          {% trans "Ten years of excellence and leadership" %}
-        {% endif %}
-      </p>
-      <h1 class="display-5 fw-bold mb-3">
-        {% if LANGUAGE_CODE == "ar" %}
-          {% trans "Mazoon Aluminum Systems" %}
-        {% else %}
-          {% trans "Mazoon Aluminum Systems" %}
-        {% endif %}
-      </h1>
-      <p class="lead mb-4 text-light-50">
-        {% if LANGUAGE_CODE == "ar" %}
-          مزون ألمنيوم علامة عُمانية متخصصة في تطوير وتصميم أنظمة الأبواب والنوافذ من الألمنيوم والألمنيوم العازل حراريًا، مع تركيز على الجودة العالية، الأداء المعتمد، والابتكار المستمر.
-        {% else %}
-          Mazoon Aluminum is a leading Omani brand developing aluminum and thermal-break window & door systems, combining certified performance, quality, and continuous innovation.
-        {% endif %}
-      </p>
-      <div class="d-flex flex-wrap gap-3">
-        <a href="{% url 'about' %}" class="btn btn-warning btn-lg px-4 rounded-pill">
-          {% if LANGUAGE_CODE == "ar" %}{% trans "تعرف علينا" %}{% else %}{% trans "Learn more" %}{% endif %}
-        </a>
-        <a href="{% url 'product_list' %}" class="btn btn-outline-light btn-lg px-4 rounded-pill">
-          {% if LANGUAGE_CODE == "ar" %}{% trans "استكشف الأنظمة" %}{% else %}{% trans "Explore systems" %}{% endif %}
-        </a>
-      </div>
-    </div>
-
-    <div class="col-lg-5">
-      <div class="rounded-4 bg-body-tertiary text-light p-4 h-100 d-flex flex-column justify-content-center shadow-sm">
-        <h2 class="h5 mb-3">
-          {% if LANGUAGE_CODE == "ar" %}
-            {% trans "عن مزون ألمنيوم" %}
-          {% else %}
-            {% trans "About Mazoon Aluminum" %}
-          {% endif %}
-        </h2>
-        <p class="small mb-2">
-          {% if LANGUAGE_CODE == "ar" %}
-            بدأنا من 2016، وتطورت أنظمة مزون لتصبح مستقلة منذ 2021، بتركيز على أنظمة متكاملة للنوافذ والأبواب، المباينة الحرارية، والعزل الصوتي والحراري.
-          {% else %}
-            Since 2016, Mazoon Aluminum has evolved its systems to become fully independent in 2021, focusing on complete window & door systems, thermal break, and advanced acoustic & thermal insulation.
-          {% endif %}
+{# ======================= HERO SECTION ======================= #}
+<section class="hero-section mb-5">
+  <div class="hero-card p-4 p-lg-5">
+    <div class="row align-items-center g-4">
+      <div class="col-lg-6 order-2 order-lg-1">
+        <div class="mb-2">
+          <span class="badge rounded-pill bg-mazoon-accent text-dark fw-semibold px-3 py-2">
+            {% trans "عشر سنوات من التميّز والريادة" %}
+          </span>
+        </div>
+        <h1 class="display-5 fw-bold mb-3">
+          {% trans "أنظمة ألمنيوم مبتكرة للنوافذ والأبواب" %}
+        </h1>
+        <p class="lead text-muted mb-4">
+          {% trans "مزون المنيوم علامة تجارية عمانية رائدة متخصصة في تطوير وتصنيع أنظمة النوافذ والأبواب من الألمنيوم والألمنيوم العازل للحرارة، بتركيز على الأداء المعتمد، والابتكار المستمر، والشراكات المحلية الموثوقة." %}
         </p>
-        <ul class="small mb-0 ps-3">
-          {% if LANGUAGE_CODE == "ar" %}
-            <li>أنظمة نوافذ وأبواب عادية وعازل حراري</li>
-            <li>جودة معتمدة واختبارات أداء متعددة (هواء، ماء، رياح...)</li>
-            <li>تطوير مستمر ونماذج أولية واختبارات ميدانية</li>
-          {% else %}
-            <li>Standard & thermal break window and door systems</li>
-            <li>Certified performance tests (air, water, wind, thermal, acoustic)</li>
-            <li>Continuous R&amp;D, mock-ups, and field testing</li>
-          {% endif %}
-        </ul>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="{% url 'product_list' %}" class="btn btn-primary px-4">
+            {% trans "استكشف الأنظمة" %}
+          </a>
+          <a href="{% url 'about' %}" class="btn btn-outline-secondary px-4">
+            {% trans "تعرّف علينا أكثر" %}
+          </a>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
 
-
-{# ========== PILLARS OF EXCELLENCE ========== #}
-<section class="mb-5">
-  <h2 class="h4 text-light mb-3">
-    {% if LANGUAGE_CODE == "ar" %}
-      {% trans "مرتكزات التميز في مزون ألمنيوم" %}
-    {% else %}
-      {% trans "Mazoon Aluminum Pillars of Excellence" %}
-    {% endif %}
-  </h2>
-  <div class="row row-cols-1 row-cols-md-4 g-3">
-    <div class="col">
-      <div class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-        <h3 class="h6 mb-2">
-          {% if LANGUAGE_CODE == "ar" %}
-            {% trans "أنظمة متقدمة" %}
-          {% else %}
-            {% trans "Advanced Systems" %}
-          {% endif %}
-        </h3>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            أنظمة نوافذ وأبواب تغطي احتياجات المشاريع السكنية والتجارية، من الأنظمة المفصلية التقليدية حتى الأنظمة العازلة حراريًا.
-          {% else %}
-            Window & door systems that cover residential and commercial needs, from classic casement to advanced thermal-break solutions.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-
-    <div class="col">
-      <div class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-        <h3 class="h6 mb-2">
-          {% if LANGUAGE_CODE == "ar" %}
-            {% trans "أداء معتمد" %}
-          {% else %}
-            {% trans "Certified Performance" %}
-          {% endif %}
-        </h3>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            اختبارات لمقاومة الهواء والماء والرياح، إضافة إلى التركيز على العزل الحراري والصوتي لضمان راحة المستخدم.
-          {% else %}
-            Tested for air, water, and wind resistance, with strong focus on thermal and acoustic comfort for end users.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-
-    <div class="col">
-      <div class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-        <h3 class="h6 mb-2">
-          {% if LANGUAGE_CODE == "ar" %}
-            {% trans "ابتكار وتطوير مستمر" %}
-          {% else %}
-            {% trans "Continuous Innovation" %}
-          {% endif %}
-        </h3>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            من التصميم إلى النماذج الأولية والتركيب التجريبي، يتم تحسين الأنظمة باستمرار بحسب متطلبات السوق والبيئة المحلية.
-          {% else %}
-            From CAD design to mock-ups and field installations, systems are continuously improved to match local climate and project needs.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-
-    <div class="col">
-      <div class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-        <h3 class="h6 mb-2">
-          {% if LANGUAGE_CODE == "ar" %}
-            {% trans "مشاريع وشراكات" %}
-          {% else %}
-            {% trans "Projects & Partnerships" %}
-          {% endif %}
-        </h3>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            تعاون مع مكاتب استشارية، وورش الألمنيوم، وأصحاب المنازل لتقديم حلول تناسب كل مشروع.
-          {% else %}
-            Collaboration with architects, workshops, and homeowners to deliver tailored solutions for every project.
-          {% endif %}
-        </p>
+      <div class="col-lg-6 order-1 order-lg-2 d-flex justify-content-center">
+        <div class="hero-image-card rounded-4">
+          {# يمكنك استبدال الصورة لاحقًا بباث من static #}
+          <img
+            src="{% static 'img/mazoon/system-hero-placeholder.webp' %}"
+            alt="{% trans 'أنظمة مزون للنوافذ والأبواب' %}"
+            class="img-fluid rounded-4 hero-main-image"
+          >
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-
-{# ========== LOCAL PARTNERS ========== #}
+{# ======================= محاور التميز ======================= #}
 <section class="mb-5">
-  <h2 class="h4 text-light mb-3">
-    {% if LANGUAGE_CODE == "ar" %}
-      {% trans "شركاؤنا المحليون الموثوقون" %}
-    {% else %}
-      {% trans "Our Local Trusted Partners" %}
-    {% endif %}
-  </h2>
-
-  <div class="row row-cols-1 row-cols-md-3 g-3">
-    <div class="col">
-      <div class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-        <p class="text-warning small mb-1">
-          {% if LANGUAGE_CODE == "ar" %}{% trans "سحب الألمنيوم" %}{% else %}{% trans "Aluminum Extrusion" %}{% endif %}
-        </p>
-        <h3 class="h6 mb-1">NAPCO Oman</h3>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            شريكنا في بثق مقاطع الألمنيوم بجودة عالية ومعايير معتمدة.
-          {% else %}
-            Our extrusion partner for high-quality aluminum profiles with recognized standards.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-
-    <div class="col">
-      <div class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-        <p class="text-warning small mb-1">
-          {% if LANGUAGE_CODE == "ar" %}{% trans "الزجاج" %}{% else %}{% trans "Glass" %}{% endif %}
-        </p>
-        <h3 class="h6 mb-1">Al Tasnim Glass Processing Factory</h3>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            مزود ومعالج للزجاج المقسى والحلول الزجاجية لمشاريع مزون.
-          {% else %}
-            Supplier and processor of tempered glass and glazing solutions for Mazoon projects.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-
-    <div class="col">
-      <div class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-        <p class="text-warning small mb-1">
-          {% if LANGUAGE_CODE == "ar" %}{% trans "الزجاج" %}{% else %}{% trans "Glass" %}{% endif %}
-        </p>
-        <h3 class="h6 mb-1">Bahwan Metal & Glass Engineering</h3>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            حلول زجاجية وهندسية تدعم جودة الواجهات والفراغات الزجاجية.
-          {% else %}
-            Glass and façade engineering solutions that support high-quality envelopes.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-
-    <div class="col">
-      <div class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-        <p class="text-warning small mb-1">
-          {% if LANGUAGE_CODE == "ar" %}{% trans "الإكسسوارات" %}{% else %}{% trans "Hardware" %}{% endif %}
-        </p>
-        <h3 class="h6 mb-1">Reliable International L.L.C</h3>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            مزود إكسسوارات عالية الجودة ودعم فني لأنظمة مزون ألمنيوم.
-          {% else %}
-            Hardware supplier providing reliable components and technical support for Mazoon systems.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-
-    <div class="col">
-      <div class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-        <p class="text-warning small mb-1">
-          {% if LANGUAGE_CODE == "ar" %}{% trans "دهان البودرة" %}{% else %}{% trans "Powder Coating" %}{% endif %}
-        </p>
-        <h3 class="h6 mb-1">Jotun Oman</h3>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            حلول دهان بودرة لونية متينة تحافظ على جمال السطح لفترات طويلة.
-          {% else %}
-            Durable powder coating finishes that keep profiles looking great for years.
-          {% endif %}
-        </p>
-      </div>
-    </div>
+  <div class="mb-4 text-center">
+    <h2 class="h3 fw-bold mb-2">{% trans "محاور التميز في مزون ألمنيوم" %}</h2>
+    <p class="text-muted mb-0">
+      {% trans "أنظمة متطورة · أداء مُعتمد · ابتكار مستمر · شراكات ومشاريع" %}
+    </p>
   </div>
-</section>
 
-
-{# ========== SYSTEMS OVERVIEW TEXT ========== #}
-<section class="mb-5">
   <div class="row g-3">
-    <div class="col-lg-8">
-      <div class="rounded-4 bg-body-tertiary text-light p-4 h-100 shadow-sm">
-        <h2 class="h4 mb-3">
-          {% if LANGUAGE_CODE == "ar" %}
-            {% trans "Mazoon Systems للأبواب والنوافذ" %}
-          {% else %}
-            {% trans "Mazoon Systems for Windows & Doors" %}
-          {% endif %}
-        </h2>
-        <p class="small mb-2">
-          {% if LANGUAGE_CODE == "ar" %}
-            تم تصميم أنظمة مزون لتجمع بين سهولة التصنيع، قوة الأداء، وجمال التصميم، مع تركيز خاص على العزل الحراري والصوتي وملاءمة المناخ في عُمان والمنطقة.
-          {% else %}
-            Mazoon systems are engineered to combine ease of fabrication, robust performance, and elegant design, with special attention to thermal and acoustic insulation suited to Oman and the region.
-          {% endif %}
-        </p>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            الأنظمة توفر حلولًا شاملة للمشاريع السكنية والتجارية والمؤسسية، من أنظمة مفصلية قياسية إلى أنظمة عازل حراري متقدمة، مع قابلية تخصيص كبيرة حسب المشروع.
-          {% else %}
-            The range covers residential, commercial, and institutional projects, from standard casement systems to advanced thermal-break solutions, with high flexibility for project-specific requirements.
-          {% endif %}
-        </p>
+    <div class="col-md-6 col-lg-3">
+      <div class="card h-100 border-0 feature-card">
+        <div class="card-body">
+          <h3 class="h6 fw-bold mb-2">{% trans "أنظمة مزون" %}</h3>
+          <p class="small text-muted mb-0">
+            {% trans "مزون 45 · مزون 46 · مزون 56 العازل حرارياً، أنظمة مصممة لتوازن بين الجمال والمتانة وسهولة التصنيع." %}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+      <div class="card h-100 border-0 feature-card">
+        <div class="card-body">
+          <h3 class="h6 fw-bold mb-2">{% trans "أداء مُعتمد" %}</h3>
+          <p class="small text-muted mb-0">
+            {% trans "اختبارات معتمدة لأداء الهواء، الماء، الرياح، العزل الحراري، والعزل الصوتي لضمان أداء ثابت على المدى الطويل." %}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+      <div class="card h-100 border-0 feature-card">
+        <div class="card-body">
+          <h3 class="h6 fw-bold mb-2">{% trans "البحث والتطوير" %}</h3>
+          <p class="small text-muted mb-0">
+            {% trans "من التصميم الرقمي إلى النماذج الأولية والاختبارات الميدانية، نطوّر الأنظمة وفق احتياجات السوق المحلية." %}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+      <div class="card h-100 border-0 feature-card">
+        <div class="card-body">
+          <h3 class="h6 fw-bold mb-2">{% trans "المشاريع والشركاء" %}</h3>
+          <p class="small text-muted mb-0">
+            {% trans "حلول متكاملة للمعماريين، الورش، وأصحاب المنازل، مع دعم فني وشركاء تصنيع وزجاج واكسسوارات موثوقين." %}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ======================= أنظمة مزون (ثلاثية ثابتة) ======================= #}
+<section class="mb-5">
+  <div class="mb-4 text-center">
+    <h2 class="h3 fw-bold mb-2">{% trans "أنظمة مزون للنوافذ والأبواب" %}</h2>
+    <p class="text-muted mb-0">
+      {% trans "جيل متطور من الأنظمة المفصلية، مع خيارات للعزل الحراري وتعدد غرف العزل." %}
+    </p>
+  </div>
+
+  <div class="row g-4 align-items-stretch">
+    <div class="col-lg-4">
+      <div class="card h-100 system-card border-0">
+        <div class="card-body">
+          <h3 class="h5 fw-bold mb-2">{% trans "مزون 45 – نظام مفصلي" %}</h3>
+          <p class="small text-muted mb-3">
+            {% trans "نظام مفصلي يجمع بين سهولة التصنيع وجودة الإنتاج مع تصميم أنيق يناسب الواجهات الحديثة." %}
+          </p>
+          <a href="#" class="btn btn-sm btn-outline-primary">
+            {% trans "إقرأ المزيد" %}
+          </a>
+        </div>
       </div>
     </div>
 
     <div class="col-lg-4">
-      <div class="rounded-4 bg-dark text-light border border-secondary p-4 h-100 d-flex flex-column justify-content-center text-center shadow-sm">
-        <div class="mb-3">
-          <div class="display-6 fw-bold">25+</div>
-          <div class="small text-light-50">
-            {% if LANGUAGE_CODE == "ar" %}
-              {% trans "قوالب (Die) لأنظمة مزون" %}
-            {% else %}
-              {% trans "Dies developed for Mazoon systems" %}
-            {% endif %}
-          </div>
+      <div class="card h-100 system-card border-0">
+        <div class="card-body">
+          <h3 class="h5 fw-bold mb-2">{% trans "مزون 46 – تطوير مزون 45" %}</h3>
+          <p class="small text-muted mb-3">
+            {% trans "يضيف غرف عزل إضافية لتحسين الأداء الصوتي والهوائي مع الحفاظ على سهولة التصنيع والمتانة العالية." %}
+          </p>
+          <a href="#" class="btn btn-sm btn-outline-primary">
+            {% trans "إقرأ المزيد" %}
+          </a>
         </div>
-        <div class="mb-3">
-          <div class="h5 fw-bold mb-0">
-            {% if LANGUAGE_CODE == "ar" %}
-              {% trans "أنظمة متعددة" %}
-            {% else %}
-              {% trans "Multiple Systems" %}
-            {% endif %}
-          </div>
-          <div class="small text-light-50">
-            Mazoon 45 · Mazoon 46 · Mazoon 56 TB
-          </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card h-100 system-card border-0">
+        <div class="card-body">
+          <h3 class="h5 fw-bold mb-2">{% trans "مزون 56 – نظام مفصلي عازل للحرارة" %}</h3>
+          <p class="small text-muted mb-3">
+            {% trans "نظام ثيرمال بريك يوفر عزلًا حراريًا متقدمًا وترشيدًا في استهلاك الطاقة مع الحفاظ على جماليات التصميم." %}
+          </p>
+          <a href="#" class="btn btn-sm btn-outline-primary">
+            {% trans "إقرأ المزيد" %}
+          </a>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-
-{# ========== BENEFITS GRID ========== #}
+{# ======================= منتجات مختارة (ديناميكي) ======================= #}
 <section class="mb-5">
-  <h2 class="h4 text-light mb-3">
-    {% if LANGUAGE_CODE == "ar" %}
-      {% trans "نصنع لك الحل الأنسب" %}
-    {% else %}
-      {% trans "We are creating the perfect solution for you" %}
-    {% endif %}
-  </h2>
-
-  <div class="row row-cols-1 row-cols-md-4 g-3">
-    {% comment %} Thermal Insulation {% endcomment %}
-    <div class="col">
-      <div class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-        <h3 class="h6 mb-1">🌡️
-          {% if LANGUAGE_CODE == "ar" %}{% trans "عزل حراري" %}{% else %}{% trans "Thermal Insulation" %}{% endif %}
-        </h3>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            تساعد الأنظمة على تقليل انتقال الحرارة، مما يخفف الاعتماد على التكييف أو التدفئة ويوفر في الطاقة.
-          {% else %}
-            Systems reduce heat transfer, lowering dependence on cooling or heating and helping save energy.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-
-    {% comment %} Soundproofing {% endcomment %}
-    <div class="col">
-      <div class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-        <h3 class="h6 mb-1">🔇
-          {% if LANGUAGE_CODE == "ar" %}{% trans "عزل صوتي" %}{% else %}{% trans "Soundproofing" %}{% endif %}
-        </h3>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            تخفف الإزعاج الخارجي لتعطيك فراغًا داخليًا أكثر هدوءًا، حتى في البيئات المزدحمة.
-          {% else %}
-            Reduces outside noise to keep your indoor spaces quieter, even in busy areas.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-
-    {% comment %} Rain Protection {% endcomment %}
-    <div class="col">
-      <div class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-        <h3 class="h6 mb-1">🌧️
-          {% if LANGUAGE_CODE == "ar" %}{% trans "حماية من الأمطار" %}{% else %}{% trans "Protection from Rain" %}{% endif %}
-        </h3>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            حشوات وإكسسوارات متخصصة تقلل تسرب المياه وتحافظ على أداء مستقر خلال مواسم الأمطار.
-          {% else %}
-            Specialized gaskets and hardware minimize water leakage and keep performance stable during rainy seasons.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-
-    {% comment %} Low Maintenance {% endcomment %}
-    <div class="col">
-      <div class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-        <h3 class="h6 mb-1">🧽
-          {% if LANGUAGE_CODE == "ar" %}{% trans "صيانة منخفضة" %}{% else %}{% trans "Low Maintenance" %}{% endif %}
-        </h3>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            يسهل تنظيف الألمنيوم والعناية به، مع بقاء المظهر أنيقًا لفترات طويلة.
-          {% else %}
-            Aluminum is easy to clean and maintain while preserving a neat appearance over time.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-
-    {% comment %} Environmentally Friendly {% endcomment %}
-    <div class="col">
-      <div class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-        <h3 class="h6 mb-1">♻️
-          {% if LANGUAGE_CODE == "ar" %}{% trans "صديق للبيئة" %}{% else %}{% trans "Environmentally Friendly" %}{% endif %}
-        </h3>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            الألمنيوم يمكن إعادة تدويره عدة مرات مع الحفاظ على خصائصه، مما يقلل الهدر واستهلاك الطاقة.
-          {% else %}
-            Aluminum can be recycled many times while keeping its properties, reducing waste and energy consumption.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-
-    {% comment %} Strong Build {% endcomment %}
-    <div class="col">
-      <div class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-        <h3 class="h6 mb-1">🛡️
-          {% if LANGUAGE_CODE == "ar" %}{% trans "متانة وقوة" %}{% else %}{% trans "Strong Build" %}{% endif %}
-        </h3>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            الألمنيوم مقاوم للعوامل الجوية، ويعمل بكفاءة لفترات طويلة في ظروف الشمس والرياح والأمطار.
-          {% else %}
-            Aluminum withstands weather conditions and keeps performing under sun, wind, and rain for many years.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-
-    {% comment %} Design Flexibility {% endcomment %}
-    <div class="col">
-      <div class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-        <h3 class="h6 mb-1">🎨
-          {% if LANGUAGE_CODE == "ar" %}{% trans "مرونة في التصميم" %}{% else %}{% trans "Design Flexibility" %}{% endif %}
-        </h3>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            خيارات متعددة للتصميمات والألوان لتتناسب مع واجهات وأنماط معمارية مختلفة.
-          {% else %}
-            Multiple design and color options to fit different façade styles and architectural concepts.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-
-    {% comment %} Easy Installation {% endcomment %}
-    <div class="col">
-      <div class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-        <h3 class="h6 mb-1">⚙️
-          {% if LANGUAGE_CODE == "ar" %}{% trans "سهولة في التركيب" %}{% else %}{% trans "Easy Installation" %}{% endif %}
-        </h3>
-        <p class="small mb-0">
-          {% if LANGUAGE_CODE == "ar" %}
-            أنظمة مصممة لتسهيل التصنيع والتركيب في الورش والمواقع، مع المحافظة على الأداء.
-          {% else %}
-            Systems are designed for straightforward fabrication and on-site installation while keeping performance high.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
-
-
-{# ========== PRODUCTS SECTION (DYNAMIC + FALLBACK) ========== #}
-<section class="mb-5">
-  <h2 class="h4 text-light mb-3">
-    {% if LANGUAGE_CODE == "ar" %}
-      {% trans "أنظمة ومنتجات مزون" %}
-    {% else %}
-      {% trans "Mazoon Products & Systems" %}
-    {% endif %}
-  </h2>
-
-  {% if featured_products %}
-    <div class="row row-cols-1 row-cols-md-3 g-3">
-      {% for product in featured_products %}
-        <div class="col">
-          <div class="card h-100 rounded-4 bg-body-tertiary text-light border-0 shadow-sm">
-            <div class="card-body d-flex flex-column">
-              <h3 class="h6 card-title mb-2">{{ product.name }}</h3>
-              <p class="card-text small text-light-50 flex-grow-1">
-                {{ product.description|truncatewords:25 }}
-              </p>
-              <div class="d-flex justify-content-between align-items-center mt-2">
-                {% if product.price %}
-                  <span class="fw-bold">{{ product.price }} ر.ع</span>
-                {% endif %}
-                <span class="badge text-bg-success">
-                  {% if LANGUAGE_CODE == "ar" %}{% trans "متوفر" %}{% else %}{% trans "Available" %}{% endif %}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  {% else %}
-    {# Fallback ثابت للأنظمة الثلاثة الرئيسية إذا لم يكن هناك بيانات منتج #}
-    <div class="row row-cols-1 row-cols-md-3 g-3">
-      <div class="col">
-        <div class="card h-100 rounded-4 bg-body-tertiary text-light border-0 shadow-sm">
-          <div class="card-body">
-            <h3 class="h6 card-title mb-2">Mazoon 45 Casement System</h3>
-            <p class="card-text small text-light-50 mb-0">
-              {% if LANGUAGE_CODE == "ar" %}
-                نظام مفصلي يوازن بين سهولة التصنيع وجودة الإنتاج، بتصميم عصري ملائم لمختلف المشاريع.
-              {% else %}
-                A casement system balancing ease of fabrication and production quality with a modern look for various projects.
-              {% endif %}
-            </p>
-          </div>
-        </div>
-      </div>
-      <div class="col">
-        <div class="card h-100 rounded-4 bg-body-tertiary text-light border-0 shadow-sm">
-          <div class="card-body">
-            <h3 class="h6 card-title mb-2">Mazoon 46 Casement System</h3>
-            <p class="card-text small text-light-50 mb-0">
-              {% if LANGUAGE_CODE == "ar" %}
-                تطوير طبيعي لنظام Mazoon 45 مع غرف عزل إضافية لرفع كفاءة العزل الصوتي والهوائي.
-              {% else %}
-                A natural evolution of Mazoon 45 with additional insulation chambers for better acoustic and air performance.
-              {% endif %}
-            </p>
-          </div>
-        </div>
-      </div>
-      <div class="col">
-        <div class="card h-100 rounded-4 bg-body-tertiary text-light border-0 shadow-sm">
-          <div class="card-body">
-            <h3 class="h6 card-title mb-2">Mazoon 56 Thermal Break</h3>
-            <p class="card-text small text-light-50 mb-0">
-              {% if LANGUAGE_CODE == "ar" %}
-                نظام متقدم بإضافة خاصية العازل الحراري لرفع كفاءة استهلاك الطاقة وتوفير راحة مثالية في مختلف الظروف المناخية.
-              {% else %}
-                An advanced system with thermal-break technology for high energy efficiency and comfort in diverse climates.
-              {% endif %}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  {% endif %}
-</section>
-
-
-{# ========== LATEST BLOG CONTENT ========== #}
-<section class="mb-2">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="h4 text-light mb-0">
-      {% if LANGUAGE_CODE == "ar" %}
-        {% trans "أحدث المحتوى من المدونة" %}
-      {% else %}
-        {% trans "Our latest content" %}
-      {% endif %}
-    </h2>
-    <a href="{% url 'blog_list' %}" class="small text-decoration-none text-warning">
-      {% if LANGUAGE_CODE == "ar" %}{% trans "عرض جميع التدوينات" %}{% else %}{% trans "View all posts" %}{% endif %}
+    <h2 class="h4 fw-bold mb-0">{% trans "منتجات مختارة" %}</h2>
+    <a href="{% url 'product_list' %}" class="small text-decoration-none text-secondary">
+      {% trans "عرض جميع المنتجات" %} →
     </a>
   </div>
 
-  {% if latest_posts %}
-    <div class="row row-cols-1 row-cols-md-3 g-3">
-      {% for post in latest_posts %}
-        <div class="col">
-          <article class="h-100 rounded-4 bg-body-tertiary text-light p-3 shadow-sm">
-            <h3 class="h6 mb-1">
-              <a href="{{ post.get_absolute_url }}" class="text-decoration-none text-light">
+  <div class="row row-cols-1 row-cols-md-3 g-3">
+    {% for product in featured_products %}
+      <div class="col">
+        <div class="card h-100 product-card">
+          <div class="card-body d-flex flex-column">
+            <h3 class="h6 card-title fw-bold mb-2">{{ product.name }}</h3>
+            <p class="card-text text-muted small flex-grow-1 mb-3">
+              {{ product.description|default_if_none:""|truncatewords:22 }}
+            </p>
+            <div class="d-flex justify-content-between align-items-center mt-auto">
+              <span class="fw-bold text-mazoon">
+                {{ product.price }} {% trans "ر.ع" %}
+              </span>
+              <span class="badge bg-success-subtle text-success border border-success-subtle">
+                {% trans "متوفر" %}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-muted mb-0">{% trans "لا توجد منتجات حتى الآن." %}</p>
+    {% endfor %}
+  </div>
+</section>
+
+{# ======================= أحدث التدوينات (ديناميكي) ======================= #}
+<section class="mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="h4 fw-bold mb-0">{% trans "أحدث من المدونة" %}</h2>
+    <a href="{% url 'blog_list' %}" class="small text-decoration-none text-secondary">
+      {% trans "الانتقال إلى المدونة" %} →
+    </a>
+  </div>
+
+  <div class="row row-cols-1 row-cols-md-3 g-3">
+    {% for post in latest_posts %}
+      <article class="col">
+        <div class="card h-100 blog-card border-0">
+          <div class="card-body d-flex flex-column">
+            <h3 class="h6 fw-bold mb-2">
+              <a href="{% url 'blog_detail' slug=post.slug %}" class="stretched-link text-decoration-none text-dark">
                 {{ post.title }}
               </a>
             </h3>
-            <p class="small text-light-50 mb-2">
-              📅 {{ post.published_at|date:"Y-m-d" }}
+            <p class="small text-muted mb-2">
+              {{ post.body|truncatewords:25 }}
             </p>
-            <p class="small text-light-50 mb-0">
-              {{ post.meta_description|default:post.body|truncatechars:160 }}
-            </p>
-          </article>
+            <div class="mt-auto d-flex justify-content-between align-items-center small text-muted">
+              <span>
+                {{ post.published_at|date:"Y-m-d" }}
+              </span>
+            </div>
+          </div>
         </div>
-      {% endfor %}
-    </div>
-  {% else %}
-    <p class="text-light-50">
-      {% if LANGUAGE_CODE == "ar" %}
-        {% trans "لا توجد تدوينات حتى الآن، سيتم عرض المحتوى الجديد هنا عند إضافته." %}
-      {% else %}
-        {% trans "No posts yet. New content will appear here once published." %}
-      {% endif %}
+      </article>
+    {% empty %}
+      <p class="text-muted mb-0">{% trans "لا توجد تدوينات حتى الآن." %}</p>
+    {% endfor %}
+  </div>
+</section>
+
+{# ======================= شركاؤنا المحليون (بسيطة) ======================= #}
+<section class="mb-3">
+  <div class="mb-3 text-center">
+    <h2 class="h5 fw-bold mb-1">{% trans "شركاؤنا المحليون الموثوقون" %}</h2>
+    <p class="text-muted small mb-0">
+      {% trans "سحب الألمنيوم · الزجاج · الأجهزة والاكسسوارات · باودر الصبغ" %}
     </p>
-  {% endif %}
+  </div>
+
+  <div class="row g-3 text-center text-md-start">
+    <div class="col-md-6 col-lg-3">
+      <div class="card border-0 partner-card h-100">
+        <div class="card-body">
+          <h3 class="h6 fw-bold mb-1">{% trans "نابكو عمان لسحب الألمنيوم" %}</h3>
+          <p class="small text-muted mb-0">
+            {% trans "شريك سحب مقاطع الألمنيوم المعتمدة بمعايير ISO." %}
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="card border-0 partner-card h-100">
+        <div class="card-body">
+          <h3 class="h6 fw-bold mb-1">{% trans "مصنع التسنيم لمعالجة الزجاج" %}</h3>
+          <p class="small text-muted mb-0">
+            {% trans "توريد، معالجة، وتقسية الزجاج لمشاريع مزون." %}
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="card border-0 partner-card h-100">
+        <div class="card-body">
+          <h3 class="h6 fw-bold mb-1">{% trans "بهوان لهندسة المعادن والزجاج" %}</h3>
+          <p class="small text-muted mb-0">
+            {% trans "حلول زجاج متقدمة للمشاريع الخاصة." %}
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+      <div class="card border-0 partner-card h-100">
+        <div class="card-body">
+          <h3 class="h6 fw-bold mb-1">{% trans "مجموعة تاول – باودر كوتنج" %}</h3>
+          <p class="small text-muted mb-0">
+            {% trans "الوكيل الرسمي لباودر الصبغ جوتن (جوتن عمان)." %}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
 {% endblock %}
