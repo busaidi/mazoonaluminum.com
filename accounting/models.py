@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
@@ -213,3 +214,82 @@ def update_invoice_on_payment_delete(sender, instance: Payment, **kwargs):
     """
     if instance.invoice_id:
         instance.invoice.update_paid_amount()
+
+
+class Order(models.Model):
+    STATUS_DRAFT = "draft"
+    STATUS_PENDING = "pending"      # طلب أونلاين ينتظر تأكيد موظف
+    STATUS_CONFIRMED = "confirmed"  # تم التأكيد
+    STATUS_CANCELLED = "cancelled"
+
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, "مسودة"),
+        (STATUS_PENDING, "بانتظار التأكيد"),
+        (STATUS_CONFIRMED, "مؤكد"),
+        (STATUS_CANCELLED, "ملغي"),
+    ]
+
+    customer = models.ForeignKey(
+        "accounting.Customer",
+        on_delete=models.PROTECT,
+        related_name="orders",
+        verbose_name="الزبون",
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders_created"
+    )
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING
+    )
+    is_online = models.BooleanField(
+        default=False,
+        help_text="صحيح إذا كان الطلب تم من بوابة الزبون.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    confirmed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="confirmed_orders",
+        verbose_name="تم تأكيده بواسطة",
+    )
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True, verbose_name="ملاحظات داخلية")
+
+    class Meta:
+        ordering = ("-created_at", "id")
+
+    def __str__(self):
+        return f"طلب #{self.pk} - {self.customer}"
+
+    @property
+    def total_amount(self):
+        return sum(item.subtotal for item in self.items.all())
+
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="items",
+        verbose_name="الطلب",
+    )
+    product = models.ForeignKey(
+        "website.Product",  # غيّرها لو الموديل في مكان آخر
+        on_delete=models.PROTECT,
+        verbose_name="المنتج",
+    )
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=3)
+
+    @property
+    def subtotal(self):
+        return self.quantity * self.unit_price
+
+    def __str__(self):
+        return f"{self.product} × {self.quantity}"

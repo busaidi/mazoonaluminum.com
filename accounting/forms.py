@@ -1,6 +1,8 @@
 # accounting/forms.py
 
 from django import forms
+
+from website.models import Product
 from .models import Invoice, Payment, Customer
 
 
@@ -100,3 +102,39 @@ class CustomerProfileForm(forms.ModelForm):
             "tax_number": forms.TextInput(attrs={"class": "form-control"}),
             "address": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }
+
+
+class CustomerOrderForm(forms.Form):
+    quantity = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=0.01,
+        label="الكمية المطلوبة",
+    )
+    notes = forms.CharField(
+        label="ملاحظات إضافية (اختياري)",
+        widget=forms.Textarea(attrs={"rows": 3}),
+        required=False,
+    )
+
+
+class StaffOrderForm(forms.Form):
+    customer = forms.ModelChoiceField(
+        queryset=Customer.objects.all(),
+        label="الزبون",
+    )
+    product = forms.ModelChoiceField(
+        queryset=Product.objects.filter(is_active=True),
+        label="المنتج",
+    )
+    quantity = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=0.01,
+        label="الكمية",
+    )
+    notes = forms.CharField(
+        label="ملاحظات (اختياري)",
+        widget=forms.Textarea(attrs={"rows": 3}),
+        required=False,
+    )

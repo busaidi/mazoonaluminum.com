@@ -1,0 +1,33 @@
+{% extends "portal/base.html" %}
+
+{% block content %}
+<h2>طلباتي</h2>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>الحالة</th>
+            <th>التاريخ</th>
+            <th>الإجمالي</th>
+            <th>عرض</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for order in orders %}
+        <tr>
+            <td>{{ order.id }}</td>
+            <td>{{ order.get_status_display }}</td>
+            <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+            <td>{{ order.total_amount }}</td>
+            <td>
+                <a href="{% url 'portal:order_detail' order.id %}" class="btn btn-sm btn-info">التفاصيل</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center">لا توجد طلبات</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

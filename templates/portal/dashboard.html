@@ -1,63 +1,86 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}لوحة الزبون{% endblock %}
+{% block title %}{% trans "لوحة الزبون" %}{% endblock %}
 
 {% block content %}
 <div class="container py-4">
 
-  <div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h4 mb-0">مرحبًا، {{ customer.name }}</h1>
-  <a href="{% url 'portal:profile' %}" class="btn btn-outline-primary btn-sm">
-    تحديث بياناتي
-  </a>
-</div>
+  {# ===== الهيدر (اسم الزبون + الأزرار) ===== #}
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <h1 class="h4 mb-2 mb-md-0">
+      {% trans "مرحبًا" %}، {{ customer.name }}
+    </h1>
 
+    <div class="d-flex gap-2">
+      <a href="{% url 'portal:profile' %}" class="btn btn-outline-primary btn-sm">
+        {% trans "تحديث بياناتي" %}
+      </a>
+      <a href="{% url 'portal:order_list' %}" class="btn btn-outline-secondary btn-sm">
+        {% trans "طلباتي" %}
+      </a>
+    </div>
+  </div>
 
+  {# ===== كروت الملخص المالي ===== #}
   <div class="row g-3 mb-4">
     <div class="col-md-4 col-sm-6">
-      <div class="card h-100">
+      <div class="card h-100 shadow-sm">
         <div class="card-body">
-          <h6 class="text-muted mb-1">إجمالي الفواتير</h6>
-          <div class="fs-5 fw-bold">{{ total_invoices }}</div>
+          <h6 class="text-muted mb-1">{% trans "إجمالي الفواتير" %}</h6>
+          <div class="fs-5 fw-bold">
+            {{ total_invoices|floatformat:3 }}
+            <span class="small text-muted">{% trans "ر.ع" %}</span>
+          </div>
         </div>
       </div>
     </div>
+
     <div class="col-md-4 col-sm-6">
-      <div class="card h-100">
+      <div class="card h-100 shadow-sm">
         <div class="card-body">
-          <h6 class="text-muted mb-1">إجمالي الدفعات</h6>
-          <div class="fs-5 fw-bold">{{ total_paid }}</div>
+          <h6 class="text-muted mb-1">{% trans "إجمالي الدفعات" %}</h6>
+          <div class="fs-5 fw-bold text-success">
+            {{ total_paid|floatformat:3 }}
+            <span class="small text-muted">{% trans "ر.ع" %}</span>
+          </div>
         </div>
       </div>
     </div>
+
     <div class="col-md-4 col-sm-6">
-      <div class="card h-100">
+      <div class="card h-100 shadow-sm">
         <div class="card-body">
-          <h6 class="text-muted mb-1">الرصيد المتبقي</h6>
-          <div class="fs-5 fw-bold">{{ balance }}</div>
+          <h6 class="text-muted mb-1">{% trans "الرصيد المتبقي" %}</h6>
+          <div class="fs-5 fw-bold {% if balance > 0 %}text-danger{% else %}text-muted{% endif %}">
+            {{ balance|floatformat:3 }}
+            <span class="small text-muted">{% trans "ر.ع" %}</span>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
+  {# ===== الجداول: آخر الفواتير + آخر الدفعات ===== #}
   <div class="row g-3">
     <!-- آخر الفواتير -->
     <div class="col-md-6">
-      <div class="card h-100">
+      <div class="card h-100 shadow-sm">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <h5 class="card-title mb-0">آخر الفواتير</h5>
+            <h5 class="card-title mb-0">{% trans "آخر الفواتير" %}</h5>
             <a href="{% url 'portal:invoice_list' %}" class="btn btn-sm btn-outline-primary">
-              كل الفواتير
+              {% trans "كل الفواتير" %}
             </a>
           </div>
-          <table class="table table-sm mb-0">
-            <thead>
+
+          <table class="table table-sm mb-0 align-middle">
+            <thead class="table-light">
               <tr>
-                <th>رقم</th>
-                <th>التاريخ</th>
-                <th>الإجمالي</th>
-                <th>المتبقي</th>
+                <th>{% trans "رقم" %}</th>
+                <th>{% trans "التاريخ" %}</th>
+                <th>{% trans "الإجمالي" %}</th>
+                <th>{% trans "المتبقي" %}</th>
               </tr>
             </thead>
             <tbody>
@@ -68,14 +91,20 @@
                     {{ inv.number }}
                   </a>
                 </td>
-                <td>{{ inv.issued_at }}</td>
-                <td>{{ inv.total_amount }}</td>
-                <td>{{ inv.balance }}</td>
+                <td>{{ inv.issued_at|date:"Y-m-d" }}</td>
+                <td>
+                  {{ inv.total_amount|floatformat:3 }}
+                  <span class="small text-muted">{% trans "ر.ع" %}</span>
+                </td>
+                <td>
+                  {{ inv.balance|floatformat:3 }}
+                  <span class="small text-muted">{% trans "ر.ع" %}</span>
+                </td>
               </tr>
               {% empty %}
               <tr>
-                <td colspan="4" class="text-muted text-center">
-                  لا توجد فواتير حتى الآن.
+                <td colspan="4" class="text-muted text-center py-3">
+                  {% trans "لا توجد فواتير حتى الآن." %}
                 </td>
               </tr>
               {% endfor %}
@@ -87,33 +116,37 @@
 
     <!-- آخر الدفعات -->
     <div class="col-md-6">
-      <div class="card h-100">
+      <div class="card h-100 shadow-sm">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <h5 class="card-title mb-0">آخر الدفعات</h5>
+            <h5 class="card-title mb-0">{% trans "آخر الدفعات" %}</h5>
             <a href="{% url 'portal:payment_list' %}" class="btn btn-sm btn-outline-primary">
-              كل الدفعات
+              {% trans "كل الدفعات" %}
             </a>
           </div>
-          <table class="table table-sm mb-0">
-            <thead>
+
+          <table class="table table-sm mb-0 align-middle">
+            <thead class="table-light">
               <tr>
-                <th>التاريخ</th>
-                <th>المبلغ</th>
-                <th>الطريقة</th>
+                <th>{% trans "التاريخ" %}</th>
+                <th>{% trans "المبلغ" %}</th>
+                <th>{% trans "الطريقة" %}</th>
               </tr>
             </thead>
             <tbody>
               {% for p in recent_payments %}
               <tr>
-                <td>{{ p.date }}</td>
-                <td>{{ p.amount }}</td>
+                <td>{{ p.date|date:"Y-m-d" }}</td>
+                <td>
+                  {{ p.amount|floatformat:3 }}
+                  <span class="small text-muted">{% trans "ر.ع" %}</span>
+                </td>
                 <td>{{ p.get_method_display }}</td>
               </tr>
               {% empty %}
               <tr>
-                <td colspan="3" class="text-muted text-center">
-                  لا توجد دفعات حتى الآن.
+                <td colspan="3" class="text-muted text-center py-3">
+                  {% trans "لا توجد دفعات حتى الآن." %}
                 </td>
               </tr>
               {% endfor %}

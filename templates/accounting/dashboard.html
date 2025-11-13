@@ -5,65 +5,64 @@
 {% block content %}
 <div class="container py-4">
 
-  <!-- العنوان الرئيسي + زر إنشاء فاتورة -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h3 mb-0">لوحة المحاسبة</h1>
-    <div>
-      <a href="{% url 'accounting:invoice_create' %}" class="btn btn-primary">
+    <div class="d-flex gap-2">
+      <a href="{% url 'accounting:invoice_create' %}" class="btn btn-primary btn-sm">
         + إنشاء فاتورة جديدة
+      </a>
+      <a href="{% url 'accounting:customer_create' %}" class="btn btn-outline-primary btn-sm">
+        + إضافة زبون
       </a>
     </div>
   </div>
 
-  <!-- الكروت الأساسية (إحصائيات سريعة) -->
+  <!-- الكروت الأساسية -->
   <div class="row g-3 mb-4">
-    <div class="col-md-3 col-sm-6">
+    <div class="col-md-3">
       <div class="card h-100">
         <div class="card-body">
-          <h6 class="text-muted mb-1">عدد الفواتير</h6>
+          <h6 class="text-muted">عدد الفواتير</h6>
           <div class="fs-4 fw-bold">{{ invoice_count }}</div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-3 col-sm-6">
+    <div class="col-md-3">
       <div class="card h-100">
         <div class="card-body">
-          <h6 class="text-muted mb-1">عدد العملاء</h6>
+          <h6 class="text-muted">عدد العملاء</h6>
           <div class="fs-4 fw-bold">{{ customer_count }}</div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-3 col-sm-6">
+    <div class="col-md-3">
       <div class="card h-100">
         <div class="card-body">
-          <h6 class="text-muted mb-1">إجمالي مبالغ الفواتير</h6>
-          <div class="fs-5 fw-bold">{{ total_amount }}</div>
+          <h6 class="text-muted">عدد الطلبات</h6>
+          <div class="fs-4 fw-bold">{{ order_count }}</div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-3 col-sm-6">
+    <div class="col-md-3">
       <div class="card h-100">
         <div class="card-body">
-          <h6 class="text-muted mb-1">إجمالي المبالغ المتبقية</h6>
+          <h6 class="text-muted">إجمالي المتبقي</h6>
           <div class="fs-5 fw-bold">{{ total_balance }}</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- روابط سريعة (فواتير / زبائن / ملاحظات) -->
+  <!-- روابط سريعة -->
   <div class="row g-3 mb-4">
-    <!-- الفواتير -->
     <div class="col-md-4">
       <div class="card h-100">
         <div class="card-body d-flex flex-column">
           <h5 class="card-title">الفواتير</h5>
-          <p class="card-text text-muted">
-            عرض وإدارة فواتير العملاء، مع إمكانية إضافة دفعات لكل فاتورة.
-          </p>
+          <p class="card-text text-muted">عرض وإدارة فواتير العملاء.</p>
           <div class="mt-auto">
             <a href="{% url 'accounting:invoice_list' %}" class="btn btn-outline-primary btn-sm">
               عرض كل الفواتير
@@ -73,47 +72,42 @@
       </div>
     </div>
 
-    <!-- الزبائن -->
     <div class="col-md-4">
       <div class="card h-100">
         <div class="card-body d-flex flex-column">
-          <h5 class="card-title">الزبائن</h5>
-          <p class="card-text text-muted mb-1">
-            عدد الزبائن: {{ customer_count }}
-          </p>
-          <p class="card-text text-muted small">
-            يمكنك إضافة وتعديل وحذف الزبائن من واجهة الموظف مباشرة.
-          </p>
+          <h5 class="card-title">العملاء</h5>
+          <p class="card-text text-muted">إدارة بيانات العملاء وربطهم بالفواتير والطلبات.</p>
           <div class="mt-auto">
             <a href="{% url 'accounting:customer_list' %}" class="btn btn-outline-primary btn-sm">
-              إدارة الزبائن
+              عرض كل العملاء
             </a>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ملاحظات / الدفعات -->
+    <!-- الطلبات -->
     <div class="col-md-4">
       <div class="card h-100">
         <div class="card-body d-flex flex-column">
-          <h5 class="card-title">الدفعات والملاحظات</h5>
-          <p class="card-text text-muted mb-1">
-            عدد الدفعات المسجلة: {{ payment_count }}
+          <h5 class="card-title">الطلبات</h5>
+          <p class="card-text text-muted">
+            متابعة طلبات العملاء (قبل وبعد تحويلها إلى فواتير).
           </p>
-          <p class="card-text text-muted small mb-0">
-            إضافة الدفعات تتم حاليًا من شاشة تفاصيل الفاتورة،
-            ويمكن لاحقًا إضافة شاشة مخصصة لإدارة الدفعات وتقاريرها.
-          </p>
+          <div class="mt-auto">
+            <a href="{% url 'accounting:order_list' %}" class="btn btn-outline-primary btn-sm">
+              عرض كل الطلبات
+            </a>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- آخر الفواتير + آخر الدفعات -->
+  <!-- آخر الفواتير + آخر الطلبات + آخر الدفعات -->
   <div class="row g-3">
     <!-- آخر الفواتير -->
-    <div class="col-md-6">
+    <div class="col-md-4">
       <div class="card h-100">
         <div class="card-body">
           <h5 class="card-title mb-3">آخر الفواتير</h5>
@@ -123,7 +117,6 @@
                 <th>رقم</th>
                 <th>العميل</th>
                 <th>التاريخ</th>
-                <th>الإجمالي</th>
                 <th>المتبقي</th>
               </tr>
             </thead>
@@ -137,12 +130,11 @@
                 </td>
                 <td>{{ inv.customer.name }}</td>
                 <td>{{ inv.issued_at }}</td>
-                <td>{{ inv.total_amount }}</td>
                 <td>{{ inv.balance }}</td>
               </tr>
               {% empty %}
               <tr>
-                <td colspan="5" class="text-muted text-center">
+                <td colspan="4" class="text-muted text-center">
                   لا توجد فواتير بعد.
                 </td>
               </tr>
@@ -153,8 +145,47 @@
       </div>
     </div>
 
+    <!-- آخر الطلبات -->
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">آخر الطلبات</h5>
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>العميل</th>
+                <th>التاريخ</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for order in recent_orders %}
+              <tr>
+                <td>
+                  <a href="{% url 'accounting:order_detail' pk=order.pk %}">
+                    {{ order.id }}
+                  </a>
+                </td>
+                <td>{{ order.customer.name }}</td>
+                <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+                <td>{{ order.get_status_display }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-muted text-center">
+                  لا توجد طلبات حتى الآن.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- آخر الدفعات -->
-    <div class="col-md-6">
+    <div class="col-md-4">
       <div class="card h-100">
         <div class="card-body">
           <h5 class="card-title mb-3">آخر الدفعات</h5>
@@ -164,7 +195,6 @@
                 <th>التاريخ</th>
                 <th>العميل</th>
                 <th>المبلغ</th>
-                <th>الطريقة</th>
               </tr>
             </thead>
             <tbody>
@@ -173,11 +203,10 @@
                 <td>{{ p.date }}</td>
                 <td>{{ p.customer.name }}</td>
                 <td>{{ p.amount }}</td>
-                <td>{{ p.get_method_display }}</td>
               </tr>
               {% empty %}
               <tr>
-                <td colspan="4" class="text-muted text-center">
+                <td colspan="3" class="text-muted text-center">
                   لا توجد دفعات مسجلة حتى الآن.
                 </td>
               </tr>
@@ -187,6 +216,7 @@
         </div>
       </div>
     </div>
+
   </div>
 
 </div>

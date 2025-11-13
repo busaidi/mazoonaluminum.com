@@ -21,7 +21,7 @@
 
 {% block og_type %}product{% endblock %}
 {% block og_url %}{{ request.build_absolute_uri }}{% endblock %}
-{% block og_image %}{% endblock %} {# يمكن تعبئته لاحقاً بصورة المنتج #}
+{% block og_image %}{% endblock %}
 
 {% block twitter_card %}summary_large_image{% endblock %}
 {% block twitter_title %}
@@ -58,6 +58,41 @@
           </p>
         {% endif %}
 
+        {# ===== أزرار الطلب والسلة ===== #}
+        {% if user.is_authenticated %}
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <!-- اطلب الآن: ينقل للبوابة ويعمل Order للمنتج مباشرة -->
+            <a href="{% url 'portal:portal_order_create' product.id %}" class="btn btn-primary">
+              {% trans "اطلب الآن" %}
+            </a>
+
+            <!-- إضافة إلى السلة -->
+            <form method="post"
+                  action="{% url 'cart:add' product.id %}"
+                  class="d-flex align-items-center gap-2">
+              {% csrf_token %}
+              <input type="number"
+                     name="quantity"
+                     value="1"
+                     min="1"
+                     step="1"
+                     class="form-control form-control-sm"
+                     style="width: 90px;">
+              <button type="submit" class="btn btn-outline-secondary btn-sm">
+                {% trans "إضافة إلى السلة" %}
+              </button>
+            </form>
+
+            <a href="{% url 'cart:detail' %}" class="btn btn-link btn-sm">
+              {% trans "عرض السلة" %}
+            </a>
+          </div>
+        {% else %}
+          <div class="alert alert-info mb-3">
+            {% trans "الرجاء تسجيل الدخول لتتمكن من الطلب أو إضافة المنتجات إلى السلة." %}
+          </div>
+        {% endif %}
+
         <div class="small text-muted" style="line-height: 1.9;">
           {{ product.description|linebreaks }}
         </div>
@@ -81,7 +116,7 @@
         <div class="card-body small text-muted">
           <strong>{% trans "ملاحظة" %}:</strong>
           <p class="mb-0">
-            {% trans "هذه صفحة عرض للمنتج فقط، ويمكن لاحقاً ربطها بنظام عروض أسعار أو طلبات شراء." %}
+            {% trans "يمكنك طلب هذا المنتج مباشرة أو إضافته أولاً إلى السلة ثم إتمام الطلب لاحقًا." %}
           </p>
         </div>
       </div>

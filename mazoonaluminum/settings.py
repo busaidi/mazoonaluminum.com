@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     "website",
     "accounting",
     "portal",
+    "cart",
 ]
 
 MIDDLEWARE = [

@@ -4,9 +4,12 @@ from django.shortcuts import get_object_or_404
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.views import redirect_to_login
 
-from accounting.models import Customer, Invoice, Payment
+from accounting.models import Customer, Invoice, Payment, Order
 from accounting.forms import CustomerProfileForm
 from django.db.models import Sum
+from django.core.exceptions import PermissionDenied
+from accounting.models import Customer, Order, OrderItem
+from cart.cart import Cart
 
 
 class CustomerPortalMixin:
@@ -140,3 +143,126 @@ class PortalInvoicePrintView(CustomerPortalMixin, DetailView):
             Invoice.objects.filter(customer=self.customer),
             number=self.kwargs.get("number"),
         )
+
+
+
+class PortalOrderListView(CustomerPortalMixin, ListView):
+    model = Order
+    template_name = "portal/order_list.html"
+    context_object_name = "orders"
+    paginate_by = 20
+
+    def get_queryset(self):
+        return (
+            Order.objects
+            .filter(customer=self.customer)
+            .order_by("-created_at", "-id")
+        )
+
+
+class PortalOrderDetailView(CustomerPortalMixin, DetailView):
+    model = Order
+    template_name = "portal/order_detail.html"
+    context_object_name = "order"
+
+    def get_queryset(self):
+        # لا نسمح إلا بطلبات هذا الزبون
+        return (
+            Order.objects
+            .filter(customer=self.customer)
+            .prefetch_related("items__product")
+        )
+
+
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.shortcuts import get_object_or_404, redirect, render
+
+from accounting.forms import CustomerOrderForm
+from accounting.models import Order, OrderItem
+from website.models import Product
+
+
+
+
+
+@login_required
+def portal_order_create(request, product_id):
+    try:
+        customer = request.user.customer_profile
+    except Customer.DoesNotExist:
+        raise PermissionDenied("لا يوجد حساب زبون مرتبط بهذا المستخدم.")
+
+    product = get_object_or_404(Product, pk=product_id, is_active=True)
+
+    if request.method == "POST":
+        form = CustomerOrderForm(request.POST)
+        if form.is_valid():
+            quantity = form.cleaned_data["quantity"]
+            notes = form.cleaned_data["notes"]
+
+            with transaction.atomic():
+                order = Order.objects.create(
+                    customer=customer,
+                    created_by=request.user,
+                    status=Order.STATUS_PENDING,
+                    is_online=True,
+                    notes=notes,
+                )
+                OrderItem.objects.create(
+                    order=order,
+                    product=product,
+                    quantity=quantity,
+                    unit_price=product.price,
+                )
+
+            messages.success(
+                request,
+                "تم إرسال طلبك بنجاح، وسيقوم الموظف بمراجعته وتأكيده.",
+            )
+            return redirect("portal:order_list")  # <-- هنا التعديل المهم
+    else:
+        form = CustomerOrderForm(initial={"quantity": 1})
+
+    return render(
+        request,
+        "portal/orders/portal_order_create.html",
+        {"form": form, "product": product},
+    )
+
+
+
+@login_required
+def cart_checkout(request):
+    cart = Cart(request)
+    if cart.is_empty():
+        messages.error(request, "سلتك فارغة.")
+        return redirect("cart:detail")
+
+    try:
+        customer = request.user.customer_profile
+    except Customer.DoesNotExist:
+        raise PermissionDenied("لا يوجد حساب زبون مرتبط بهذا المستخدم.")
+
+    if request.method == "POST":
+        with transaction.atomic():
+            order = Order.objects.create(
+                customer=customer,
+                created_by=request.user,
+                status=Order.STATUS_PENDING,
+                is_online=True,
+            )
+            for item in cart:
+                OrderItem.objects.create(
+                    order=order,
+                    product=item["product"],
+                    quantity=item["quantity"],
+                    unit_price=item["price"],
+                )
+        cart.clear()
+        messages.success(request, "تم إنشاء الطلب من السلة بنجاح.")
+        return redirect("portal:order_detail", pk=order.pk)
+
+    return redirect("cart:detail")

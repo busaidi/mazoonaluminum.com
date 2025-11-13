@@ -1,0 +1,76 @@
+{% extends "accounting/base.html" %}
+
+{% block content %}
+<h2 class="mb-3">تفاصيل الطلب رقم {{ order.id }}</h2>
+
+<div class="mb-3">
+  <p><strong>الزبون:</strong> {{ order.customer }}</p>
+
+  <p>
+    <strong>النوع:</strong>
+    {% if order.is_online %}
+      <span class="badge bg-info text-dark">أونلاين (من بوابة الزبون)</span>
+    {% else %}
+      <span class="badge bg-secondary">من الموظف</span>
+    {% endif %}
+  </p>
+
+  <p>
+    <strong>الحالة:</strong>
+    {% if order.status == "pending" %}
+      <span class="badge bg-warning text-dark">بانتظار التأكيد</span>
+    {% elif order.status == "confirmed" %}
+      <span class="badge bg-success">مؤكد</span>
+    {% elif order.status == "cancelled" %}
+      <span class="badge bg-danger">ملغي</span>
+    {% else %}
+      <span class="badge bg-light text-muted">مسودة</span>
+    {% endif %}
+  </p>
+
+  <p><strong>تاريخ الإنشاء:</strong> {{ order.created_at }}</p>
+</div>
+
+{# أزرار الإجراءات للموظف #}
+<div class="mb-3">
+  {% if order.status == "pending" %}
+    <form method="post" action="{% url 'accounting:order_confirm' order.id %}" class="d-inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-success">
+        ✅ تأكيد الطلب
+      </button>
+    </form>
+  {% endif %}
+
+  <a href="{% url 'accounting:order_list' %}" class="btn btn-link">
+    رجوع إلى قائمة الطلبات
+  </a>
+</div>
+
+<hr>
+
+<h4 class="mt-3">المنتجات</h4>
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>المنتج</th>
+      <th>الكمية</th>
+      <th>السعر</th>
+      <th>الإجمالي</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in order.items.all %}
+      <tr>
+        <td>{{ item.product_name }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.unit_price }}</td>
+        <td>{{ item.subtotal }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h4 class="mt-4">الإجمالي الكلي: {{ order.total_amount }}</h4>
+
+{% endblock %}

@@ -1,0 +1,223 @@
+{% load static i18n %}
+<!doctype html>
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_CODE == 'ar' %}rtl{% else %}ltr{% endif %}" data-bs-theme="light">
+<head>
+    <meta charset="utf-8"/>
+
+    {# عنوان الصفحة (SEO + التبويب) #}
+    <title>
+        {% block meta_title %}Mazoon Aluminum{% endblock %}
+    </title>
+
+    {# وصف الصفحة (SEO description) #}
+    <meta name="description"
+          content="{% block meta_description %}High-quality aluminum systems, profiles, and solutions by Mazoon Aluminum.{% endblock %}">
+
+    {# Canonical + hreflang #}
+    {% with cur_path=request.path host=request.get_host scheme=request.scheme %}
+        {% if cur_path|slice:":4" == "/en/" %}
+            {% with path_no_lang=cur_path|slice:"4:" %}
+                {% with en_path=cur_path ar_path="/ar/"|add:path_no_lang %}
+                    <link rel="canonical" href="{{ scheme }}://{{ host }}{{ cur_path }}">
+                    <link rel="alternate" hreflang="en" href="{{ scheme }}://{{ host }}{{ en_path }}">
+                    <link rel="alternate" hreflang="ar" href="{{ scheme }}://{{ host }}{{ ar_path }}">
+                    <link rel="alternate" hreflang="x-default" href="{{ scheme }}://{{ host }}{{ cur_path }}">
+                {% endwith %}
+            {% endwith %}
+        {% elif cur_path|slice:":4" == "/ar/" %}
+            {% with path_no_lang=cur_path|slice:"4:" %}
+                {% with ar_path=cur_path en_path="/en/"|add:path_no_lang %}
+                    <link rel="canonical" href="{{ scheme }}://{{ host }}{{ cur_path }}">
+                    <link rel="alternate" hreflang="ar" href="{{ scheme }}://{{ host }}{{ ar_path }}">
+                    <link rel="alternate" hreflang="en" href="{{ scheme }}://{{ host }}{{ en_path }}">
+                    <link rel="alternate" hreflang="x-default" href="{{ scheme }}://{{ host }}{{ cur_path }}">
+                {% endwith %}
+            {% endwith %}
+        {% else %}
+            {% with en_path="/en/" ar_path="/ar/" %}
+                <link rel="canonical" href="{{ scheme }}://{{ host }}{{ cur_path }}">
+                <link rel="alternate" hreflang="en" href="{{ scheme }}://{{ host }}{{ en_path }}">
+                <link rel="alternate" hreflang="ar" href="{{ scheme }}://{{ host }}{{ ar_path }}">
+                <link rel="alternate" hreflang="x-default" href="{{ scheme }}://{{ host }}{{ cur_path }}">
+            {% endwith %}
+        {% endif %}
+    {% endwith %}
+
+    {# Open Graph / Facebook / WhatsApp #}
+    <meta property="og:title"
+          content="{% block og_title %}Mazoon Aluminum{% endblock %}">
+    <meta property="og:description"
+          content="{% block og_description %}{% endblock %}">
+    <meta property="og:type"
+          content="{% block og_type %}website{% endblock %}">
+    <meta property="og:url"
+          content="{% block og_url %}{{ request.build_absolute_uri }}{% endblock %}">
+    <meta property="og:image"
+          content="{% block og_image %}{% endblock %}">
+
+    {# Twitter #}
+    <meta name="twitter:card"
+          content="{% block twitter_card %}summary_large_image{% endblock %}">
+    <meta name="twitter:title"
+          content="{% block twitter_title %}{% endblock %}">
+    <meta name="twitter:description"
+          content="{% block twitter_description %}{% endblock %}">
+    <meta name="twitter:image"
+          content="{% block twitter_image %}{% endblock %}">
+
+    {# باقي الراس: viewport + Bootstrap + CSS #}
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+    <!-- Bootstrap 5.3.x -->
+    <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+            crossorigin="anonymous"
+    />
+
+    <link rel="stylesheet" href="{% static 'css/style.css' %}"/>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-body text-body d-flex flex-column min-vh-100">
+
+<nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{% url 'home' %}">
+            {# تقدر تضيف لوجو هنا من static لاحقاً #}
+            <span>Mazoon Aluminum</span>
+        </a>
+        <button
+                class="navbar-toggler"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#mainNavbar"
+        >
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNavbar">
+            {# روابط الموقع العامة #}
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
+                       href="{% url 'home' %}">{% trans "الرئيسية" %}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}"
+                       href="{% url 'about' %}">{% trans "عنّا" %}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'lab' %}active{% endif %}"
+                       href="{% url 'lab' %}">{% trans "المختبر" %}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'blog_list' or request.resolver_match.url_name == 'blog_detail' %}active{% endif %}"
+                       href="{% url 'blog_list' %}">{% trans "المدونة" %}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'product_list' %}active{% endif %}"
+                       href="{% url 'product_list' %}">{% trans "المنتجات" %}</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'contact' %}active{% endif %}"
+                       href="{% url 'contact' %}">{% trans "اتصل بنا" %}</a>
+                </li>
+            </ul>
+
+            {# يمين/يسار: بوابة الزبون + المحاسبة + تسجيل الدخول/الخروج + اللغة #}
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+
+                {# بوابة الزبون (لو عنده Customer مرتبط) #}
+                {% if user.is_authenticated and user.customer_profile %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.namespace == 'portal' %}active{% endif %}"
+                           href="{% url 'portal:dashboard' %}">
+                            بوابة الزبون
+                        </a>
+                    </li>
+                {% endif %}
+
+                {# المحاسبة (لموظف أو superuser) #}
+                {% if user.is_authenticated and user.is_staff or user.is_superuser %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.namespace == 'accounting' %}active{% endif %}"
+                           href="{% url 'accounting:dashboard' %}">
+                            المحاسبة
+                        </a>
+                    </li>
+                {% endif %}
+
+                {# تسجيل الدخول / الخروج #}
+          {% if user.is_authenticated %}
+    <li class="nav-item">
+        <form action="{% url 'logout' %}" method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="nav-link btn btn-link p-0">
+                {% trans "تسجيل الخروج" %}
+            </button>
+        </form>
+    </li>
+{% else %}
+    <li class="nav-item">
+        <a class="nav-link"
+           href="{% url 'login' %}?next={{ request.path }}">
+            {% trans "تسجيل الدخول" %}
+        </a>
+    </li>
+{% endif %}
+
+
+                {# Language switcher #}
+                <li class="nav-item ms-2">
+                    <form action="{% url 'set_language' %}" method="post" class="d-flex">
+                        {% csrf_token %}
+                        <input name="next" type="hidden" value="{{ request.get_full_path }}"/>
+                        <select name="language" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="ar" {% if LANGUAGE_CODE == 'ar' %}selected{% endif %}>العربية</option>
+                            <option value="en" {% if LANGUAGE_CODE == 'en' %}selected{% endif %}>English</option>
+                        </select>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<main class="py-4 flex-grow-1">
+    <div class="container">
+
+        {% if messages %}
+            <div class="mb-3">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} mb-2" role="alert">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+<footer class="border-top py-3 mt-auto bg-body-tertiary">
+    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center text-muted small gap-2">
+        <div>
+            &copy; {% now "Y" %} Mazoon Aluminum – {% trans "جميع الحقوق محفوظة" %}
+        </div>
+        <div class="d-flex gap-3">
+            <a href="{% url 'home' %}" class="link-secondary text-decoration-none small">{% trans "الرئيسية" %}</a>
+            <a href="#" class="link-secondary text-decoration-none small">{% trans "الخصوصية" %}</a>
+            <a href="#" class="link-secondary text-decoration-none small">{% trans "الشروط والأحكام" %}</a>
+        </div>
+    </div>
+</footer>
+
+<script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous"
+></script>
+{% block extra_body %}{% endblock %}
+</body>
+</html>

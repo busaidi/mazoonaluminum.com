@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "سلة المشتريات" %}{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">{% trans "سلة المشتريات" %}</h2>
+
+{% if cart.is_empty %}
+  <div class="alert alert-info">
+    {% trans "سلتك فارغة حالياً." %}
+  </div>
+{% else %}
+  <table class="table table-bordered align-middle">
+    <thead>
+      <tr>
+        <th>{% trans "المنتج" %}</th>
+        <th style="width: 120px;">{% trans "الكمية" %}</th>
+        <th style="width: 120px;">{% trans "السعر" %}</th>
+        <th style="width: 120px;">{% trans "الإجمالي" %}</th>
+        <th style="width: 80px;"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in cart %}
+      <tr>
+        <td>{{ item.product }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.price }}</td>
+        <td>{{ item.total_price }}</td>
+        <td>
+          <a href="{% url 'cart:remove' item.product.id %}" class="btn btn-sm btn-outline-danger">
+            {% trans "حذف" %}
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="d-flex justify-content-between align-items-center mt-3">
+    <div>
+      <a href="/" class="btn btn-outline-secondary">
+  {% trans "متابعة التسوق" %}
+</a>
+    </div>
+
+    <div class="text-end">
+      <p class="mb-2">
+        <strong>{% trans "الإجمالي الكلي" %}:</strong>
+        {{ cart.get_total_price }}
+      </p>
+      <form method="post" action="{% url 'portal:cart_checkout' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">
+          {% trans "إتمام الطلب" %}
+        </button>
+      </form>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

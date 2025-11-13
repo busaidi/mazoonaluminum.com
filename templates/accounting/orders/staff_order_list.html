@@ -1,0 +1,72 @@
+{% extends "accounting/base.html" %}
+
+{% block content %}
+<h2 class="mb-4">قائمة الطلبات</h2>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <a href="{% url 'accounting:order_create' %}" class="btn btn-primary">
+
+
+    إنشاء طلب جديد (من الموظف)
+  </a>
+</div>
+
+<table class="table table-bordered table-striped align-middle">
+  <thead class="table-dark">
+    <tr>
+      <th>#</th>
+      <th>الزبون</th>
+      <th>النوع</th>
+      <th>الحالة</th>
+      <th>التاريخ</th>
+      <th>المبلغ</th>
+      <th>إدارة</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for order in orders %}
+    <tr>
+      <td>{{ order.id }}</td>
+      <td>{{ order.customer }}</td>
+
+      {# نوع الطلب: أونلاين من البوابة أو من الموظف #}
+      <td>
+        {% if order.is_online %}
+          <span class="badge bg-info text-dark">أونلاين</span>
+        {% else %}
+          <span class="badge bg-secondary">من الموظف</span>
+        {% endif %}
+      </td>
+
+      {# حالة الطلب ببادجات ألوان #}
+      <td>
+        {% if order.status == "pending" %}
+          <span class="badge bg-warning text-dark">بانتظار التأكيد</span>
+        {% elif order.status == "confirmed" %}
+          <span class="badge bg-success">مؤكد</span>
+        {% elif order.status == "cancelled" %}
+          <span class="badge bg-danger">ملغي</span>
+        {% else %}
+          <span class="badge bg-light text-muted">مسودة</span>
+        {% endif %}
+      </td>
+
+      <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+      <td>{{ order.total_amount }}</td>
+
+      <td>
+        <a href="{% url 'accounting:order_detail' order.id %}" class="btn btn-sm btn-info">
+    التفاصيل
+</a>
+
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="7" class="text-center py-3">لا يوجد طلبات</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

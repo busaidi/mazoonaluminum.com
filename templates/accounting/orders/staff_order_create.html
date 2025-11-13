@@ -1,0 +1,59 @@
+{% extends "accounting/base.html" %}
+{% load i18n %}
+
+{% block content %}
+<h2 class="mb-4">إنشاء طلب جديد (من الموظف)</h2>
+
+{% get_current_language as LANGUAGE_CODE %}
+
+<form method="post" class="card p-3 shadow-sm">
+  {% csrf_token %}
+
+  <div class="mb-3">
+    <label class="form-label">الزبون</label>
+    <select name="customer" class="form-select" required>
+      <option value="">اختر الزبون</option>
+      {% for c in customers %}
+        <option value="{{ c.id }}">{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">المنتج</label>
+    <select name="product" class="form-select" required>
+      <option value="">اختر المنتج</option>
+      {% for p in products %}
+        <option value="{{ p.id }}">
+          {% if LANGUAGE_CODE == "ar" %}
+            {{ p.name_ar }}
+          {% else %}
+            {{ p.name_en }}
+          {% endif %}
+          – {{ p.price }} ر.ع
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">الكمية</label>
+    <input type="number" name="quantity" class="form-control" value="1" min="1" required>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">ملاحظات</label>
+    <textarea name="notes" class="form-control" rows="3"></textarea>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary">حفظ كمسودة</button>
+
+    <!-- 🔹 إلغاء والرجوع لقائمة الطلبات بدون reverse -->
+    <a href="/{{ LANGUAGE_CODE }}/accounting/orders/" class="btn btn-outline-secondary">
+      إلغاء والعودة لقائمة الطلبات
+    </a>
+  </div>
+</form>
+
+{% endblock %}

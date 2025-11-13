@@ -1,11 +1,14 @@
 # accounting/views.py
-
+from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
+from django.db import transaction
 from django.db.models import Sum
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render, redirect
+from django.contrib.admin.views.decorators import staff_member_required
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.utils.translation import get_language
 from django.views.generic import (
     ListView,
     DetailView,
@@ -14,9 +17,9 @@ from django.views.generic import (
     TemplateView, UpdateView, DeleteView,
 )
 
-
-from .forms import InvoiceForm, PaymentForInvoiceForm, CustomerForm, CustomerProfileForm
-from .models import Invoice, Payment, Customer
+from website.models import Product
+from .forms import InvoiceForm, PaymentForInvoiceForm, CustomerForm, CustomerProfileForm, StaffOrderForm
+from .models import Invoice, Payment, Customer, Order, OrderItem
 
 
 def is_accounting_staff(user):
@@ -149,21 +152,25 @@ class AccountingDashboardView(TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
 
-        invoices = Invoice.objects.select_related("customer")
-        payments = Payment.objects.select_related("customer", "invoice")
-
+        invoices = Invoice.objects.select_related("customer").all()
+        customers = Customer.objects.all()
+        payments = Payment.objects.select_related("customer", "invoice").all()
+        orders = Order.objects.select_related("customer").all()
         total_amount = invoices.aggregate(s=Sum("total_amount"))["s"] or 0
         total_paid = invoices.aggregate(s=Sum("paid_amount"))["s"] or 0
+        total_balance = total_amount - total_paid
 
         ctx["invoice_count"] = invoices.count()
-        ctx["customer_count"] = Customer.objects.count()
+        ctx["customer_count"] = customers.count()
         ctx["payment_count"] = payments.count()
+        ctx["order_count"] = orders.count()
+
         ctx["total_amount"] = total_amount
-        ctx["total_paid"] = total_paid
-        ctx["total_balance"] = total_amount - total_paid
+        ctx["total_balance"] = total_balance
 
         ctx["recent_invoices"] = invoices.order_by("-issued_at", "-id")[:5]
         ctx["recent_payments"] = payments.order_by("-date", "-id")[:5]
+        ctx["recent_orders"] = orders.order_by("-created_at", "-id")[:5]
 
         return ctx
 
@@ -299,4 +306,124 @@ class InvoicePrintView(DetailView):
 
 
 
+@method_decorator(accounting_staff_required, name="dispatch")
+class OrderListView(ListView):
+    model = Order
+    template_name = "accounting/order_list.html"
+    context_object_name = "orders"
+    paginate_by = 25
 
+    def get_queryset(self):
+        return (
+            Order.objects
+            .select_related("customer")
+            .order_by("-created_at", "-id")
+        )
+
+
+
+@method_decorator(accounting_staff_required, name="dispatch")
+@method_decorator(accounting_staff_required, name="dispatch")
+class OrderDetailView(DetailView):
+    model = Order
+    template_name = "accounting/order_detail.html"
+    context_object_name = "order"
+
+    def get_queryset(self):
+        # نجهّز الـ queryset مع العلاقات الجاهزة
+        return (
+            Order.objects
+            .select_related("customer")
+            .prefetch_related("items__product")
+        )
+
+
+
+
+@staff_member_required
+def staff_order_list(request):
+    orders = (
+        Order.objects
+        .select_related("customer", "confirmed_by")
+        .prefetch_related("items__product")
+        .order_by("-created_at", "id")
+    )
+    return render(
+        request,
+        "accounting/orders/staff_order_list.html",
+        {"orders": orders},
+    )
+
+
+@staff_member_required
+def staff_order_detail(request, pk):
+    order = get_object_or_404(
+        Order.objects.select_related("customer", "confirmed_by").prefetch_related("items__product"),
+        pk=pk,
+    )
+    return render(
+        request,
+        "accounting/orders/staff_order_detail.html",
+        {"order": order},
+    )
+
+
+
+@staff_member_required
+def staff_order_confirm(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+
+    if request.method == "POST":
+        if order.status != Order.STATUS_CONFIRMED:
+            order.status = Order.STATUS_CONFIRMED
+            order.confirmed_by = request.user
+            order.confirmed_at = timezone.now()
+            order.save(update_fields=["status", "confirmed_by", "confirmed_at"])
+        return redirect("accounting:order_detail", pk=order.pk)
+
+    # لو أحد فتح الرابط بـ GET نرجعه للتفاصيل
+    return redirect("accounting:order_detail", pk=order.pk)
+
+
+@staff_member_required
+def staff_order_create(request):
+    if request.method == "POST":
+        customer_id = request.POST.get("customer")
+        product_id = request.POST.get("product")
+        quantity = request.POST.get("quantity") or "1"
+        notes = request.POST.get("notes", "").strip()
+
+        customer = get_object_or_404(Customer, pk=customer_id)
+        product = get_object_or_404(Product, pk=product_id)
+
+        order = Order.objects.create(
+            customer=customer,
+            created_by=request.user,
+            is_online=False,
+            status=Order.STATUS_DRAFT,
+            notes=notes,
+        )
+        order.items.create(
+            product=product,
+            quantity=quantity,
+            unit_price=product.price,
+        )
+
+        # 🔹 رجوع لقائمة الطلبات مع كود اللغة (ar / en)
+        lang = get_language() or "ar"
+        return redirect(f"/{lang}/accounting/orders/")
+
+    lang = get_language() or "ar"
+    product_name_field = "name_ar" if lang.startswith("ar") else "name_en"
+
+    customers = Customer.objects.all().order_by("name")
+    products = Product.objects.filter(is_active=True).order_by(product_name_field)
+
+    return render(
+        request,
+        "accounting/orders/staff_order_create.html",
+        {
+            "customers": customers,
+            "products": products,
+        },
+    )
