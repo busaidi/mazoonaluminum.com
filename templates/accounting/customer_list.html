@@ -1,17 +1,23 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block meta_title %}الزبائن | Mazoon Aluminum{% endblock %}
+{% block meta_title %}
+  {% trans "الزبائن | مزون ألمنيوم" %}
+{% endblock %}
+
 {% block meta_description %}
-قائمة الزبائن مع إمكانية البحث وإدارة بيانات العملاء في نظام المحاسبة.
+  {% trans "قائمة الزبائن مع إمكانية البحث وإدارة بيانات العملاء في نظام المحاسبة." %}
 {% endblock %}
 
 {% block content %}
 <div class="py-4">
 
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-    <h1 class="h4 mb-0">الزبائن</h1>
+    <h1 class="h4 mb-0 text-mazoon">
+      {% trans "الزبائن" %}
+    </h1>
     <a href="{% url 'accounting:customer_create' %}" class="btn btn-primary btn-sm">
-      + زبون جديد
+      {% trans "+ زبون جديد" %}
     </a>
   </div>
 
@@ -21,12 +27,12 @@
       <input type="text"
              name="q"
              class="form-control form-control-sm"
-             placeholder="بحث بالاسم أو الشركة"
+             placeholder="{% trans 'بحث بالاسم أو الشركة' %}"
              value="{{ request.GET.q }}">
     </div>
     <div class="col-auto">
       <button type="submit" class="btn btn-outline-secondary btn-sm">
-        بحث
+        {% trans "بحث" %}
       </button>
     </div>
   </form>
@@ -36,11 +42,11 @@
       <table class="table table-hover table-sm mb-0 align-middle">
         <thead class="table-light">
           <tr>
-            <th>الاسم</th>
-            <th>الشركة</th>
-            <th>الهاتف</th>
-            <th>البريد</th>
-            <th class="text-end">الرصيد</th>
+            <th>{% trans "الاسم" %}</th>
+            <th>{% trans "الشركة" %}</th>
+            <th>{% trans "الهاتف" %}</th>
+            <th>{% trans "البريد" %}</th>
+            <th class="text-end">{% trans "الرصيد" %}</th>
             <th class="text-end"></th>
           </tr>
         </thead>
@@ -59,18 +65,18 @@
               <td class="text-end">
                 <a href="{% url 'accounting:customer_edit' pk=c.pk %}"
                    class="btn btn-sm btn-outline-primary">
-                  تعديل
+                  {% trans "تعديل" %}
                 </a>
                 <a href="{% url 'accounting:customer_delete' pk=c.pk %}"
                    class="btn btn-sm btn-outline-danger">
-                  حذف
+                  {% trans "حذف" %}
                 </a>
               </td>
             </tr>
           {% empty %}
             <tr>
               <td colspan="6" class="text-center text-muted py-3">
-                لا يوجد زبائن حاليًا.
+                {% trans "لا يوجد زبائن حاليًا." %}
               </td>
             </tr>
           {% endfor %}
@@ -81,25 +87,29 @@
     {# Pagination #}
     {% if is_paginated %}
       <div class="card-footer bg-body-tertiary">
-        <nav aria-label="صفحات الزبائن">
+        <nav aria-label="{% trans 'صفحات الزبائن' %}">
           <ul class="pagination justify-content-center mb-0">
 
             {% if page_obj.has_previous %}
               <li class="page-item">
                 <a class="page-link"
                    href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
-                  السابق
+                  {% trans "السابق" %}
                 </a>
               </li>
             {% else %}
               <li class="page-item disabled">
-                <span class="page-link">السابق</span>
+                <span class="page-link">
+                  {% trans "السابق" %}
+                </span>
               </li>
             {% endif %}
 
             <li class="page-item disabled">
               <span class="page-link">
-                صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+                {% blocktrans with number=page_obj.number total=page_obj.paginator.num_pages %}
+                  صفحة {{ number }} من {{ total }}
+                {% endblocktrans %}
               </span>
             </li>
 
@@ -107,14 +117,17 @@
               <li class="page-item">
                 <a class="page-link"
                    href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
-                  التالي
+                  {% trans "التالي" %}
                 </a>
               </li>
             {% else %}
               <li class="page-item disabled">
-                <span class="page-link">التالي</span>
+                <span class="page-link">
+                  {% trans "التالي" %}
+                </span>
               </li>
             {% endif %}
+
           </ul>
         </nav>
       </div>

@@ -26,7 +26,7 @@ from website.models import Product
 from .forms import (
     InvoiceForm,
     PaymentForInvoiceForm,
-    CustomerForm, InvoiceItemFormSet,
+    CustomerForm, InvoiceItemFormSet, ApplyPaymentForm,
 )
 from .models import Invoice, Payment, Customer, Order
 
@@ -477,8 +477,76 @@ class CustomerPaymentCreateView(FormView):
 
 
 # ==========================
-# Orders (CBV staff-level)
+# Payment Recolonization
 # ==========================
+@accounting_staff_required
+def apply_general_payment(request, pk):
+    """
+    تسوية دفعة عامة (بدون فاتورة) على فاتورة معيّنة.
+    - لو المبلغ المسوّى = كامل الدفعة → نربط نفس الدفعة بالفاتورة.
+    - لو المبلغ المسوّى < مبلغ الدفعة → ننشئ دفعة جديدة للفاتورة، وننقص المبلغ من الدفعة العامة.
+    """
+    # نسمح فقط بالدفعات العامة (invoice__isnull=True)
+    payment = get_object_or_404(
+        Payment,
+        pk=pk,
+        invoice__isnull=True,
+    )
+    customer = payment.customer
+
+    # لو الزبون ما عنده ولا فاتورة، ما في شيء نعمله
+    if not customer.invoices.exists():
+        messages.error(request, "لا توجد فواتير لهذا الزبون لتسوية الدفعة عليها.")
+        return redirect("accounting:customer_detail", pk=customer.pk)
+
+    if request.method == "POST":
+        form = ApplyPaymentForm(customer, payment.amount, request.POST)
+        if form.is_valid():
+            invoice = form.cleaned_data["invoice"]
+            amount = form.cleaned_data["amount"]
+
+            # الحالة 1: تسوية كاملة (المبلغ بالكامل)
+            if amount == payment.amount:
+                payment.invoice = invoice
+                payment.save(update_fields=["invoice"])
+                messages.success(
+                    request,
+                    f"تم تسوية الدفعة بالكامل على الفاتورة {invoice.number}.",
+                )
+            else:
+                # الحالة 2: تسوية جزئية
+                # إنشاء دفعة جديدة مرتبطة بالفاتورة
+                Payment.objects.create(
+                    customer=customer,
+                    invoice=invoice,
+                    amount=amount,
+                    date=payment.date,
+                    method=payment.method,
+                    notes=f"تسوية جزء ({amount}) من الدفعة العامة #{payment.pk}",
+                )
+                # تقليل المبلغ المتبقي في الدفعة العامة
+                payment.amount = payment.amount - amount
+                payment.save(update_fields=["amount"])
+
+                messages.success(
+                    request,
+                    f"تم تسوية مبلغ {amount} على الفاتورة {invoice.number}، "
+                    f"والمتبقي في الدفعة العامة هو {payment.amount}."
+                )
+
+            return redirect("accounting:customer_detail", pk=customer.pk)
+    else:
+        form = ApplyPaymentForm(customer, payment.amount)
+
+    return render(
+        request,
+        "accounting/general_payment_apply.html",
+        {
+            "payment": payment,
+            "customer": customer,
+            "form": form,
+        },
+    )
 
 
 

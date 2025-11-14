@@ -1,228 +1,200 @@
 {% extends "base.html" %}
-
-{% block meta_title %}الزبون {{ customer.name }} | Mazoon Aluminum{% endblock %}
-{% block meta_description %}
-تفاصيل الزبون {{ customer.name }}، بيانات التواصل، الملخص المالي، الفواتير والدفعات المرتبطة به.
-{% endblock %}
+{% load i18n %}
 
 {% block content %}
-<div class="py-4">
+<div class="container mt-4">
 
-  {# العنوان + الأزرار #}
-  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
-    <div>
-      <h1 class="h4 mb-1">الزبون: {{ customer.name }}</h1>
-      {% if customer.company_name %}
-        <div class="text-muted small">
-          {{ customer.company_name }}
-        </div>
-      {% endif %}
-    </div>
+  <!-- بطاقة بيانات الزبون -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h3 class="mb-0 text-mazoon">
+          {% blocktrans with name=customer.name %}الزبون: {{ name }}{% endblocktrans %}
+        </h3>
+        <a href="{% url 'accounting:customer_edit' customer.pk %}" class="btn btn-sm btn-outline-primary">
+          {% trans "تعديل بيانات الزبون" %}
+        </a>
+      </div>
 
-    <div class="btn-group">
-      <a href="{% url 'accounting:customer_edit' pk=customer.pk %}"
-         class="btn btn-outline-primary btn-sm">
-        تعديل
-      </a>
-
-      <a href="{% url 'accounting:customer_delete' pk=customer.pk %}"
-         class="btn btn-outline-danger btn-sm">
-        حذف
-      </a>
-
-      <a href="{% url 'accounting:invoice_create' %}?customer={{ customer.pk }}"
-         class="btn btn-success btn-sm">
-        + إنشاء فاتورة لهذا الزبون
-      </a>
-
-      <a href="{% url 'accounting:customer_add_payment' pk=customer.pk %}"
-         class="btn btn-outline-success btn-sm">
-        + دفعة لهذا الزبون
-      </a>
-
-      <a href="{% url 'accounting:customer_list' %}"
-         class="btn btn-secondary btn-sm">
-        رجوع للزبائن
-      </a>
+      <p class="mb-1">
+        <strong>{% trans "الشركة" %}:</strong>
+        {{ customer.company_name|default:"-" }}
+      </p>
+      <p class="mb-1">
+        <strong>{% trans "الهاتف" %}:</strong>
+        {{ customer.phone|default:"-" }}
+      </p>
+      <p class="mb-1">
+        <strong>{% trans "البريد الإلكتروني" %}:</strong>
+        {{ customer.email|default:"-" }}
+      </p>
+      <p class="mb-1">
+        <strong>{% trans "الرقم الضريبي" %}:</strong>
+        {{ customer.tax_number|default:"-" }}
+      </p>
+      <p class="mb-0">
+        <strong>{% trans "العنوان" %}:</strong>
+        {{ customer.address|linebreaksbr|default:"-" }}
+      </p>
     </div>
   </div>
 
-  {# بيانات أساسية + ملخص مالي #}
-  <div class="row g-3 mb-4">
-    <div class="col-md-6">
-      <div class="card h-100 border-0 shadow-sm">
+  <!-- ملخص الحساب -->
+  <div class="row mb-4">
+    <div class="col-md-4 mb-3">
+      <div class="card text-center">
         <div class="card-body">
-          <h5 class="card-title mb-3">بيانات الزبون</h5>
-
-          <p class="mb-1 small">
-            <span class="text-muted">الاسم:</span>
-            <span class="fw-semibold">{{ customer.name }}</span>
-          </p>
-
-          {% if customer.company_name %}
-            <p class="mb-1 small">
-              <span class="text-muted">الشركة:</span>
-              <span class="fw-semibold">{{ customer.company_name }}</span>
-            </p>
-          {% endif %}
-
-          {% if customer.phone %}
-            <p class="mb-1 small">
-              <span class="text-muted">الهاتف:</span>
-              <span class="fw-semibold">{{ customer.phone }}</span>
-            </p>
-          {% endif %}
-
-          {% if customer.email %}
-            <p class="mb-1 small">
-              <span class="text-muted">البريد:</span>
-              <span class="fw-semibold">{{ customer.email }}</span>
-            </p>
-          {% endif %}
-
-          {% if customer.tax_number %}
-            <p class="mb-1 small">
-              <span class="text-muted">الرقم الضريبي:</span>
-              <span class="fw-semibold">{{ customer.tax_number }}</span>
-            </p>
-          {% endif %}
-
-          {% if customer.address %}
-            <p class="mb-0 small">
-              <span class="text-muted">العنوان:</span><br>
-              <span class="fw-semibold">{{ customer.address|linebreaksbr }}</span>
-            </p>
-          {% endif %}
+          <div class="text-muted small mb-1">{% trans "إجمالي الفواتير" %}</div>
+          <div class="fs-4">{{ total_invoices }}</div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-6">
-      <div class="card h-100 border-0 shadow-sm">
+    <div class="col-md-4 mb-3">
+      <div class="card text-center">
         <div class="card-body">
-          <h5 class="card-title mb-3">ملخص مالي</h5>
-          <div class="row">
-            <div class="col-sm-4 mb-2">
-              <div class="small text-muted mb-1">إجمالي الفواتير</div>
-              <div class="fw-semibold">{{ total_invoices }}</div>
-            </div>
-            <div class="col-sm-4 mb-2">
-              <div class="small text-muted mb-1">إجمالي الدفعات</div>
-              <div class="fw-semibold">{{ total_paid }}</div>
-            </div>
-            <div class="col-sm-4 mb-2">
-              <div class="small text-muted mb-1">الرصيد المتبقي</div>
-              <div class="fw-semibold">{{ balance }}</div>
-            </div>
+          <div class="text-muted small mb-1">{% trans "إجمالي الدفعات" %}</div>
+          <div class="fs-4">{{ total_paid }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <div class="text-muted small mb-1">{% trans "الرصيد" %}</div>
+          <div class="fs-4 {% if balance > 0 %}text-danger{% elif balance < 0 %}text-success{% endif %}">
+            {{ balance }}
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  {# فواتير الزبون + دفعات الزبون #}
-  <div class="row g-3">
-    <div class="col-md-6">
-      <div class="card h-100 border-0 shadow-sm">
-        <div class="card-body">
-          <h5 class="card-title mb-3">فواتير الزبون</h5>
-          <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th>رقم الفاتورة</th>
-                  <th>التاريخ</th>
-                  <th class="text-end">الإجمالي</th>
-                  <th class="text-end">المتبقي</th>
-                  <th>الحالة</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for inv in invoices %}
-                  <tr>
-                    <td>
-                      <a href="{% url 'accounting:invoice_detail' number=inv.number %}">
-                        {{ inv.number }}
-                      </a>
-                    </td>
-                    <td>{{ inv.issued_at }}</td>
-                    <td class="text-end">{{ inv.total_amount }}</td>
-                    <td class="text-end">{{ inv.balance }}</td>
-                    <td>
-                      {% if inv.status == inv.Status.PAID %}
-                        <span class="badge bg-success">مدفوعة</span>
-                      {% elif inv.status == inv.Status.PARTIALLY_PAID %}
-                        <span class="badge bg-warning text-dark">مدفوعة جزئياً</span>
-                      {% elif inv.status == inv.Status.CANCELLED %}
-                        <span class="badge bg-secondary">ملغاة</span>
-                      {% elif inv.status == inv.Status.SENT %}
-                        <span class="badge bg-info text-dark">مرسلة</span>
-                      {% else %}
-                        <span class="badge bg-light text-dark">
-                          {{ inv.get_status_display }}
-                        </span>
-                      {% endif %}
-                    </td>
-                  </tr>
-                {% empty %}
-                  <tr>
-                    <td colspan="5" class="text-muted text-center small py-3">
-                      لا توجد فواتير لهذا الزبون.
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
+  <!-- جدول الفواتير -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0 text-mazoon">{% trans "الفواتير" %}</h5>
+
+        <a href="{% url 'accounting:invoice_create' %}?customer={{ customer.pk }}"
+           class="btn btn-sm btn-primary">
+          {% trans "إنشاء فاتورة" %}
+        </a>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th>{% trans "رقم الفاتورة" %}</th>
+              <th>{% trans "التاريخ" %}</th>
+              <th>{% trans "الإجمالي" %}</th>
+              <th>{% trans "المدفوع" %}</th>
+              <th>{% trans "المتبقي" %}</th>
+              <th>{% trans "الحالة" %}</th>
+              <th></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for invoice in invoices %}
+              <tr>
+                <td>{{ invoice.number }}</td>
+                <td>{{ invoice.issued_at }}</td>
+                <td>{{ invoice.total_amount }}</td>
+                <td>{{ invoice.paid_amount }}</td>
+                <td>{{ invoice.balance }}</td>
+                <td>{{ invoice.get_status_display }}</td>
+                <td class="text-end">
+                  <a href="{% url 'accounting:invoice_detail' invoice.number %}"
+                     class="btn btn-sm btn-outline-primary">
+                    {% trans "عرض" %}
+                  </a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="7" class="text-center text-muted">
+                  {% trans "لا توجد فواتير لهذا الزبون." %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+
+        </table>
       </div>
     </div>
+  </div>
 
-    {# دفعات الزبون #}
-    <div class="col-md-6">
-      <div class="card h-100 border-0 shadow-sm">
-        <div class="card-body">
-          <h5 class="card-title mb-3">دفعات الزبون</h5>
-          <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th>التاريخ</th>
-                  <th class="text-end">المبلغ</th>
-                  <th>الطريقة</th>
-                  <th>الفاتورة</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for p in payments %}
-                  <tr>
-                    <td>{{ p.date }}</td>
-                    <td class="text-end">{{ p.amount }}</td>
-                    <td>{{ p.get_method_display }}</td>
-                    <td>
-                      {% if p.invoice %}
-                        <a href="{% url 'accounting:invoice_detail' number=p.invoice.number %}">
-                          {{ p.invoice.number }}
-                        </a>
-                      {% else %}
-                        <span class="text-muted small">غير مرتبط</span>
-                      {% endif %}
-                    </td>
-                  </tr>
-                {% empty %}
-                  <tr>
-                    <td colspan="4" class="text-muted text-center small py-3">
-                      لا توجد دفعات لهذا الزبون.
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
+  <!-- جدول الدفعات -->
+  <div class="card mb-4">
+    <div class="card-body">
+
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0 text-mazoon">{% trans "الدفعات" %}</h5>
+
+        <a href="{% url 'accounting:customer_add_payment' customer.pk %}"
+           class="btn btn-sm btn-primary">
+          {% trans "إضافة دفعة عامة" %}
+        </a>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th>{% trans "التاريخ" %}</th>
+              <th>{% trans "المبلغ" %}</th>
+              <th>{% trans "الطريقة" %}</th>
+              <th>{% trans "الفاتورة" %}</th>
+              <th>{% trans "ملاحظات" %}</th>
+              <th></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for payment in payments %}
+            <tr>
+              <td>{{ payment.date }}</td>
+              <td>{{ payment.amount }}</td>
+              <td>{{ payment.get_method_display }}</td>
+
+              <td>
+                {% if payment.invoice %}
+                  <a href="{% url 'accounting:invoice_detail' payment.invoice.number %}">
+                    {{ payment.invoice.number }}
+                  </a>
+                {% else %}
+                  <span class="badge bg-mazoon-accent text-dark">
+                    {% trans "دفعة عامة" %}
+                  </span>
+                {% endif %}
+              </td>
+
+              <td>{{ payment.notes|default:"-" }}</td>
+
+              <td class="text-end">
+                {% if not payment.invoice %}
+                  <a href="{% url 'accounting:payment_apply' payment.pk %}"
+                     class="btn btn-sm btn-outline-primary">
+                    {% trans "تسوية / ربط بالفاتورة" %}
+                  </a>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-muted">
+                {% trans "لا توجد دفعات لهذا الزبون." %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+
+        </table>
       </div>
     </div>
-
   </div>
 
 </div>

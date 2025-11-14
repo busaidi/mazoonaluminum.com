@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container mt-4">
+
+  <div class="card">
+    <div class="card-body">
+
+      <!-- عنوان الصفحة -->
+      <h3 class="mb-3 text-mazoon">
+        {% blocktrans with id=payment.pk %}تسوية دفعة عامة رقم #{{ id }}{% endblocktrans %}
+      </h3>
+
+      <!-- معلومات الزبون -->
+      <p class="mb-1">
+        <strong>{% trans "الزبون" %}:</strong>
+        {{ customer.name }}
+      </p>
+
+      <p class="mb-1">
+        <strong>{% trans "المبلغ المتاح" %}:</strong>
+        {{ payment.amount }}
+      </p>
+
+      <p class="text-muted">
+        {% trans "يمكنك تسوية جزء من هذا المبلغ أو تسويته بالكامل على فاتورة معيّنة." %}
+      </p>
+
+      <hr>
+
+
+      <!-- فورم التسوية -->
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <!-- اختيار الفاتورة -->
+        <div class="mb-3">
+          <label class="form-label">{% trans "اختر الفاتورة" %}</label>
+          {{ form.invoice }}
+          {% for error in form.invoice.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <!-- مبلغ التسوية -->
+        <div class="mb-3">
+          <label class="form-label">{% trans "مبلغ التسوية" %}</label>
+          {{ form.amount }}
+          <div class="form-text">
+            {% blocktrans with max=payment.amount %}
+              أقصى مبلغ ممكن: {{ max }}
+            {% endblocktrans %}
+          </div>
+          {% for error in form.amount.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <!-- الأزرار -->
+        <div class="mt-4">
+          <button type="submit" class="btn btn-primary">
+            {% trans "تنفيذ التسوية" %}
+          </button>
+
+          <a href="{% url 'accounting:customer_detail' customer.pk %}"
+             class="btn btn-outline-primary ms-2">
+            {% trans "إلغاء" %}
+          </a>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

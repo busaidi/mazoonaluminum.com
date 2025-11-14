@@ -58,6 +58,13 @@ urlpatterns = [
         name="customer_add_payment",
     ),
 
+    # Payments apply (general payment settlement)
+    path(
+        "payments/<int:pk>/apply/",
+        views.apply_general_payment,
+        name="payment_apply",
+    ),
+
     # Orders (staff)
     path("orders/", views.staff_order_list, name="order_list"),
     path("orders/create/", views.staff_order_create, name="order_create"),

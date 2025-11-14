@@ -1,4 +1,5 @@
 # accounting/forms.py
+from decimal import Decimal
 
 from django import forms
 from django.forms import inlineformset_factory
@@ -211,3 +212,43 @@ class StaffOrderForm(forms.Form):
                 field.widget.attrs["class"] = (css + " form-select").strip()
             else:
                 field.widget.attrs["class"] = (css + " form-control").strip()
+
+
+# ==========================
+# Payment Recolonization form
+# ==========================
+class ApplyPaymentForm(forms.Form):
+    """
+    فورم لتسوية دفعة عامة على فاتورة معيّنة (كاملة أو جزئية).
+    """
+    invoice = forms.ModelChoiceField(
+        queryset=Invoice.objects.none(),
+        label="اختر الفاتورة",
+        widget=forms.Select(attrs={
+            "class": "form-select"
+        })
+    )
+    amount = forms.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        label="المبلغ المراد تسويته",
+        widget=forms.NumberInput(attrs={
+            "class": "form-control",
+            "placeholder": "أدخل المبلغ"
+        })
+    )
+
+    def __init__(self, customer, max_amount: Decimal, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # فواتير هذا الزبون فقط
+        self.fields["invoice"].queryset = Invoice.objects.filter(customer=customer)
+        self.max_amount = max_amount
+
+    def clean_amount(self):
+        amount = self.cleaned_data["amount"]
+        if amount <= 0:
+            raise forms.ValidationError("المبلغ يجب أن يكون أكبر من صفر.")
+        if amount > self.max_amount:
+            raise forms.ValidationError("المبلغ أكبر من المبلغ المتاح في الدفعة.")
+        return amount
