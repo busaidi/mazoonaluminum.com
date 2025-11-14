@@ -71,6 +71,10 @@
       min-width: 200px;
     }
 
+    [dir="ltr"] .invoice-title {
+      text-align: left;
+    }
+
     .invoice-title h1 {
       font-size: 20px;
       margin: 0 0 6px 0;
@@ -125,10 +129,19 @@
       color: var(--mazoon-text-main);
     }
 
+    [dir="rtl"] th {
+      text-align: right;
+    }
+
     .totals-table {
       width: 50%;
       margin-left: auto;
       margin-top: 10px;
+    }
+
+    [dir="rtl"] .totals-table {
+      margin-left: 0;
+      margin-right: auto;
     }
 
     .totals-table th {
@@ -185,6 +198,32 @@
       background: #e5e7eb;
     }
 
+    /* بنود الفاتورة */
+    .items-table th,
+    .items-table td {
+      font-size: 12px;
+    }
+
+    .items-table .col-product {
+      width: 28%;
+    }
+
+    .items-table .col-desc {
+      width: 34%;
+    }
+
+    .items-table .col-qty,
+    .items-table .col-unit,
+    .items-table .col-total {
+      white-space: nowrap;
+      width: 12%;
+    }
+
+    .line-total {
+      font-weight: 600;
+      color: var(--mazoon-primary);
+    }
+
     @media print {
       body {
         background: #fff;
@@ -234,7 +273,6 @@
         <div>
           <strong>{% trans "الحالة:" %}</strong>
           {{ invoice.get_status_display }}
-          {% comment %} شارة حالة بسيطة للطباعة {% endcomment %}
           {% if invoice.status == invoice.Status.PAID %}
             <span class="badge-status paid">{% trans "مدفوعة" %}</span>
           {% elif invoice.status == invoice.Status.PARTIALLY_PAID %}
@@ -285,6 +323,60 @@
           <th>{% trans "المتبقي" %}</th>
           <td class="text-right">{{ invoice.balance }}</td>
         </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- بنود الفاتورة -->
+  <div class="block">
+    <div class="section-title">{% trans "بنود الفاتورة" %}</div>
+
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th class="col-product">{% trans "المنتج" %}</th>
+          <th class="col-desc">{% trans "الوصف" %}</th>
+          <th class="col-qty text-center">{% trans "الكمية" %}</th>
+          <th class="col-unit text-center">{% trans "سعر الوحدة" %}</th>
+          <th class="col-total text-right">{% trans "الإجمالي" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in invoice.items.all %}
+          <tr>
+            <td class="col-product">
+              {% if item.product %}
+                {{ item.product.name }}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="col-desc">
+              {% if item.description %}
+                {{ item.description }}
+              {% elif item.product %}
+                {{ item.product.description }}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="col-qty text-center">
+              {{ item.quantity }}
+            </td>
+            <td class="col-unit text-center">
+              {{ item.unit_price }}
+            </td>
+            <td class="col-total text-right">
+              <span class="line-total">{{ item.subtotal }}</span>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" class="text-center">
+              {% trans "لا توجد بنود في هذه الفاتورة." %}
+            </td>
+          </tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>
@@ -347,7 +439,7 @@
 </div>
 
 <script>
-  // يمكنك تفعيل الطباعة تلقائياً عند فتح الصفحة إن أحببت:
+  // لو تحب يفتح صفحة الطباعة مباشرة:
   // window.print();
 </script>
 
