@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
-from django.db.models import Sum, Q, ProtectedError
+from django.db.models import Sum, Q, ProtectedError, F
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse, reverse_lazy
@@ -300,15 +300,7 @@ class InvoicePrintView(DetailView):
 # Dashboard
 # ==========================
 
-@method_decorator(accounting_staff_required, name="dispatch")
 class AccountingDashboardView(TemplateView):
-    """
-    لوحة مبسطة للمحاسبة:
-    - إحصائيات عامة
-    - آخر الفواتير
-    - آخر الدفعات
-    - آخر الطلبات
-    """
     template_name = "accounting/dashboard.html"
 
     def get_context_data(self, **kwargs):
@@ -335,7 +327,24 @@ class AccountingDashboardView(TemplateView):
         ctx["recent_payments"] = payments.order_by("-date", "-id")[:5]
         ctx["recent_orders"] = orders.order_by("-created_at", "-id")[:5]
 
+        # 👇 الطلبات التي لم تُحوّل إلى فاتورة
+        ctx["pending_orders"] = (
+            orders
+            .filter(invoice__isnull=True)
+            .order_by("-created_at", "-id")[:5]
+        )
+
+        # 👇 الفواتير غير المسددة (كل ما عدا المدفوعة/الملغاة أو اللي فيها رصيد)
+        ctx["unpaid_invoices"] = (
+            invoices
+            .exclude(status=Invoice.Status.PAID)
+            .exclude(status=Invoice.Status.CANCELLED)
+            .filter(total_amount__gt=F("paid_amount"))
+            .order_by("-issued_at", "-id")[:5]
+        )
+
         return ctx
+
 
 
 # ==========================
