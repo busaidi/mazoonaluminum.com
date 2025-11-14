@@ -1,22 +1,22 @@
 # accounting/forms.py
 
 from django import forms
+from django.forms import inlineformset_factory
 
 from website.models import Product
-from .models import Invoice, Payment, Customer
+from .models import Invoice, Payment, Customer, InvoiceItem
 
 
 class InvoiceForm(forms.ModelForm):
     class Meta:
         model = Invoice
+        # 👈 لاحظ: شلّينا number و total_amount من الحقول
         fields = [
             "customer",
-            "number",
             "issued_at",
             "due_date",
             "description",
             "terms",
-            "total_amount",
             "status",
         ]
         widgets = {
@@ -54,14 +54,10 @@ class InvoiceForm(forms.ModelForm):
     def clean(self):
         """
         Basic business validation:
-        - total_amount must be > 0
         - due_date cannot be before issued_at
+        (total_amount صار ينحسب من البنود، فما نتحقق عنه هنا)
         """
         cleaned = super().clean()
-
-        total_amount = cleaned.get("total_amount")
-        if total_amount is not None and total_amount <= 0:
-            self.add_error("total_amount", "Total amount must be greater than zero.")
 
         issued_at = cleaned.get("issued_at")
         due_date = cleaned.get("due_date")
@@ -69,6 +65,7 @@ class InvoiceForm(forms.ModelForm):
             self.add_error("due_date", "Due date cannot be before issue date.")
 
         return cleaned
+
 
 
 
@@ -104,6 +101,15 @@ class PaymentForInvoiceForm(forms.ModelForm):
         if amount is not None and amount <= 0:
             raise forms.ValidationError("Amount must be greater than zero.")
         return amount
+
+
+InvoiceItemFormSet = inlineformset_factory(
+    Invoice,
+    InvoiceItem,
+    fields=["product", "description", "quantity", "unit_price"],
+    extra=1,
+    can_delete=True,
+)
 
 
 class CustomerForm(forms.ModelForm):

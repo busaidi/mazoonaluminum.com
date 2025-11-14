@@ -174,3 +174,36 @@ main .container {
 .alert {
   border-radius: 6px;
 }
+/* ====== Invoice items table ====== */
+.invoice-items-table td,
+.invoice-items-table th {
+  vertical-align: middle;
+}
+
+.invoice-items-table td input,
+.invoice-items-table td select,
+.invoice-items-table td textarea {
+  width: 100%;
+}
+
+/* أعمدة الكمية والسعر والإجمالي بحجم متناسق */
+.invoice-items-table .qty-col,
+.invoice-items-table .price-col,
+.invoice-items-table .total-col {
+  width: 11%;
+  white-space: nowrap;
+}
+
+.invoice-items-table .product-col {
+  width: 26%;
+}
+
+.invoice-items-table .desc-col {
+  width: 32%;
+}
+
+/* مظهر الإجمالي داخل البند */
+.invoice-line-total {
+  font-weight: 600;
+  color: var(--mazoon-primary);
+}

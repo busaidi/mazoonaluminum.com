@@ -1,13 +1,16 @@
 # accounting/views.py
+import json
 from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Sum, Q, ProtectedError
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.utils.safestring import mark_safe
 from django.utils.translation import get_language
 from django.views.generic import (
     ListView,
@@ -23,7 +26,7 @@ from website.models import Product
 from .forms import (
     InvoiceForm,
     PaymentForInvoiceForm,
-    CustomerForm,
+    CustomerForm, InvoiceItemFormSet,
 )
 from .models import Invoice, Payment, Customer, Order
 
@@ -105,13 +108,66 @@ class InvoiceCreateView(CreateView):
 
         # Pre-fill default terms template for new invoices
         # Only on GET (not POST) and if no terms already provided
-        if "terms" not in initial or not initial["terms"]:
+        if "terms" not in initial or not initial.get("terms"):
             initial["terms"] = DEFAULT_INVOICE_TERMS
 
         return initial
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+
+        if self.request.POST:
+            ctx["item_formset"] = InvoiceItemFormSet(self.request.POST)
+        else:
+            ctx["item_formset"] = InvoiceItemFormSet()
+
+        # 👇 تجهيز بيانات المنتجات للـ JavaScript
+        products = Product.objects.filter(is_active=True)
+        ctx["products_json"] = mark_safe(json.dumps(
+            {
+                str(p.id): {
+                    "description": p.description or "",
+                    "price": str(p.price),
+                }
+                for p in products
+            }
+        ))
+
+        return ctx
+
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        item_formset = context["item_formset"]
+
+        # أولاً: تأكد أن formset صحيح
+        if not item_formset.is_valid():
+            return self.form_invalid(form)
+
+        # 1) نحفظ الفاتورة بدون إجمالي
+        invoice = form.save(commit=False)
+        # نحط رقم مبدئيًا صفر، بنحدثه بعد البنود
+        invoice.total_amount = Decimal("0")
+        # paid_amount يظل افتراضي (0) من الموديل
+        invoice.save()  # هنا يتولد number تلقائياً من save() في الموديل
+        self.object = invoice
+
+        # 2) نحفظ البنود ونربطها بالفاتورة
+        item_formset.instance = invoice
+        item_formset.save()
+
+        # 3) نحسب الإجمالي من البنود
+        total = sum((item.subtotal for item in invoice.items.all()), Decimal("0"))
+        invoice.total_amount = total
+        invoice.save(update_fields=["total_amount"])
+
+        # 4) رجوع للصفحة المطلوبة
+        return HttpResponseRedirect(self.get_success_url())
+
     def get_success_url(self):
         return reverse("accounting:invoice_list")
+
+
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
@@ -122,9 +178,59 @@ class InvoiceUpdateView(UpdateView):
     slug_field = "number"
     slug_url_kwarg = "number"
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+
+        invoice = self.object  # الفاتورة الحالية
+
+        if self.request.POST:
+            ctx["item_formset"] = InvoiceItemFormSet(self.request.POST, instance=invoice)
+        else:
+            ctx["item_formset"] = InvoiceItemFormSet(instance=invoice)
+
+        # نفس JSON المنتجات المستخدم في الإنشاء
+        products = Product.objects.filter(is_active=True)
+        ctx["products_json"] = mark_safe(json.dumps(
+            {
+                str(p.id): {
+                    "description": p.description or "",
+                    "price": str(p.price),
+                }
+                for p in products
+            }
+        ))
+
+        return ctx
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        item_formset = context["item_formset"]
+
+        if not item_formset.is_valid():
+            return self.form_invalid(form)
+
+        # نحدّث بيانات الفاتورة نفسها أولاً
+        invoice = form.save(commit=False)
+        # نرجّع الإجمالي للصفر، ثم نحسبه من جديد بعد حفظ البنود
+        invoice.total_amount = Decimal("0")
+        invoice.save()
+        self.object = invoice
+
+        # نحفظ البنود (تعديل / حذف / إضافة)
+        item_formset.instance = invoice
+        item_formset.save()
+
+        # نعيد حساب الإجمالي من البنود بعد التعديل
+        total = sum((item.subtotal for item in invoice.items.all()), Decimal("0"))
+        invoice.total_amount = total
+        invoice.save(update_fields=["total_amount"])
+
+        return HttpResponseRedirect(self.get_success_url())
+
     def get_success_url(self):
         # بعد الحفظ يرجع لتفاصيل نفس الفاتورة
         return reverse("accounting:invoice_detail", kwargs={"number": self.object.number})
+
 
 
 @method_decorator(accounting_staff_required, name="dispatch")

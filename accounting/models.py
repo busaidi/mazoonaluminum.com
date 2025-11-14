@@ -183,6 +183,55 @@ class Invoice(models.Model):
         self.save(update_fields=["paid_amount", "status"])
 
 
+
+class InvoiceItem(models.Model):
+    invoice = models.ForeignKey(
+        Invoice,
+        related_name="items",
+        on_delete=models.CASCADE,
+        verbose_name="الفاتورة",
+    )
+    product = models.ForeignKey(
+        "website.Product",
+        on_delete=models.PROTECT,
+        verbose_name="المنتج",
+        null=True,
+        blank=True,  # 👈 صار اختياري
+    )
+    description = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="الوصف",
+    )
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=3)
+
+    @property
+    def subtotal(self) -> Decimal:
+        return self.quantity * self.unit_price
+
+    def clean(self):
+        """
+        سطر الفاتورة يكون صالح إذا:
+        - product موجود، أو
+        - description مكتوب
+        إذا الاثنين فاضيين، نعتبره سطر فارغ (عادة formset يتجاهله)،
+        لكن لو وصل هنا نرمي خطأ بسيط.
+        """
+        from django.core.exceptions import ValidationError
+
+        if not self.product and not self.description:
+            raise ValidationError(
+                "يجب اختيار منتج أو كتابة وصف للبند."
+            )
+
+    def __str__(self):
+        if self.product:
+            return f"{self.product} × {self.quantity}"
+        return f"{self.description or 'Item'} × {self.quantity}"
+
+
+
 class Payment(models.Model):
     """
     Payment can be linked to a specific invoice, or just to a customer.

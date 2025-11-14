@@ -43,7 +43,7 @@
           </span>
         </div>
         <p class="text-muted small mb-0">
-          {% trans "املأ بيانات الفاتورة، خصوصًا العميل، رقم الفاتورة، المبلغ الإجمالي، والحالة." %}
+          {% trans "املأ بيانات الفاتورة، خصوصًا العميل، تاريخ الإصدار، بنود الفاتورة، والشروط." %}
         </p>
       {% endif %}
     </div>
@@ -62,7 +62,7 @@
       <form method="post" novalidate>
         {% csrf_token %}
 
-        {# أخطاء عامة للفورم #}
+        {# أخطاء عامة للفورم الرئيسي #}
         {% if form.non_field_errors %}
           <div class="alert alert-danger mb-3">
             {% for error in form.non_field_errors %}
@@ -78,30 +78,186 @@
           </div>
         </div>
 
-        {# الحقول بالترتيب كما في InvoiceForm.fields، عمود واحد #}
-        {% for field in form %}
-          <div class="mb-3">
-            <label class="form-label d-flex justify-content-between align-items-center" for="{{ field.id_for_label }}">
-              <span>{{ field.label }}</span>
-              {% if field.field.required %}
+        {# --- رأس الفاتورة: العميل + التواريخ + الحالة --- #}
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label d-flex justify-content-between align-items-center" for="{{ form.customer.id_for_label }}">
+              <span>{{ form.customer.label }}</span>
+              {% if form.customer.field.required %}
                 <span class="small text-muted">*</span>
               {% endif %}
             </label>
-            {{ field }}
-            {% if field.help_text %}
-              <div class="form-text small">{{ field.help_text }}</div>
-            {% else %}
-              {% if field.name == "terms" %}
-                <div class="form-text small text-muted">
-                  {% trans "اكتب هنا الشروط والأحكام أو ملاحظات الدفع التي ستظهر في الفاتورة." %}
-                </div>
-              {% endif %}
-            {% endif %}
-            {% for error in field.errors %}
+            {{ form.customer }}
+            {% for error in form.customer.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
             {% endfor %}
           </div>
+
+          <div class="col-md-3 mb-3">
+            <label class="form-label d-flex justify-content-between align-items-center" for="{{ form.issued_at.id_for_label }}">
+              <span>{{ form.issued_at.label }}</span>
+              {% if form.issued_at.field.required %}
+                <span class="small text-muted">*</span>
+              {% endif %}
+            </label>
+            {{ form.issued_at }}
+            {% for error in form.issued_at.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-3 mb-3">
+            <label class="form-label d-flex justify-content-between align-items-center" for="{{ form.due_date.id_for_label }}">
+              <span>{{ form.due_date.label }}</span>
+            </label>
+            {{ form.due_date }}
+            {% for error in form.due_date.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label class="form-label d-flex justify-content-between align-items-center" for="{{ form.status.id_for_label }}">
+              <span>{{ form.status.label }}</span>
+              {% if form.status.field.required %}
+                <span class="small text-muted">*</span>
+              {% endif %}
+            </label>
+            {{ form.status }}
+            {% for error in form.status.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- بنود الفاتورة (InvoiceItem formset) -->
+        <div class="mb-3 d-flex justify-content-between align-items-center">
+          <div class="small text-muted">
+            {% trans "بنود الفاتورة (منتجات أو بنود حرة)" %}
+          </div>
+          <div class="small text-muted">
+            {% trans "يمكنك اختيار منتج من القائمة أو تركه فارغًا وكتابة وصف حر للبند، مع تحديد الكمية والسعر." %}
+          </div>
+        </div>
+
+        {# أخطاء عامة للـ formset #}
+        {% if item_formset.non_form_errors %}
+          <div class="alert alert-danger mb-3">
+            {% for error in item_formset.non_form_errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {{ item_formset.management_form }}
+
+        <div class="table-responsive mb-3">
+  <table class="table table-sm align-middle invoice-items-table">
+    <thead class="table-light">
+      <tr>
+        <th class="product-col">{% trans "المنتج (اختياري)" %}</th>
+        <th class="desc-col">{% trans "الوصف" %}</th>
+        <th class="qty-col text-center">{% trans "الكمية" %}</th>
+        <th class="price-col text-center">{% trans "سعر الوحدة" %}</th>
+        <th class="total-col text-end">{% trans "الإجمالي" %}</th>
+        <th style="width: 6%;" class="text-center">{% trans "حذف" %}</th>
+      </tr>
+    </thead>
+    <tbody id="invoice-items-body">
+      {% for f in item_formset %}
+        {# حقول مخفية مثل id #}
+        {% for hidden in f.hidden_fields %}
+          {{ hidden }}
         {% endfor %}
+
+        <tr class="invoice-item-row">
+          <td class="product-col">
+            {{ f.product }}
+            {% for error in f.product.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          </td>
+          <td class="desc-col">
+            {{ f.description }}
+            {% for error in f.description.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          </td>
+          <td class="qty-col">
+            {{ f.quantity }}
+            {% for error in f.quantity.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          </td>
+          <td class="price-col">
+            {{ f.unit_price }}
+            {% for error in f.unit_price.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          </td>
+          <td class="total-col text-end">
+            {# نعرض قيمة مبدئية لو البند محفوظ، وإلا نخليها صفر #}
+            <span class="invoice-line-total">
+              {% if f.instance.pk %}
+                {{ f.instance.subtotal }}
+              {% else %}
+                0.000
+              {% endif %}
+            </span>
+          </td>
+          <td class="text-center">
+            {% if f.DELETE %}
+              {{ f.DELETE }}
+            {% endif %}
+            {% if f.non_field_errors %}
+              {% for error in f.non_field_errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+
+        <div class="mb-4">
+          <button type="button" class="btn btn-outline-primary btn-sm" id="add-item-row">
+            {% trans "إضافة بند جديد" %}
+          </button>
+        </div>
+
+        <hr class="my-4">
+
+        {# الوصف العام للفاتورة #}
+        <div class="mb-3">
+          <label class="form-label d-flex justify-content-between align-items-center" for="{{ form.description.id_for_label }}">
+            <span>{{ form.description.label }}</span>
+          </label>
+          {{ form.description }}
+          {% for error in form.description.errors %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        {# الشروط والأحكام #}
+        <div class="mb-3">
+          <label class="form-label d-flex justify-content-between align-items-center" for="{{ form.terms.id_for_label }}">
+            <span>{{ form.terms.label }}</span>
+          </label>
+          {{ form.terms }}
+          <div class="form-text small text-muted">
+            {% trans "اكتب هنا الشروط والأحكام أو ملاحظات الدفع التي ستظهر في الفاتورة." %}
+          </div>
+          {% for error in form.terms.errors %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+          {% endfor %}
+        </div>
 
         <div class="d-flex flex-wrap gap-2 mt-3">
           <button type="submit" class="btn btn-primary">
@@ -121,4 +277,132 @@
   </div>
 
 </div>
+
+{# ---------------- JS: تعبئة السعر/الوصف + إضافة بنود ديناميكيًا ---------------- #}
+<script>
+  // بيانات المنتجات من الـ View
+  window.INVOICE_PRODUCTS = {{ products_json|default:"{}"|safe }};
+
+  function recalcRowTotal(row) {
+    if (!row) return;
+    const qtyInput = row.querySelector('input[name$="-quantity"]');
+    const priceInput = row.querySelector('input[name$="-unit_price"]');
+    const totalSpan = row.querySelector(".invoice-line-total");
+
+    if (!qtyInput || !priceInput || !totalSpan) return;
+
+    const qty = parseFloat(qtyInput.value || "0");
+    const price = parseFloat(priceInput.value || "0");
+    const total = qty * price;
+
+    // ثلاث منازل عشرية
+    totalSpan.textContent = total.toFixed(3);
+  }
+
+  function attachProductListener(selectEl) {
+    if (!selectEl) return;
+    selectEl.addEventListener("change", function () {
+      const productId = this.value;
+      const row = this.closest("tr");
+      if (!row) return;
+
+      const descInput =
+        row.querySelector('input[name$="-description"], textarea[name$="-description"]');
+      const priceInput = row.querySelector('input[name$="-unit_price"]');
+
+      const p = window.INVOICE_PRODUCTS[String(productId)];
+      if (p) {
+        if (descInput && !descInput.value) {
+          descInput.value = p.description || "";
+        }
+        if (priceInput && (!priceInput.value || priceInput.value === "0" || priceInput.value === "0.000")) {
+          priceInput.value = p.price;
+        }
+        // بعد ما نحدّث السعر، نعيد حساب الإجمالي
+        recalcRowTotal(row);
+      }
+    });
+  }
+
+  function attachQtyPriceListeners(row) {
+    if (!row) return;
+    const qtyInput = row.querySelector('input[name$="-quantity"]');
+    const priceInput = row.querySelector('input[name$="-unit_price"]');
+
+    [qtyInput, priceInput].forEach(function (el) {
+      if (!el) return;
+      el.addEventListener("input", function () {
+        recalcRowTotal(row);
+      });
+    });
+  }
+
+  // ربط الليسنرات على الصفوف الموجودة عند تحميل الصفحة
+  document.querySelectorAll("tr.invoice-item-row").forEach(function (row) {
+    const selectEl = row.querySelector('select[name$="-product"]');
+    if (selectEl) {
+      attachProductListener(selectEl);
+    }
+    attachQtyPriceListeners(row);
+    recalcRowTotal(row); // حساب مبدئي
+  });
+
+  // إضافة صف جديد ديناميكيًا
+  (function () {
+    const addBtn = document.getElementById("add-item-row");
+    const tableBody = document.getElementById("invoice-items-body");
+    const totalFormsInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
+
+    if (!addBtn || !tableBody || !totalFormsInput) return;
+
+    addBtn.addEventListener("click", function () {
+      const currentCount = parseInt(totalFormsInput.value, 10);
+      const newIndex = currentCount;
+
+      // ناخذ آخر صف كقالب
+      const lastRow = tableBody.querySelector("tr.invoice-item-row:last-child");
+      if (!lastRow) return;
+
+      const newRow = lastRow.cloneNode(true);
+
+      // تنظيف القيم القديمة وتحديث أسماء الحقول
+      newRow.querySelectorAll("input, select, textarea").forEach(function (el) {
+        // تحديث name / id من -0- إلى -newIndex-
+        if (el.name) {
+          el.name = el.name.replace(/\-(\d+)\-/, "-" + newIndex + "-");
+        }
+        if (el.id) {
+          el.id = el.id.replace(/\_(\d+)\_/, "_" + newIndex + "_");
+        }
+
+        // تفريغ القيم
+        if (el.type === "checkbox" || el.type === "radio") {
+          el.checked = false;
+        } else {
+          el.value = "";
+        }
+      });
+
+      // الإجمالي في الصف الجديد يرجع 0.000
+      const totalSpan = newRow.querySelector(".invoice-line-total");
+      if (totalSpan) {
+        totalSpan.textContent = "0.000";
+      }
+
+      tableBody.appendChild(newRow);
+
+      // زيادة عدّاد الفورمات
+      totalFormsInput.value = newIndex + 1;
+
+      // ربط الليسنرات للصف الجديد
+      const newSelect = newRow.querySelector('select[name$="-product"]');
+      if (newSelect) {
+        attachProductListener(newSelect);
+      }
+      attachQtyPriceListeners(newRow);
+    });
+  })();
+</script>
+
+
 {% endblock %}
