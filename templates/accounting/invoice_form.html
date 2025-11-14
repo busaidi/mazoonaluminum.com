@@ -1,38 +1,61 @@
 {% extends "base.html" %}
-{% load static %}
 
-{% block title %}فاتورة جديدة{% endblock %}
+{% block meta_title %}فاتورة جديدة | Mazoon Aluminum{% endblock %}
+{% block meta_description %}
+إنشاء فاتورة جديدة لعميل في نظام المحاسبة الخاص بمزون ألمنيوم.
+{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-  <h1 class="h3 mb-3">فاتورة جديدة</h1>
+<div class="py-4">
 
-  <form method="post" novalidate>
-    {% csrf_token %}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">فاتورة جديدة</h1>
+    <a href="{% url 'accounting:invoice_list' %}" class="btn btn-outline-secondary btn-sm">
+      رجوع إلى قائمة الفواتير
+    </a>
+  </div>
 
-    {% if form.non_field_errors %}
-      <div class="alert alert-danger">
-        {{ form.non_field_errors }}
-      </div>
-    {% endif %}
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <form method="post" novalidate>
+        {% csrf_token %}
 
-    {% for field in form %}
-      <div class="mb-3">
-        <label class="form-label" for="{{ field.id_for_label }}">
-          {{ field.label }}{% if field.field.required %} *{% endif %}
-        </label>
-        {{ field }}
-        {% if field.help_text %}
-          <div class="form-text">{{ field.help_text }}</div>
+        {# أخطاء عامة للفورم #}
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">
+            {% for error in form.non_field_errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
         {% endif %}
-        {% for error in field.errors %}
-          <div class="text-danger small">{{ error }}</div>
-        {% endfor %}
-      </div>
-    {% endfor %}
 
-    <button type="submit" class="btn btn-primary">حفظ الفاتورة</button>
-    <a href="{% url 'accounting:invoice_list' %}" class="btn btn-secondary">رجوع</a>
-  </form>
+        {# الحقول #}
+        {% for field in form %}
+          <div class="mb-3">
+            <label class="form-label" for="{{ field.id_for_label }}">
+              {{ field.label }}{% if field.field.required %} *{% endif %}
+            </label>
+            {{ field }}
+            {% if field.help_text %}
+              <div class="form-text">{{ field.help_text }}</div>
+            {% endif %}
+            {% for error in field.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endfor %}
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">
+            حفظ الفاتورة
+          </button>
+          <a href="{% url 'accounting:invoice_list' %}" class="btn btn-secondary">
+            إلغاء
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
 </div>
 {% endblock %}

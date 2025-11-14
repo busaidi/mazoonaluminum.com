@@ -1,68 +1,85 @@
 {% extends "base.html" %}
 
-{% block title %}لوحة المحاسبة{% endblock %}
+{# عنوان الصفحة في التبويب + SEO #}
+{% block meta_title %}لوحة المحاسبة | Mazoon Aluminum{% endblock %}
+{% block meta_description %}
+لوحة تحكم لمتابعة الفواتير، الدفعات والطلبات في نظام المحاسبة الخاص بمزون ألمنيوم.
+{% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="py-4">
 
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">لوحة المحاسبة</h1>
-    <div class="d-flex gap-2">
+  {# العنوان + أزرار سريعة #}
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+      <h1 class="h3 mb-1">لوحة المحاسبة</h1>
+      <p class="text-muted mb-0 small">
+        نظرة سريعة على الفواتير، العملاء، الطلبات والدفعات.
+      </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
       <a href="{% url 'accounting:invoice_create' %}" class="btn btn-primary btn-sm">
         + إنشاء فاتورة جديدة
       </a>
       <a href="{% url 'accounting:customer_create' %}" class="btn btn-outline-primary btn-sm">
         + إضافة زبون
       </a>
+      <a href="{% url 'accounting:order_list' %}" class="btn btn-outline-secondary btn-sm">
+        إدارة الطلبات
+      </a>
     </div>
   </div>
 
-  <!-- الكروت الأساسية -->
+  {# كروت الإحصائيات الأساسية #}
   <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="card h-100">
+    <div class="col-md-3 col-sm-6">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
-          <h6 class="text-muted">عدد الفواتير</h6>
+          <div class="text-muted small mb-1">عدد الفواتير</div>
           <div class="fs-4 fw-bold">{{ invoice_count }}</div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-3">
-      <div class="card h-100">
+    <div class="col-md-3 col-sm-6">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
-          <h6 class="text-muted">عدد العملاء</h6>
+          <div class="text-muted small mb-1">عدد العملاء</div>
           <div class="fs-4 fw-bold">{{ customer_count }}</div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-3">
-      <div class="card h-100">
+    <div class="col-md-3 col-sm-6">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
-          <h6 class="text-muted">عدد الطلبات</h6>
+          <div class="text-muted small mb-1">عدد الطلبات</div>
           <div class="fs-4 fw-bold">{{ order_count }}</div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-3">
-      <div class="card h-100">
+    <div class="col-md-3 col-sm-6">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
-          <h6 class="text-muted">إجمالي المتبقي</h6>
-          <div class="fs-5 fw-bold">{{ total_balance }}</div>
+          <div class="text-muted small mb-1">إجمالي المتبقي</div>
+          <div class="fs-5 fw-bold">
+            {{ total_balance }}
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- روابط سريعة -->
+  {# روابط سريعة لأقسام المحاسبة #}
   <div class="row g-3 mb-4">
     <div class="col-md-4">
-      <div class="card h-100">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body d-flex flex-column">
           <h5 class="card-title">الفواتير</h5>
-          <p class="card-text text-muted">عرض وإدارة فواتير العملاء.</p>
+          <p class="card-text text-muted small">
+            عرض وإدارة فواتير العملاء، ومتابعة المبالغ المتبقية والمدفوعة.
+          </p>
           <div class="mt-auto">
             <a href="{% url 'accounting:invoice_list' %}" class="btn btn-outline-primary btn-sm">
               عرض كل الفواتير
@@ -73,10 +90,12 @@
     </div>
 
     <div class="col-md-4">
-      <div class="card h-100">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body d-flex flex-column">
           <h5 class="card-title">العملاء</h5>
-          <p class="card-text text-muted">إدارة بيانات العملاء وربطهم بالفواتير والطلبات.</p>
+          <p class="card-text text-muted small">
+            إدارة بيانات العملاء وربطهم بالفواتير والدفعات والطلبات.
+          </p>
           <div class="mt-auto">
             <a href="{% url 'accounting:customer_list' %}" class="btn btn-outline-primary btn-sm">
               عرض كل العملاء
@@ -86,17 +105,19 @@
       </div>
     </div>
 
-    <!-- الطلبات -->
     <div class="col-md-4">
-      <div class="card h-100">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body d-flex flex-column">
           <h5 class="card-title">الطلبات</h5>
-          <p class="card-text text-muted">
-            متابعة طلبات العملاء (قبل وبعد تحويلها إلى فواتير).
+          <p class="card-text text-muted small">
+            متابعة طلبات العملاء قبل وبعد تحويلها إلى فواتير.
           </p>
-          <div class="mt-auto">
+          <div class="mt-auto d-flex gap-2">
             <a href="{% url 'accounting:order_list' %}" class="btn btn-outline-primary btn-sm">
               عرض كل الطلبات
+            </a>
+            <a href="{% url 'accounting:order_create' %}" class="btn btn-primary btn-sm">
+              + إنشاء طلب
             </a>
           </div>
         </div>
@@ -104,115 +125,121 @@
     </div>
   </div>
 
-  <!-- آخر الفواتير + آخر الطلبات + آخر الدفعات -->
+  {# آخر الفواتير + آخر الطلبات + آخر الدفعات #}
   <div class="row g-3">
-    <!-- آخر الفواتير -->
+    {# آخر الفواتير #}
     <div class="col-md-4">
-      <div class="card h-100">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
           <h5 class="card-title mb-3">آخر الفواتير</h5>
-          <table class="table table-sm align-middle mb-0">
-            <thead>
-              <tr>
-                <th>رقم</th>
-                <th>العميل</th>
-                <th>التاريخ</th>
-                <th>المتبقي</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for inv in recent_invoices %}
-              <tr>
-                <td>
-                  <a href="{% url 'accounting:invoice_detail' number=inv.number %}">
-                    {{ inv.number }}
-                  </a>
-                </td>
-                <td>{{ inv.customer.name }}</td>
-                <td>{{ inv.issued_at }}</td>
-                <td>{{ inv.balance }}</td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="4" class="text-muted text-center">
-                  لا توجد فواتير بعد.
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>رقم</th>
+                  <th>العميل</th>
+                  <th>التاريخ</th>
+                  <th>المتبقي</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for inv in recent_invoices %}
+                  <tr>
+                    <td>
+                      <a href="{% url 'accounting:invoice_detail' number=inv.number %}">
+                        {{ inv.number }}
+                      </a>
+                    </td>
+                    <td>{{ inv.customer.name }}</td>
+                    <td>{{ inv.issued_at }}</td>
+                    <td>{{ inv.balance }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="4" class="text-muted text-center small">
+                      لا توجد فواتير بعد.
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- آخر الطلبات -->
+    {# آخر الطلبات #}
     <div class="col-md-4">
-      <div class="card h-100">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
           <h5 class="card-title mb-3">آخر الطلبات</h5>
-          <table class="table table-sm align-middle mb-0">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>العميل</th>
-                <th>التاريخ</th>
-                <th>الحالة</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for order in recent_orders %}
-              <tr>
-                <td>
-                  <a href="{% url 'accounting:order_detail' pk=order.pk %}">
-                    {{ order.id }}
-                  </a>
-                </td>
-                <td>{{ order.customer.name }}</td>
-                <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
-                <td>{{ order.get_status_display }}</td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="4" class="text-muted text-center">
-                  لا توجد طلبات حتى الآن.
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>العميل</th>
+                  <th>التاريخ</th>
+                  <th>الحالة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for order in recent_orders %}
+                  <tr>
+                    <td>
+                      <a href="{% url 'accounting:order_detail' pk=order.pk %}">
+                        {{ order.id }}
+                      </a>
+                    </td>
+                    <td>{{ order.customer.name }}</td>
+                    <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ order.get_status_display }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="4" class="text-muted text-center small">
+                      لا توجد طلبات حتى الآن.
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- آخر الدفعات -->
+    {# آخر الدفعات #}
     <div class="col-md-4">
-      <div class="card h-100">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
           <h5 class="card-title mb-3">آخر الدفعات</h5>
-          <table class="table table-sm align-middle mb-0">
-            <thead>
-              <tr>
-                <th>التاريخ</th>
-                <th>العميل</th>
-                <th>المبلغ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for p in recent_payments %}
-              <tr>
-                <td>{{ p.date }}</td>
-                <td>{{ p.customer.name }}</td>
-                <td>{{ p.amount }}</td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="3" class="text-muted text-center">
-                  لا توجد دفعات مسجلة حتى الآن.
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>التاريخ</th>
+                  <th>العميل</th>
+                  <th>المبلغ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in recent_payments %}
+                  <tr>
+                    <td>{{ p.date }}</td>
+                    <td>{{ p.customer.name }}</td>
+                    <td>{{ p.amount }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="3" class="text-muted text-center small">
+                      لا توجد دفعات مسجلة حتى الآن.
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

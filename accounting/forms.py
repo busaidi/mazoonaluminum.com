@@ -26,6 +26,7 @@ class InvoiceForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Add Bootstrap classes
         for name, field in self.fields.items():
             css = field.widget.attrs.get("class", "")
             if name in ("customer", "status"):
@@ -33,11 +34,30 @@ class InvoiceForm(forms.ModelForm):
             else:
                 field.widget.attrs["class"] = (css + " form-control").strip()
 
+    def clean(self):
+        """
+        Basic business validation:
+        - total_amount must be > 0
+        - due_date cannot be before issued_at
+        """
+        cleaned = super().clean()
+
+        total_amount = cleaned.get("total_amount")
+        if total_amount is not None and total_amount <= 0:
+            self.add_error("total_amount", "Total amount must be greater than zero.")
+
+        issued_at = cleaned.get("issued_at")
+        due_date = cleaned.get("due_date")
+        if issued_at and due_date and due_date < issued_at:
+            self.add_error("due_date", "Due date cannot be before issue date.")
+
+        return cleaned
+
 
 class PaymentForInvoiceForm(forms.ModelForm):
     """
-    فورم بسيط لإضافة دفعة من شاشة الفاتورة.
-    لا نعرض حقل customer ولا invoice؛ سنملأها في الفيو.
+    Simple form to add a payment from the invoice screen.
+    We do NOT expose customer/invoice fields; they are set in the view.
     """
 
     class Meta:
@@ -50,12 +70,23 @@ class PaymentForInvoiceForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Add Bootstrap classes
         for name, field in self.fields.items():
             css = field.widget.attrs.get("class", "")
             if name == "method":
                 field.widget.attrs["class"] = (css + " form-select").strip()
             else:
                 field.widget.attrs["class"] = (css + " form-control").strip()
+
+    def clean_amount(self):
+        """
+        Ensure payment amount is strictly positive.
+        """
+        amount = self.cleaned_data.get("amount")
+        if amount is not None and amount <= 0:
+            raise forms.ValidationError("Amount must be greater than zero.")
+        return amount
+
 
 class CustomerForm(forms.ModelForm):
     class Meta:
@@ -74,6 +105,7 @@ class CustomerForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Add Bootstrap on all fields
         for name, field in self.fields.items():
             css = field.widget.attrs.get("class", "")
             field.widget.attrs["class"] = (css + " form-control").strip()
@@ -81,7 +113,7 @@ class CustomerForm(forms.ModelForm):
 
 class CustomerProfileForm(forms.ModelForm):
     """
-    فورم تعديل بيانات الزبون من بوابة الزبون (بدون user).
+    Form used in the customer portal to edit basic profile data (without user field).
     """
 
     class Meta:
@@ -117,6 +149,13 @@ class CustomerOrderForm(forms.Form):
         required=False,
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Bootstrap styling
+        for name, field in self.fields.items():
+            css = field.widget.attrs.get("class", "")
+            field.widget.attrs["class"] = (css + " form-control").strip()
+
 
 class StaffOrderForm(forms.Form):
     customer = forms.ModelChoiceField(
@@ -138,3 +177,13 @@ class StaffOrderForm(forms.Form):
         widget=forms.Textarea(attrs={"rows": 3}),
         required=False,
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Bootstrap styling: selects vs inputs
+        for name, field in self.fields.items():
+            css = field.widget.attrs.get("class", "")
+            if name in ("customer", "product"):
+                field.widget.attrs["class"] = (css + " form-select").strip()
+            else:
+                field.widget.attrs["class"] = (css + " form-control").strip()

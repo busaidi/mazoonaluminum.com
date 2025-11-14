@@ -1,173 +1,229 @@
 {% extends "base.html" %}
 
-{% block title %}الزبون {{ customer.name }}{% endblock %}
+{% block meta_title %}الزبون {{ customer.name }} | Mazoon Aluminum{% endblock %}
+{% block meta_description %}
+تفاصيل الزبون {{ customer.name }}، بيانات التواصل، الملخص المالي، الفواتير والدفعات المرتبطة به.
+{% endblock %}
 
 {% block content %}
-    <div class="container py-4">
+<div class="py-4">
 
-        <!-- العنوان + أزرار -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="h4 mb-1">الزبون: {{ customer.name }}</h1>
-                {% if customer.company_name %}
-                    <div class="text-muted small">
-                        {{ customer.company_name }}
-                    </div>
-                {% endif %}
-            </div>
-            <div class="btn-group">
-  <a href="{% url 'accounting:customer_edit' pk=customer.pk %}"
-     class="btn btn-outline-primary btn-sm">
-    تعديل
-  </a>
-
-  <a href="{% url 'accounting:customer_delete' pk=customer.pk %}"
-     class="btn btn-outline-danger btn-sm">
-    حذف
-  </a>
-
-  <a href="{% url 'accounting:invoice_create' %}?customer={{ customer.pk }}"
-     class="btn btn-success btn-sm">
-    + إنشاء فاتورة لهذا الزبون
-  </a>
-
-  <a href="{% url 'accounting:customer_add_payment' pk=customer.pk %}"
-     class="btn btn-outline-success btn-sm">
-    + دفعة لهذا الزبون
-  </a>
-
-  <a href="{% url 'accounting:customer_list' %}"
-     class="btn btn-secondary btn-sm">
-    رجوع للزبائن
-  </a>
-</div>
-
-
+  {# العنوان + الأزرار #}
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+      <h1 class="h4 mb-1">الزبون: {{ customer.name }}</h1>
+      {% if customer.company_name %}
+        <div class="text-muted small">
+          {{ customer.company_name }}
         </div>
-
-        <!-- بيانات أساسية + ملخص مالي -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title mb-3">بيانات الزبون</h5>
-                        <p class="mb-1"><strong>الاسم:</strong> {{ customer.name }}</p>
-                        {% if customer.company_name %}
-                            <p class="mb-1"><strong>الشركة:</strong> {{ customer.company_name }}</p>
-                        {% endif %}
-                        {% if customer.phone %}
-                            <p class="mb-1"><strong>الهاتف:</strong> {{ customer.phone }}</p>
-                        {% endif %}
-                        {% if customer.email %}
-                            <p class="mb-1"><strong>البريد:</strong> {{ customer.email }}</p>
-                        {% endif %}
-                        {% if customer.tax_number %}
-                            <p class="mb-1"><strong>الرقم الضريبي:</strong> {{ customer.tax_number }}</p>
-                        {% endif %}
-                        {% if customer.address %}
-                            <p class="mb-1"><strong>العنوان:</strong><br>{{ customer.address|linebreaksbr }}</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title mb-3">ملخص مالي</h5>
-                        <p class="mb-1"><strong>إجمالي الفواتير:</strong> {{ total_invoices }}</p>
-                        <p class="mb-1"><strong>إجمالي الدفعات:</strong> {{ total_paid }}</p>
-                        <p class="mb-1"><strong>الرصيد المتبقي:</strong> {{ balance }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- فواتير الزبون -->
-        <div class="row g-3">
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title mb-3">فواتير الزبون</h5>
-                        <table class="table table-sm align-middle mb-0">
-                            <thead>
-                            <tr>
-                                <th>رقم الفاتورة</th>
-                                <th>التاريخ</th>
-                                <th>الإجمالي</th>
-                                <th>المتبقي</th>
-                                <th>الحالة</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {% for inv in invoices %}
-                                <tr>
-                                    <td>
-                                        <a href="{% url 'accounting:invoice_detail' number=inv.number %}">
-                                            {{ inv.number }}
-                                        </a>
-                                    </td>
-                                    <td>{{ inv.issued_at }}</td>
-                                    <td>{{ inv.total_amount }}</td>
-                                    <td>{{ inv.balance }}</td>
-                                    <td>{{ inv.get_status_display }}</td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="5" class="text-muted text-center">
-                                        لا توجد فواتير لهذا الزبون.
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- دفعات الزبون -->
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title mb-3">دفعات الزبون</h5>
-                        <table class="table table-sm align-middle mb-0">
-                            <thead>
-                            <tr>
-                                <th>التاريخ</th>
-                                <th>المبلغ</th>
-                                <th>الطريقة</th>
-                                <th>الفاتورة</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {% for p in payments %}
-                                <tr>
-                                    <td>{{ p.date }}</td>
-                                    <td>{{ p.amount }}</td>
-                                    <td>{{ p.get_method_display }}</td>
-                                    <td>
-                                        {% if p.invoice %}
-                                            <a href="{% url 'accounting:invoice_detail' number=p.invoice.number %}">
-                                                {{ p.invoice.number }}
-                                            </a>
-                                        {% else %}
-                                            <span class="text-muted small">غير مرتبط</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="4" class="text-muted text-center">
-                                        لا توجد دفعات لهذا الزبون.
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+      {% endif %}
     </div>
+
+    <div class="btn-group">
+      <a href="{% url 'accounting:customer_edit' pk=customer.pk %}"
+         class="btn btn-outline-primary btn-sm">
+        تعديل
+      </a>
+
+      <a href="{% url 'accounting:customer_delete' pk=customer.pk %}"
+         class="btn btn-outline-danger btn-sm">
+        حذف
+      </a>
+
+      <a href="{% url 'accounting:invoice_create' %}?customer={{ customer.pk }}"
+         class="btn btn-success btn-sm">
+        + إنشاء فاتورة لهذا الزبون
+      </a>
+
+      <a href="{% url 'accounting:customer_add_payment' pk=customer.pk %}"
+         class="btn btn-outline-success btn-sm">
+        + دفعة لهذا الزبون
+      </a>
+
+      <a href="{% url 'accounting:customer_list' %}"
+         class="btn btn-secondary btn-sm">
+        رجوع للزبائن
+      </a>
+    </div>
+  </div>
+
+  {# بيانات أساسية + ملخص مالي #}
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title mb-3">بيانات الزبون</h5>
+
+          <p class="mb-1 small">
+            <span class="text-muted">الاسم:</span>
+            <span class="fw-semibold">{{ customer.name }}</span>
+          </p>
+
+          {% if customer.company_name %}
+            <p class="mb-1 small">
+              <span class="text-muted">الشركة:</span>
+              <span class="fw-semibold">{{ customer.company_name }}</span>
+            </p>
+          {% endif %}
+
+          {% if customer.phone %}
+            <p class="mb-1 small">
+              <span class="text-muted">الهاتف:</span>
+              <span class="fw-semibold">{{ customer.phone }}</span>
+            </p>
+          {% endif %}
+
+          {% if customer.email %}
+            <p class="mb-1 small">
+              <span class="text-muted">البريد:</span>
+              <span class="fw-semibold">{{ customer.email }}</span>
+            </p>
+          {% endif %}
+
+          {% if customer.tax_number %}
+            <p class="mb-1 small">
+              <span class="text-muted">الرقم الضريبي:</span>
+              <span class="fw-semibold">{{ customer.tax_number }}</span>
+            </p>
+          {% endif %}
+
+          {% if customer.address %}
+            <p class="mb-0 small">
+              <span class="text-muted">العنوان:</span><br>
+              <span class="fw-semibold">{{ customer.address|linebreaksbr }}</span>
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title mb-3">ملخص مالي</h5>
+          <div class="row">
+            <div class="col-sm-4 mb-2">
+              <div class="small text-muted mb-1">إجمالي الفواتير</div>
+              <div class="fw-semibold">{{ total_invoices }}</div>
+            </div>
+            <div class="col-sm-4 mb-2">
+              <div class="small text-muted mb-1">إجمالي الدفعات</div>
+              <div class="fw-semibold">{{ total_paid }}</div>
+            </div>
+            <div class="col-sm-4 mb-2">
+              <div class="small text-muted mb-1">الرصيد المتبقي</div>
+              <div class="fw-semibold">{{ balance }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# فواتير الزبون + دفعات الزبون #}
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title mb-3">فواتير الزبون</h5>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>رقم الفاتورة</th>
+                  <th>التاريخ</th>
+                  <th class="text-end">الإجمالي</th>
+                  <th class="text-end">المتبقي</th>
+                  <th>الحالة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for inv in invoices %}
+                  <tr>
+                    <td>
+                      <a href="{% url 'accounting:invoice_detail' number=inv.number %}">
+                        {{ inv.number }}
+                      </a>
+                    </td>
+                    <td>{{ inv.issued_at }}</td>
+                    <td class="text-end">{{ inv.total_amount }}</td>
+                    <td class="text-end">{{ inv.balance }}</td>
+                    <td>
+                      {% if inv.status == inv.Status.PAID %}
+                        <span class="badge bg-success">مدفوعة</span>
+                      {% elif inv.status == inv.Status.PARTIALLY_PAID %}
+                        <span class="badge bg-warning text-dark">مدفوعة جزئياً</span>
+                      {% elif inv.status == inv.Status.CANCELLED %}
+                        <span class="badge bg-secondary">ملغاة</span>
+                      {% elif inv.status == inv.Status.SENT %}
+                        <span class="badge bg-info text-dark">مرسلة</span>
+                      {% else %}
+                        <span class="badge bg-light text-dark">
+                          {{ inv.get_status_display }}
+                        </span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="5" class="text-muted text-center small py-3">
+                      لا توجد فواتير لهذا الزبون.
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# دفعات الزبون #}
+    <div class="col-md-6">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title mb-3">دفعات الزبون</h5>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>التاريخ</th>
+                  <th class="text-end">المبلغ</th>
+                  <th>الطريقة</th>
+                  <th>الفاتورة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in payments %}
+                  <tr>
+                    <td>{{ p.date }}</td>
+                    <td class="text-end">{{ p.amount }}</td>
+                    <td>{{ p.get_method_display }}</td>
+                    <td>
+                      {% if p.invoice %}
+                        <a href="{% url 'accounting:invoice_detail' number=p.invoice.number %}">
+                          {{ p.invoice.number }}
+                        </a>
+                      {% else %}
+                        <span class="text-muted small">غير مرتبط</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="4" class="text-muted text-center small py-3">
+                      لا توجد دفعات لهذا الزبون.
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
 {% endblock %}

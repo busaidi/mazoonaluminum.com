@@ -1,23 +1,30 @@
-from django.utils.decorators import method_decorator
-from django.views.generic import TemplateView, ListView, DetailView, UpdateView
-from django.shortcuts import get_object_or_404
-from django.core.exceptions import PermissionDenied
+# portal/views.py
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import redirect_to_login
-
-from accounting.models import Customer, Invoice, Payment, Order
-from accounting.forms import CustomerProfileForm
-from django.db.models import Sum
 from django.core.exceptions import PermissionDenied
-from accounting.models import Customer, Order, OrderItem
-from cart.cart import Cart
+from django.db import transaction
+from django.db.models import Sum
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.generic import TemplateView, ListView, DetailView, UpdateView
 
+from accounting.forms import CustomerProfileForm, CustomerOrderForm
+from accounting.models import Customer, Invoice, Payment, Order, OrderItem
+from cart.cart import Cart
+from website.models import Product
+
+
+# ------------------------------------------------------------------------------
+# Helpers / Mixins
+# ------------------------------------------------------------------------------
 
 class CustomerPortalMixin:
     """
-    Mixin لكل فيوز في بوابة الزبون:
+    Mixin لكل الفيوز في بوابة الزبون:
     - يتأكد أن المستخدم مسجّل دخول
-    - يجلب Customer المرتبط به
-    - يخزنه في self.customer
+    - يجلب Customer المرتبط به (customer_profile)
+    - يخزنه في self.customer لاستخدامه في بقية الميثودز
     """
 
     def dispatch(self, request, *args, **kwargs):
@@ -25,6 +32,7 @@ class CustomerPortalMixin:
             return redirect_to_login(request.get_full_path())
 
         try:
+            # Customer مرتبط بالمستخدم عبر OneToOneField user
             self.customer = Customer.objects.select_related("user").get(user=request.user)
         except Customer.DoesNotExist:
             # المستخدم مسجّل دخول لكن ليس لديه Customer مرتبط
@@ -32,6 +40,10 @@ class CustomerPortalMixin:
 
         return super().dispatch(request, *args, **kwargs)
 
+
+# ------------------------------------------------------------------------------
+# Dashboard / Profile
+# ------------------------------------------------------------------------------
 
 class PortalDashboardView(CustomerPortalMixin, TemplateView):
     template_name = "portal/dashboard.html"
@@ -65,6 +77,28 @@ class PortalDashboardView(CustomerPortalMixin, TemplateView):
         return ctx
 
 
+class PortalProfileUpdateView(CustomerPortalMixin, UpdateView):
+    """
+    يسمح للزبون بتحديث بياناته (Customer المرتبط به).
+    """
+    model = Customer
+    form_class = CustomerProfileForm
+    template_name = "portal/profile_form.html"
+    context_object_name = "customer"
+
+    def get_object(self, queryset=None):
+        # نستخدم self.customer من الـ mixin
+        return self.customer
+
+    def get_success_url(self):
+        from django.urls import reverse
+        return reverse("portal:dashboard")
+
+
+# ------------------------------------------------------------------------------
+# Invoices / Payments (Portal)
+# ------------------------------------------------------------------------------
+
 class PortalInvoiceListView(CustomerPortalMixin, ListView):
     model = Invoice
     template_name = "portal/invoice_list.html"
@@ -94,38 +128,6 @@ class PortalInvoiceDetailView(CustomerPortalMixin, DetailView):
         )
 
 
-class PortalPaymentListView(CustomerPortalMixin, ListView):
-    model = Payment
-    template_name = "portal/payment_list.html"
-    context_object_name = "payments"
-    paginate_by = 20
-
-    def get_queryset(self):
-        return (
-            Payment.objects
-            .filter(customer=self.customer)
-            .select_related("invoice")
-            .order_by("-date", "-id")
-        )
-
-
-class PortalProfileUpdateView(CustomerPortalMixin, UpdateView):
-    """
-    يسمح للزبون بتحديث بياناته (Customer المرتبط به).
-    """
-    model = Customer
-    form_class = CustomerProfileForm
-    template_name = "portal/profile_form.html"
-    context_object_name = "customer"
-
-    def get_object(self, queryset=None):
-        return self.customer
-
-    def get_success_url(self):
-        from django.urls import reverse
-        return reverse("portal:dashboard")
-
-
 class PortalInvoicePrintView(CustomerPortalMixin, DetailView):
     """
     صفحة طباعة الفاتورة من بوابة الزبون.
@@ -145,6 +147,24 @@ class PortalInvoicePrintView(CustomerPortalMixin, DetailView):
         )
 
 
+class PortalPaymentListView(CustomerPortalMixin, ListView):
+    model = Payment
+    template_name = "portal/payment_list.html"
+    context_object_name = "payments"
+    paginate_by = 20
+
+    def get_queryset(self):
+        return (
+            Payment.objects
+            .filter(customer=self.customer)
+            .select_related("invoice")
+            .order_by("-date", "-id")
+        )
+
+
+# ------------------------------------------------------------------------------
+# Orders (Portal listing / detail)
+# ------------------------------------------------------------------------------
 
 class PortalOrderListView(CustomerPortalMixin, ListView):
     model = Order
@@ -174,22 +194,16 @@ class PortalOrderDetailView(CustomerPortalMixin, DetailView):
         )
 
 
-
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.db import transaction
-from django.shortcuts import get_object_or_404, redirect, render
-
-from accounting.forms import CustomerOrderForm
-from accounting.models import Order, OrderItem
-from website.models import Product
-
-
-
-
+# ------------------------------------------------------------------------------
+# Orders creation (single product / cart checkout)
+# ------------------------------------------------------------------------------
 
 @login_required
 def portal_order_create(request, product_id):
+    """
+    إنشاء طلب جديد من صفحة منتج واحد (زر "اطلب الآن").
+    يربط الطلب بالزبون الحالي (customer_profile) ويضبط is_online=True.
+    """
     try:
         customer = request.user.customer_profile
     except Customer.DoesNotExist:
@@ -222,20 +236,25 @@ def portal_order_create(request, product_id):
                 request,
                 "تم إرسال طلبك بنجاح، وسيقوم الموظف بمراجعته وتأكيده.",
             )
-            return redirect("portal:order_list")  # <-- هنا التعديل المهم
+            return redirect("portal:order_list")
     else:
         form = CustomerOrderForm(initial={"quantity": 1})
 
     return render(
         request,
         "portal/orders/portal_order_create.html",
-        {"form": form, "product": product},
+        {
+            "form": form,
+            "product": product,
+        },
     )
-
 
 
 @login_required
 def cart_checkout(request):
+    """
+    تحويل محتوى السلة (Cart) إلى طلب واحد مرتبط بالزبون الحالي.
+    """
     cart = Cart(request)
     if cart.is_empty():
         messages.error(request, "سلتك فارغة.")
@@ -261,8 +280,10 @@ def cart_checkout(request):
                     quantity=item["quantity"],
                     unit_price=item["price"],
                 )
+
         cart.clear()
         messages.success(request, "تم إنشاء الطلب من السلة بنجاح.")
         return redirect("portal:order_detail", pk=order.pk)
 
+    # لو لم يكن POST نرجعه للسلة
     return redirect("cart:detail")

@@ -1,52 +1,24 @@
-/* ====== ألوان الهوية ====== */
+/* ====== ألوان الهوية العامة ====== */
 :root {
-  --mazoon-bg-page: #E7E7E7;
-  --mazoon-card-bg: #FFFFFF;
-  --mazoon-text-main: #1A1A1A;
-  --mazoon-text-muted: #555555;
+  --mazoon-bg-page: #f4f4f5;
+  --mazoon-card-bg: #ffffff;
 
-  --mazoon-primary: #0f4c81;       /* أزرق عميق أنيق */
-  --mazoon-accent: #f59e0b;        /* برتقالي/ذهبي */
+  --mazoon-text-main: #111827;    /* قريب من الأسود */
+  --mazoon-text-muted: #6b7280;   /* رمادي ناعم */
+
+  --mazoon-primary: #111827;      /* أسود/داكن - للأزرار والعناصر الأساسية */
+  --mazoon-primary-soft: #374151; /* رمادي داكن ناعم للهفّر */
+  --mazoon-accent: #f59e0b;       /* برتقالي/ذهبي خفيف للتأكيد */
+  --mazoon-border-soft: #e5e7eb;
 }
 
-/* الخلفية العامة */
+/* الخلفية العامة و النص */
 body {
   background-color: var(--mazoon-bg-page) !important;
   color: var(--mazoon-text-main) !important;
 }
 
-/* ====== HERO ====== */
-.hero-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 50%, #ffffff 100%);
-  border-radius: 5px;
-  border: 1px solid #dddddd;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
-}
-
-.hero-image-card {
-  background-color: #f3f3f3;
-  padding: 1.25rem;
-  border-radius: 5px;
-  border: 1px solid #e0e0e0;
-}
-
-.hero-main-image {
-  object-fit: cover;
-}
-
-/* ====== كروت المزايا / الأنظمة / الشركاء ====== */
-.feature-card,
-.system-card,
-.partner-card,
-.product-card,
-.blog-card {
-  background-color: var(--mazoon-card-bg) !important;
-  border-radius: 5px;
-  border: 1px solid #dedede !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-}
-
-/* نصوص */
+/* تنسيق العناوين والنصوص */
 h1, h2, h3, h4, h5, h6 {
   color: var(--mazoon-text-main) !important;
 }
@@ -55,15 +27,118 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--mazoon-text-muted) !important;
 }
 
-/* ألوان الأزرار */
+/* ====== Navbar مخصص ====== */
+.mazoon-navbar {
+  background-color: #f9fafb !important;
+  border-bottom: 1px solid var(--mazoon-border-soft) !important;
+}
+
+.mazoon-navbar .navbar-brand .brand-mark {
+  width: 28px;
+  height: 28px;
+  font-size: 0.9rem;
+  background-color: var(--mazoon-primary);
+  color: #ffffff;
+}
+
+.mazoon-navbar .navbar-brand .brand-text {
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mazoon-text-main);
+}
+
+.mazoon-navbar .nav-link {
+  position: relative;
+  font-size: 0.95rem;
+  padding-inline: 0.75rem !important;
+  color: #4b5563 !important;  /* رمادي */
+}
+
+.mazoon-navbar .nav-link:hover {
+  color: var(--mazoon-primary) !important;
+}
+
+.mazoon-navbar .nav-link.active {
+  color: var(--mazoon-primary) !important;
+  font-weight: 600;
+}
+
+.mazoon-navbar .nav-link.active::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0.6rem;
+  bottom: 0;
+  height: 2px;
+  background-color: var(--mazoon-primary);
+  border-radius: 999px;
+}
+
+/* زر تسجيل الدخول/الخروج كشكل لينك أنيق */
+.nav-link-btn {
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* السويتشر للغة */
+.lang-switcher {
+  min-width: 90px;
+}
+
+/* ====== كروت عامة ====== */
+.card,
+.feature-card,
+.system-card,
+.partner-card,
+.product-card,
+.blog-card {
+  background-color: var(--mazoon-card-bg) !important;
+  border-radius: 6px;
+  border: 1px solid var(--mazoon-border-soft) !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+}
+
+/* ====== Hero ====== */
+.hero-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 50%, #ffffff 100%);
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+}
+
+.hero-image-card {
+  background-color: #f3f4f6;
+  padding: 1.25rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.hero-main-image {
+  object-fit: cover;
+}
+
+/* ====== أزرار داكنة (pattern black) ====== */
 .btn-primary {
   background-color: var(--mazoon-primary) !important;
   border-color: var(--mazoon-primary) !important;
+  color: #ffffff !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--mazoon-primary-soft) !important;
+  border-color: var(--mazoon-primary-soft) !important;
 }
 
 .btn-outline-primary {
   color: var(--mazoon-primary) !important;
   border-color: var(--mazoon-primary) !important;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus {
+  background-color: var(--mazoon-primary) !important;
+  color: #ffffff !important;
 }
 
 .text-mazoon {
@@ -74,13 +149,28 @@ h1, h2, h3, h4, h5, h6 {
   background-color: var(--mazoon-accent) !important;
 }
 
-/* navbar & footer تبقى فاتحة */
-.navbar {
-  background-color: #F8F9FA !important;
-  border-bottom: 1px solid #DDDDDD !important;
+/* ====== Footer ====== */
+.mazoon-footer {
+  background-color: #f9fafb !important;
+  border-top: 1px solid var(--mazoon-border-soft) !important;
 }
 
-footer {
-  background-color: #F3F3F3 !important;
-  border-top: 1px solid #CCCCCC !important;
+/* ====== جداول خفيفة ====== */
+.table thead tr {
+  background-color: #f9fafb;
+}
+
+.table thead th {
+  border-bottom-color: var(--mazoon-border-soft);
+}
+
+/* ====== مسافات عامة ====== */
+main .container {
+  /* تخفيف التزاحم */
+  max-width: 1100px;
+}
+
+/* تحسين مظهر الـ alerts */
+.alert {
+  border-radius: 6px;
 }

@@ -1,10 +1,12 @@
+from decimal import Decimal
+
 from django.conf import settings
-from django.contrib.auth.models import User
-from django.db import models
-from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.db import models
+from django.db.models import Sum
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+from django.utils import timezone
 
 
 class Customer(models.Model):
@@ -40,17 +42,26 @@ class Customer(models.Model):
         return self.name
 
     @property
-    def total_invoiced(self):
-        from django.db.models import Sum
-        return self.invoices.aggregate(s=Sum("total_amount")).get("s") or 0
+    def total_invoiced(self) -> Decimal:
+        """
+        Sum of all invoices.total_amount for this customer.
+        """
+        total = self.invoices.aggregate(s=Sum("total_amount")).get("s")
+        return total or Decimal("0")
 
     @property
-    def total_paid(self):
-        from django.db.models import Sum
-        return self.payments.aggregate(s=Sum("amount")).get("s") or 0
+    def total_paid(self) -> Decimal:
+        """
+        Sum of all payments.amount for this customer.
+        """
+        total = self.payments.aggregate(s=Sum("amount")).get("s")
+        return total or Decimal("0")
 
     @property
-    def balance(self):
+    def balance(self) -> Decimal:
+        """
+        Customer balance = total_invoiced - total_paid.
+        """
         return self.total_invoiced - self.total_paid
 
 
@@ -111,28 +122,30 @@ class Invoice(models.Model):
         return f"Invoice {self.number} - {self.customer.name}"
 
     @property
-    def balance(self):
+    def balance(self) -> Decimal:
+        """
+        Invoice balance = total_amount - paid_amount.
+        """
         return self.total_amount - self.paid_amount
 
-    def update_paid_amount(self):
+    def update_paid_amount(self) -> None:
         """
-        Recalculate 'paid_amount' from related payments.
-        You can call this in signals or after saving a Payment.
+        Recalculate 'paid_amount' from related payments,
+        and auto-update status if fully/partially paid.
         """
-        from django.db.models import Sum
-        total = self.payments.aggregate(s=Sum("amount")).get("s") or 0
+        total = self.payments.aggregate(s=Sum("amount")).get("s") or Decimal("0")
         self.paid_amount = total
 
         # auto-update status if fully/partially paid
-        if self.paid_amount >= self.total_amount and self.total_amount > 0:
+        if self.total_amount and self.paid_amount >= self.total_amount > 0:
             self.status = Invoice.Status.PAID
-        elif 0 < self.paid_amount < self.total_amount:
+        elif self.total_amount and 0 < self.paid_amount < self.total_amount:
             self.status = Invoice.Status.PARTIALLY_PAID
         elif self.paid_amount == 0 and self.status in {
             Invoice.Status.PAID,
             Invoice.Status.PARTIALLY_PAID,
         }:
-            # رجعها Draft أو Sent حسب استخدامك لاحقًا
+            # رجعها Sent (أو Draft حسب ما تحب تغيّر لاحقًا)
             self.status = Invoice.Status.SENT
 
         self.save(update_fields=["paid_amount", "status"])
@@ -208,7 +221,7 @@ class Payment(models.Model):
 
 
 @receiver(post_delete, sender=Payment)
-def update_invoice_on_payment_delete(sender, instance: Payment, **kwargs):
+def update_invoice_on_payment_delete(sender, instance: "Payment", **kwargs):
     """
     When a payment is deleted, recalc invoice.paid_amount.
     """
@@ -230,20 +243,24 @@ class Order(models.Model):
     ]
 
     customer = models.ForeignKey(
-        "accounting.Customer",
+        Customer,
         on_delete=models.PROTECT,
         related_name="orders",
         verbose_name="الزبون",
     )
+    # نستخدم AUTH_USER_MODEL بدل استيراد User مباشرة
     created_by = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="orders_created"
+        related_name="orders_created",
+        verbose_name="تم إدخاله بواسطة",
     )
     status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
     )
     is_online = models.BooleanField(
         default=False,
@@ -268,8 +285,12 @@ class Order(models.Model):
         return f"طلب #{self.pk} - {self.customer}"
 
     @property
-    def total_amount(self):
-        return sum(item.subtotal for item in self.items.all())
+    def total_amount(self) -> Decimal:
+        """
+        Sum of item.quantity * item.unit_price for this order.
+        نستخدم الجمع في البايثون هنا لتبسيط الأمور.
+        """
+        return sum((item.subtotal for item in self.items.all()), Decimal("0"))
 
 
 class OrderItem(models.Model):
@@ -288,7 +309,7 @@ class OrderItem(models.Model):
     unit_price = models.DecimalField(max_digits=10, decimal_places=3)
 
     @property
-    def subtotal(self):
+    def subtotal(self) -> Decimal:
         return self.quantity * self.unit_price
 
     def __str__(self):

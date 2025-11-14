@@ -4,7 +4,7 @@
 {% block title %}{% trans "لوحة الزبون" %}{% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="py-4">
 
   {# ===== الهيدر (اسم الزبون + الأزرار) ===== #}
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
@@ -74,42 +74,45 @@
             </a>
           </div>
 
-          <table class="table table-sm mb-0 align-middle">
-            <thead class="table-light">
-              <tr>
-                <th>{% trans "رقم" %}</th>
-                <th>{% trans "التاريخ" %}</th>
-                <th>{% trans "الإجمالي" %}</th>
-                <th>{% trans "المتبقي" %}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for inv in recent_invoices %}
-              <tr>
-                <td>
-                  <a href="{% url 'portal:invoice_detail' number=inv.number %}">
-                    {{ inv.number }}
-                  </a>
-                </td>
-                <td>{{ inv.issued_at|date:"Y-m-d" }}</td>
-                <td>
-                  {{ inv.total_amount|floatformat:3 }}
-                  <span class="small text-muted">{% trans "ر.ع" %}</span>
-                </td>
-                <td>
-                  {{ inv.balance|floatformat:3 }}
-                  <span class="small text-muted">{% trans "ر.ع" %}</span>
-                </td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="4" class="text-muted text-center py-3">
-                  {% trans "لا توجد فواتير حتى الآن." %}
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+          <div class="table-responsive">
+            <table class="table table-sm mb-0 align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>{% trans "رقم" %}</th>
+                  <th>{% trans "التاريخ" %}</th>
+                  <th>{% trans "الإجمالي" %}</th>
+                  <th>{% trans "المتبقي" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for inv in recent_invoices %}
+                <tr>
+                  <td>
+                    <a href="{% url 'portal:invoice_detail' number=inv.number %}">
+                      {{ inv.number }}
+                    </a>
+                  </td>
+                  <td>{{ inv.issued_at|date:"Y-m-d" }}</td>
+                  <td>
+                    {{ inv.total_amount|floatformat:3 }}
+                    <span class="small text-muted">{% trans "ر.ع" %}</span>
+                  </td>
+                  <td>
+                    {{ inv.balance|floatformat:3 }}
+                    <span class="small text-muted">{% trans "ر.ع" %}</span>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="4" class="text-muted text-center py-3">
+                    {% trans "لا توجد فواتير حتى الآن." %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
         </div>
       </div>
     </div>
@@ -125,33 +128,36 @@
             </a>
           </div>
 
-          <table class="table table-sm mb-0 align-middle">
-            <thead class="table-light">
-              <tr>
-                <th>{% trans "التاريخ" %}</th>
-                <th>{% trans "المبلغ" %}</th>
-                <th>{% trans "الطريقة" %}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for p in recent_payments %}
-              <tr>
-                <td>{{ p.date|date:"Y-m-d" }}</td>
-                <td>
-                  {{ p.amount|floatformat:3 }}
-                  <span class="small text-muted">{% trans "ر.ع" %}</span>
-                </td>
-                <td>{{ p.get_method_display }}</td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="3" class="text-muted text-center py-3">
-                  {% trans "لا توجد دفعات حتى الآن." %}
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+          <div class="table-responsive">
+            <table class="table table-sm mb-0 align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>{% trans "التاريخ" %}</th>
+                  <th>{% trans "المبلغ" %}</th>
+                  <th>{% trans "الطريقة" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in recent_payments %}
+                <tr>
+                  <td>{{ p.date|date:"Y-m-d" }}</td>
+                  <td>
+                    {{ p.amount|floatformat:3 }}
+                    <span class="small text-muted">{% trans "ر.ع" %}</span>
+                  </td>
+                  <td>{{ p.get_method_display }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="3" class="text-muted text-center py-3">
+                    {% trans "لا توجد دفعات حتى الآن." %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
         </div>
       </div>
     </div>

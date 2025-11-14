@@ -1,10 +1,9 @@
 # accounting/views.py
-from django.contrib import messages
+from decimal import Decimal
+
 from django.contrib.auth.decorators import user_passes_test
-from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.shortcuts import get_object_or_404, render, redirect
-from django.contrib.admin.views.decorators import staff_member_required
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -14,13 +13,23 @@ from django.views.generic import (
     DetailView,
     CreateView,
     FormView,
-    TemplateView, UpdateView, DeleteView,
+    TemplateView,
+    UpdateView,
+    DeleteView,
 )
 
 from website.models import Product
-from .forms import InvoiceForm, PaymentForInvoiceForm, CustomerForm, CustomerProfileForm, StaffOrderForm
-from .models import Invoice, Payment, Customer, Order, OrderItem
+from .forms import (
+    InvoiceForm,
+    PaymentForInvoiceForm,
+    CustomerForm,
+)
+from .models import Invoice, Payment, Customer, Order
 
+
+# ==========================
+# Helpers / Permissions
+# ==========================
 
 def is_accounting_staff(user):
     """
@@ -38,6 +47,10 @@ def is_accounting_staff(user):
 accounting_staff_required = user_passes_test(is_accounting_staff)
 
 
+# ==========================
+# Invoices
+# ==========================
+
 @method_decorator(accounting_staff_required, name="dispatch")
 class InvoiceListView(ListView):
     model = Invoice
@@ -51,9 +64,11 @@ class InvoiceListView(ListView):
             .get_queryset()
             .select_related("customer")
         )
+
         status = self.request.GET.get("status")
         if status:
             qs = qs.filter(status=status)
+
         return qs
 
     def get_context_data(self, **kwargs):
@@ -71,15 +86,12 @@ class InvoiceCreateView(CreateView):
     def get_initial(self):
         initial = super().get_initial()
         customer_id = self.request.GET.get("customer")
-
         if customer_id:
             # تعبئة فورم الفاتورة بالزبون تلقائيًا
             initial["customer"] = customer_id
-
         return initial
 
     def get_success_url(self):
-        from django.urls import reverse
         return reverse("accounting:invoice_list")
 
 
@@ -116,7 +128,6 @@ class InvoicePaymentCreateView(FormView):
 
     def get_initial(self):
         initial = super().get_initial()
-        from django.utils import timezone
         initial.setdefault("date", timezone.now().date())
         return initial
 
@@ -126,18 +137,30 @@ class InvoicePaymentCreateView(FormView):
         payment.customer = self.invoice.customer
         payment.invoice = self.invoice
         payment.save()  # هذا تلقائيًا يحدث paid_amount في save()
-
-        # نرجع إلى صفحة تفاصيل الفاتورة
         return super().form_valid(form)
 
     def get_success_url(self):
-        from django.urls import reverse
         return reverse(
             "accounting:invoice_detail",
             kwargs={"number": self.invoice.number},
         )
 
 
+@method_decorator(accounting_staff_required, name="dispatch")
+class InvoicePrintView(DetailView):
+    """
+    صفحة طباعة للفاتورة (للموظف)
+    """
+    model = Invoice
+    template_name = "accounting/invoice_print.html"
+    context_object_name = "invoice"
+    slug_field = "number"
+    slug_url_kwarg = "number"
+
+
+# ==========================
+# Dashboard
+# ==========================
 
 @method_decorator(accounting_staff_required, name="dispatch")
 class AccountingDashboardView(TemplateView):
@@ -146,6 +169,7 @@ class AccountingDashboardView(TemplateView):
     - إحصائيات عامة
     - آخر الفواتير
     - آخر الدفعات
+    - آخر الطلبات
     """
     template_name = "accounting/dashboard.html"
 
@@ -156,8 +180,9 @@ class AccountingDashboardView(TemplateView):
         customers = Customer.objects.all()
         payments = Payment.objects.select_related("customer", "invoice").all()
         orders = Order.objects.select_related("customer").all()
-        total_amount = invoices.aggregate(s=Sum("total_amount"))["s"] or 0
-        total_paid = invoices.aggregate(s=Sum("paid_amount"))["s"] or 0
+
+        total_amount = invoices.aggregate(s=Sum("total_amount"))["s"] or Decimal("0")
+        total_paid = invoices.aggregate(s=Sum("paid_amount"))["s"] or Decimal("0")
         total_balance = total_amount - total_paid
 
         ctx["invoice_count"] = invoices.count()
@@ -175,6 +200,10 @@ class AccountingDashboardView(TemplateView):
         return ctx
 
 
+# ==========================
+# Customers
+# ==========================
+
 @method_decorator(accounting_staff_required, name="dispatch")
 class CustomerListView(ListView):
     model = Customer
@@ -186,7 +215,10 @@ class CustomerListView(ListView):
         qs = super().get_queryset()
         q = self.request.GET.get("q")
         if q:
-            qs = qs.filter(name__icontains=q) | qs.filter(company_name__icontains=q)
+            # بحث بالاسم أو اسم الشركة
+            qs = qs.filter(
+                Q(name__icontains=q) | Q(company_name__icontains=q)
+            )
         return qs
 
 
@@ -197,7 +229,6 @@ class CustomerCreateView(CreateView):
     template_name = "accounting/customer_form.html"
 
     def get_success_url(self):
-        from django.urls import reverse
         return reverse("accounting:customer_list")
 
 
@@ -208,7 +239,6 @@ class CustomerUpdateView(UpdateView):
     template_name = "accounting/customer_form.html"
 
     def get_success_url(self):
-        from django.urls import reverse
         return reverse("accounting:customer_list")
 
 
@@ -218,9 +248,7 @@ class CustomerDeleteView(DeleteView):
     template_name = "accounting/customer_confirm_delete.html"
 
     def get_success_url(self):
-        from django.urls import reverse
         return reverse("accounting:customer_list")
-
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
@@ -243,10 +271,8 @@ class CustomerDetailView(DetailView):
             .order_by("-date", "-id")
         )
 
-        from django.db.models import Sum
-
-        total_invoices = invoices.aggregate(s=Sum("total_amount"))["s"] or 0
-        total_paid = payments.aggregate(s=Sum("amount"))["s"] or 0
+        total_invoices = invoices.aggregate(s=Sum("total_amount"))["s"] or Decimal("0")
+        total_paid = payments.aggregate(s=Sum("amount"))["s"] or Decimal("0")
 
         ctx["invoices"] = invoices
         ctx["payments"] = payments
@@ -272,7 +298,6 @@ class CustomerPaymentCreateView(FormView):
 
     def get_initial(self):
         initial = super().get_initial()
-        from django.utils import timezone
         initial.setdefault("date", timezone.now().date())
         return initial
 
@@ -289,58 +314,21 @@ class CustomerPaymentCreateView(FormView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        from django.urls import reverse
         return reverse("accounting:customer_detail", kwargs={"pk": self.customer.pk})
 
 
-@method_decorator(accounting_staff_required, name="dispatch")
-class InvoicePrintView(DetailView):
-    """
-    صفحة طباعة للفاتورة (للموظف) – تستخدم نفس قالب invoice_print.html
-    """
-    model = Invoice
-    template_name = "accounting/invoice_print.html"
-    context_object_name = "invoice"
-    slug_field = "number"
-    slug_url_kwarg = "number"
-
-
-
-@method_decorator(accounting_staff_required, name="dispatch")
-class OrderListView(ListView):
-    model = Order
-    template_name = "accounting/order_list.html"
-    context_object_name = "orders"
-    paginate_by = 25
-
-    def get_queryset(self):
-        return (
-            Order.objects
-            .select_related("customer")
-            .order_by("-created_at", "-id")
-        )
-
-
-
-@method_decorator(accounting_staff_required, name="dispatch")
-@method_decorator(accounting_staff_required, name="dispatch")
-class OrderDetailView(DetailView):
-    model = Order
-    template_name = "accounting/order_detail.html"
-    context_object_name = "order"
-
-    def get_queryset(self):
-        # نجهّز الـ queryset مع العلاقات الجاهزة
-        return (
-            Order.objects
-            .select_related("customer")
-            .prefetch_related("items__product")
-        )
+# ==========================
+# Orders (CBV staff-level)
+# ==========================
 
 
 
 
-@staff_member_required
+# ==========================
+# Orders (function-based for staff)
+# ==========================
+
+@accounting_staff_required
 def staff_order_list(request):
     orders = (
         Order.objects
@@ -355,10 +343,12 @@ def staff_order_list(request):
     )
 
 
-@staff_member_required
+@accounting_staff_required
 def staff_order_detail(request, pk):
     order = get_object_or_404(
-        Order.objects.select_related("customer", "confirmed_by").prefetch_related("items__product"),
+        Order.objects
+        .select_related("customer", "confirmed_by")
+        .prefetch_related("items__product"),
         pk=pk,
     )
     return render(
@@ -368,8 +358,7 @@ def staff_order_detail(request, pk):
     )
 
 
-
-@staff_member_required
+@accounting_staff_required
 def staff_order_confirm(request, pk):
     order = get_object_or_404(Order, pk=pk)
 
@@ -385,13 +374,17 @@ def staff_order_confirm(request, pk):
     return redirect("accounting:order_detail", pk=order.pk)
 
 
-@staff_member_required
+@accounting_staff_required
 def staff_order_create(request):
+    """
+    إنشاء طلب موظف بسيط (زبون واحد + منتج واحد مبدئيًا).
+    لاحقًا ممكن نربطه بـ StaffOrderForm لو حبّينا نعقّد المنطق.
+    """
     if request.method == "POST":
         customer_id = request.POST.get("customer")
         product_id = request.POST.get("product")
         quantity = request.POST.get("quantity") or "1"
-        notes = request.POST.get("notes", "").strip()
+        notes = (request.POST.get("notes") or "").strip()
 
         customer = get_object_or_404(Customer, pk=customer_id)
         product = get_object_or_404(Product, pk=product_id)

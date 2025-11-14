@@ -1,98 +1,157 @@
 {% extends "base.html" %}
-{% load static %}
 
-{% block title %}فاتورة {{ invoice.number }}{% endblock %}
+{% block meta_title %}فاتورة {{ invoice.number }} | Mazoon Aluminum{% endblock %}
+{% block meta_description %}
+تفاصيل الفاتورة رقم {{ invoice.number }} للعميل {{ invoice.customer.name }}، مع عرض الدفعات المرتبطة والمبلغ المتبقي.
+{% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="py-4">
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h3 mb-0">فاتورة {{ invoice.number }}</h1>
-  <div>
-    <a href="{% url 'accounting:invoice_add_payment' number=invoice.number %}"
-       class="btn btn-success me-2">
-      + إضافة دفعة
-    </a>
-    <a href="{% url 'accounting:invoice_list' %}" class="btn btn-secondary">
-      رجوع إلى القائمة
-    </a>
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+      <h1 class="h3 mb-1">فاتورة {{ invoice.number }}</h1>
+      <p class="text-muted small mb-0">
+        عميل: {{ invoice.customer.name }}
+      </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'accounting:invoice_add_payment' number=invoice.number %}"
+         class="btn btn-success btn-sm">
+        + إضافة دفعة
+      </a>
       <a href="{% url 'accounting:invoice_print' number=invoice.number %}"
-   class="btn btn-outline-secondary btn-sm"
-   target="_blank">
-  طباعة / PDF
-</a>
-  </div>
-</div>
-
-  <div class="row mb-3">
-    <div class="col-md-6">
-      <h5>العميل</h5>
-      <p class="mb-1">{{ invoice.customer.name }}</p>
-      {% if invoice.customer.company_name %}
-      <p class="mb-1">{{ invoice.customer.company_name }}</p>
-      {% endif %}
-      {% if invoice.customer.phone %}
-      <p class="mb-1">📞 {{ invoice.customer.phone }}</p>
-      {% endif %}
-      {% if invoice.customer.email %}
-      <p class="mb-1">✉ {{ invoice.customer.email }}</p>
-      {% endif %}
-    </div>
-    <div class="col-md-6">
-      <h5>تفاصيل الفاتورة</h5>
-      <p class="mb-1">التاريخ: {{ invoice.issued_at }}</p>
-      <p class="mb-1">تاريخ الاستحقاق: {{ invoice.due_date|default:"-" }}</p>
-      <p class="mb-1">الحالة: {{ invoice.get_status_display }}</p>
+         class="btn btn-outline-secondary btn-sm"
+         target="_blank">
+        طباعة / PDF
+      </a>
+      <a href="{% url 'accounting:invoice_list' %}" class="btn btn-secondary btn-sm">
+        رجوع إلى القائمة
+      </a>
     </div>
   </div>
 
-  <div class="card mb-3">
+  <div class="row g-3 mb-3">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">بيانات العميل</h5>
+          <p class="mb-1 fw-semibold">{{ invoice.customer.name }}</p>
+
+          {% if invoice.customer.company_name %}
+            <p class="mb-1 text-muted small">{{ invoice.customer.company_name }}</p>
+          {% endif %}
+
+          {% if invoice.customer.phone %}
+            <p class="mb-1">
+              <span class="text-muted small">📞</span>
+              <span class="small">{{ invoice.customer.phone }}</span>
+            </p>
+          {% endif %}
+
+          {% if invoice.customer.email %}
+            <p class="mb-0">
+              <span class="text-muted small">✉</span>
+              <span class="small">{{ invoice.customer.email }}</span>
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">تفاصيل الفاتورة</h5>
+          <p class="mb-1 small">
+            <span class="text-muted">التاريخ:</span>
+            <span class="fw-semibold">{{ invoice.issued_at }}</span>
+          </p>
+          <p class="mb-1 small">
+            <span class="text-muted">تاريخ الاستحقاق:</span>
+            <span class="fw-semibold">{{ invoice.due_date|default:"-" }}</span>
+          </p>
+          <p class="mb-0 small">
+            <span class="text-muted">الحالة:</span>
+            {% if invoice.status == invoice.Status.PAID %}
+              <span class="badge bg-success ms-1">مدفوعة</span>
+            {% elif invoice.status == invoice.Status.PARTIALLY_PAID %}
+              <span class="badge bg-warning text-dark ms-1">مدفوعة جزئياً</span>
+            {% elif invoice.status == invoice.Status.CANCELLED %}
+              <span class="badge bg-secondary ms-1">ملغاة</span>
+            {% elif invoice.status == invoice.Status.SENT %}
+              <span class="badge bg-info text-dark ms-1">مرسلة</span>
+            {% else %}
+              <span class="badge bg-light text-dark ms-1">
+                {{ invoice.get_status_display }}
+              </span>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-3">
     <div class="card-body">
-      <h5 class="card-title">المبالغ</h5>
-      <p class="mb-1">الإجمالي: {{ invoice.total_amount }}</p>
-      <p class="mb-1">المدفوع: {{ invoice.paid_amount }}</p>
-      <p class="mb-1">المتبقي: {{ invoice.balance }}</p>
+      <h5 class="card-title mb-3">المبالغ</h5>
+      <div class="row">
+        <div class="col-md-4 col-sm-6 mb-2">
+          <div class="small text-muted mb-1">الإجمالي</div>
+          <div class="fw-semibold">{{ invoice.total_amount }}</div>
+        </div>
+        <div class="col-md-4 col-sm-6 mb-2">
+          <div class="small text-muted mb-1">المدفوع</div>
+          <div class="fw-semibold">{{ invoice.paid_amount }}</div>
+        </div>
+        <div class="col-md-4 col-sm-6 mb-2">
+          <div class="small text-muted mb-1">المتبقي</div>
+          <div class="fw-semibold">{{ invoice.balance }}</div>
+        </div>
+      </div>
     </div>
   </div>
 
   {% if invoice.description %}
-  <div class="card mb-3">
-    <div class="card-body">
-      <h5 class="card-title">الوصف</h5>
-      <p class="mb-0">{{ invoice.description|linebreaks }}</p>
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h5 class="card-title mb-3">الوصف</h5>
+        <p class="mb-0 small">{{ invoice.description|linebreaks }}</p>
+      </div>
     </div>
-  </div>
   {% endif %}
 
-  <div class="card">
+  <div class="card border-0 shadow-sm">
     <div class="card-body">
-      <h5 class="card-title">الدفعات المرتبطة</h5>
-      <table class="table mb-0">
-        <thead>
-          <tr>
-            <th>التاريخ</th>
-            <th>المبلغ</th>
-            <th>الطريقة</th>
-            <th>ملاحظات</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for p in invoice.payments.all %}
-          <tr>
-            <td>{{ p.date }}</td>
-            <td>{{ p.amount }}</td>
-            <td>{{ p.get_method_display }}</td>
-            <td>{{ p.notes }}</td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="4" class="text-muted text-center">
-              لا توجد دفعات لهذه الفاتورة.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <h5 class="card-title mb-3">الدفعات المرتبطة</h5>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>التاريخ</th>
+              <th>المبلغ</th>
+              <th>الطريقة</th>
+              <th>ملاحظات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in invoice.payments.all %}
+              <tr>
+                <td>{{ p.date }}</td>
+                <td>{{ p.amount }}</td>
+                <td>{{ p.get_method_display }}</td>
+                <td>{{ p.notes }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="text-muted text-center small py-3">
+                  لا توجد دفعات لهذه الفاتورة.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
