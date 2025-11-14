@@ -11,7 +11,7 @@ from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.safestring import mark_safe
-from django.utils.translation import get_language
+from django.utils.translation import get_language, gettext as _
 from django.views.generic import (
     ListView,
     DetailView,
@@ -26,9 +26,9 @@ from website.models import Product
 from .forms import (
     InvoiceForm,
     PaymentForInvoiceForm,
-    CustomerForm, InvoiceItemFormSet, ApplyPaymentForm,
+    CustomerForm, InvoiceItemFormSet, ApplyPaymentForm, OrderItemFormSet, OrderForm,
 )
-from .models import Invoice, Payment, Customer, Order
+from .models import Invoice, Payment, Customer, Order, InvoiceItem
 
 # ==========================
 # DEFAULT_INVOICE_TERMS
@@ -550,43 +550,210 @@ def apply_general_payment(request, pk):
 
 
 
+# ==========================
+# Orders (staff)
+# ==========================
 
-# ==========================
-# Orders (function-based for staff)
-# ==========================
+@method_decorator(accounting_staff_required, name="dispatch")
+class OrderListView(ListView):
+    model = Order
+    template_name = "accounting/orders/order_list.html"
+    context_object_name = "orders"
+    paginate_by = 20
+
+    def get_queryset(self):
+        return (
+            Order.objects
+            .select_related("customer", "created_by", "confirmed_by")
+            .prefetch_related("items__product")
+            .order_by("-created_at", "id")
+        )
+
+
+@method_decorator(accounting_staff_required, name="dispatch")
+class OrderDetailView(DetailView):
+    model = Order
+    template_name = "accounting/orders/order_detail.html"
+    context_object_name = "order"
+
+
+@method_decorator(accounting_staff_required, name="dispatch")
+class OrderCreateView(CreateView):
+    model = Order
+    form_class = OrderForm
+    template_name = "accounting/orders/order_form.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+
+        if self.request.POST:
+            ctx["item_formset"] = OrderItemFormSet(self.request.POST)
+        else:
+            ctx["item_formset"] = OrderItemFormSet()
+
+        # JSON للمنتجات عشان نستخدمه في JS (نفس فكرة الفاتورة)
+        products = Product.objects.filter(is_active=True)
+        ctx["products_json"] = mark_safe(json.dumps(
+            {
+                str(p.id): {
+                    "description": p.description or "",
+                    "price": str(p.price),
+                }
+                for p in products
+            }
+        ))
+        return ctx
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        item_formset = context["item_formset"]
+
+        if not item_formset.is_valid():
+            return self.form_invalid(form)
+
+        order = form.save(commit=False)
+        order.created_by = self.request.user
+        order.is_online = False  # طلب ستاف
+        if not order.status:
+            order.status = Order.STATUS_DRAFT
+        order.save()
+        self.object = order
+
+        item_formset.instance = order
+        item_formset.save()
+
+        return HttpResponseRedirect(self.get_success_url())
+
+    def get_success_url(self):
+        return reverse("accounting:order_detail", kwargs={"pk": self.object.pk})
+
+
+@method_decorator(accounting_staff_required, name="dispatch")
+class OrderUpdateView(UpdateView):
+    model = Order
+    form_class = OrderForm
+    template_name = "accounting/orders/order_form.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        order = self.object
+
+        if self.request.POST:
+            ctx["item_formset"] = OrderItemFormSet(self.request.POST, instance=order)
+        else:
+            ctx["item_formset"] = OrderItemFormSet(instance=order)
+
+        products = Product.objects.filter(is_active=True)
+        ctx["products_json"] = mark_safe(json.dumps(
+            {
+                str(p.id): {
+                    "description": p.description or "",
+                    "price": str(p.price),
+                }
+                for p in products
+            }
+        ))
+        return ctx
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        item_formset = context["item_formset"]
+
+        if not item_formset.is_valid():
+            return self.form_invalid(form)
+
+        order = form.save(commit=False)
+        order.save()
+        self.object = order
+
+        item_formset.instance = order
+        item_formset.save()
+
+        return HttpResponseRedirect(self.get_success_url())
+
+    def get_success_url(self):
+        return reverse("accounting:order_detail", kwargs={"pk": self.object.pk})
+
 
 @accounting_staff_required
-def staff_order_list(request):
-    orders = (
-        Order.objects
-        .select_related("customer", "confirmed_by")
-        .prefetch_related("items__product")
-        .order_by("-created_at", "id")
-    )
-    return render(
-        request,
-        "accounting/orders/staff_order_list.html",
-        {"orders": orders},
-    )
-
-
-@accounting_staff_required
-def staff_order_detail(request, pk):
+def order_to_invoice(request, pk):
+    """
+    تحويل طلب إلى فاتورة:
+    - ينشئ فاتورة من بيانات الطلب.
+    - ينسخ بنود الطلب إلى بنود الفاتورة.
+    - يربط الطلب بالفاتورة (order.invoice).
+    """
     order = get_object_or_404(
-        Order.objects
-        .select_related("customer", "confirmed_by")
-        .prefetch_related("items__product"),
+        Order.objects.select_related("customer").prefetch_related("items__product"),
         pk=pk,
     )
-    return render(
-        request,
-        "accounting/orders/staff_order_detail.html",
-        {"order": order},
+
+    # لو الطلب محوّل سابقًا
+    if getattr(order, "invoice", None):
+        messages.info(
+            request,
+            _("تم تحويل هذا الطلب إلى فاتورة من قبل.")
+        )
+        return redirect("accounting:invoice_detail", number=order.invoice.number)
+
+    # نسمح بالتحويل عبر POST فقط
+    if request.method != "POST":
+        return redirect("accounting:order_detail", pk=order.pk)
+
+    # إنشاء الفاتورة
+    invoice = Invoice(
+        customer=order.customer,
+        status=Invoice.Status.DRAFT,
+        description=order.notes or "",
+        terms=DEFAULT_INVOICE_TERMS,
+        issued_at=timezone.now(),
     )
+    invoice.total_amount = Decimal("0")
+    invoice.save()  # هنا يتولّد number تلقائيًا
+
+    # إنشاء بنود الفاتورة من بنود الطلب
+    total = Decimal("0")
+    invoice_items = []
+    for item in order.items.all():
+        inv_item = InvoiceItem(
+            invoice=invoice,
+            product=item.product,
+            description=item.description,
+            quantity=item.quantity,
+            unit_price=item.unit_price,
+        )
+        invoice_items.append(inv_item)
+        total += inv_item.subtotal
+
+    InvoiceItem.objects.bulk_create(invoice_items)
+
+    # تحديث إجمالي الفاتورة
+    invoice.total_amount = total
+    invoice.save(update_fields=["total_amount"])
+
+    # ربط الطلب بالفاتورة + ممكن نحدّث حالة الطلب
+    order.invoice = invoice
+    try:
+        # لو عندك ثابت STATUS_CONFIRMED
+        order.status = Order.STATUS_CONFIRMED
+        order.save(update_fields=["invoice", "status"])
+    except AttributeError:
+        order.save(update_fields=["invoice"])
+
+    messages.success(
+        request,
+        _("تم إنشاء الفاتورة %(number)s من هذا الطلب.") % {"number": invoice.number}
+    )
+
+    return redirect("accounting:invoice_detail", number=invoice.number)
+
 
 
 @accounting_staff_required
 def staff_order_confirm(request, pk):
+    """
+    تأكيد الطلب (زر سريع)
+    """
     order = get_object_or_404(Order, pk=pk)
 
     if request.method == "POST":
@@ -599,51 +766,3 @@ def staff_order_confirm(request, pk):
 
     # لو أحد فتح الرابط بـ GET نرجعه للتفاصيل
     return redirect("accounting:order_detail", pk=order.pk)
-
-
-@accounting_staff_required
-def staff_order_create(request):
-    """
-    إنشاء طلب موظف بسيط (زبون واحد + منتج واحد مبدئيًا).
-    لاحقًا ممكن نربطه بـ StaffOrderForm لو حبّينا نعقّد المنطق.
-    """
-    if request.method == "POST":
-        customer_id = request.POST.get("customer")
-        product_id = request.POST.get("product")
-        quantity = request.POST.get("quantity") or "1"
-        notes = (request.POST.get("notes") or "").strip()
-
-        customer = get_object_or_404(Customer, pk=customer_id)
-        product = get_object_or_404(Product, pk=product_id)
-
-        order = Order.objects.create(
-            customer=customer,
-            created_by=request.user,
-            is_online=False,
-            status=Order.STATUS_DRAFT,
-            notes=notes,
-        )
-        order.items.create(
-            product=product,
-            quantity=quantity,
-            unit_price=product.price,
-        )
-
-        # 🔹 رجوع لقائمة الطلبات مع كود اللغة (ar / en)
-        lang = get_language() or "ar"
-        return redirect(f"/{lang}/accounting/orders/")
-
-    lang = get_language() or "ar"
-    product_name_field = "name_ar" if lang.startswith("ar") else "name_en"
-
-    customers = Customer.objects.all().order_by("name")
-    products = Product.objects.filter(is_active=True).order_by(product_name_field)
-
-    return render(
-        request,
-        "accounting/orders/staff_order_create.html",
-        {
-            "customers": customers,
-            "products": products,
-        },
-    )

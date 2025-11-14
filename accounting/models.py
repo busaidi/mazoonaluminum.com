@@ -338,6 +338,14 @@ class Order(models.Model):
         related_name="orders_created",
         verbose_name="تم إدخاله بواسطة",
     )
+    invoice = models.OneToOneField(
+        "Invoice",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="source_order",
+        verbose_name="الفاتورة الناتجة",
+    )
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -382,9 +390,17 @@ class OrderItem(models.Model):
         verbose_name="الطلب",
     )
     product = models.ForeignKey(
-        "website.Product",  # غيّرها لو الموديل في مكان آخر
+        "website.Product",
         on_delete=models.PROTECT,
         verbose_name="المنتج",
+        null=True,
+        blank=True,
+    )
+    description = models.CharField(     # 👈 هذا الحقل الجديد
+        max_length=255,
+        blank=True,
+        default="",                      # أنصح تضيف default عشان ما يسألك أثناء المايغريشن
+        verbose_name="الوصف",
     )
     quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1)
     unit_price = models.DecimalField(max_digits=10, decimal_places=3)
@@ -393,5 +409,3 @@ class OrderItem(models.Model):
     def subtotal(self) -> Decimal:
         return self.quantity * self.unit_price
 
-    def __str__(self):
-        return f"{self.product} × {self.quantity}"

@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block meta_title %}{% trans "طلب جديد" %} | Mazoon Aluminum{% endblock %}
+{% block meta_description %}{% trans "إنشاء أو تعديل طلب زبون مع بنود متعددة." %}{% endblock %}
+
+{% block content %}
+<div class="py-4">
+
+  <!-- عنوان الصفحة + رجوع -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h5 mb-1">
+        {% if object %}
+          {% blocktrans with id=object.id %}تعديل طلب #{{ id }}{% endblocktrans %}
+        {% else %}
+          {% trans "طلب جديد" %}
+        {% endif %}
+      </h1>
+      <p class="text-muted small mb-0">
+        {% trans "إدارة طلبات الزبائن مع إمكانية إضافة بنود من المنتجات أو كبنود حرة." %}
+      </p>
+    </div>
+    <a href="{% url 'accounting:order_list' %}" class="btn btn-outline-secondary btn-sm">
+      {% trans "رجوع إلى الطلبات" %}
+    </a>
+  </div>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <!-- بطاقة بيانات الطلب الأساسية -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">
+              {% trans "الزبون" %}
+            </label>
+            {{ form.customer }}
+            {% for error in form.customer.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">
+              {% trans "الحالة" %}
+            </label>
+            {{ form.status }}
+            {% for error in form.status.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">
+              {% trans "ملاحظات داخلية" %}
+            </label>
+            {{ form.notes }}
+            {% for error in form.notes.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+            <div class="form-text">
+              {% trans "هذه الملاحظات لا تظهر للزبون، وتستخدم فقط لأغراض داخلية." %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- بنود الطلب -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center bg-light">
+        <span class="fw-semibold">
+          {% trans "بنود الطلب" %}
+        </span>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="add-row-btn">
+          + {% trans "بند جديد" %}
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0 invoice-items-table align-middle">
+            <thead class="table-light">
+              <tr>
+                <th class="product-col small text-muted">{% trans "المنتج" %}</th>
+                <th class="desc-col small text-muted">{% trans "الوصف الحر" %}</th>
+                <th class="qty-col small text-muted">{% trans "الكمية" %}</th>
+                <th class="price-col small text-muted">{% trans "سعر الوحدة" %}</th>
+                <th class="total-col small text-muted">{% trans "الإجمالي" %}</th>
+                <th class="small text-muted text-center">{% trans "حذف" %}</th>
+              </tr>
+            </thead>
+            <tbody id="order-items-body">
+              {{ item_formset.management_form }}
+              {{ item_formset.non_form_errors }}
+
+              {% for formset_form in item_formset %}
+                <tr class="order-item-row">
+                  {{ formset_form.id }}
+
+                  <td>
+                    {{ formset_form.product }}
+                    {% for error in formset_form.product.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+                  <td>
+                    {{ formset_form.description }}
+                    {% for error in formset_form.description.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+                  <td class="qty-col" style="max-width: 110px;">
+                    {{ formset_form.quantity }}
+                    {% for error in formset_form.quantity.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+                  <td class="price-col" style="max-width: 130px;">
+                    {{ formset_form.unit_price }}
+                    {% for error in formset_form.unit_price.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+                  <td class="total-col text-nowrap">
+                    <span class="invoice-line-total">0.000</span>
+                  </td>
+                  <td class="text-center">
+                    {% if formset_form.instance.pk %}
+                      <label class="small text-danger d-inline-flex align-items-center gap-1">
+                        {{ formset_form.DELETE }}
+                        {% trans "حذف" %}
+                      </label>
+                    {% else %}
+                      <span class="text-muted small">–</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card-footer d-flex justify-content-between align-items-center">
+        <div class="text-muted small">
+          {% trans "يمكنك ترك حقل المنتج فارغًا وكتابة وصف حر للبند." %}
+        </div>
+        <div class="fw-semibold">
+          {% trans "إجمالي تقريبي" %}:
+          <span id="order-total-preview">0.000</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- أزرار الحفظ -->
+    <div class="d-flex justify-content-between align-items-center">
+      <div></div>
+      <button type="submit" class="btn btn-primary">
+        {% trans "حفظ الطلب" %}
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+  // products_json من الفيو (نفس فكرة الفاتورة)
+  const PRODUCTS = {{ products_json|default:"{}"|safe }};
+  const itemsBody = document.getElementById("order-items-body");
+  const addRowBtn = document.getElementById("add-row-btn");
+  const totalPreviewEl = document.getElementById("order-total-preview");
+
+  function updateLineTotals() {
+    let grandTotal = 0.0;
+
+    itemsBody.querySelectorAll("tr.order-item-row").forEach(row => {
+      const qtyInput = row.querySelector('input[name$="-quantity"]');
+      const priceInput = row.querySelector('input[name$="-unit_price"]');
+      const totalSpan = row.querySelector(".invoice-line-total");
+
+      const qty = parseFloat(qtyInput?.value || "0");
+      const price = parseFloat(priceInput?.value || "0");
+      const total = qty * price;
+
+      if (totalSpan) {
+        totalSpan.textContent = total.toFixed(3);
+      }
+      if (!isNaN(total)) {
+        grandTotal += total;
+      }
+    });
+
+    if (totalPreviewEl) {
+      totalPreviewEl.textContent = grandTotal.toFixed(3);
+    }
+  }
+
+  // تحديث الإجمالي عند تغيير الكمية أو السعر
+  if (itemsBody) {
+    itemsBody.addEventListener("input", function (e) {
+      if (
+        e.target.name &&
+        (e.target.name.endsWith("quantity") || e.target.name.endsWith("unit_price"))
+      ) {
+        updateLineTotals();
+      }
+    });
+
+    // لو اختار منتج، نحط الوصف والسعر تلقائيًا
+    itemsBody.addEventListener("change", function (e) {
+      if (e.target.tagName === "SELECT" && e.target.name.endsWith("-product")) {
+        const productId = e.target.value;
+        const row = e.target.closest("tr");
+        if (!row) return;
+
+        if (PRODUCTS[productId]) {
+          const priceInput = row.querySelector('input[name$="-unit_price"]');
+          const descInput = row.querySelector('input[name$="-description"]');
+          if (priceInput && PRODUCTS[productId].price) {
+            priceInput.value = PRODUCTS[productId].price;
+          }
+          if (descInput && !descInput.value) {
+            descInput.value = PRODUCTS[productId].description || "";
+          }
+          updateLineTotals();
+        }
+      }
+    });
+  }
+
+  // زر إضافة سطر جديد (نستنتج الـ prefix من حقل TOTAL_FORMS)
+  if (addRowBtn && itemsBody) {
+    addRowBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      const totalFormsInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
+      if (!totalFormsInput) return;
+
+      const prefix = totalFormsInput.name.replace("-TOTAL_FORMS", "");
+      const totalForms = parseInt(totalFormsInput.value, 10);
+
+      const templateRow = itemsBody.querySelector("tr.order-item-row");
+      if (!templateRow) return;
+
+      let newRowHtml = templateRow.outerHTML;
+
+      // استبدال أرقام الفورم القديمة بالرقم الجديد
+      const regex = new RegExp(prefix + "-(\\d+)-", "g");
+      newRowHtml = newRowHtml.replace(regex, prefix + "-" + totalForms + "-");
+
+      // تفريغ القيم الافتراضية في المدخلات (quantity, unit_price, description, product)
+      const tempDiv = document.createElement("tbody");
+      tempDiv.innerHTML = newRowHtml;
+      const newRow = tempDiv.querySelector("tr.order-item-row");
+
+      if (newRow) {
+        newRow.querySelectorAll("input, select, textarea").forEach(input => {
+          if (input.type === "checkbox" || input.type === "radio") {
+            input.checked = false;
+          } else {
+            input.value = "";
+          }
+        });
+
+        // إعادة تعيين الإجمالي للسطر الجديد
+        const totalSpan = newRow.querySelector(".invoice-line-total");
+        if (totalSpan) {
+          totalSpan.textContent = "0.000";
+        }
+
+        itemsBody.appendChild(newRow);
+        totalFormsInput.value = totalForms + 1;
+        updateLineTotals();
+      }
+    });
+  }
+
+  // حساب مبدئي عند التحميل
+  updateLineTotals();
+</script>
+{% endblock %}

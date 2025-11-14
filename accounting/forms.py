@@ -5,7 +5,7 @@ from django import forms
 from django.forms import inlineformset_factory
 
 from website.models import Product
-from .models import Invoice, Payment, Customer, InvoiceItem
+from .models import Invoice, Payment, Customer, InvoiceItem, Order, OrderItem
 
 
 class InvoiceForm(forms.ModelForm):
@@ -212,6 +212,35 @@ class StaffOrderForm(forms.Form):
                 field.widget.attrs["class"] = (css + " form-select").strip()
             else:
                 field.widget.attrs["class"] = (css + " form-control").strip()
+
+
+
+class OrderForm(forms.ModelForm):
+    class Meta:
+        model = Order
+        fields = ["customer", "status", "notes"]
+        widgets = {
+            "notes": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for name, field in self.fields.items():
+            css = field.widget.attrs.get("class", "")
+            if name in ("customer", "status"):
+                field.widget.attrs["class"] = (css + " form-select").strip()
+            else:
+                field.widget.attrs["class"] = (css + " form-control").strip()
+
+
+OrderItemFormSet = inlineformset_factory(
+    Order,
+    OrderItem,
+    fields=["product", "description", "quantity", "unit_price"],
+    extra=1,
+    can_delete=True,
+)
 
 
 # ==========================
