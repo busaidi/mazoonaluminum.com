@@ -1,53 +1,98 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}تسجيل الدخول{% endblock %}
+{% block title %}{% trans "تسجيل الدخول" %}{% endblock %}
 
 {% block content %}
-<div class="container py-5" style="max-width: 480px;">
-  <h1 class="h3 mb-4 text-center">تسجيل الدخول</h1>
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
 
-  {% if form.errors %}
-    <div class="alert alert-danger">
-      اسم المستخدم أو كلمة المرور غير صحيحة. حاول مرة أخرى.
-    </div>
-  {% endif %}
+      <div class="card shadow-sm border-0">
+        <div class="card-body p-4 p-md-5">
 
-  {% if next %}
-    {% if user.is_authenticated %}
-      <div class="alert alert-warning">
-        لديك صلاحية دخول، لكن لا تملك إذن للوصول لهذه الصفحة.
+          <h1 class="h4 mb-4 text-center">
+            {% trans "تسجيل الدخول" %}
+          </h1>
+
+          {# رسالة خطأ عامة لو بيانات الدخول غلط #}
+          {% if form.errors %}
+            <div class="alert alert-danger small">
+              {% trans "اسم المستخدم أو كلمة المرور غير صحيحة. حاول مرة أخرى." %}
+            </div>
+          {% endif %}
+
+          {# رسالة next (لو جاي من صفحة محمية) #}
+          {% if next %}
+            {% if user.is_authenticated %}
+              <div class="alert alert-warning small">
+                {% trans "لديك صلاحية دخول، لكن لا تملك إذن للوصول لهذه الصفحة." %}
+              </div>
+            {% else %}
+              <p class="text-muted small mb-3">
+                {% trans "الرجاء تسجيل الدخول للوصول إلى الصفحة المطلوبة." %}
+              </p>
+            {% endif %}
+          {% endif %}
+
+          <form method="post" novalidate>
+            {% csrf_token %}
+
+            {# اسم المستخدم #}
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.username.id_for_label }}">
+                {% trans "اسم المستخدم" %}
+              </label>
+              <input
+                type="text"
+                name="{{ form.username.html_name }}"
+                id="{{ form.username.id_for_label }}"
+                value="{{ form.username.value|default_if_none:'' }}"
+                class="form-control"
+                autocomplete="username"
+                required
+              >
+              {% for error in form.username.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            {# كلمة المرور #}
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.password.id_for_label }}">
+                {% trans "كلمة المرور" %}
+              </label>
+              <input
+                type="password"
+                name="{{ form.password.html_name }}"
+                id="{{ form.password.id_for_label }}"
+                class="form-control"
+                autocomplete="current-password"
+                required
+              >
+              {% for error in form.password.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            {# أخطاء غير مرتبطة بحقل معين #}
+            {% if form.non_field_errors %}
+              <div class="text-danger small mb-2">
+                {{ form.non_field_errors }}
+              </div>
+            {% endif %}
+
+            <input type="hidden" name="next" value="{{ next }}">
+
+            <button type="submit" class="btn btn-primary w-100 mt-2">
+              {% trans "دخول" %}
+            </button>
+          </form>
+
+        </div>
       </div>
-    {% else %}
-      <p class="text-muted small">
-        الرجاء تسجيل الدخول للوصول إلى الصفحة المطلوبة.
-      </p>
-    {% endif %}
-  {% endif %}
 
-  <form method="post" novalidate>
-    {% csrf_token %}
-
-    <div class="mb-3">
-      <label class="form-label" for="{{ form.username.id_for_label }}">اسم المستخدم</label>
-      {{ form.username }}
     </div>
-
-    <div class="mb-3">
-      <label class="form-label" for="{{ form.password.id_for_label }}">كلمة المرور</label>
-      {{ form.password }}
-    </div>
-
-    {% if form.non_field_errors %}
-      <div class="text-danger small mb-2">
-        {{ form.non_field_errors }}
-      </div>
-    {% endif %}
-
-    <button type="submit" class="btn btn-primary w-100 mb-3">دخول</button>
-
-    <input type="hidden" name="next" value="{{ next }}">
-
-  </form>
+  </div>
 </div>
 {% endblock %}
