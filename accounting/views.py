@@ -27,6 +27,17 @@ from .forms import (
 )
 from .models import Invoice, Payment, Customer, Order
 
+# ==========================
+# DEFAULT_INVOICE_TERMS
+# ==========================
+
+# Default terms template for new invoices
+DEFAULT_INVOICE_TERMS = (
+    "• تُصدر هذه الفاتورة وفقًا لشروط مزون ألمنيوم.\n"
+    "• يجب سداد المبلغ خلال 15 يومًا من تاريخ الفاتورة ما لم يُتفق على غير ذلك كتابيًا.\n"
+    "• تحتفظ مزون ألمنيوم بحقها في إيقاف التوريد أو الخدمات في حال التأخر عن السداد.\n"
+    "• في حال وجود أي ملاحظة على الفاتورة، يرجى التواصل خلال 3 أيام عمل من تاريخ الاستلام.\n"
+)
 
 # ==========================
 # Helpers / Permissions
@@ -86,14 +97,34 @@ class InvoiceCreateView(CreateView):
 
     def get_initial(self):
         initial = super().get_initial()
+
         customer_id = self.request.GET.get("customer")
         if customer_id:
-            # تعبئة فورم الفاتورة بالزبون تلقائيًا
+            # Pre-fill customer if passed in query params
             initial["customer"] = customer_id
+
+        # Pre-fill default terms template for new invoices
+        # Only on GET (not POST) and if no terms already provided
+        if "terms" not in initial or not initial["terms"]:
+            initial["terms"] = DEFAULT_INVOICE_TERMS
+
         return initial
 
     def get_success_url(self):
         return reverse("accounting:invoice_list")
+
+
+@method_decorator(accounting_staff_required, name="dispatch")
+class InvoiceUpdateView(UpdateView):
+    model = Invoice
+    form_class = InvoiceForm
+    template_name = "accounting/invoice_form.html"
+    slug_field = "number"
+    slug_url_kwarg = "number"
+
+    def get_success_url(self):
+        # بعد الحفظ يرجع لتفاصيل نفس الفاتورة
+        return reverse("accounting:invoice_detail", kwargs={"number": self.object.number})
 
 
 @method_decorator(accounting_staff_required, name="dispatch")

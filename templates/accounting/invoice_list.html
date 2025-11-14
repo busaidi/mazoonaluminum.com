@@ -60,7 +60,7 @@
                   </a>
                 </td>
                 <td>{{ inv.customer.name }}</td>
-                <td>{{ inv.issued_at }}</td>
+                <td>{{ inv.issued_at|date:"d/m/Y" }}</td>
                 <td class="text-end">{{ inv.total_amount }}</td>
                 <td class="text-end">{{ inv.paid_amount }}</td>
                 <td class="text-end">{{ inv.balance }}</td>

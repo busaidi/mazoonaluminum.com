@@ -3,27 +3,44 @@
 <html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_CODE == 'ar' %}rtl{% else %}ltr{% endif %}">
 <head>
   <meta charset="utf-8">
-  <title>فاتورة {{ invoice.number }}</title>
+  <title>
+    {% blocktrans with number=invoice.number %}فاتورة {{ number }}{% endblocktrans %}
+  </title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
+    :root {
+      --mazoon-bg-page: #f4f4f5;
+      --mazoon-card-bg: #ffffff;
+      --mazoon-text-main: #111827;
+      --mazoon-text-muted: #6b7280;
+      --mazoon-primary: #111827;
+      --mazoon-accent: #f59e0b;
+      --mazoon-border-soft: #e5e7eb;
+    }
+
     * {
       box-sizing: border-box;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
+
     body {
       margin: 0;
       padding: 20px;
-      background: #f5f5f5;
+      background: var(--mazoon-bg-page);
+      color: var(--mazoon-text-main);
     }
+
     .invoice-wrapper {
       max-width: 900px;
       margin: 0 auto;
-      background: #fff;
+      background: var(--mazoon-card-bg);
       padding: 24px 28px;
       border-radius: 8px;
-      border: 1px solid #ddd;
+      border: 1px solid var(--mazoon-border-soft);
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
     }
+
     .header {
       display: flex;
       justify-content: space-between;
@@ -31,45 +48,62 @@
       margin-bottom: 24px;
       gap: 16px;
     }
+
+    .company-block {
+      max-width: 55%;
+    }
+
     .company-name {
       font-size: 22px;
       font-weight: 700;
       margin-bottom: 4px;
+      color: var(--mazoon-primary);
     }
+
     .company-details {
       font-size: 12px;
-      color: #555;
-      line-height: 1.5;
+      color: var(--mazoon-text-muted);
+      line-height: 1.6;
     }
+
     .invoice-title {
       text-align: right;
+      min-width: 200px;
     }
+
     .invoice-title h1 {
       font-size: 20px;
-      margin: 0 0 4px 0;
+      margin: 0 0 6px 0;
+      color: var(--mazoon-primary);
     }
+
     .invoice-meta {
       font-size: 12px;
-      color: #555;
-      line-height: 1.5;
+      color: var(--mazoon-text-muted);
+      line-height: 1.6;
+    }
+
+    .invoice-meta strong {
+      color: var(--mazoon-text-main);
     }
 
     .section-title {
       font-weight: 600;
       margin-bottom: 6px;
       font-size: 14px;
+      color: var(--mazoon-primary);
     }
 
     .block {
-      margin-bottom: 16px;
+      margin-bottom: 18px;
     }
 
     .box {
-      border: 1px solid #ddd;
+      border: 1px solid var(--mazoon-border-soft);
       border-radius: 6px;
       padding: 10px 12px;
       font-size: 13px;
-      background: #fafafa;
+      background: #f9fafb;
     }
 
     table {
@@ -78,13 +112,17 @@
       margin-top: 8px;
       font-size: 13px;
     }
-    th, td {
+
+    th,
+    td {
       padding: 8px 6px;
-      border: 1px solid #ddd;
+      border: 1px solid #e5e7eb;
     }
+
     th {
-      background: #f0f0f0;
+      background: #f9fafb;
       text-align: left;
+      color: var(--mazoon-text-main);
     }
 
     .totals-table {
@@ -92,6 +130,7 @@
       margin-left: auto;
       margin-top: 10px;
     }
+
     .totals-table th {
       width: 50%;
     }
@@ -99,6 +138,7 @@
     .text-right {
       text-align: right;
     }
+
     .text-center {
       text-align: center;
     }
@@ -107,6 +147,7 @@
       font-size: 12px;
       color: #444;
       white-space: pre-wrap;
+      line-height: 1.7;
     }
 
     .print-hint {
@@ -116,14 +157,43 @@
       text-align: center;
     }
 
+    .badge-status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid var(--mazoon-border-soft);
+      background: #f9fafb;
+      margin-top: 4px;
+    }
+
+    .badge-status.paid {
+      border-color: #16a34a;
+      color: #15803d;
+      background: #dcfce7;
+    }
+
+    .badge-status.partial {
+      border-color: #f97316;
+      color: #c2410c;
+      background: #ffedd5;
+    }
+
+    .badge-status.cancelled {
+      border-color: #6b7280;
+      color: #4b5563;
+      background: #e5e7eb;
+    }
+
     @media print {
       body {
         background: #fff;
         padding: 0;
       }
       .invoice-wrapper {
-        border: none;
         border-radius: 0;
+        border: none;
+        box-shadow: none;
       }
       .print-hint {
         display: none;
@@ -135,61 +205,84 @@
 
 <div class="invoice-wrapper">
 
+  <!-- الهيدر -->
   <div class="header">
-    <div>
+    <div class="company-block">
       <div class="company-name">Mazoon Aluminum</div>
       <div class="company-details">
-        سلطنة عمان – ورشة/شركة الألمنيوم<br>
-        هاتف: +968-00000000<br>
-        بريد إلكتروني: info@example.com
+        {% trans "سلطنة عمان – ورشة/شركة الألمنيوم" %}<br>
+        {% trans "هاتف:" %} +968-00000000<br>
+        {% trans "بريد إلكتروني:" %} info@example.com
       </div>
     </div>
 
     <div class="invoice-title">
-      <h1>فاتورة</h1>
+      <h1>{% trans "فاتورة" %}</h1>
       <div class="invoice-meta">
-        <div><strong>رقم الفاتورة:</strong> {{ invoice.number }}</div>
-        <div><strong>تاريخ الإصدار:</strong> {{ invoice.issued_at }}</div>
-        <div><strong>تاريخ الاستحقاق:</strong> {{ invoice.due_date|default:"-" }}</div>
-        <div><strong>الحالة:</strong> {{ invoice.get_status_display }}</div>
+        <div>
+          <strong>{% trans "رقم الفاتورة:" %}</strong>
+          {{ invoice.number }}
+        </div>
+        <div>
+          <strong>{% trans "تاريخ الإصدار:" %}</strong>
+          {{ invoice.issued_at }}
+        </div>
+        <div>
+          <strong>{% trans "تاريخ الاستحقاق:" %}</strong>
+          {{ invoice.due_date|default:"-" }}
+        </div>
+        <div>
+          <strong>{% trans "الحالة:" %}</strong>
+          {{ invoice.get_status_display }}
+          {% comment %} شارة حالة بسيطة للطباعة {% endcomment %}
+          {% if invoice.status == invoice.Status.PAID %}
+            <span class="badge-status paid">{% trans "مدفوعة" %}</span>
+          {% elif invoice.status == invoice.Status.PARTIALLY_PAID %}
+            <span class="badge-status partial">{% trans "مدفوعة جزئياً" %}</span>
+          {% elif invoice.status == invoice.Status.CANCELLED %}
+            <span class="badge-status cancelled">{% trans "ملغاة" %}</span>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
 
+  <!-- بيانات الزبون -->
   <div class="block">
-    <div class="section-title">بيانات الزبون</div>
+    <div class="section-title">{% trans "بيانات الزبون" %}</div>
     <div class="box">
-      <div><strong>الاسم:</strong> {{ invoice.customer.name }}</div>
+      <div><strong>{% trans "الاسم:" %}</strong> {{ invoice.customer.name }}</div>
       {% if invoice.customer.company_name %}
-      <div><strong>الشركة:</strong> {{ invoice.customer.company_name }}</div>
+        <div><strong>{% trans "الشركة:" %}</strong> {{ invoice.customer.company_name }}</div>
       {% endif %}
       {% if invoice.customer.tax_number %}
-      <div><strong>الرقم الضريبي:</strong> {{ invoice.customer.tax_number }}</div>
+        <div><strong>{% trans "الرقم الضريبي:" %}</strong> {{ invoice.customer.tax_number }}</div>
       {% endif %}
       {% if invoice.customer.phone %}
-      <div><strong>الهاتف:</strong> {{ invoice.customer.phone }}</div>
+        <div><strong>{% trans "الهاتف:" %}</strong> {{ invoice.customer.phone }}</div>
       {% endif %}
       {% if invoice.customer.address %}
-      <div><strong>العنوان:</strong> {{ invoice.customer.address }}</div>
+        <div><strong>{% trans "العنوان:" %}</strong> {{ invoice.customer.address }}</div>
       {% endif %}
     </div>
   </div>
 
+  <!-- ملخص الفاتورة -->
   <div class="block">
-    <div class="section-title">ملخص الفاتورة</div>
+    <div class="section-title">{% trans "ملخص الفاتورة" %}</div>
 
     <table class="totals-table">
       <tbody>
         <tr>
-          <th>إجمالي الفاتورة</th>
+          <th>{% trans "إجمالي الفاتورة" %}</th>
           <td class="text-right">{{ invoice.total_amount }}</td>
         </tr>
         <tr>
-          <th>إجمالي المدفوع</th>
+          <th>{% trans "إجمالي المدفوع" %}</th>
           <td class="text-right">{{ invoice.paid_amount }}</td>
         </tr>
         <tr>
-          <th>المتبقي</th>
+          <th>{% trans "المتبقي" %}</th>
           <td class="text-right">{{ invoice.balance }}</td>
         </tr>
       </tbody>
@@ -197,51 +290,64 @@
   </div>
 
   {% if invoice.description %}
-  <div class="block">
-    <div class="section-title">الوصف / التفاصيل</div>
-    <div class="box notes">
-      {{ invoice.description|linebreaksbr }}
+    <!-- الوصف / التفاصيل -->
+    <div class="block">
+      <div class="section-title">{% trans "الوصف / التفاصيل" %}</div>
+      <div class="box notes">
+        {{ invoice.description|linebreaksbr }}
+      </div>
     </div>
-  </div>
   {% endif %}
 
+  {% if invoice.terms %}
+    <!-- الشروط والأحكام -->
+    <div class="block">
+      <div class="section-title">{% trans "الشروط والأحكام" %}</div>
+      <div class="box notes">
+        {{ invoice.terms|linebreaksbr }}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- جدول الدفعات -->
   <div class="block">
-    <div class="section-title">الدفعات على هذه الفاتورة</div>
+    <div class="section-title">{% trans "الدفعات على هذه الفاتورة" %}</div>
     <table>
       <thead>
         <tr>
-          <th>التاريخ</th>
-          <th>المبلغ</th>
-          <th>الطريقة</th>
-          <th>ملاحظات</th>
+          <th>{% trans "التاريخ" %}</th>
+          <th>{% trans "المبلغ" %}</th>
+          <th>{% trans "الطريقة" %}</th>
+          <th>{% trans "ملاحظات" %}</th>
         </tr>
       </thead>
       <tbody>
         {% for p in invoice.payments.all %}
-        <tr>
-          <td>{{ p.date }}</td>
-          <td>{{ p.amount }}</td>
-          <td>{{ p.get_method_display }}</td>
-          <td>{{ p.notes }}</td>
-        </tr>
+          <tr>
+            <td>{{ p.date }}</td>
+            <td>{{ p.amount }}</td>
+            <td>{{ p.get_method_display }}</td>
+            <td>{{ p.notes }}</td>
+          </tr>
         {% empty %}
-        <tr>
-          <td colspan="4" class="text-center">
-            لا توجد دفعات مسجلة على هذه الفاتورة.
-          </td>
-        </tr>
+          <tr>
+            <td colspan="4" class="text-center">
+              {% trans "لا توجد دفعات مسجلة على هذه الفاتورة." %}
+            </td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 
   <div class="print-hint">
-    يمكنك استخدام أمر الطباعة في المتصفح (Ctrl + P) ثم اختيار <strong>Save as PDF</strong>.
+    {% trans "يمكنك استخدام أمر الطباعة في المتصفح (Ctrl + P) ثم اختيار" %}
+    <strong>Save as PDF</strong>.
   </div>
 </div>
 
 <script>
-  // خيار: تفعيل الطباعة تلقائيًا عند الفتح (إذا حاب)
+  // يمكنك تفعيل الطباعة تلقائياً عند فتح الصفحة إن أحببت:
   // window.print();
 </script>
 

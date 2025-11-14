@@ -1,58 +1,121 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block meta_title %}فاتورة جديدة | Mazoon Aluminum{% endblock %}
+{% block meta_title %}
+  {% if form.instance.pk %}
+    {% blocktrans with number=form.instance.number %}تعديل فاتورة {{ number }} | Mazoon Aluminum{% endblocktrans %}
+  {% else %}
+    {% trans "فاتورة جديدة | Mazoon Aluminum" %}
+  {% endif %}
+{% endblock %}
+
 {% block meta_description %}
-إنشاء فاتورة جديدة لعميل في نظام المحاسبة الخاص بمزون ألمنيوم.
+  {% if form.instance.pk %}
+    {% blocktrans with number=form.instance.number %}تعديل بيانات الفاتورة رقم {{ number }} في نظام المحاسبة.{% endblocktrans %}
+  {% else %}
+    {% trans "إنشاء فاتورة جديدة لعميل في نظام المحاسبة الخاص بمزون ألمنيوم." %}
+  {% endif %}
 {% endblock %}
 
 {% block content %}
 <div class="py-4">
 
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h3 mb-0">فاتورة جديدة</h1>
-    <a href="{% url 'accounting:invoice_list' %}" class="btn btn-outline-secondary btn-sm">
-      رجوع إلى قائمة الفواتير
-    </a>
+  <!-- العنوان وأزرار الأعلى -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+      {% if form.instance.pk %}
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <h1 class="h3 mb-0">
+            {% blocktrans with number=form.instance.number %}تعديل فاتورة {{ number }}{% endblocktrans %}
+          </h1>
+          <span class="badge bg-light text-mazoon border">
+            {% trans "وضع التحرير" %}
+          </span>
+        </div>
+        <p class="text-muted small mb-0">
+          {% trans "قم بتحديث بيانات الفاتورة بدقة، وسيتم حفظ التغييرات في السجلات المحاسبية." %}
+        </p>
+      {% else %}
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <h1 class="h3 mb-0">{% trans "فاتورة جديدة" %}</h1>
+          <span class="badge bg-light text-mazoon border">
+            {% trans "فاتورة يدوية" %}
+          </span>
+        </div>
+        <p class="text-muted small mb-0">
+          {% trans "املأ بيانات الفاتورة، خصوصًا العميل، رقم الفاتورة، المبلغ الإجمالي، والحالة." %}
+        </p>
+      {% endif %}
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'accounting:invoice_list' %}" class="btn btn-outline-secondary btn-sm">
+        {% trans "رجوع إلى قائمة الفواتير" %}
+      </a>
+    </div>
   </div>
 
+  <!-- كرت الفورم -->
   <div class="card border-0 shadow-sm">
     <div class="card-body">
+
       <form method="post" novalidate>
         {% csrf_token %}
 
         {# أخطاء عامة للفورم #}
         {% if form.non_field_errors %}
-          <div class="alert alert-danger">
+          <div class="alert alert-danger mb-3">
             {% for error in form.non_field_errors %}
               <div>{{ error }}</div>
             {% endfor %}
           </div>
         {% endif %}
 
-        {# الحقول #}
+        <!-- عنوان صغير فوق الحقول -->
+        <div class="mb-3">
+          <div class="small text-muted">
+            {% trans "بيانات الفاتورة" %}
+          </div>
+        </div>
+
+        {# الحقول بالترتيب كما في InvoiceForm.fields، عمود واحد #}
         {% for field in form %}
           <div class="mb-3">
-            <label class="form-label" for="{{ field.id_for_label }}">
-              {{ field.label }}{% if field.field.required %} *{% endif %}
+            <label class="form-label d-flex justify-content-between align-items-center" for="{{ field.id_for_label }}">
+              <span>{{ field.label }}</span>
+              {% if field.field.required %}
+                <span class="small text-muted">*</span>
+              {% endif %}
             </label>
             {{ field }}
             {% if field.help_text %}
-              <div class="form-text">{{ field.help_text }}</div>
+              <div class="form-text small">{{ field.help_text }}</div>
+            {% else %}
+              {% if field.name == "terms" %}
+                <div class="form-text small text-muted">
+                  {% trans "اكتب هنا الشروط والأحكام أو ملاحظات الدفع التي ستظهر في الفاتورة." %}
+                </div>
+              {% endif %}
             {% endif %}
             {% for error in field.errors %}
-              <div class="text-danger small">{{ error }}</div>
+              <div class="text-danger small mt-1">{{ error }}</div>
             {% endfor %}
           </div>
         {% endfor %}
 
-        <div class="d-flex gap-2">
+        <div class="d-flex flex-wrap gap-2 mt-3">
           <button type="submit" class="btn btn-primary">
-            حفظ الفاتورة
+            {% if form.instance.pk %}
+              {% trans "حفظ التعديلات" %}
+            {% else %}
+              {% trans "حفظ الفاتورة" %}
+            {% endif %}
           </button>
           <a href="{% url 'accounting:invoice_list' %}" class="btn btn-secondary">
-            إلغاء
+            {% trans "إلغاء" %}
           </a>
         </div>
+
       </form>
     </div>
   </div>

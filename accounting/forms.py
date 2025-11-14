@@ -15,24 +15,41 @@ class InvoiceForm(forms.ModelForm):
             "issued_at",
             "due_date",
             "description",
+            "terms",
             "total_amount",
             "status",
         ]
         widgets = {
-            "issued_at": forms.DateInput(attrs={"type": "date"}),
-            "due_date": forms.DateInput(attrs={"type": "date"}),
+            "issued_at": forms.DateInput(
+                format="%d-%m-%Y",
+                attrs={
+                    "placeholder": "DD-MM-YYYY",
+                },
+            ),
+            "due_date": forms.DateInput(
+                format="%d-%m-%Y",
+                attrs={
+                    "placeholder": "DD-MM-YYYY",
+                },
+            ),
             "description": forms.Textarea(attrs={"rows": 3}),
+            "terms": forms.Textarea(attrs={"rows": 5}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Add Bootstrap classes
+
+        # Bootstrap classes: select vs input
         for name, field in self.fields.items():
             css = field.widget.attrs.get("class", "")
             if name in ("customer", "status"):
                 field.widget.attrs["class"] = (css + " form-select").strip()
             else:
                 field.widget.attrs["class"] = (css + " form-control").strip()
+
+        # تاريخ بصيغة Day-Month-Year
+        self.fields["issued_at"].input_formats = ["%d-%m-%Y"]
+        self.fields["due_date"].input_formats = ["%d-%m-%Y"]
 
     def clean(self):
         """
@@ -52,6 +69,7 @@ class InvoiceForm(forms.ModelForm):
             self.add_error("due_date", "Due date cannot be before issue date.")
 
         return cleaned
+
 
 
 class PaymentForInvoiceForm(forms.ModelForm):

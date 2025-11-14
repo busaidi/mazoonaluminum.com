@@ -1,9 +1,0 @@
-التالي الطبيعي: نبدأ نراجع القوالب واحدة واحدة (مثلاً):
-
-accounting/dashboard.html
-
-accounting/invoice_list.html
-
-accounting/invoice_form.html
-
-accounting/order_list.html + orders/staff_order_*

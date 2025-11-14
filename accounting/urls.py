@@ -14,6 +14,11 @@ urlpatterns = [
     path("invoices/", views.InvoiceListView.as_view(), name="invoice_list"),
     path("invoices/new/", views.InvoiceCreateView.as_view(), name="invoice_create"),
     path(
+        "invoices/<str:number>/edit/",
+        views.InvoiceUpdateView.as_view(),
+        name="invoice_update",
+    ),
+    path(
         "invoices/<str:number>/",
         views.InvoiceDetailView.as_view(),
         name="invoice_detail",

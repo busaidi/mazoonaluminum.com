@@ -8,6 +8,24 @@ from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 
+#generate invoice number
+def generate_invoice_number():
+    year = timezone.now().year
+
+    # استرجاع آخر فاتورة في نفس السنة
+    last_invoice = Invoice.objects.filter(
+        number__startswith=f"INV-{year}"
+    ).order_by("id").last()
+
+    if last_invoice:
+        # استخراج آخر رقم + 1
+        last_number = int(last_invoice.number.split("-")[-1])
+        new_number = last_number + 1
+    else:
+        new_number = 1
+
+    return f"INV-{year}-{new_number:04d}"
+
 
 class Customer(models.Model):
     """
@@ -86,12 +104,18 @@ class Invoice(models.Model):
     number = models.CharField(
         max_length=50,
         unique=True,
+        blank=True,
         help_text="Human-readable invoice number, e.g. MAZ-2025-0001.",
     )
     issued_at = models.DateField(default=timezone.now)
     due_date = models.DateField(null=True, blank=True)
 
     description = models.TextField(blank=True)
+
+    terms = models.TextField(
+        blank=True,
+        help_text="Terms and conditions shown on the invoice."
+    )
 
     total_amount = models.DecimalField(max_digits=12, decimal_places=3)
     paid_amount = models.DecimalField(
@@ -120,6 +144,14 @@ class Invoice(models.Model):
 
     def __str__(self):
         return f"Invoice {self.number} - {self.customer.name}"
+
+    def save(self, *args, **kwargs):
+        """
+        On first save, if no number provided, auto-generate one.
+        """
+        if not self.number:
+            self.number = generate_invoice_number()
+        super().save(*args, **kwargs)
 
     @property
     def balance(self) -> Decimal:
