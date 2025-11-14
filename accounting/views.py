@@ -1,10 +1,11 @@
 # accounting/views.py
 from decimal import Decimal
 
+from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, ProtectedError
 from django.shortcuts import get_object_or_404, render, redirect
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.translation import get_language
@@ -246,9 +247,30 @@ class CustomerUpdateView(UpdateView):
 class CustomerDeleteView(DeleteView):
     model = Customer
     template_name = "accounting/customer_confirm_delete.html"
+    success_url = reverse_lazy("accounting:customer_list")
 
-    def get_success_url(self):
-        return reverse("accounting:customer_list")
+    def post(self, request, *args, **kwargs):
+        """
+        ننفّذ الحذف يدويًا عشان نقدر نمسك ProtectedError
+        بدل ما نخليه يطلع 500.
+        """
+        self.object = self.get_object()
+        try:
+            # محاولة الحذف الفعلية
+            self.object.delete()
+        except ProtectedError:
+            # هنا نجي لو عنده فواتير/دفعات/طلبات مرتبطة
+            messages.error(
+                request,
+                "لا يمكن حذف هذا الزبون لأنه مرتبط بفواتير أو دفعات أو طلبات قائمة. "
+                "يمكنك تعديل بياناته أو إبقاءه كما هو للسجلات المحاسبية."
+            )
+            return redirect("accounting:customer_detail", pk=self.object.pk)
+        else:
+            # لو الحذف نجح فعلاً
+            messages.success(request, "تم حذف الزبون بنجاح.")
+            return redirect(self.success_url)
+
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
