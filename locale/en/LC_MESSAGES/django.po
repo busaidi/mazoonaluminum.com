@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-11-15 12:27+0400\n"
+"POT-Creation-Date: 2025-11-15 12:51+0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -241,7 +241,8 @@ msgstr "Customers | Mazoon Aluminum"
 
 #: templates/accounting/customer_list.html:9
 msgid "قائمة الزبائن مع إمكانية البحث وإدارة بيانات العملاء في نظام المحاسبة."
-msgstr "Customer list with search and data management in the accounting system."
+msgstr ""
+"Customer list with search and data management in the accounting system."
 
 #: templates/accounting/customer_list.html:17
 msgid "الزبائن"
@@ -312,6 +313,7 @@ msgid "التالي"
 msgstr "Next"
 
 #: templates/accounting/dashboard.html:5 templates/accounting/dashboard.html:17
+#: templates/base.html:157 templates/base.html:164
 msgid "لوحة المحاسبة"
 msgstr "Accounting dashboard"
 
@@ -733,8 +735,8 @@ msgstr "Manual invoice"
 msgid ""
 "املأ بيانات الفاتورة، خصوصًا العميل، تاريخ الإصدار، بنود الفاتورة، والشروط."
 msgstr ""
-"Fill in the invoice data, especially the customer, issue date, invoice items,"
-" and terms."
+"Fill in the invoice data, especially the customer, issue date, invoice "
+"items, and terms."
 
 #: templates/accounting/invoice_form.html:53
 msgid "رجوع إلى قائمة الفواتير"
@@ -888,8 +890,7 @@ msgstr "Order #%(id)s"
 
 #: templates/accounting/orders/order_detail.html:16
 msgid "عرض تفاصيل الطلب، حالة المعالجة، وجميع البنود المرتبطة به."
-msgstr ""
-"View order details, processing status, and all related line items."
+msgstr "View order details, processing status, and all related line items."
 
 #: templates/accounting/orders/order_detail.html:24
 msgid "تأكيد الطلب"
@@ -1160,13 +1161,18 @@ msgstr "from the print screen."
 msgid "إيصال دفع آلي من نظام مزون ألمنيوم"
 msgstr "Automatic payment receipt from Mazoon Aluminum system"
 
+#: templates/base.html:98
+msgid "مزون المنيوم"
+msgstr "Mazoon Aluminum"
+
 #: templates/base.html:115 templates/base.html:234
 msgid "الرئيسية"
 msgstr "Home"
 
-#: templates/base.html:119
-msgid "عنّا"
-msgstr "About us"
+#: templates/base.html:119 templates/website/about.html:64
+#: templates/website/about.html:78
+msgid "من نحن"
+msgstr "Who we are"
 
 #: templates/base.html:123 templates/website/lab.html:62
 msgid "المختبر"
@@ -1189,6 +1195,12 @@ msgstr "Products"
 #: templates/website/contact.html:79
 msgid "اتصل بنا"
 msgstr "Contact us"
+
+#: templates/base.html:147
+#, fuzzy
+#| msgid "بيانات الزبون"
+msgid "بوابة الزبون"
+msgstr "Customer Portal"
 
 #: templates/base.html:181
 msgid "تسجيل الخروج"
@@ -1298,10 +1310,6 @@ msgstr "Password"
 #: templates/registration/login.html:88
 msgid "دخول"
 msgstr "Log in"
-
-#: templates/website/about.html:64 templates/website/about.html:78
-msgid "من نحن"
-msgstr "Who we are"
 
 #: templates/website/about.html:66
 msgid "About us"
@@ -1747,8 +1755,7 @@ msgstr "Our trusted local partners"
 
 #: templates/website/home.html:259
 msgid "سحب الألمنيوم · الزجاج · الأجهزة والاكسسوارات · باودر الصبغ"
-msgstr ""
-"Aluminum extrusion · Glass · Hardware and accessories · Powder coating"
+msgstr "Aluminum extrusion · Glass · Hardware and accessories · Powder coating"
 
 #: templates/website/home.html:267
 msgid "نابكو عمان لسحب الألمنيوم"
@@ -1863,8 +1870,7 @@ msgstr ""
 
 #: templates/website/product_list.html:79
 msgid "أنظمة نوافذ وأبواب تم تطويرها بعناية لتناسب المشاريع الحديثة."
-msgstr ""
-"Window and door systems carefully developed to suit modern projects."
+msgstr "Window and door systems carefully developed to suit modern projects."
 
 #: templates/website/product_list.html:81
 msgid "Carefully developed window and door systems for modern projects."

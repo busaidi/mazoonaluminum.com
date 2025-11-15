@@ -92,11 +92,10 @@
 <nav class="navbar navbar-expand-lg navbar-light mazoon-navbar shadow-sm">
     <div class="container">
         <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{% url 'home' %}">
-            <span class="brand-mark rounded-circle d-inline-flex align-items-center justify-content-center">
-                M
-            </span>
-            <span class="brand-text">Mazoon Aluminum</span>
-        </a>
+    <img src="{% static 'img/logo_mazoon_black.png' %}"
+         alt="Mazoon Aluminum logo"
+         class="navbar-logo">
+</a>
 
         <button
                 class="navbar-toggler"
@@ -116,7 +115,7 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}"
-                       href="{% url 'about' %}">{% trans "عنّا" %}</a>
+                       href="{% url 'about' %}">{% trans "من نحن" %}</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {% if request.resolver_match.url_name == 'lab' %}active{% endif %}"
@@ -144,7 +143,7 @@
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.namespace == 'portal' %}active{% endif %}"
                            href="{% url 'portal:dashboard' %}">
-                            بوابة الزبون
+                            {% trans "بوابة الزبون" %}
                         </a>
                     </li>
                 {% endif %}
@@ -154,14 +153,14 @@
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.namespace == 'accounting' %}active{% endif %}"
                            href="{% url 'accounting:dashboard' %}">
-                            المحاسبة
+                            {% trans "لوحة المحاسبة" %}
                         </a>
                     </li>
                 {% elif user.is_authenticated and user.is_superuser %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.namespace == 'accounting' %}active{% endif %}"
                            href="{% url 'accounting:dashboard' %}">
-                            المحاسبة
+                            {% trans "لوحة المحاسبة" %}
                         </a>
                     </li>
                 {% endif %}

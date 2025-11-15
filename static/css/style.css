@@ -255,3 +255,8 @@ main .container > *:last-child {
   font-weight: 600;
   color: var(--mazoon-primary);
 }
+.navbar-logo {
+  height: 36px;   /* جرّب 32 أو 36 حسب شكل الشعار */
+  width: auto;
+  display: block;
+}

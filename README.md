@@ -29,9 +29,24 @@ python manage.py migrate
 ```bash
 python manage.py createsuperuser
 ```
+
+
+```bash
+python manage.py seed_accounting_staff_group
+```
+```bash
+python manage.py seed_hamed_user
+```
+```bash
+python manage.py seed_agent_customer
+```
+```bash
+python manage.py seed_website_data
+```
 ```bash
 python manage.py runserver
 ```
+
 
 Open:
 
