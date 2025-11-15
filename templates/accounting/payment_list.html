@@ -1,27 +1,36 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block meta_title %}{% trans "الدفعات" %}{% endblock %}
+{% block meta_title %}{% trans "الدفعات" %} | Mazoon Aluminum{% endblock %}
+{% block meta_description %}
+{% trans "قائمة الدفعات مع إمكانية البحث والتصفية والتسوية على الفواتير في نظام المحاسبة." %}
+{% endblock %}
 
 {% block content %}
 <div class="py-4">
 
+  <!-- العنوان + زر إضافة -->
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-    <h1 class="h4 mb-0">{% trans "الدفعات" %}</h1>
+    <div>
+      <h1 class="h4 mb-1">{% trans "الدفعات" %}</h1>
+      <p class="text-muted small mb-0">
+        {% trans "إدارة دفعات العملاء وتسويتها على الفواتير أو كدفعات عامة." %}
+      </p>
+    </div>
 
     <a href="{% url 'accounting:payment_create' %}" class="btn btn-primary btn-sm">
-      {% trans "إضافة دفعة جديدة" %}
+      + {% trans "إضافة دفعة جديدة" %}
     </a>
   </div>
 
-  <!-- فلاتر -->
+  <!-- فلاتر البحث -->
   <form method="get" class="row g-2 mb-3">
     <div class="col-md-4">
       <input type="text"
              name="customer"
              value="{{ customer_filter }}"
              class="form-control form-control-sm"
-             placeholder="{% trans 'بحث بالعميل' %}">
+             placeholder="{% trans 'بحث باسم العميل' %}">
     </div>
 
     <div class="col-md-3">
@@ -36,57 +45,82 @@
     </div>
 
     <div class="col-md-2">
-      <button class="btn btn-primary btn-sm w-100">{% trans "بحث" %}</button>
+      <button class="btn btn-primary btn-sm w-100">
+        {% trans "بحث" %}
+      </button>
     </div>
   </form>
 
   <!-- جدول الدفعات -->
   <div class="card p-3">
     <div class="table-responsive">
-      <table class="table table-sm align-middle">
+      <table class="table table-sm align-middle mb-0">
         <thead>
           <tr>
-            <th>{% trans "التاريخ" %}</th>
-            <th>{% trans "العميل" %}</th>
-            <th>{% trans "المبلغ" %}</th>
-            <th>{% trans "الطريقة" %}</th>
-            <th>{% trans "الفاتورة" %}</th>
-            <th>{% trans "ملاحظات" %}</th>
-            <th class="text-end">{% trans "إجراءات" %}</th>
+            <th class="small text-muted">{% trans "التاريخ" %}</th>
+            <th class="small text-muted">{% trans "العميل" %}</th>
+            <th class="small text-muted">{% trans "المبلغ" %}</th>
+            <th class="small text-muted">{% trans "الطريقة" %}</th>
+            <th class="small text-muted">{% trans "الفاتورة" %}</th>
+            <th class="small text-muted">{% trans "ملاحظات" %}</th>
+            <th class="small text-muted text-end">{% trans "إجراءات" %}</th>
           </tr>
         </thead>
         <tbody>
           {% for p in payments %}
           <tr>
-            <td>{{ p.date }}</td>
+            <td class="text-nowrap">
+              {{ p.date|date:"Y-m-d" }}
+            </td>
+
             <td>
               <a href="{% url 'accounting:customer_detail' p.customer.pk %}">
                 {{ p.customer.name }}
               </a>
             </td>
-            <td><strong>{{ p.amount }}</strong></td>
-            <td>{{ p.get_method_display }}</td>
+
+            <td class="text-nowrap">
+              <strong>{{ p.amount }}</strong>
+            </td>
+
+            <td>
+              <span class="badge bg-light text-muted border">
+                {{ p.get_method_display }}
+              </span>
+            </td>
+
             <td>
               {% if p.invoice %}
                 <a href="{% url 'accounting:invoice_detail' p.invoice.number %}">
                   {{ p.invoice.number }}
                 </a>
               {% else %}
-                <span class="text-muted">{% trans "دفعة عامة" %}</span>
-              {% endif %}
-            </td>
-            <td>{{ p.notes|default:"-" }}</td>
-            <td class="text-end">
-              {% if not p.invoice %}
-                <a href="{% url 'accounting:payment_apply' p.pk %}"
-                   class="btn btn-outline-primary btn-sm">
-                  {% trans "تسوية" %}
-                </a>
-              {% else %}
                 <span class="text-muted small">
-                  {% trans "مربوطة بفاتورة" %}
+                  {% trans "دفعة عامة (بدون فاتورة)" %}
                 </span>
               {% endif %}
+            </td>
+
+            <td class="small">
+              {{ p.notes|default:"-" }}
+            </td>
+
+            <td class="text-end">
+              <div class="d-inline-flex gap-1">
+                <!-- زر تعديل الدفعة -->
+                <a href="{% url 'accounting:payment_update' p.pk %}"
+                   class="btn btn-outline-secondary btn-sm">
+                  {% trans "تعديل" %}
+                </a>
+
+                <!-- زر تسوية يظهر فقط للدفعات العامة -->
+                {% if not p.invoice %}
+                  <a href="{% url 'accounting:payment_apply' p.pk %}"
+                     class="btn btn-outline-primary btn-sm">
+                    {% trans "تسوية" %}
+                  </a>
+                {% endif %}
+              </div>
             </td>
           </tr>
           {% empty %}
@@ -100,10 +134,11 @@
       </table>
     </div>
 
+    <!-- Pagination -->
     {% if is_paginated %}
       <div class="mt-3 d-flex justify-content-center">
         <nav>
-          <ul class="pagination pagination-sm">
+          <ul class="pagination pagination-sm mb-0">
             {% if page_obj.has_previous %}
               <li class="page-item">
                 <a class="page-link"

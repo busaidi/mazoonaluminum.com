@@ -893,6 +893,9 @@ class PaymentListView(ListView):
         ctx["customer_filter"] = self.request.GET.get("customer", "")
         return ctx
 
+# ============================================================
+# Payment Create
+# ============================================================
 @method_decorator(accounting_staff_required, name="dispatch")
 class PaymentCreateView(CreateView):
     """
@@ -908,6 +911,35 @@ class PaymentCreateView(CreateView):
         # تاريخ اليوم كقيمة افتراضية
         initial.setdefault("date", timezone.now().date())
         return initial
+
+    def get_success_url(self):
+        return reverse("accounting:payment_list")
+
+# ============================================================
+# Payment Update
+# ============================================================
+@method_decorator(accounting_staff_required, name="dispatch")
+class PaymentUpdateView(UpdateView):
+    """
+    تعديل دفعة موجودة:
+    - نسمح بتعديل التاريخ، المبلغ، طريقة الدفع، الملاحظات
+    - لا نسمح بتغيير العميل أو الفاتورة من شاشة التعديل
+      (عشان ما تلخبط إجماليات الفواتير القديمة).
+    """
+    model = Payment
+    form_class = PaymentForm
+    template_name = "accounting/payment_form.html"
+    context_object_name = "payment"
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+
+        # نثبت العميل والفاتورة (قراءة فقط)
+        for fname in ("customer", "invoice"):
+            if fname in form.fields:
+                form.fields[fname].disabled = True
+
+        return form
 
     def get_success_url(self):
         return reverse("accounting:payment_list")

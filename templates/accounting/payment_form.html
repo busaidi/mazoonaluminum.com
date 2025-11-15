@@ -1,13 +1,25 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block meta_title %}{% trans "إضافة دفعة" %}{% endblock %}
+{% block meta_title %}
+  {% if form.instance.pk %}
+    {% trans "تعديل دفعة" %}
+  {% else %}
+    {% trans "إضافة دفعة" %}
+  {% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="py-4">
 
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-    <h1 class="h4 mb-0">{% trans "إضافة دفعة جديدة" %}</h1>
+    <h1 class="h4 mb-0">
+      {% if form.instance.pk %}
+        {% trans "تعديل دفعة" %}
+      {% else %}
+        {% trans "إضافة دفعة جديدة" %}
+      {% endif %}
+    </h1>
     <a href="{% url 'accounting:payment_list' %}" class="btn btn-outline-secondary btn-sm">
       {% trans "رجوع إلى الدفعات" %}
     </a>
@@ -69,7 +81,11 @@
           {% trans "إلغاء" %}
         </a>
         <button type="submit" class="btn btn-primary">
-          {% trans "حفظ الدفعة" %}
+          {% if form.instance.pk %}
+            {% trans "حفظ التعديلات" %}
+          {% else %}
+            {% trans "حفظ الدفعة" %}
+          {% endif %}
         </button>
       </div>
     </form>
