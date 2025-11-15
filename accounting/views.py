@@ -11,7 +11,7 @@ from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.safestring import mark_safe
-from django.utils.translation import get_language, gettext as _
+from django.utils.translation import gettext as _
 from django.views.generic import (
     ListView,
     DetailView,
@@ -26,15 +26,19 @@ from website.models import Product
 from .forms import (
     InvoiceForm,
     PaymentForInvoiceForm,
-    CustomerForm, InvoiceItemFormSet, ApplyPaymentForm, OrderItemFormSet, OrderForm,
+    CustomerForm,
+    InvoiceItemFormSet,
+    ApplyPaymentForm,
+    OrderItemFormSet,
+    OrderForm,
 )
 from .models import Invoice, Payment, Customer, Order, InvoiceItem
 
-# ==========================
-# DEFAULT_INVOICE_TERMS
-# ==========================
 
-# Default terms template for new invoices
+# ============================================================
+# Default invoice terms template
+# ============================================================
+
 DEFAULT_INVOICE_TERMS = (
     "• تُصدر هذه الفاتورة وفقًا لشروط مزون ألمنيوم.\n"
     "• يجب سداد المبلغ خلال 15 يومًا من تاريخ الفاتورة ما لم يُتفق على غير ذلك كتابيًا.\n"
@@ -42,15 +46,16 @@ DEFAULT_INVOICE_TERMS = (
     "• في حال وجود أي ملاحظة على الفاتورة، يرجى التواصل خلال 3 أيام عمل من تاريخ الاستلام.\n"
 )
 
-# ==========================
+
+# ============================================================
 # Helpers / Permissions
-# ==========================
+# ============================================================
 
 def is_accounting_staff(user):
     """
-    الموظف المصرح له بالمحاسبة:
-    - مستخدم مفعل
-    - عضو في المجموعة 'accounting_staff'
+    Simple permission check for accounting staff:
+    - Authenticated, active user
+    - Member of 'accounting_staff' group
     """
     return (
         user.is_authenticated
@@ -62,12 +67,15 @@ def is_accounting_staff(user):
 accounting_staff_required = user_passes_test(is_accounting_staff)
 
 
-# ==========================
+# ============================================================
 # Invoices
-# ==========================
+# ============================================================
 
 @method_decorator(accounting_staff_required, name="dispatch")
 class InvoiceListView(ListView):
+    """
+    Staff list of invoices with optional status filter.
+    """
     model = Invoice
     template_name = "accounting/invoice_list.html"
     context_object_name = "invoices"
@@ -94,6 +102,9 @@ class InvoiceListView(ListView):
 
 @method_decorator(accounting_staff_required, name="dispatch")
 class InvoiceCreateView(CreateView):
+    """
+    Create a new invoice with inline items formset.
+    """
     model = Invoice
     form_class = InvoiceForm
     template_name = "accounting/invoice_form.html"
@@ -101,13 +112,12 @@ class InvoiceCreateView(CreateView):
     def get_initial(self):
         initial = super().get_initial()
 
+        # Pre-fill customer if passed in query params
         customer_id = self.request.GET.get("customer")
         if customer_id:
-            # Pre-fill customer if passed in query params
             initial["customer"] = customer_id
 
         # Pre-fill default terms template for new invoices
-        # Only on GET (not POST) and if no terms already provided
         if "terms" not in initial or not initial.get("terms"):
             initial["terms"] = DEFAULT_INVOICE_TERMS
 
@@ -116,12 +126,13 @@ class InvoiceCreateView(CreateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
 
+        # Invoice items formset
         if self.request.POST:
             ctx["item_formset"] = InvoiceItemFormSet(self.request.POST)
         else:
             ctx["item_formset"] = InvoiceItemFormSet()
 
-        # 👇 تجهيز بيانات المنتجات للـ JavaScript
+        # Products JSON for JS auto-fill (description + price)
         products = Product.objects.filter(is_active=True)
         ctx["products_json"] = mark_safe(json.dumps(
             {
@@ -135,43 +146,41 @@ class InvoiceCreateView(CreateView):
 
         return ctx
 
-
     def form_valid(self, form):
         context = self.get_context_data()
         item_formset = context["item_formset"]
 
-        # أولاً: تأكد أن formset صحيح
+        # Validate formset first
         if not item_formset.is_valid():
             return self.form_invalid(form)
 
-        # 1) نحفظ الفاتورة بدون إجمالي
+        # 1) Save invoice without total
         invoice = form.save(commit=False)
-        # نحط رقم مبدئيًا صفر، بنحدثه بعد البنود
         invoice.total_amount = Decimal("0")
-        # paid_amount يظل افتراضي (0) من الموديل
-        invoice.save()  # هنا يتولد number تلقائياً من save() في الموديل
+        invoice.save()  # number is generated in model's save()
         self.object = invoice
 
-        # 2) نحفظ البنود ونربطها بالفاتورة
+        # 2) Save items
         item_formset.instance = invoice
         item_formset.save()
 
-        # 3) نحسب الإجمالي من البنود
+        # 3) Compute total from items
         total = sum((item.subtotal for item in invoice.items.all()), Decimal("0"))
         invoice.total_amount = total
         invoice.save(update_fields=["total_amount"])
 
-        # 4) رجوع للصفحة المطلوبة
+        # 4) Redirect
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
         return reverse("accounting:invoice_list")
 
 
-
-
 @method_decorator(accounting_staff_required, name="dispatch")
 class InvoiceUpdateView(UpdateView):
+    """
+    Update existing invoice + related items.
+    """
     model = Invoice
     form_class = InvoiceForm
     template_name = "accounting/invoice_form.html"
@@ -180,15 +189,15 @@ class InvoiceUpdateView(UpdateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        invoice = self.object
 
-        invoice = self.object  # الفاتورة الحالية
-
+        # Bind formset to existing invoice
         if self.request.POST:
             ctx["item_formset"] = InvoiceItemFormSet(self.request.POST, instance=invoice)
         else:
             ctx["item_formset"] = InvoiceItemFormSet(instance=invoice)
 
-        # نفس JSON المنتجات المستخدم في الإنشاء
+        # Same products JSON used in create
         products = Product.objects.filter(is_active=True)
         ctx["products_json"] = mark_safe(json.dumps(
             {
@@ -209,18 +218,17 @@ class InvoiceUpdateView(UpdateView):
         if not item_formset.is_valid():
             return self.form_invalid(form)
 
-        # نحدّث بيانات الفاتورة نفسها أولاً
+        # Update invoice itself
         invoice = form.save(commit=False)
-        # نرجّع الإجمالي للصفر، ثم نحسبه من جديد بعد حفظ البنود
         invoice.total_amount = Decimal("0")
         invoice.save()
         self.object = invoice
 
-        # نحفظ البنود (تعديل / حذف / إضافة)
+        # Save items changes
         item_formset.instance = invoice
         item_formset.save()
 
-        # نعيد حساب الإجمالي من البنود بعد التعديل
+        # Recompute total
         total = sum((item.subtotal for item in invoice.items.all()), Decimal("0"))
         invoice.total_amount = total
         invoice.save(update_fields=["total_amount"])
@@ -228,13 +236,14 @@ class InvoiceUpdateView(UpdateView):
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
-        # بعد الحفظ يرجع لتفاصيل نفس الفاتورة
         return reverse("accounting:invoice_detail", kwargs={"number": self.object.number})
-
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
 class InvoiceDetailView(DetailView):
+    """
+    Staff invoice detail page (with items, payments, etc).
+    """
     model = Invoice
     template_name = "accounting/invoice_detail.html"
     context_object_name = "invoice"
@@ -245,14 +254,14 @@ class InvoiceDetailView(DetailView):
 @method_decorator(accounting_staff_required, name="dispatch")
 class InvoicePaymentCreateView(FormView):
     """
-    إنشاء دفعة جديدة لفتورة معينة.
+    Create a payment for a specific invoice.
     URL: /accounting/invoices/<number>/payments/new/
     """
     template_name = "accounting/invoice_payment_form.html"
     form_class = PaymentForInvoiceForm
 
     def dispatch(self, request, *args, **kwargs):
-        # نجيب الفاتورة من رقمها مرة واحدة ونخزنها على self
+        # Load invoice once and store on self
         self.invoice = get_object_or_404(
             Invoice.objects.select_related("customer"),
             number=kwargs.get("number"),
@@ -270,11 +279,11 @@ class InvoicePaymentCreateView(FormView):
         return initial
 
     def form_valid(self, form):
-        # ننشئ الـ Payment ونربطه بنفس العميل والفاتورة
+        # Create payment bound to same customer & invoice
         payment = form.save(commit=False)
         payment.customer = self.invoice.customer
         payment.invoice = self.invoice
-        payment.save()  # هذا تلقائيًا يحدث paid_amount في save()
+        payment.save()  # triggers invoice paid_amount update
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -287,7 +296,7 @@ class InvoicePaymentCreateView(FormView):
 @method_decorator(accounting_staff_required, name="dispatch")
 class InvoicePrintView(DetailView):
     """
-    صفحة طباعة للفاتورة (للموظف)
+    Print page for invoice (staff side).
     """
     model = Invoice
     template_name = "accounting/invoice_print.html"
@@ -296,11 +305,19 @@ class InvoicePrintView(DetailView):
     slug_url_kwarg = "number"
 
 
-# ==========================
+# ============================================================
 # Dashboard
-# ==========================
+# ============================================================
 
+@method_decorator(accounting_staff_required, name="dispatch")
 class AccountingDashboardView(TemplateView):
+    """
+    Main accounting dashboard:
+    - Counters
+    - Recent invoices, payments, orders
+    - Pending orders (no invoice)
+    - Unpaid invoices
+    """
     template_name = "accounting/dashboard.html"
 
     def get_context_data(self, **kwargs):
@@ -327,14 +344,14 @@ class AccountingDashboardView(TemplateView):
         ctx["recent_payments"] = payments.order_by("-date", "-id")[:5]
         ctx["recent_orders"] = orders.order_by("-created_at", "-id")[:5]
 
-        # 👇 الطلبات التي لم تُحوّل إلى فاتورة
+        # Orders that are not converted to invoices yet
         ctx["pending_orders"] = (
             orders
             .filter(invoice__isnull=True)
             .order_by("-created_at", "-id")[:5]
         )
 
-        # 👇 الفواتير غير المسددة (كل ما عدا المدفوعة/الملغاة أو اللي فيها رصيد)
+        # Unpaid invoices (not fully paid or cancelled)
         ctx["unpaid_invoices"] = (
             invoices
             .exclude(status=Invoice.Status.PAID)
@@ -346,13 +363,15 @@ class AccountingDashboardView(TemplateView):
         return ctx
 
 
-
-# ==========================
+# ============================================================
 # Customers
-# ==========================
+# ============================================================
 
 @method_decorator(accounting_staff_required, name="dispatch")
 class CustomerListView(ListView):
+    """
+    Staff list of customers, with simple search by name/company.
+    """
     model = Customer
     template_name = "accounting/customer_list.html"
     context_object_name = "customers"
@@ -362,7 +381,6 @@ class CustomerListView(ListView):
         qs = super().get_queryset()
         q = self.request.GET.get("q")
         if q:
-            # بحث بالاسم أو اسم الشركة
             qs = qs.filter(
                 Q(name__icontains=q) | Q(company_name__icontains=q)
             )
@@ -371,6 +389,9 @@ class CustomerListView(ListView):
 
 @method_decorator(accounting_staff_required, name="dispatch")
 class CustomerCreateView(CreateView):
+    """
+    Create a new customer.
+    """
     model = Customer
     form_class = CustomerForm
     template_name = "accounting/customer_form.html"
@@ -381,6 +402,9 @@ class CustomerCreateView(CreateView):
 
 @method_decorator(accounting_staff_required, name="dispatch")
 class CustomerUpdateView(UpdateView):
+    """
+    Update an existing customer.
+    """
     model = Customer
     form_class = CustomerForm
     template_name = "accounting/customer_form.html"
@@ -391,21 +415,22 @@ class CustomerUpdateView(UpdateView):
 
 @method_decorator(accounting_staff_required, name="dispatch")
 class CustomerDeleteView(DeleteView):
+    """
+    Delete a customer if no protected relations exist.
+    If ProtectedError is raised, show a friendly message instead of 500.
+    """
     model = Customer
     template_name = "accounting/customer_confirm_delete.html"
     success_url = reverse_lazy("accounting:customer_list")
 
     def post(self, request, *args, **kwargs):
         """
-        ننفّذ الحذف يدويًا عشان نقدر نمسك ProtectedError
-        بدل ما نخليه يطلع 500.
+        Custom delete to catch ProtectedError and display a message instead.
         """
         self.object = self.get_object()
         try:
-            # محاولة الحذف الفعلية
             self.object.delete()
         except ProtectedError:
-            # هنا نجي لو عنده فواتير/دفعات/طلبات مرتبطة
             messages.error(
                 request,
                 "لا يمكن حذف هذا الزبون لأنه مرتبط بفواتير أو دفعات أو طلبات قائمة. "
@@ -413,14 +438,19 @@ class CustomerDeleteView(DeleteView):
             )
             return redirect("accounting:customer_detail", pk=self.object.pk)
         else:
-            # لو الحذف نجح فعلاً
             messages.success(request, "تم حذف الزبون بنجاح.")
             return redirect(self.success_url)
 
 
-
 @method_decorator(accounting_staff_required, name="dispatch")
 class CustomerDetailView(DetailView):
+    """
+    Customer full profile:
+    - Invoices
+    - Orders
+    - Payments
+    - Balance summary
+    """
     model = Customer
     template_name = "accounting/customer_detail.html"
     context_object_name = "customer"
@@ -429,27 +459,27 @@ class CustomerDetailView(DetailView):
         ctx = super().get_context_data(**kwargs)
         customer = self.object
 
-        # الفواتير
+        # Invoices
         invoices = (
             customer.invoices.all()
             .order_by("-issued_at", "-id")
         )
 
-        # الدفعات
+        # Payments
         payments = (
             customer.payments.all()
             .select_related("invoice")
             .order_by("-date", "-id")
         )
 
-        # الطلبات 👈 جديد
+        # Orders
         orders = (
             customer.orders.all()
             .prefetch_related("items__product")
             .order_by("-created_at", "id")
         )
 
-        # الملخص
+        # Summary
         total_invoices = invoices.aggregate(s=Sum("total_amount"))["s"] or Decimal("0")
         total_paid = payments.aggregate(s=Sum("amount"))["s"] or Decimal("0")
 
@@ -466,7 +496,7 @@ class CustomerDetailView(DetailView):
 @method_decorator(accounting_staff_required, name="dispatch")
 class CustomerPaymentCreateView(FormView):
     """
-    إنشاء دفعة مرتبطة بزبون فقط (بدون فاتورة محددة).
+    Create a general payment for a customer (not bound to a specific invoice).
     URL: /accounting/customers/<pk>/payments/new/
     """
     template_name = "accounting/customer_payment_form.html"
@@ -489,7 +519,7 @@ class CustomerPaymentCreateView(FormView):
     def form_valid(self, form):
         payment = form.save(commit=False)
         payment.customer = self.customer
-        payment.invoice = None  # دفعة عامة، ليست لفاتورة معينة
+        payment.invoice = None  # General payment, not tied to invoice
         payment.save()
         return super().form_valid(form)
 
@@ -497,17 +527,19 @@ class CustomerPaymentCreateView(FormView):
         return reverse("accounting:customer_detail", kwargs={"pk": self.customer.pk})
 
 
-# ==========================
-# Payment Recolonization
-# ==========================
+# ============================================================
+# General payment allocation
+# ============================================================
+
 @accounting_staff_required
 def apply_general_payment(request, pk):
     """
-    تسوية دفعة عامة (بدون فاتورة) على فاتورة معيّنة.
-    - لو المبلغ المسوّى = كامل الدفعة → نربط نفس الدفعة بالفاتورة.
-    - لو المبلغ المسوّى < مبلغ الدفعة → ننشئ دفعة جديدة للفاتورة، وننقص المبلغ من الدفعة العامة.
+    Apply a general payment (invoice__isnull=True) to a specific invoice.
+
+    - If applied amount equals full payment → attach payment directly to invoice.
+    - If applied amount is partial          → create new payment for invoice
+                                             and reduce amount on original one.
     """
-    # نسمح فقط بالدفعات العامة (invoice__isnull=True)
     payment = get_object_or_404(
         Payment,
         pk=pk,
@@ -515,7 +547,6 @@ def apply_general_payment(request, pk):
     )
     customer = payment.customer
 
-    # لو الزبون ما عنده ولا فاتورة، ما في شيء نعمله
     if not customer.invoices.exists():
         messages.error(request, "لا توجد فواتير لهذا الزبون لتسوية الدفعة عليها.")
         return redirect("accounting:customer_detail", pk=customer.pk)
@@ -526,7 +557,7 @@ def apply_general_payment(request, pk):
             invoice = form.cleaned_data["invoice"]
             amount = form.cleaned_data["amount"]
 
-            # الحالة 1: تسوية كاملة (المبلغ بالكامل)
+            # Full allocation
             if amount == payment.amount:
                 payment.invoice = invoice
                 payment.save(update_fields=["invoice"])
@@ -535,8 +566,7 @@ def apply_general_payment(request, pk):
                     f"تم تسوية الدفعة بالكامل على الفاتورة {invoice.number}.",
                 )
             else:
-                # الحالة 2: تسوية جزئية
-                # إنشاء دفعة جديدة مرتبطة بالفاتورة
+                # Partial allocation
                 Payment.objects.create(
                     customer=customer,
                     invoice=invoice,
@@ -545,7 +575,6 @@ def apply_general_payment(request, pk):
                     method=payment.method,
                     notes=f"تسوية جزء ({amount}) من الدفعة العامة #{payment.pk}",
                 )
-                # تقليل المبلغ المتبقي في الدفعة العامة
                 payment.amount = payment.amount - amount
                 payment.save(update_fields=["amount"])
 
@@ -570,13 +599,15 @@ def apply_general_payment(request, pk):
     )
 
 
-
-# ==========================
+# ============================================================
 # Orders (staff)
-# ==========================
+# ============================================================
 
 @method_decorator(accounting_staff_required, name="dispatch")
 class OrderListView(ListView):
+    """
+    Staff list of orders.
+    """
     model = Order
     template_name = "accounting/orders/order_list.html"
     context_object_name = "orders"
@@ -593,6 +624,9 @@ class OrderListView(ListView):
 
 @method_decorator(accounting_staff_required, name="dispatch")
 class OrderDetailView(DetailView):
+    """
+    Staff order detail page.
+    """
     model = Order
     template_name = "accounting/orders/order_detail.html"
     context_object_name = "order"
@@ -600,6 +634,9 @@ class OrderDetailView(DetailView):
 
 @method_decorator(accounting_staff_required, name="dispatch")
 class OrderCreateView(CreateView):
+    """
+    Create staff order with inline items formset.
+    """
     model = Order
     form_class = OrderForm
     template_name = "accounting/orders/order_form.html"
@@ -612,7 +649,7 @@ class OrderCreateView(CreateView):
         else:
             ctx["item_formset"] = OrderItemFormSet()
 
-        # JSON للمنتجات عشان نستخدمه في JS (نفس فكرة الفاتورة)
+        # Products JSON for JS
         products = Product.objects.filter(is_active=True)
         ctx["products_json"] = mark_safe(json.dumps(
             {
@@ -634,7 +671,7 @@ class OrderCreateView(CreateView):
 
         order = form.save(commit=False)
         order.created_by = self.request.user
-        order.is_online = False  # طلب ستاف
+        order.is_online = False  # staff-created order
         if not order.status:
             order.status = Order.STATUS_DRAFT
         order.save()
@@ -651,6 +688,9 @@ class OrderCreateView(CreateView):
 
 @method_decorator(accounting_staff_required, name="dispatch")
 class OrderUpdateView(UpdateView):
+    """
+    Update an existing staff order with items formset.
+    """
     model = Order
     form_class = OrderForm
     template_name = "accounting/orders/order_form.html"
@@ -699,17 +739,17 @@ class OrderUpdateView(UpdateView):
 @accounting_staff_required
 def order_to_invoice(request, pk):
     """
-    تحويل طلب إلى فاتورة:
-    - ينشئ فاتورة من بيانات الطلب.
-    - ينسخ بنود الطلب إلى بنود الفاتورة.
-    - يربط الطلب بالفاتورة (order.invoice).
+    Convert an order to an invoice:
+    - Create invoice from order data.
+    - Copy all order items to invoice items.
+    - Link order to invoice (order.invoice).
     """
     order = get_object_or_404(
         Order.objects.select_related("customer").prefetch_related("items__product"),
         pk=pk,
     )
 
-    # لو الطلب محوّل سابقًا
+    # Already converted
     if getattr(order, "invoice", None):
         messages.info(
             request,
@@ -717,11 +757,11 @@ def order_to_invoice(request, pk):
         )
         return redirect("accounting:invoice_detail", number=order.invoice.number)
 
-    # نسمح بالتحويل عبر POST فقط
+    # Only allow POST
     if request.method != "POST":
         return redirect("accounting:order_detail", pk=order.pk)
 
-    # إنشاء الفاتورة
+    # Create invoice
     invoice = Invoice(
         customer=order.customer,
         status=Invoice.Status.DRAFT,
@@ -730,9 +770,9 @@ def order_to_invoice(request, pk):
         issued_at=timezone.now(),
     )
     invoice.total_amount = Decimal("0")
-    invoice.save()  # هنا يتولّد number تلقائيًا
+    invoice.save()  # number will be generated automatically
 
-    # إنشاء بنود الفاتورة من بنود الطلب
+    # Create invoice items from order items
     total = Decimal("0")
     invoice_items = []
     for item in order.items.all():
@@ -748,14 +788,13 @@ def order_to_invoice(request, pk):
 
     InvoiceItem.objects.bulk_create(invoice_items)
 
-    # تحديث إجمالي الفاتورة
+    # Update invoice total
     invoice.total_amount = total
     invoice.save(update_fields=["total_amount"])
 
-    # ربط الطلب بالفاتورة + ممكن نحدّث حالة الطلب
+    # Link order to invoice and mark as confirmed if constant exists
     order.invoice = invoice
     try:
-        # لو عندك ثابت STATUS_CONFIRMED
         order.status = Order.STATUS_CONFIRMED
         order.save(update_fields=["invoice", "status"])
     except AttributeError:
@@ -769,11 +808,10 @@ def order_to_invoice(request, pk):
     return redirect("accounting:invoice_detail", number=invoice.number)
 
 
-
 @accounting_staff_required
 def staff_order_confirm(request, pk):
     """
-    تأكيد الطلب (زر سريع)
+    Quick confirm button for orders.
     """
     order = get_object_or_404(Order, pk=pk)
 
@@ -785,14 +823,14 @@ def staff_order_confirm(request, pk):
             order.save(update_fields=["status", "confirmed_by", "confirmed_at"])
         return redirect("accounting:order_detail", pk=order.pk)
 
-    # لو أحد فتح الرابط بـ GET نرجعه للتفاصيل
+    # If GET, just redirect back
     return redirect("accounting:order_detail", pk=order.pk)
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
 class OrderPrintView(DetailView):
     """
-    صفحة طباعة للطلب (للموظف)
+    Print page for order (staff side).
     """
     model = Order
     template_name = "accounting/orders/order_print.html"
@@ -807,10 +845,14 @@ class OrderPrintView(DetailView):
         )
 
 
+# ============================================================
+# Payment print
+# ============================================================
+
 @method_decorator(accounting_staff_required, name="dispatch")
 class PaymentPrintView(DetailView):
     """
-    صفحة طباعة إيصال الدفع (Payment Receipt)
+    Print page for payment receipt.
     """
     model = Payment
     template_name = "accounting/payment_print.html"

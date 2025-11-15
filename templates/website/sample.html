@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{# =================== SEO & META =================== #}
+
+{% block title %}{% trans "مزون المنيوم - الرئيسية" %}{% endblock %}
+
+{% block meta_description %}
+{% trans "مزون المنيوم علامة تجارية عمانية متخصصة في أنظمة الألمنيوم للنوافذ والأبواب." %}
+{% endblock %}
+
+{% block og_title_inner %}{% trans "مزون المنيوم - الرئيسية" %}{% endblock %}
+{% block og_description %}
+{% trans "أنظمة ألمنيوم مبتكرة للنوافذ والأبواب مع أداء معتمد وجودة عالية." %}
+{% endblock %}
+{% block og_type %}website{% endblock %}
+{% block og_url %}{{ request.build_absolute_uri }}{% endblock %}
+{% block og_image %}{% endblock %}
+
+{% block twitter_card %}summary_large_image{% endblock %}
+{% block twitter_title %}{% trans "مزون المنيوم - الرئيسية" %}{% endblock %}
+{% block twitter_description %}
+{% trans "حلول متطورة لأنظمة الألمنيوم في عمان." %}
+{% endblock %}
+{% block twitter_image %}{% endblock %}
+
+{# =================== PAGE CONTENT =================== #}
+{% block content %}
+
+{# هنا اكتب أي شيء تريده لاحقاً — القالب الآن فاضي بالكامل #}
+
+{% endblock %}

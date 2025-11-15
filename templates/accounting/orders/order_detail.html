@@ -72,33 +72,18 @@
         <div class="col-md-4">
           <div class="text-muted small">{% trans "نوع الطلب" %}</div>
           <div>
-            {% if order.is_online %}
-              <span class="badge bg-mazoon-accent text-dark">
-                {% trans "أونلاين" %}
-              </span>
-            {% else %}
-              <span class="badge bg-secondary">
-                {% trans "موظف" %}
-              </span>
-            {% endif %}
+           <span class="{{ order.type_badge }}">{{ order.type_label }}</span>
           </div>
         </div>
 
-        <div class="col-md-4">
-          <div class="text-muted small">{% trans "الحالة" %}</div>
-          <div>
-            {% if order.status == order.STATUS_CONFIRMED %}
-              <span class="badge bg-success">{% trans "مؤكد" %}</span>
-            {% elif order.status == order.STATUS_PENDING %}
-              <span class="badge bg-warning text-dark">{% trans "بانتظار التأكيد" %}</span>
-            {% elif order.status == order.STATUS_CANCELLED %}
-              <span class="badge bg-danger">{% trans "ملغي" %}</span>
-            {% else %}
-              <span class="badge bg-secondary">{% trans "مسودة" %}</span>
-            {% endif %}
-          </div>
-        </div>
-
+      <div class="col-md-4">
+  <div class="text-muted small">{% trans "الحالة" %}</div>
+  <div>
+    <span class="{{ order.status_badge }}">
+      {{ order.get_status_display }}
+    </span>
+  </div>
+</div>
         {% if order.confirmed_by %}
           <div class="col-md-4">
             <div class="text-muted small">{% trans "تم التأكيد بواسطة" %}</div>

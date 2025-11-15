@@ -102,21 +102,12 @@
             </span>
                         </p>
                         <p class="mb-0 small">
-                            <span class="text-muted">{% trans "الحالة:" %}</span>
-                            {% if invoice.status == invoice.Status.PAID %}
-                                <span class="badge bg-success ms-1">{% trans "مدفوعة" %}</span>
-                            {% elif invoice.status == invoice.Status.PARTIALLY_PAID %}
-                                <span class="badge bg-warning text-dark ms-1">{% trans "مدفوعة جزئياً" %}</span>
-                            {% elif invoice.status == invoice.Status.CANCELLED %}
-                                <span class="badge bg-secondary ms-1">{% trans "ملغاة" %}</span>
-                            {% elif invoice.status == invoice.Status.SENT %}
-                                <span class="badge bg-info text-dark ms-1">{% trans "مرسلة" %}</span>
-                            {% else %}
-                                <span class="badge bg-light text-dark ms-1">
-                {{ invoice.get_status_display }}
-              </span>
-                            {% endif %}
-                        </p>
+    <span class="text-muted">{% trans "الحالة:" %}</span>
+    <span class="{{ invoice.status_badge }} ms-1">
+        {{ invoice.get_status_display }}
+    </span>
+</p>
+
                     </div>
                 </div>
             </div>

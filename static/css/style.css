@@ -260,3 +260,53 @@ main .container > *:last-child {
   width: auto;
   display: block;
 }
+
+.badge-mazoon {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white !important;
+}
+
+.badge-draft {
+    background-color: var(--mazoon-text-muted);
+}
+
+.badge-sent,
+.badge-pending {
+    background-color: var(--mazoon-accent);
+}
+
+.badge-paid,
+.badge-confirmed {
+    background-color: var(--mazoon-primary);
+}
+
+.badge-partially-paid {
+    background-color: var(--mazoon-primary-soft);
+}
+
+.badge-cancelled {
+    background-color: #b91c1c; /* أحمر */
+}
+.badge-mazoon {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* نوع الطلب */
+.badge-online {
+  background-color: var(--mazoon-accent);
+  color: #1f2933; /* غامق شوي للنص */
+}
+
+.badge-staff {
+  background-color: #ccbdad; /* رمادي فاتح */
+  color: #0450f8;
+}

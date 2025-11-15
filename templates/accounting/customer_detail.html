@@ -1,13 +1,18 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block content %}
-<div class="container mt-4">
+{% block meta_title %}{{ customer.name }} | {% trans "تفاصيل الزبون" %} | Mazoon Aluminum{% endblock %}
+{% block meta_description %}
+  {% blocktrans with name=customer.name %}تفاصيل حساب الزبون {{ name }} مع الفواتير والطلبات والدفعات.{% endblocktrans %}
+{% endblock %}
 
-  <!-- بطاقة بيانات الزبون -->
-  <div class="card mb-4">
+{% block content %}
+<div class="py-4">
+
+  {# ================= بطاقة بيانات الزبون ================= #}
+  <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
-      <div class="d-flex justify-content-between align-items-center mb-2">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
         <h3 class="mb-0 text-mazoon">
           {% blocktrans with name=customer.name %}الزبون: {{ name }}{% endblocktrans %}
         </h3>
@@ -16,54 +21,59 @@
         </a>
       </div>
 
-      <p class="mb-1">
-        <strong>{% trans "الشركة" %}:</strong>
-        {{ customer.company_name|default:"-" }}
-      </p>
-      <p class="mb-1">
-        <strong>{% trans "الهاتف" %}:</strong>
-        {{ customer.phone|default:"-" }}
-      </p>
-      <p class="mb-1">
-        <strong>{% trans "البريد الإلكتروني" %}:</strong>
-        {{ customer.email|default:"-" }}
-      </p>
-      <p class="mb-1">
-        <strong>{% trans "الرقم الضريبي" %}:</strong>
-        {{ customer.tax_number|default:"-" }}
-      </p>
-      <p class="mb-0">
-        <strong>{% trans "العنوان" %}:</strong>
-        {{ customer.address|linebreaksbr|default:"-" }}
-      </p>
+      <div class="row small">
+        <div class="col-md-6 mb-1">
+          <strong class="text-muted">{% trans "الشركة" %}:</strong>
+          <span>{{ customer.company_name|default:"-" }}</span>
+        </div>
+        <div class="col-md-6 mb-1">
+          <strong class="text-muted">{% trans "الهاتف" %}:</strong>
+          <span>{{ customer.phone|default:"-" }}</span>
+        </div>
+        <div class="col-md-6 mb-1">
+          <strong class="text-muted">{% trans "البريد الإلكتروني" %}:</strong>
+          <span>{{ customer.email|default:"-" }}</span>
+        </div>
+        <div class="col-md-6 mb-1">
+          <strong class="text-muted">{% trans "الرقم الضريبي" %}:</strong>
+          <span>{{ customer.tax_number|default:"-" }}</span>
+        </div>
+        <div class="col-12 mb-0">
+          <strong class="text-muted d-block">{% trans "العنوان" %}:</strong>
+          <span>{{ customer.address|default:"-"|linebreaksbr }}</span>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- ملخص الحساب -->
-  <div class="row mb-4">
-    <div class="col-md-4 mb-3">
-      <div class="card text-center">
+  {# ================= ملخص الحساب ================= #}
+  <div class="row mb-4 g-3">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm text-center h-100">
         <div class="card-body">
           <div class="text-muted small mb-1">{% trans "إجمالي الفواتير" %}</div>
-          <div class="fs-4">{{ total_invoices }}</div>
+          <div class="fs-4 fw-semibold">{{ total_invoices }}</div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-4 mb-3">
-      <div class="card text-center">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm text-center h-100">
         <div class="card-body">
           <div class="text-muted small mb-1">{% trans "إجمالي الدفعات" %}</div>
-          <div class="fs-4">{{ total_paid }}</div>
+          <div class="fs-4 fw-semibold">{{ total_paid }}</div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-4 mb-3">
-      <div class="card text-center">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm text-center h-100">
         <div class="card-body">
           <div class="text-muted small mb-1">{% trans "الرصيد" %}</div>
-          <div class="fs-4 {% if balance > 0 %}text-danger{% elif balance < 0 %}text-success{% endif %}">
+          <div class="fs-4 fw-semibold
+                      {% if balance > 0 %}text-danger
+                      {% elif balance < 0 %}text-success
+                      {% endif %}">
             {{ balance }}
           </div>
         </div>
@@ -71,10 +81,10 @@
     </div>
   </div>
 
-  <!-- جدول الفواتير -->
-  <div class="card mb-4">
+  {# ================= جدول الفواتير ================= #}
+  <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
-      <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <h5 class="mb-0 text-mazoon">{% trans "الفواتير" %}</h5>
 
         <a href="{% url 'accounting:invoice_create' %}?customer={{ customer.pk }}"
@@ -85,7 +95,7 @@
 
       <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
-          <thead>
+          <thead class="table-light">
             <tr>
               <th>{% trans "رقم الفاتورة" %}</th>
               <th>{% trans "التاريخ" %}</th>
@@ -93,19 +103,23 @@
               <th>{% trans "المدفوع" %}</th>
               <th>{% trans "المتبقي" %}</th>
               <th>{% trans "الحالة" %}</th>
-              <th></th>
+              <th class="text-end">{% trans "إجراءات" %}</th>
             </tr>
           </thead>
 
           <tbody>
             {% for invoice in invoices %}
               <tr>
-                <td>{{ invoice.number }}</td>
-                <td>{{ invoice.issued_at }}</td>
-                <td>{{ invoice.total_amount }}</td>
-                <td>{{ invoice.paid_amount }}</td>
-                <td>{{ invoice.balance }}</td>
-                <td>{{ invoice.get_status_display }}</td>
+                <td class="text-nowrap">{{ invoice.number }}</td>
+                <td class="text-nowrap">{{ invoice.issued_at|date:"Y-m-d" }}</td>
+                <td class="text-nowrap">{{ invoice.total_amount }}</td>
+                <td class="text-nowrap">{{ invoice.paid_amount }}</td>
+                <td class="text-nowrap">{{ invoice.balance }}</td>
+                <td>
+                  <span class="{{ invoice.status_badge }}">
+                    {{ invoice.get_status_display }}
+                  </span>
+                </td>
                 <td class="text-end">
                   <a href="{% url 'accounting:invoice_detail' invoice.number %}"
                      class="btn btn-sm btn-outline-primary">
@@ -115,7 +129,7 @@
               </tr>
             {% empty %}
               <tr>
-                <td colspan="7" class="text-center text-muted">
+                <td colspan="7" class="text-center text-muted py-3">
                   {% trans "لا توجد فواتير لهذا الزبون." %}
                 </td>
               </tr>
@@ -127,10 +141,10 @@
     </div>
   </div>
 
-  <!-- جدول الطلبات -->
-  <div class="card mb-4">
+  {# ================= جدول الطلبات ================= #}
+  <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
-      <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <h5 class="mb-0 text-mazoon">{% trans "الطلبات" %}</h5>
 
         <a href="{% url 'accounting:order_create' %}"
@@ -141,34 +155,42 @@
 
       <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
-          <thead>
+          <thead class="table-light">
             <tr>
               <th>{% trans "رقم الطلب" %}</th>
               <th>{% trans "التاريخ" %}</th>
               <th>{% trans "النوع" %}</th>
               <th>{% trans "الحالة" %}</th>
               <th>{% trans "الإجمالي" %}</th>
-              <th></th>
+              <th class="text-end">{% trans "إجراءات" %}</th>
             </tr>
           </thead>
           <tbody>
             {% for order in orders %}
               <tr>
-                <td>#{{ order.pk }}</td>
-                <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
-                <td>
-                  {% if order.is_online %}
-                    <span class="badge bg-mazoon-accent text-dark">
-                      {% trans "طلب أونلاين" %}
-                    </span>
-                  {% else %}
-                    <span class="badge bg-secondary">
-                      {% trans "طلب من الموظف" %}
-                    </span>
-                  {% endif %}
+                <td class="text-nowrap">#{{ order.pk }}</td>
+                <td class="text-nowrap">
+                  {{ order.created_at|date:"Y-m-d" }}
+                  <div class="text-muted small">{{ order.created_at|date:"H:i" }}</div>
                 </td>
-                <td>{{ order.get_status_display }}</td>
-                <td>{{ order.total_amount }}</td>
+
+                {# نوع الطلب: أونلاين / موظف #}
+                <td>
+                  <span class="{{ order.type_badge }}">
+                    {{ order.type_label }}
+                  </span>
+                </td>
+
+                {# حالة الطلب باستخدام الـ badge الجاهز #}
+                <td>
+                  <span class="{{ order.status_badge }}">
+                    {{ order.get_status_display }}
+                  </span>
+                </td>
+
+                <td class="text-nowrap">
+                  {{ order.total_amount }}
+                </td>
                 <td class="text-end">
                   <a href="{% url 'accounting:order_detail' order.pk %}"
                      class="btn btn-sm btn-outline-primary">
@@ -178,7 +200,7 @@
               </tr>
             {% empty %}
               <tr>
-                <td colspan="6" class="text-center text-muted">
+                <td colspan="6" class="text-center text-muted py-3">
                   {% trans "لا توجد طلبات لهذا الزبون." %}
                 </td>
               </tr>
@@ -189,11 +211,11 @@
     </div>
   </div>
 
-  <!-- جدول الدفعات -->
-  <div class="card mb-4">
+  {# ================= جدول الدفعات ================= #}
+  <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
 
-      <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <h5 class="mb-0 text-mazoon">{% trans "الدفعات" %}</h5>
 
         <a href="{% url 'accounting:customer_add_payment' customer.pk %}"
@@ -203,65 +225,66 @@
       </div>
 
       <div class="table-responsive">
-      <table class="table table-sm align-middle mb-0">
-        <thead>
-          <tr>
-            <th>{% trans "التاريخ" %}</th>
-            <th>{% trans "المبلغ" %}</th>
-            <th>{% trans "الطريقة" %}</th>
-            <th>{% trans "الفاتورة" %}</th>
-            <th>{% trans "ملاحظات" %}</th>
-            <th class="text-end">{% trans "إجراءات" %}</th>
-          </tr>
-        </thead>
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>{% trans "التاريخ" %}</th>
+              <th>{% trans "المبلغ" %}</th>
+              <th>{% trans "الطريقة" %}</th>
+              <th>{% trans "الفاتورة" %}</th>
+              <th>{% trans "ملاحظات" %}</th>
+              <th class="text-end">{% trans "إجراءات" %}</th>
+            </tr>
+          </thead>
 
-        <tbody>
-          {% for payment in payments %}
-          <tr>
-            <td>{{ payment.date }}</td>
-            <td>{{ payment.amount }}</td>
-            <td>{{ payment.get_method_display }}</td>
+          <tbody>
+            {% for payment in payments %}
+            <tr>
+              <td class="text-nowrap">{{ payment.date|date:"Y-m-d" }}</td>
+              <td class="text-nowrap">{{ payment.amount }}</td>
+              <td class="text-nowrap">{{ payment.get_method_display }}</td>
 
-            <td>
-              {% if payment.invoice %}
-                <a href="{% url 'accounting:invoice_detail' payment.invoice.number %}">
-                  {{ payment.invoice.number }}
+              <td>
+                {% if payment.invoice %}
+                  <a href="{% url 'accounting:invoice_detail' payment.invoice.number %}">
+                    {{ payment.invoice.number }}
+                  </a>
+                {% else %}
+                  <span class="badge bg-mazoon-accent text-dark">
+                    {% trans "دفعة عامة" %}
+                  </span>
+                {% endif %}
+              </td>
+
+              <td class="small">{{ payment.notes|default:"-" }}</td>
+
+              <td class="text-end d-flex flex-wrap justify-content-end gap-1">
+                <a href="{% url 'accounting:payment_print' pk=payment.pk %}"
+                   class="btn btn-sm btn-outline-secondary">
+                   {% trans "طباعة الإيصال" %}
                 </a>
-              {% else %}
-                <span class="badge bg-mazoon-accent text-dark">
-                  {% trans "دفعة عامة" %}
-                </span>
-              {% endif %}
-            </td>
 
-            <td>{{ payment.notes|default:"-" }}</td>
+                {% if not payment.invoice %}
+                  <a href="{% url 'accounting:payment_apply' payment.pk %}"
+                     class="btn btn-sm btn-outline-primary">
+                    {% trans "تسوية / ربط بالفاتورة" %}
+                  </a>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-muted py-3">
+                {% trans "لا توجد دفعات لهذا الزبون." %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
 
-            <td class="text-end d-flex flex-wrap justify-content-end gap-1">
-              <a href="{% url 'accounting:payment_print' pk=payment.pk %}"
-                 class="btn btn-sm btn-outline-secondary">
-                 {% trans "طباعة الإيصال" %}
-              </a>
-
-              {% if not payment.invoice %}
-                <a href="{% url 'accounting:payment_apply' payment.pk %}"
-                   class="btn btn-sm btn-outline-primary">
-                  {% trans "تسوية / ربط بالفاتورة" %}
-                </a>
-              {% endif %}
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="6" class="text-center text-muted">
-              {% trans "لا توجد دفعات لهذا الزبون." %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-
-      </table>
+        </table>
+      </div>
     </div>
-
+  </div>
 
 </div>
 {% endblock %}

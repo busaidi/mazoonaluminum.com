@@ -6,16 +6,28 @@ from django.db import models
 from django.db.models import Sum
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
-#generate invoice number
-def generate_invoice_number():
+
+# ============================================================
+# Helpers
+# ============================================================
+
+def generate_invoice_number() -> str:
+    """
+    Generate a human-readable invoice number per year, e.g. INV-2025-0001.
+    Pattern: INV-<year>-<running_number>
+    """
     year = timezone.now().year
 
-    # استرجاع آخر فاتورة في نفس السنة
-    last_invoice = Invoice.objects.filter(
-        number__startswith=f"INV-{year}"
-    ).order_by("id").last()
+    # آخر فاتورة في نفس السنة
+    last_invoice = (
+        Invoice.objects
+        .filter(number__startswith=f"INV-{year}")
+        .order_by("id")
+        .last()
+    )
 
     if last_invoice:
         # استخراج آخر رقم + 1
@@ -27,11 +39,16 @@ def generate_invoice_number():
     return f"INV-{year}-{new_number:04d}"
 
 
+# ============================================================
+# Customer
+# ============================================================
+
 class Customer(models.Model):
     """
     Basic customer profile.
     If 'user' is set, it links to Django auth user (for portal login).
     """
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -56,8 +73,10 @@ class Customer(models.Model):
     class Meta:
         ordering = ("name", "id")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
+
+    # ---------- Aggregated helpers ----------
 
     @property
     def total_invoiced(self) -> Decimal:
@@ -82,6 +101,10 @@ class Customer(models.Model):
         """
         return self.total_invoiced - self.total_paid
 
+
+# ============================================================
+# Invoice & InvoiceItem
+# ============================================================
 
 class Invoice(models.Model):
     """
@@ -114,7 +137,7 @@ class Invoice(models.Model):
 
     terms = models.TextField(
         blank=True,
-        help_text="Terms and conditions shown on the invoice."
+        help_text="Terms and conditions shown on the invoice.",
     )
 
     total_amount = models.DecimalField(max_digits=12, decimal_places=3)
@@ -142,8 +165,10 @@ class Invoice(models.Model):
             models.Index(fields=["issued_at"]),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Invoice {self.number} - {self.customer.name}"
+
+    # ---------- Core logic ----------
 
     def save(self, *args, **kwargs):
         """
@@ -177,11 +202,28 @@ class Invoice(models.Model):
             Invoice.Status.PAID,
             Invoice.Status.PARTIALLY_PAID,
         }:
-            # رجعها Sent (أو Draft حسب ما تحب تغيّر لاحقًا)
+            # رجّعها Sent (أو Draft حسب ما تحب تغيّر لاحقًا)
             self.status = Invoice.Status.SENT
 
         self.save(update_fields=["paid_amount", "status"])
 
+    # ---------- UI helpers (Mazoon badges) ----------
+
+    @property
+    def status_badge(self) -> str:
+        """
+        CSS classes for Mazoon theme badge based on invoice status.
+        تستخدم في القالب مثل:
+        <span class="{{ invoice.status_badge }}">{{ invoice.get_status_display }}</span>
+        """
+        mapping = {
+            Invoice.Status.DRAFT: "badge-mazoon badge-draft",
+            Invoice.Status.SENT: "badge-mazoon badge-sent",
+            Invoice.Status.PARTIALLY_PAID: "badge-mazoon badge-partially-paid",
+            Invoice.Status.PAID: "badge-mazoon badge-paid",
+            Invoice.Status.CANCELLED: "badge-mazoon badge-cancelled",
+        }
+        return mapping.get(self.status, "badge-mazoon badge-draft")
 
 
 class InvoiceItem(models.Model):
@@ -196,7 +238,7 @@ class InvoiceItem(models.Model):
         on_delete=models.PROTECT,
         verbose_name="المنتج",
         null=True,
-        blank=True,  # 👈 صار اختياري
+        blank=True,  # اختياري
     )
     description = models.CharField(
         max_length=255,
@@ -215,27 +257,24 @@ class InvoiceItem(models.Model):
         سطر الفاتورة يكون صالح إذا:
         - product موجود، أو
         - description مكتوب
-        إذا الاثنين فاضيين، نعتبره سطر فارغ (عادة formset يتجاهله)،
-        لكن لو وصل هنا نرمي خطأ بسيط.
         """
-        from django.core.exceptions import ValidationError
-
         if not self.product and not self.description:
-            raise ValidationError(
-                "يجب اختيار منتج أو كتابة وصف للبند."
-            )
+            raise ValidationError("يجب اختيار منتج أو كتابة وصف للبند.")
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.product:
             return f"{self.product} × {self.quantity}"
         return f"{self.description or 'Item'} × {self.quantity}"
 
 
+# ============================================================
+# Payment + signal
+# ============================================================
 
 class Payment(models.Model):
     """
     Payment can be linked to a specific invoice, or just to a customer.
-    Later, views will handle automatic linking and updating invoice totals.
+    Views handle automatic linking and updating invoice totals.
     """
 
     class Method(models.TextChoices):
@@ -278,10 +317,12 @@ class Payment(models.Model):
             models.Index(fields=["customer"]),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.invoice:
             return f"Payment {self.amount} for {self.invoice.number}"
         return f"Payment {self.amount} ({self.customer.name})"
+
+    # ---------- Validation / save hooks ----------
 
     def clean(self):
         """
@@ -300,6 +341,23 @@ class Payment(models.Model):
         if self.invoice_id:
             self.invoice.update_paid_amount()
 
+    # ---------- UI helpers (Mazoon badges) ----------
+
+    @property
+    def method_badge(self) -> str:
+        """
+        CSS classes for Mazoon theme badge based on payment method.
+        مثال في القالب:
+        <span class="{{ payment.method_badge }}">{{ payment.get_method_display }}</span>
+        """
+        mapping = {
+            Payment.Method.CASH: "badge-mazoon badge-confirmed",
+            Payment.Method.BANK_TRANSFER: "badge-mazoon badge-sent",
+            Payment.Method.CARD: "badge-mazoon badge-partially-paid",
+            Payment.Method.OTHER: "badge-mazoon badge-draft",
+        }
+        return mapping.get(self.method, "badge-mazoon badge-draft")
+
 
 @receiver(post_delete, sender=Payment)
 def update_invoice_on_payment_delete(sender, instance: "Payment", **kwargs):
@@ -309,6 +367,10 @@ def update_invoice_on_payment_delete(sender, instance: "Payment", **kwargs):
     if instance.invoice_id:
         instance.invoice.update_paid_amount()
 
+
+# ============================================================
+# Orders (header + items)
+# ============================================================
 
 class Order(models.Model):
     STATUS_DRAFT = "draft"
@@ -329,7 +391,6 @@ class Order(models.Model):
         related_name="orders",
         verbose_name="الزبون",
     )
-    # نستخدم AUTH_USER_MODEL بدل استيراد User مباشرة
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -370,16 +431,55 @@ class Order(models.Model):
     class Meta:
         ordering = ("-created_at", "id")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"طلب #{self.pk} - {self.customer}"
 
     @property
     def total_amount(self) -> Decimal:
         """
         Sum of item.quantity * item.unit_price for this order.
-        نستخدم الجمع في البايثون هنا لتبسيط الأمور.
         """
         return sum((item.subtotal for item in self.items.all()), Decimal("0"))
+
+    # ---------- UI helpers (Mazoon badges) ----------
+
+    @property
+    def status_badge(self) -> str:
+        """
+        CSS classes for Mazoon theme badge based on order status.
+        مثال في القالب:
+        <span class="{{ order.status_badge }}">{{ order.get_status_display }}</span>
+        """
+        mapping = {
+            self.STATUS_DRAFT: "badge-mazoon badge-draft",
+            self.STATUS_PENDING: "badge-mazoon badge-pending",
+            self.STATUS_CONFIRMED: "badge-mazoon badge-confirmed",
+            self.STATUS_CANCELLED: "badge-mazoon badge-cancelled",
+        }
+        return mapping.get(self.status, "badge-mazoon badge-draft")
+
+    @property
+    def type_label(self) -> str:
+        """
+        نص نوع الطلب حسب اللغة الحالية:
+        - أونلاين
+        - موظف
+        تُستخدم في القالب:
+        {{ order.type_label }}
+        """
+        return _("أونلاين") if self.is_online else _("موظف")
+
+    @property
+    def type_badge(self) -> str:
+        """
+        CSS classes for Mazoon theme badge based on order type.
+        تُستخدم في القالب:
+        <span class="{{ order.type_badge }}">{{ order.type_label }}</span>
+        """
+        if self.is_online:
+            # نفس فكرة bg-mazoon-accent text-dark اللي كنت تستخدمها
+            return "badge-mazoon badge-online"
+        return "badge-mazoon badge-staff"
 
 
 class OrderItem(models.Model):
@@ -396,10 +496,10 @@ class OrderItem(models.Model):
         null=True,
         blank=True,
     )
-    description = models.CharField(     # 👈 هذا الحقل الجديد
+    description = models.CharField(
         max_length=255,
         blank=True,
-        default="",                      # أنصح تضيف default عشان ما يسألك أثناء المايغريشن
+        default="",
         verbose_name="الوصف",
     )
     quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1)
@@ -408,4 +508,3 @@ class OrderItem(models.Model):
     @property
     def subtotal(self) -> Decimal:
         return self.quantity * self.unit_price
-

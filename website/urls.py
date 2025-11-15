@@ -1,20 +1,32 @@
 from django.urls import path
-from . import views
-
+from .views import (
+    HomeView,
+    AboutView,
+    LabView,
+    BlogListView,
+    BlogDetailView,
+    BlogTagView,
+    ProductListView,
+    ProductDetailView,
+    ContactView,
+)
 
 
 urlpatterns = [
-    path("", views.home, name="home"),
-    path("about/", views.about, name="about"),
-    path("lab/", views.lab, name="lab"),
+    path("", HomeView.as_view(), name="home"),
+    path("about/", AboutView.as_view(), name="about"),
+    path("lab/", LabView.as_view(), name="lab"),
 
+    # BLOG
+    path("blog/", BlogListView.as_view(), name="blog_list"),
+    path("blog/category/<slug:category_slug>/", BlogListView.as_view(), name="blog_category"),
+    path("blog/tag/<slug:tag_slug>/", BlogTagView.as_view(), name="blog_tag"),
+    path("blog/<slug:slug>/", BlogDetailView.as_view(), name="blog_detail"),
 
+    # PRODUCTS
+    path("products/", ProductListView.as_view(), name="product_list"),
+    path("products/<slug:slug>/", ProductDetailView.as_view(), name="product_detail"),
 
-    path("blog/", views.blog_list, name="blog_list"),
-    path("blog/category/<slug:category_slug>/", views.blog_list, name="blog_category"),
-    path("blog/tag/<slug:tag_slug>/", views.blog_tag, name="blog_tag"),
-    path("blog/<slug:slug>/", views.blog_detail, name="blog_detail"),
-    path("products/", views.product_list, name="product_list"),
-    path("products/<slug:slug>/", views.product_detail, name="product_detail"),
-    path("contact/", views.contact, name="contact"),
+    # CONTACT
+    path("contact/", ContactView.as_view(), name="contact"),
 ]

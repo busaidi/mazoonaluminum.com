@@ -45,7 +45,7 @@
               <th class="text-muted small">{% trans "التاريخ" %}</th>
               <th class="text-muted small">{% trans "نوع الطلب" %}</th>
               <th class="text-muted small">{% trans "الحالة" %}</th>
-              <th class="text-muted small">{% trans "الإجمالي" %}</th>
+              <th class="text-muted small text-end">{% trans "الإجمالي" %}</th>
               <th class="text-muted small text-end">{% trans "خيارات" %}</th>
             </tr>
           </thead>
@@ -53,41 +53,39 @@
           {% for order in orders %}
             <tr>
               <td class="fw-semibold text-nowrap">#{{ order.id }}</td>
+
               <td>
                 <div class="fw-semibold">{{ order.customer.name }}</div>
                 {% if order.customer.company_name %}
                   <div class="text-muted small">{{ order.customer.company_name }}</div>
                 {% endif %}
               </td>
+
               <td class="text-nowrap">
                 {{ order.created_at|date:"Y-m-d" }}
                 <div class="text-muted small">{{ order.created_at|date:"H:i" }}</div>
               </td>
+
+              <!-- نوع الطلب -->
               <td>
-                {% if order.is_online %}
-                  <span class="badge bg-mazoon-accent text-dark">
-                    {% trans "أونلاين" %}
-                  </span>
-                {% else %}
-                  <span class="badge bg-secondary">
-                    {% trans "موظف" %}
-                  </span>
-                {% endif %}
+                <span class="{{ order.type_badge }}">
+                  {{ order.type_label }}
+                </span>
               </td>
+
+              <!-- حالة الطلب -->
               <td>
-                {% if order.status == order.STATUS_CONFIRMED %}
-                  <span class="badge bg-success">{% trans "مؤكد" %}</span>
-                {% elif order.status == order.STATUS_PENDING %}
-                  <span class="badge bg-warning text-dark">{% trans "بانتظار التأكيد" %}</span>
-                {% elif order.status == order.STATUS_CANCELLED %}
-                  <span class="badge bg-danger">{% trans "ملغي" %}</span>
-                {% else %}
-                  <span class="badge bg-secondary">{% trans "مسودة" %}</span>
-                {% endif %}
+                <span class="{{ order.status_badge }}">
+                  {{ order.get_status_display }}
+                </span>
               </td>
-              <td class="text-nowrap">
+
+              <!-- الإجمالي -->
+              <td class="text-nowrap text-end">
                 {{ order.total_amount }}
               </td>
+
+              <!-- خيارات -->
               <td class="text-end">
                 <a href="{% url 'accounting:order_detail' order.pk %}" class="btn btn-sm btn-outline-primary">
                   {% trans "تفاصيل" %}
@@ -107,7 +105,6 @@
     </div>
   </div>
 
-  {# لو عندك paginate_by = 20 في الفيو، هذا البلوك بيستخدم نفس ستايل الباقي #}
   {% if is_paginated %}
     <nav class="mt-3">
       <ul class="pagination pagination-sm justify-content-center mb-0">
