@@ -1,18 +1,22 @@
+/* ========================================
+   Mazoon Aluminum – Global Theme
+   ======================================== */
+
 /* ====== ألوان الهوية العامة ====== */
 :root {
-  --mazoon-bg-page: #f4f4f5;
-  --mazoon-card-bg: #ffffff;
+  --mazoon-bg-page: #f4f4f5;       /* خلفية عامة للصفحة (خارج المحتوى) */
+  --mazoon-card-bg: #ffffff;       /* خلفية الكروت والمحتوى */
 
-  --mazoon-text-main: #111827;    /* قريب من الأسود */
-  --mazoon-text-muted: #6b7280;   /* رمادي ناعم */
+  --mazoon-text-main: #111827;     /* قريب من الأسود */
+  --mazoon-text-muted: #6b7280;    /* رمادي ناعم */
 
-  --mazoon-primary: #111827;      /* أسود/داكن - للأزرار والعناصر الأساسية */
-  --mazoon-primary-soft: #374151; /* رمادي داكن ناعم للهفّر */
-  --mazoon-accent: #f59e0b;       /* برتقالي/ذهبي خفيف للتأكيد */
-  --mazoon-border-soft: #e5e7eb;
+  --mazoon-primary: #111827;       /* أسود/داكن - للأزرار والعناصر الأساسية */
+  --mazoon-primary-soft: #374151;  /* رمادي داكن ناعم للهفّر */
+  --mazoon-accent: #f59e0b;        /* برتقالي/ذهبي خفيف للتأكيد */
+  --mazoon-border-soft: #e5e7eb;   /* حدود ناعمة */
 }
 
-/* الخلفية العامة و النص */
+/* ====== الخلفية العامة و النص ====== */
 body {
   background-color: var(--mazoon-bg-page) !important;
   color: var(--mazoon-text-main) !important;
@@ -27,7 +31,45 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--mazoon-text-muted) !important;
 }
 
-/* ====== Navbar مخصص ====== */
+/* ========================================
+   Layout – Navbar / Main / Footer
+   ======================================== */
+
+/* ملاحظة مهمّة:
+   لا نلمس .container نهائياً من ناحية العرض.
+   نخلي Bootstrap يتحكم فيه عشان يكون عرض الهيدر والمحتوى متطابق.
+*/
+
+/* منطقة المحتوى – شريط بلون مختلف عن body */
+main {
+  background-color: var(--mazoon-card-bg);  /* أبيض ناعم للمحتوى */
+  padding-block: 2.5rem;                    /* مسافة فوق وتحت المحتوى */
+}
+
+/* نخفف شكل المسافات داخل الـ main container بدون تغيير العرض */
+main .container {
+  /* لا background ولا max-width ولا padding أفقي إضافي،
+     نخلي Bootstrap يتحكم في العرض والمسافات الجانبية. */
+  padding-inline: 0.75rem;  /* تقريباً نفس padding الـ navbar افتراضياً */
+}
+
+/* أول وآخر عنصر داخل الكونتينر بدون فراغ زائد */
+main .container > *:first-child {
+  margin-top: 0;
+}
+main .container > *:last-child {
+  margin-bottom: 0;
+}
+
+/* تحسين مظهر الـ alerts */
+.alert {
+  border-radius: 6px;
+}
+
+/* ========================================
+   Navbar
+   ======================================== */
+
 .mazoon-navbar {
   background-color: #f9fafb !important;
   border-bottom: 1px solid var(--mazoon-border-soft) !important;
@@ -85,7 +127,11 @@ h1, h2, h3, h4, h5, h6 {
   min-width: 90px;
 }
 
-/* ====== كروت عامة ====== */
+/* ========================================
+   Cards & Components
+   ======================================== */
+
+/* كروت عامة */
 .card,
 .feature-card,
 .system-card,
@@ -117,7 +163,10 @@ h1, h2, h3, h4, h5, h6 {
   object-fit: cover;
 }
 
-/* ====== أزرار داكنة (pattern black) ====== */
+/* ========================================
+   Buttons
+   ======================================== */
+
 .btn-primary {
   background-color: var(--mazoon-primary) !important;
   border-color: var(--mazoon-primary) !important;
@@ -149,13 +198,19 @@ h1, h2, h3, h4, h5, h6 {
   background-color: var(--mazoon-accent) !important;
 }
 
-/* ====== Footer ====== */
+/* ========================================
+   Footer
+   ======================================== */
+
 .mazoon-footer {
   background-color: #f9fafb !important;
   border-top: 1px solid var(--mazoon-border-soft) !important;
 }
 
-/* ====== جداول خفيفة ====== */
+/* ========================================
+   Tables
+   ======================================== */
+
 .table thead tr {
   background-color: #f9fafb;
 }
@@ -164,17 +219,10 @@ h1, h2, h3, h4, h5, h6 {
   border-bottom-color: var(--mazoon-border-soft);
 }
 
-/* ====== مسافات عامة ====== */
-main .container {
-  /* تخفيف التزاحم */
-  max-width: 1100px;
-}
+/* ========================================
+   Invoice items table
+   ======================================== */
 
-/* تحسين مظهر الـ alerts */
-.alert {
-  border-radius: 6px;
-}
-/* ====== Invoice items table ====== */
 .invoice-items-table td,
 .invoice-items-table th {
   vertical-align: middle;
