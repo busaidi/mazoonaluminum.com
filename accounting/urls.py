@@ -64,6 +64,11 @@ urlpatterns = [
         views.apply_general_payment,
         name="payment_apply",
     ),
+    path(
+    "payments/<int:pk>/print/",
+    views.PaymentPrintView.as_view(),
+    name="payment_print",
+    ),
 
 
 
@@ -74,5 +79,6 @@ urlpatterns = [
     path("orders/<int:pk>/edit/", views.OrderUpdateView.as_view(), name="order_update"),
     path("orders/<int:pk>/confirm/", views.staff_order_confirm, name="order_confirm"),
     path("orders/<int:pk>/to-invoice/", views.order_to_invoice, name="order_to_invoice"),
+    path("orders/<int:pk>/print/", views.OrderPrintView.as_view(), name="order_print"),
 
 ]

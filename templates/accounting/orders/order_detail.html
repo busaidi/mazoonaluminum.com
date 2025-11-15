@@ -38,6 +38,11 @@
           </button>
         </form>
       {% endif %}
+     <a href="{% url 'accounting:order_print' order.pk %}"
+       class="btn btn-sm btn-outline-dark"
+       target="_blank">
+      {% trans "طباعة" %}
+    </a>
 
       <a href="{% url 'accounting:order_update' order.pk %}" class="btn btn-sm btn-outline-primary">
         {% trans "تعديل" %}

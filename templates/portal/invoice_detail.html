@@ -13,6 +13,13 @@
          target="_blank">
         طباعة / PDF
       </a>
+        {# 👇 زر عرض الطلب في بوابة الزبون إن كانت الفاتورة مرتبطة بطلب #}
+      {% if invoice.order %}
+        <a href="{% url 'portal:order_detail' pk=invoice.order.pk %}"
+           class="btn btn-outline-primary btn-sm">
+          عرض الطلب
+        </a>
+      {% endif %}
       <a href="{% url 'portal:invoice_list' %}" class="btn btn-secondary btn-sm">
         رجوع للفواتير
       </a>

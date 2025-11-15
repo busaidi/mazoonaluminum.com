@@ -1,0 +1,438 @@
+{% load i18n %}
+<!doctype html>
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_CODE == 'ar' %}rtl{% else %}ltr{% endif %}">
+<head>
+  <meta charset="utf-8">
+  <title>
+    {% blocktrans with id=order.id %}طلب #{{ id }}{% endblocktrans %}
+  </title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    :root {
+      --mazoon-bg-page: #f4f4f5;
+      --mazoon-card-bg: #ffffff;
+      --mazoon-text-main: #111827;
+      --mazoon-text-muted: #6b7280;
+      --mazoon-primary: #111827;
+      --mazoon-accent: #f59e0b;
+      --mazoon-border-soft: #e5e7eb;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--mazoon-bg-page);
+      color: var(--mazoon-text-main);
+    }
+
+    .invoice-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--mazoon-card-bg);
+      padding: 24px 28px;
+      border-radius: 8px;
+      border: 1px solid var(--mazoon-border-soft);
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+      gap: 16px;
+    }
+
+    .company-block {
+      max-width: 55%;
+    }
+
+    .company-name {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: var(--mazoon-primary);
+    }
+
+    .company-details {
+      font-size: 12px;
+      color: var(--mazoon-text-muted);
+      line-height: 1.6;
+    }
+
+    .invoice-title {
+      text-align: right;
+      min-width: 220px;
+    }
+
+    [dir="ltr"] .invoice-title {
+      text-align: left;
+    }
+
+    .invoice-title h1 {
+      font-size: 20px;
+      margin: 0 0 6px 0;
+      color: var(--mazoon-primary);
+    }
+
+    .invoice-meta {
+      font-size: 12px;
+      color: var(--mazoon-text-muted);
+      line-height: 1.6;
+    }
+
+    .invoice-meta strong {
+      color: var(--mazoon-text-main);
+    }
+
+    .section-title {
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 14px;
+      color: var(--mazoon-primary);
+    }
+
+    .block {
+      margin-bottom: 18px;
+    }
+
+    .box {
+      border: 1px solid var(--mazoon-border-soft);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 13px;
+      background: #f9fafb;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 13px;
+    }
+
+    th,
+    td {
+      padding: 8px 6px;
+      border: 1px solid #e5e7eb;
+    }
+
+    th {
+      background: #f9fafb;
+      text-align: left;
+      color: var(--mazoon-text-main);
+    }
+
+    [dir="rtl"] th {
+      text-align: right;
+    }
+
+    .totals-table {
+      width: 50%;
+      margin-left: auto;
+      margin-top: 10px;
+    }
+
+    [dir="rtl"] .totals-table {
+      margin-left: 0;
+      margin-right: auto;
+    }
+
+    .totals-table th {
+      width: 50%;
+    }
+
+    .text-right {
+      text-align: right;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .notes {
+      font-size: 12px;
+      color: #444;
+      white-space: pre-wrap;
+      line-height: 1.7;
+    }
+
+    .print-hint {
+      margin-top: 16px;
+      font-size: 11px;
+      color: #777;
+      text-align: center;
+    }
+
+    .badge-status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid var(--mazoon-border-soft);
+      background: #f9fafb;
+      margin-top: 4px;
+    }
+
+    .badge-status.confirmed {
+      border-color: #16a34a;
+      color: #15803d;
+      background: #dcfce7;
+    }
+
+    .badge-status.pending {
+      border-color: #f97316;
+      color: #c2410c;
+      background: #ffedd5;
+    }
+
+    .badge-status.cancelled {
+      border-color: #dc2626;
+      color: #b91c1c;
+      background: #fee2e2;
+    }
+
+    .badge-status.draft {
+      border-color: #6b7280;
+      color: #4b5563;
+      background: #e5e7eb;
+    }
+
+    /* بنود الطلب */
+    .items-table th,
+    .items-table td {
+      font-size: 12px;
+    }
+
+    .items-table .col-product {
+      width: 28%;
+    }
+
+    .items-table .col-desc {
+      width: 34%;
+    }
+
+    .items-table .col-qty,
+    .items-table .col-unit,
+    .items-table .col-total {
+      white-space: nowrap;
+      width: 12%;
+    }
+
+    .line-total {
+      font-weight: 600;
+      color: var(--mazoon-primary);
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .invoice-wrapper {
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+      }
+      .print-hint {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="invoice-wrapper">
+
+  <!-- الهيدر -->
+  <div class="header">
+    <div class="company-block">
+      <div class="company-name">Mazoon Aluminum</div>
+      <div class="company-details">
+        {% trans "سلطنة عمان – ورشة/شركة الألمنيوم" %}<br>
+        {% trans "هاتف:" %} +968-00000000<br>
+        {% trans "بريد إلكتروني:" %} info@example.com
+      </div>
+    </div>
+
+    <div class="invoice-title">
+      <h1>{% trans "طلب" %}</h1>
+      <div class="invoice-meta">
+        <div>
+          <strong>{% trans "رقم الطلب:" %}</strong>
+          #{{ order.id }}
+        </div>
+        <div>
+          <strong>{% trans "تاريخ الإنشاء:" %}</strong>
+          {{ order.created_at|date:"Y-m-d H:i" }}
+        </div>
+        <div>
+          <strong>{% trans "نوع الطلب:" %}</strong>
+          {% if order.is_online %}
+            {% trans "أونلاين" %}
+          {% else %}
+            {% trans "موظف" %}
+          {% endif %}
+        </div>
+        <div>
+          <strong>{% trans "الحالة:" %}</strong>
+          {% if order.status == order.STATUS_CONFIRMED %}
+            {% trans "مؤكد" %}
+            <span class="badge-status confirmed">{% trans "مؤكد" %}</span>
+          {% elif order.status == order.STATUS_PENDING %}
+            {% trans "بانتظار التأكيد" %}
+            <span class="badge-status pending">{% trans "بانتظار التأكيد" %}</span>
+          {% elif order.status == order.STATUS_CANCELLED %}
+            {% trans "ملغي" %}
+            <span class="badge-status cancelled">{% trans "ملغي" %}</span>
+          {% else %}
+            {% trans "مسودة" %}
+            <span class="badge-status draft">{% trans "مسودة" %}</span>
+          {% endif %}
+        </div>
+        <div>
+          <strong>{% trans "تم إدخاله بواسطة:" %}</strong>
+          {% if order.created_by %}
+            {{ order.created_by.get_full_name|default:order.created_by.username }}
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </div>
+        {% if order.confirmed_by %}
+          <div>
+            <strong>{% trans "تم التأكيد بواسطة:" %}</strong>
+            {{ order.confirmed_by.get_full_name|default:order.confirmed_by.username }}
+          </div>
+          <div>
+            <strong>{% trans "وقت التأكيد:" %}</strong>
+            {{ order.confirmed_at|date:"Y-m-d H:i" }}
+          </div>
+        {% endif %}
+        <div>
+          <strong>{% trans "الفاتورة المرتبطة:" %}</strong>
+          {% if order.invoice %}
+            {{ order.invoice.number }}
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- بيانات الزبون -->
+  <div class="block">
+    <div class="section-title">{% trans "بيانات الزبون" %}</div>
+    <div class="box">
+      <div><strong>{% trans "الاسم:" %}</strong> {{ order.customer.name }}</div>
+      {% if order.customer.company_name %}
+        <div><strong>{% trans "الشركة:" %}</strong> {{ order.customer.company_name }}</div>
+      {% endif %}
+      {% if order.customer.tax_number %}
+        <div><strong>{% trans "الرقم الضريبي:" %}</strong> {{ order.customer.tax_number }}</div>
+      {% endif %}
+      {% if order.customer.phone %}
+        <div><strong>{% trans "الهاتف:" %}</strong> {{ order.customer.phone }}</div>
+      {% endif %}
+      {% if order.customer.address %}
+        <div><strong>{% trans "العنوان:" %}</strong> {{ order.customer.address }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ملخص الطلب -->
+  <div class="block">
+    <div class="section-title">{% trans "ملخص الطلب" %}</div>
+    <table class="totals-table">
+      <tbody>
+        <tr>
+          <th>{% trans "إجمالي الطلب" %}</th>
+          <td class="text-right">{{ order.total_amount }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- بنود الطلب -->
+  <div class="block">
+    <div class="section-title">{% trans "بنود الطلب" %}</div>
+
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th class="col-product">{% trans "المنتج" %}</th>
+          <th class="col-desc">{% trans "الوصف" %}</th>
+          <th class="col-qty text-center">{% trans "الكمية" %}</th>
+          <th class="col-unit text-center">{% trans "سعر الوحدة" %}</th>
+          <th class="col-total text-right">{% trans "الإجمالي" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in order.items.all %}
+          <tr>
+            <td class="col-product">
+              {% if item.product %}
+                {{ item.product.name }}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="col-desc">
+              {% if item.description %}
+                {{ item.description }}
+              {% elif item.product %}
+                {{ item.product.description }}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="col-qty text-center">
+              {{ item.quantity }}
+            </td>
+            <td class="col-unit text-center">
+              {{ item.unit_price }}
+            </td>
+            <td class="col-total text-right">
+              <span class="line-total">{{ item.subtotal }}</span>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" class="text-center">
+              {% trans "لا توجد بنود في هذا الطلب." %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if order.notes %}
+    <!-- الملاحظات الداخلية -->
+    <div class="block">
+      <div class="section-title">{% trans "ملاحظات داخلية" %}</div>
+      <div class="box notes">
+        {{ order.notes|linebreaksbr }}
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="print-hint">
+    {% trans "يمكنك استخدام أمر الطباعة في المتصفح (Ctrl + P) ثم اختيار" %}
+    <strong>Save as PDF</strong>.
+  </div>
+</div>
+
+<script>
+  // لو تحب تخلي الطباعة تفتح تلقائيًا:
+  // window.print();
+</script>
+
+</body>
+</html>

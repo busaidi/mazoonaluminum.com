@@ -429,21 +429,33 @@ class CustomerDetailView(DetailView):
         ctx = super().get_context_data(**kwargs)
         customer = self.object
 
+        # الفواتير
         invoices = (
             customer.invoices.all()
             .order_by("-issued_at", "-id")
         )
+
+        # الدفعات
         payments = (
             customer.payments.all()
             .select_related("invoice")
             .order_by("-date", "-id")
         )
 
+        # الطلبات 👈 جديد
+        orders = (
+            customer.orders.all()
+            .prefetch_related("items__product")
+            .order_by("-created_at", "id")
+        )
+
+        # الملخص
         total_invoices = invoices.aggregate(s=Sum("total_amount"))["s"] or Decimal("0")
         total_paid = payments.aggregate(s=Sum("amount"))["s"] or Decimal("0")
 
         ctx["invoices"] = invoices
         ctx["payments"] = payments
+        ctx["orders"] = orders
         ctx["total_invoices"] = total_invoices
         ctx["total_paid"] = total_paid
         ctx["balance"] = total_invoices - total_paid
@@ -775,3 +787,31 @@ def staff_order_confirm(request, pk):
 
     # لو أحد فتح الرابط بـ GET نرجعه للتفاصيل
     return redirect("accounting:order_detail", pk=order.pk)
+
+
+@method_decorator(accounting_staff_required, name="dispatch")
+class OrderPrintView(DetailView):
+    """
+    صفحة طباعة للطلب (للموظف)
+    """
+    model = Order
+    template_name = "accounting/orders/order_print.html"
+    context_object_name = "order"
+
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .select_related("customer", "created_by", "confirmed_by")
+            .prefetch_related("items__product")
+        )
+
+
+@method_decorator(accounting_staff_required, name="dispatch")
+class PaymentPrintView(DetailView):
+    """
+    صفحة طباعة إيصال الدفع (Payment Receipt)
+    """
+    model = Payment
+    template_name = "accounting/payment_print.html"
+    context_object_name = "payment"

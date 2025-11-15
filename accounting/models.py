@@ -343,7 +343,7 @@ class Order(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="source_order",
+        related_name="order",
         verbose_name="الفاتورة الناتجة",
     )
     status = models.CharField(

@@ -127,6 +127,68 @@
     </div>
   </div>
 
+  <!-- جدول الطلبات -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0 text-mazoon">{% trans "الطلبات" %}</h5>
+
+        <a href="{% url 'accounting:order_create' %}"
+           class="btn btn-sm btn-primary">
+          {% trans "إنشاء طلب جديد" %}
+        </a>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th>{% trans "رقم الطلب" %}</th>
+              <th>{% trans "التاريخ" %}</th>
+              <th>{% trans "النوع" %}</th>
+              <th>{% trans "الحالة" %}</th>
+              <th>{% trans "الإجمالي" %}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for order in orders %}
+              <tr>
+                <td>#{{ order.pk }}</td>
+                <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+                <td>
+                  {% if order.is_online %}
+                    <span class="badge bg-mazoon-accent text-dark">
+                      {% trans "طلب أونلاين" %}
+                    </span>
+                  {% else %}
+                    <span class="badge bg-secondary">
+                      {% trans "طلب من الموظف" %}
+                    </span>
+                  {% endif %}
+                </td>
+                <td>{{ order.get_status_display }}</td>
+                <td>{{ order.total_amount }}</td>
+                <td class="text-end">
+                  <a href="{% url 'accounting:order_detail' order.pk %}"
+                     class="btn btn-sm btn-outline-primary">
+                    {% trans "عرض" %}
+                  </a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="6" class="text-center text-muted">
+                  {% trans "لا توجد طلبات لهذا الزبون." %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- جدول الدفعات -->
   <div class="card mb-4">
     <div class="card-body">
@@ -141,61 +203,65 @@
       </div>
 
       <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
-          <thead>
-            <tr>
-              <th>{% trans "التاريخ" %}</th>
-              <th>{% trans "المبلغ" %}</th>
-              <th>{% trans "الطريقة" %}</th>
-              <th>{% trans "الفاتورة" %}</th>
-              <th>{% trans "ملاحظات" %}</th>
-              <th></th>
-            </tr>
-          </thead>
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr>
+            <th>{% trans "التاريخ" %}</th>
+            <th>{% trans "المبلغ" %}</th>
+            <th>{% trans "الطريقة" %}</th>
+            <th>{% trans "الفاتورة" %}</th>
+            <th>{% trans "ملاحظات" %}</th>
+            <th class="text-end">{% trans "إجراءات" %}</th>
+          </tr>
+        </thead>
 
-          <tbody>
-            {% for payment in payments %}
-            <tr>
-              <td>{{ payment.date }}</td>
-              <td>{{ payment.amount }}</td>
-              <td>{{ payment.get_method_display }}</td>
+        <tbody>
+          {% for payment in payments %}
+          <tr>
+            <td>{{ payment.date }}</td>
+            <td>{{ payment.amount }}</td>
+            <td>{{ payment.get_method_display }}</td>
 
-              <td>
-                {% if payment.invoice %}
-                  <a href="{% url 'accounting:invoice_detail' payment.invoice.number %}">
-                    {{ payment.invoice.number }}
-                  </a>
-                {% else %}
-                  <span class="badge bg-mazoon-accent text-dark">
-                    {% trans "دفعة عامة" %}
-                  </span>
-                {% endif %}
-              </td>
+            <td>
+              {% if payment.invoice %}
+                <a href="{% url 'accounting:invoice_detail' payment.invoice.number %}">
+                  {{ payment.invoice.number }}
+                </a>
+              {% else %}
+                <span class="badge bg-mazoon-accent text-dark">
+                  {% trans "دفعة عامة" %}
+                </span>
+              {% endif %}
+            </td>
 
-              <td>{{ payment.notes|default:"-" }}</td>
+            <td>{{ payment.notes|default:"-" }}</td>
 
-              <td class="text-end">
-                {% if not payment.invoice %}
-                  <a href="{% url 'accounting:payment_apply' payment.pk %}"
-                     class="btn btn-sm btn-outline-primary">
-                    {% trans "تسوية / ربط بالفاتورة" %}
-                  </a>
-                {% endif %}
-              </td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="6" class="text-center text-muted">
-                {% trans "لا توجد دفعات لهذا الزبون." %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
+            <td class="text-end d-flex flex-wrap justify-content-end gap-1">
+              <a href="{% url 'accounting:payment_print' pk=payment.pk %}"
+                 class="btn btn-sm btn-outline-secondary">
+                 {% trans "طباعة الإيصال" %}
+              </a>
 
-        </table>
-      </div>
+              {% if not payment.invoice %}
+                <a href="{% url 'accounting:payment_apply' payment.pk %}"
+                   class="btn btn-sm btn-outline-primary">
+                  {% trans "تسوية / ربط بالفاتورة" %}
+                </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted">
+              {% trans "لا توجد دفعات لهذا الزبون." %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+
+      </table>
     </div>
-  </div>
+
 
 </div>
 {% endblock %}

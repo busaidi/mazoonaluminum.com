@@ -1,0 +1,335 @@
+{% load i18n %}
+<!doctype html>
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_CODE == 'ar' %}rtl{% else %}ltr{% endif %}">
+<head>
+  <meta charset="utf-8">
+  <title>
+    {% trans "إيصال دفع" %} #{{ payment.id }}
+  </title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    :root {
+      --mazoon-bg-page: #f4f4f5;
+      --mazoon-card-bg: #ffffff;
+      --mazoon-text-main: #111827;
+      --mazoon-text-muted: #6b7280;
+      --mazoon-primary: #111827;
+      --mazoon-accent: #f59e0b;
+      --mazoon-border-soft: #e5e7eb;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--mazoon-bg-page);
+      color: var(--mazoon-text-main);
+    }
+
+    .receipt-wrapper {
+      max-width: 600px;
+      margin: 0 auto;
+      background: var(--mazoon-card-bg);
+      padding: 20px 22px;
+      border-radius: 8px;
+      border: 1px solid var(--mazoon-border-soft);
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+      gap: 12px;
+    }
+
+    .company-block {
+      max-width: 60%;
+    }
+
+    .company-name {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: var(--mazoon-primary);
+    }
+
+    .company-details {
+      font-size: 11px;
+      color: var(--mazoon-text-muted);
+      line-height: 1.6;
+    }
+
+    .receipt-title {
+      text-align: right;
+      min-width: 160px;
+    }
+
+    [dir="ltr"] .receipt-title {
+      text-align: left;
+    }
+
+    .receipt-title h1 {
+      font-size: 18px;
+      margin: 0 0 4px 0;
+      color: var(--mazoon-primary);
+    }
+
+    .receipt-meta {
+      font-size: 11px;
+      color: var(--mazoon-text-muted);
+      line-height: 1.5;
+    }
+
+    .receipt-meta strong {
+      color: var(--mazoon-text-main);
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px dashed #d1d5db;
+      margin: 10px 0 14px 0;
+    }
+
+    .section-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+      font-size: 13px;
+      color: var(--mazoon-primary);
+    }
+
+    .box {
+      border: 1px solid var(--mazoon-border-soft);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 12px;
+      background: #f9fafb;
+      margin-bottom: 10px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .label {
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .value {
+      color: #111827;
+    }
+
+    .notes {
+      font-size: 12px;
+      color: #444;
+      white-space: pre-wrap;
+      line-height: 1.7;
+    }
+
+    .badge-type {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid var(--mazoon-border-soft);
+      background: #f9fafb;
+      margin-top: 4px;
+    }
+
+    .badge-type-general {
+      border-color: #f59e0b;
+      color: #92400e;
+      background: #fffbeb;
+    }
+
+    .badge-type-invoice {
+      border-color: #16a34a;
+      color: #166534;
+      background: #dcfce7;
+    }
+
+    .print-hint {
+      margin-top: 14px;
+      font-size: 10px;
+      color: #777;
+      text-align: center;
+    }
+
+    .btn-print {
+      display: inline-block;
+      padding: 7px 16px;
+      background: var(--mazoon-primary);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 6px;
+      margin-top: 12px;
+      font-size: 12px;
+    }
+
+    .footer-line {
+      margin-top: 12px;
+      font-size: 10px;
+      text-align: center;
+      color: #9ca3af;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .receipt-wrapper {
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+      }
+      .print-hint,
+      .btn-print {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="receipt-wrapper">
+
+  <!-- الهيدر -->
+  <div class="header">
+    <div class="company-block">
+      <div class="company-name">Mazoon Aluminum</div>
+      <div class="company-details">
+        {% trans "سلطنة عمان – ورشة/شركة الألمنيوم" %}<br>
+        {% trans "هاتف:" %} +968-00000000<br>
+        {% trans "بريد إلكتروني:" %} info@example.com
+      </div>
+    </div>
+
+    <div class="receipt-title">
+      <h1>{% trans "إيصال دفع" %}</h1>
+      <div class="receipt-meta">
+        <div>
+          <strong>{% trans "رقم الإيصال:" %}</strong>
+          #{{ payment.id }}
+        </div>
+        <div>
+          <strong>{% trans "تاريخ الدفع:" %}</strong>
+          {{ payment.date }}
+        </div>
+        <div>
+          <strong>{% trans "المبلغ:" %}</strong>
+          {{ payment.amount }} OMR
+        </div>
+        <div>
+          <strong>{% trans "طريقة الدفع:" %}</strong>
+          {{ payment.get_method_display }}
+        </div>
+        <div>
+          <strong>{% trans "نوع الدفعة:" %}</strong>
+          {% if payment.invoice %}
+            <span class="badge-type badge-type-invoice">
+              {% trans "دفعة مرتبطة بحساب / فاتورة" %}
+            </span>
+          {% else %}
+            <span class="badge-type badge-type-general">
+              {% trans "دفعة عامة (رصيد للعميل)" %}
+            </span>
+          {% endif %}
+        </div>
+        {% if payment.invoice %}
+          <div style="margin-top: 4px; font-size: 11px;">
+            <strong>{% trans "مرجع:" %}</strong>
+            {% trans "فاتورة رقم" %} {{ payment.invoice.number }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- بيانات الزبون -->
+  <div class="section">
+    <div class="section-title">{% trans "بيانات الزبون" %}</div>
+    <div class="box">
+      <div class="row">
+        <span class="label">{% trans "الاسم:" %}</span>
+        <span class="value">{{ payment.customer.name }}</span>
+      </div>
+      {% if payment.customer.company_name %}
+      <div class="row">
+        <span class="label">{% trans "الشركة:" %}</span>
+        <span class="value">{{ payment.customer.company_name }}</span>
+      </div>
+      {% endif %}
+      {% if payment.customer.phone %}
+      <div class="row">
+        <span class="label">{% trans "الهاتف:" %}</span>
+        <span class="value">{{ payment.customer.phone }}</span>
+      </div>
+      {% endif %}
+      {% if payment.customer.address %}
+      <div class="row">
+        <span class="label">{% trans "العنوان:" %}</span>
+        <span class="value">{{ payment.customer.address }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ملخص الدفع البسيط -->
+  <div class="section">
+    <div class="section-title">{% trans "ملخص الدفع" %}</div>
+    <div class="box">
+      <div class="row">
+        <span class="label">{% trans "المبلغ المدفوع" %}:</span>
+        <span class="value">{{ payment.amount }} OMR</span>
+      </div>
+      <div class="row">
+        <span class="label">{% trans "طريقة الدفع" %}:</span>
+        <span class="value">{{ payment.get_method_display }}</span>
+      </div>
+    </div>
+  </div>
+
+  {% if payment.notes %}
+  <!-- ملاحظات -->
+  <div class="section">
+    <div class="section-title">{% trans "ملاحظات" %}</div>
+    <div class="box notes">
+      {{ payment.notes|linebreaksbr }}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="print-hint">
+    {% trans "لاستخدام الإيصال رقميًا، يمكنك اختيار" %}
+    <strong>Save as PDF</strong>
+    {% trans "من شاشة الطباعة." %}
+  </div>
+
+  <div style="text-align: center;">
+    <a href="#" onclick="window.print(); return false;" class="btn-print">
+      {% trans "طباعة الإيصال" %}
+    </a>
+  </div>
+
+  <div class="footer-line">
+    {% trans "إيصال دفع آلي من نظام مزون ألمنيوم" %}
+  </div>
+
+</div>
+
+</body>
+</html>
