@@ -916,15 +916,14 @@ class PaymentCreateView(CreateView):
         return reverse("accounting:payment_list")
 
 # ============================================================
-# Payment Update
+# Payment Update and reconciliation
 # ============================================================
 @method_decorator(accounting_staff_required, name="dispatch")
 class PaymentUpdateView(UpdateView):
     """
     تعديل دفعة موجودة:
-    - نسمح بتعديل التاريخ، المبلغ، طريقة الدفع، الملاحظات
-    - لا نسمح بتغيير العميل أو الفاتورة من شاشة التعديل
-      (عشان ما تلخبط إجماليات الفواتير القديمة).
+    - نسمح بتعديل التاريخ، المبلغ، طريقة الدفع، الملاحظات، وربط/فك الفاتورة.
+    - نثبّت العميل (لا يتغير من شاشة التعديل).
     """
     model = Payment
     form_class = PaymentForm
@@ -934,12 +933,19 @@ class PaymentUpdateView(UpdateView):
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
 
-        # نثبت العميل والفاتورة (قراءة فقط)
-        for fname in ("customer", "invoice"):
-            if fname in form.fields:
-                form.fields[fname].disabled = True
+        # تثبيت العميل فقط (لا يتغير)
+        if "customer" in form.fields:
+            form.fields["customer"].disabled = True
+
+        # الفاتورة: نسمح بالتعديل/المسح، لكن نفلترها على فواتير نفس العميل
+        if "invoice" in form.fields:
+            form.fields["invoice"].queryset = Invoice.objects.filter(
+                customer=self.object.customer
+            )
+            form.fields["invoice"].required = False  # مسموح تكون فاضية (دفعة عامة)
 
         return form
 
     def get_success_url(self):
         return reverse("accounting:payment_list")
+
