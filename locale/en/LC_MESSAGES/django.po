@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-11-14 23:23+0400\n"
+"POT-Creation-Date: 2025-11-15 12:27+0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,205 +17,283 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: accounting/views.py:716
+msgid "تم تحويل هذا الطلب إلى فاتورة من قبل."
+msgstr "This order has already been converted to an invoice."
+
+#: accounting/views.py:766
+#, python-format
+msgid "تم إنشاء الفاتورة %(number)s من هذا الطلب."
+msgstr "Invoice %(number)s has been created from this order."
+
 #: templates/accounting/customer_detail.html:12
 #, python-format
 msgid "الزبون: %(name)s"
-msgstr ""
+msgstr "Customer: %(name)s"
 
 #: templates/accounting/customer_detail.html:15
 msgid "تعديل بيانات الزبون"
-msgstr ""
+msgstr "Edit customer details"
 
 #: templates/accounting/customer_detail.html:20
 #: templates/accounting/customer_list.html:46
 msgid "الشركة"
-msgstr ""
+msgstr "Company"
 
 #: templates/accounting/customer_detail.html:24
 #: templates/accounting/customer_list.html:47
 msgid "الهاتف"
-msgstr ""
+msgstr "Phone"
 
 #: templates/accounting/customer_detail.html:28
 #: templates/website/contact.html:99
 msgid "البريد الإلكتروني"
-msgstr ""
+msgstr "Email"
 
 #: templates/accounting/customer_detail.html:32
 msgid "الرقم الضريبي"
-msgstr ""
+msgstr "Tax number"
 
 #: templates/accounting/customer_detail.html:36
 msgid "العنوان"
-msgstr ""
+msgstr "Address"
 
 #: templates/accounting/customer_detail.html:47
 #: templates/portal/dashboard.html:30
 msgid "إجمالي الفواتير"
-msgstr ""
+msgstr "Total invoices"
 
 #: templates/accounting/customer_detail.html:56
 #: templates/portal/dashboard.html:42
 msgid "إجمالي الدفعات"
-msgstr ""
+msgstr "Total payments"
 
 #: templates/accounting/customer_detail.html:65
 #: templates/accounting/customer_list.html:49
 msgid "الرصيد"
-msgstr ""
+msgstr "Balance"
 
 #: templates/accounting/customer_detail.html:78
+#: templates/accounting/dashboard.html:93
 msgid "الفواتير"
-msgstr ""
+msgstr "Invoices"
 
 #: templates/accounting/customer_detail.html:82
+#: templates/accounting/orders/order_detail.html:37
 msgid "إنشاء فاتورة"
-msgstr ""
+msgstr "Create invoice"
 
 #: templates/accounting/customer_detail.html:90
 msgid "رقم الفاتورة"
-msgstr ""
+msgstr "Invoice number"
 
 #: templates/accounting/customer_detail.html:91
 #: templates/accounting/customer_detail.html:147
-#: templates/accounting/invoice_detail.html:223
+#: templates/accounting/customer_detail.html:209
+#: templates/accounting/dashboard.html:162
+#: templates/accounting/dashboard.html:209
+#: templates/accounting/dashboard.html:250
+#: templates/accounting/invoice_detail.html:233
 #: templates/accounting/invoice_print.html:410
+#: templates/accounting/orders/order_detail.html:69
+#: templates/accounting/orders/order_list.html:45
 #: templates/portal/dashboard.html:82 templates/portal/dashboard.html:135
 msgid "التاريخ"
-msgstr ""
+msgstr "Date"
 
 #: templates/accounting/customer_detail.html:92
-#: templates/accounting/invoice_detail.html:121
-#: templates/accounting/invoice_detail.html:149
+#: templates/accounting/customer_detail.html:150
+#: templates/accounting/invoice_detail.html:131
+#: templates/accounting/invoice_detail.html:159
 #: templates/accounting/invoice_form.html:166
-#: templates/accounting/invoice_print.html:341 templates/cart/detail.html:20
-#: templates/portal/dashboard.html:83
+#: templates/accounting/invoice_print.html:341
+#: templates/accounting/orders/order_detail.html:136
+#: templates/accounting/orders/order_form.html:89
+#: templates/accounting/orders/order_list.html:48
+#: templates/accounting/orders/order_print.html:373
+#: templates/cart/detail.html:20 templates/portal/dashboard.html:83
 msgid "الإجمالي"
-msgstr ""
+msgstr "Total"
 
 #: templates/accounting/customer_detail.html:93
-#: templates/accounting/invoice_detail.html:125
+#: templates/accounting/invoice_detail.html:135
 msgid "المدفوع"
-msgstr ""
+msgstr "Paid"
 
 #: templates/accounting/customer_detail.html:94
-#: templates/accounting/invoice_detail.html:129
+#: templates/accounting/dashboard.html:163
+#: templates/accounting/invoice_detail.html:139
 #: templates/accounting/invoice_print.html:323
 #: templates/portal/dashboard.html:84
 msgid "المتبقي"
-msgstr ""
+msgstr "Remaining"
 
 #: templates/accounting/customer_detail.html:95
+#: templates/accounting/customer_detail.html:149
+#: templates/accounting/dashboard.html:210
+#: templates/accounting/orders/order_detail.html:88
+#: templates/accounting/orders/order_form.html:47
+#: templates/accounting/orders/order_list.html:47
 msgid "الحالة"
-msgstr ""
+msgstr "Status"
 
 #: templates/accounting/customer_detail.html:112
+#: templates/accounting/customer_detail.html:175
 msgid "عرض"
-msgstr ""
+msgstr "View"
 
 #: templates/accounting/customer_detail.html:119
 msgid "لا توجد فواتير لهذا الزبون."
-msgstr ""
+msgstr "There are no invoices for this customer."
 
-#: templates/accounting/customer_detail.html:135
-msgid "الدفعات"
-msgstr ""
+#: templates/accounting/customer_detail.html:134
+#: templates/accounting/dashboard.html:131
+#: templates/accounting/orders/order_list.html:4
+#: templates/accounting/orders/order_list.html:14
+msgid "الطلبات"
+msgstr "Orders"
 
-#: templates/accounting/customer_detail.html:139
-msgid "إضافة دفعة عامة"
-msgstr ""
+#: templates/accounting/customer_detail.html:138
+msgid "إنشاء طلب جديد"
+msgstr "Create new order"
+
+#: templates/accounting/customer_detail.html:146
+msgid "رقم الطلب"
+msgstr "Order number"
 
 #: templates/accounting/customer_detail.html:148
-#: templates/accounting/invoice_detail.html:224
+msgid "النوع"
+msgstr "Type"
+
+#: templates/accounting/customer_detail.html:162
+msgid "طلب أونلاين"
+msgstr "Online order"
+
+#: templates/accounting/customer_detail.html:166
+msgid "طلب من الموظف"
+msgstr "Staff order"
+
+#: templates/accounting/customer_detail.html:182
+msgid "لا توجد طلبات لهذا الزبون."
+msgstr "There are no orders for this customer."
+
+#: templates/accounting/customer_detail.html:197
+msgid "الدفعات"
+msgstr "Payments"
+
+#: templates/accounting/customer_detail.html:201
+msgid "إضافة دفعة عامة"
+msgstr "Add general payment"
+
+#: templates/accounting/customer_detail.html:210
+#: templates/accounting/dashboard.html:252
+#: templates/accounting/invoice_detail.html:234
 #: templates/accounting/invoice_print.html:411
 #: templates/portal/dashboard.html:136
 msgid "المبلغ"
-msgstr ""
+msgstr "Amount"
 
-#: templates/accounting/customer_detail.html:149
-#: templates/accounting/invoice_detail.html:225
+#: templates/accounting/customer_detail.html:211
 #: templates/accounting/invoice_print.html:412
 #: templates/portal/dashboard.html:137
 msgid "الطريقة"
-msgstr ""
+msgstr "Method"
 
-#: templates/accounting/customer_detail.html:150
+#: templates/accounting/customer_detail.html:212
+#: templates/accounting/invoice_detail.html:236
 msgid "الفاتورة"
-msgstr ""
+msgstr "Invoice"
 
-#: templates/accounting/customer_detail.html:151
-#: templates/accounting/invoice_detail.html:226
+#: templates/accounting/customer_detail.html:213
 #: templates/accounting/invoice_print.html:413
+#: templates/accounting/payment_print.html:309
 msgid "ملاحظات"
-msgstr ""
+msgstr "Notes"
 
-#: templates/accounting/customer_detail.html:170
+#: templates/accounting/customer_detail.html:214
+#: templates/accounting/invoice_detail.html:237
+msgid "إجراءات"
+msgstr "Actions"
+
+#: templates/accounting/customer_detail.html:232
+#: templates/accounting/invoice_detail.html:250
 msgid "دفعة عامة"
-msgstr ""
+msgstr "General payment"
 
-#: templates/accounting/customer_detail.html:181
+#: templates/accounting/customer_detail.html:242
+#: templates/accounting/invoice_detail.html:256
+#: templates/accounting/payment_print.html:324
+msgid "طباعة الإيصال"
+msgstr "Print receipt"
+
+#: templates/accounting/customer_detail.html:248
 msgid "تسوية / ربط بالفاتورة"
-msgstr ""
+msgstr "Apply / link to invoice"
 
-#: templates/accounting/customer_detail.html:189
+#: templates/accounting/customer_detail.html:256
 msgid "لا توجد دفعات لهذا الزبون."
-msgstr ""
+msgstr "There are no payments for this customer."
 
 #: templates/accounting/customer_list.html:5
 msgid "الزبائن | مزون ألمنيوم"
-msgstr ""
+msgstr "Customers | Mazoon Aluminum"
 
 #: templates/accounting/customer_list.html:9
 msgid "قائمة الزبائن مع إمكانية البحث وإدارة بيانات العملاء في نظام المحاسبة."
-msgstr ""
+msgstr "Customer list with search and data management in the accounting system."
 
 #: templates/accounting/customer_list.html:17
 msgid "الزبائن"
-msgstr ""
+msgstr "Customers"
 
 #: templates/accounting/customer_list.html:20
 msgid "+ زبون جديد"
-msgstr ""
+msgstr "+ New customer"
 
 #: templates/accounting/customer_list.html:30
 msgid "بحث بالاسم أو الشركة"
-msgstr ""
+msgstr "Search by name or company"
 
 #: templates/accounting/customer_list.html:35
 #: templates/website/blog_list.html:307
 msgid "بحث"
-msgstr ""
+msgstr "Search"
 
 #: templates/accounting/customer_list.html:45
 #: templates/website/blog_detail.html:112 templates/website/contact.html:95
 msgid "الاسم"
-msgstr ""
+msgstr "Name"
 
 #: templates/accounting/customer_list.html:48
 msgid "البريد"
-msgstr ""
+msgstr "Email"
 
 #: templates/accounting/customer_list.html:68
+#: templates/accounting/orders/order_detail.html:48
 msgid "تعديل"
-msgstr ""
+msgstr "Edit"
 
 #: templates/accounting/customer_list.html:72
-#: templates/accounting/invoice_form.html:167 templates/cart/detail.html:33
+#: templates/accounting/invoice_form.html:167
+#: templates/accounting/orders/order_form.html:90
+#: templates/accounting/orders/order_form.html:132
+#: templates/cart/detail.html:33
 msgid "حذف"
-msgstr ""
+msgstr "Delete"
 
 #: templates/accounting/customer_list.html:79
 msgid "لا يوجد زبائن حاليًا."
-msgstr ""
+msgstr "There are no customers at the moment."
 
 #: templates/accounting/customer_list.html:90
 msgid "صفحات الزبائن"
-msgstr ""
+msgstr "Customer pages"
 
 #: templates/accounting/customer_list.html:97
 #: templates/accounting/customer_list.html:103
 msgid "السابق"
-msgstr ""
+msgstr "Previous"
 
 #: templates/accounting/customer_list.html:110
 #, python-format
@@ -224,36 +302,213 @@ msgid ""
 "                  صفحة %(number)s من %(total)s\n"
 "                "
 msgstr ""
+"\n"
+"                  Page %(number)s of %(total)s\n"
+"                "
 
 #: templates/accounting/customer_list.html:120
 #: templates/accounting/customer_list.html:126
 msgid "التالي"
+msgstr "Next"
+
+#: templates/accounting/dashboard.html:5 templates/accounting/dashboard.html:17
+msgid "لوحة المحاسبة"
+msgstr "Accounting dashboard"
+
+#: templates/accounting/dashboard.html:7
+msgid ""
+"لوحة تحكم لمتابعة الفواتير، الدفعات والطلبات في نظام المحاسبة الخاص بمزون "
+"ألمنيوم."
 msgstr ""
+"A control panel to track invoices, payments, and orders in the Mazoon "
+"Aluminum accounting system."
+
+#: templates/accounting/dashboard.html:20
+msgid "نظرة سريعة على الفواتير، العملاء، الطلبات والدفعات."
+msgstr "Quick overview of invoices, customers, orders, and payments."
+
+#: templates/accounting/dashboard.html:25
+msgid "إنشاء فاتورة جديدة"
+msgstr "Create new invoice"
+
+#: templates/accounting/dashboard.html:28
+#: templates/accounting/dashboard.html:121
+msgid "إضافة زبون"
+msgstr "Add customer"
+
+#: templates/accounting/dashboard.html:31
+msgid "إدارة الطلبات"
+msgstr "Manage orders"
+
+#: templates/accounting/dashboard.html:42
+msgid "عدد الفواتير"
+msgstr "Number of invoices"
+
+#: templates/accounting/dashboard.html:53
+msgid "عدد العملاء"
+msgstr "Number of customers"
+
+#: templates/accounting/dashboard.html:64
+msgid "عدد الطلبات"
+msgstr "Number of orders"
+
+#: templates/accounting/dashboard.html:75
+msgid "إجمالي المتبقي على العملاء"
+msgstr "Total outstanding balance for customers"
+
+#: templates/accounting/dashboard.html:81
+msgid "إجمالي الفواتير ناقص الدفعات المسجّلة."
+msgstr "Total invoice amount minus recorded payments."
+
+#: templates/accounting/dashboard.html:95
+msgid "عرض وإدارة فواتير العملاء، ومتابعة المبالغ المتبقية والمدفوعة."
+msgstr ""
+"View and manage customer invoices, and track outstanding and paid amounts."
+
+#: templates/accounting/dashboard.html:99
+msgid "عرض كل الفواتير"
+msgstr "View all invoices"
+
+#: templates/accounting/dashboard.html:102
+#: templates/accounting/invoice_form.html:40
+msgid "فاتورة جديدة"
+msgstr "New invoice"
+
+#: templates/accounting/dashboard.html:112
+msgid "العملاء"
+msgstr "Customers"
+
+#: templates/accounting/dashboard.html:114
+msgid "إدارة بيانات العملاء وربطهم بالفواتير والدفعات والطلبات."
+msgstr ""
+"Manage customer data and link them with invoices, payments, and orders."
+
+#: templates/accounting/dashboard.html:118
+msgid "عرض كل العملاء"
+msgstr "View all customers"
+
+#: templates/accounting/dashboard.html:133
+msgid "متابعة طلبات العملاء قبل وبعد تحويلها إلى فواتير."
+msgstr "Track customer orders before and after converting them to invoices."
+
+#: templates/accounting/dashboard.html:137
+msgid "عرض كل الطلبات"
+msgstr "View all orders"
+
+#: templates/accounting/dashboard.html:140
+msgid "إنشاء طلب"
+msgstr "Create order"
+
+#: templates/accounting/dashboard.html:155 templates/portal/dashboard.html:71
+msgid "آخر الفواتير"
+msgstr "Latest invoices"
+
+#: templates/accounting/dashboard.html:160 templates/portal/dashboard.html:81
+msgid "رقم"
+msgstr "No."
+
+#: templates/accounting/dashboard.html:161
+#: templates/accounting/dashboard.html:208
+#: templates/accounting/dashboard.html:251
+msgid "العميل"
+msgstr "Customer"
+
+#: templates/accounting/dashboard.html:187
+msgid "لا توجد فواتير بعد."
+msgstr "There are no invoices yet."
+
+#: templates/accounting/dashboard.html:202
+msgid "آخر الطلبات"
+msgstr "Latest orders"
+
+#: templates/accounting/dashboard.html:230
+#: templates/accounting/orders/order_list.html:100
+msgid "لا توجد طلبات حتى الآن."
+msgstr "There are no orders yet."
+
+#: templates/accounting/dashboard.html:245 templates/portal/dashboard.html:125
+msgid "آخر الدفعات"
+msgstr "Latest payments"
+
+#: templates/accounting/dashboard.html:265
+msgid "لا توجد دفعات مسجلة حتى الآن."
+msgstr "There are no payments recorded yet."
+
+#: templates/accounting/dashboard.html:286
+msgid "قائمة التنبيهات"
+msgstr "Alerts list"
+
+#: templates/accounting/dashboard.html:289
+msgid "للمتابعة السريعة للحالات المفتوحة"
+msgstr "For quickly following up on open cases"
+
+#: templates/accounting/dashboard.html:297
+msgid "طلبات لم تُحوّل إلى فاتورة"
+msgstr "Orders not converted to invoices"
+
+#: templates/accounting/dashboard.html:306
+#: templates/accounting/orders/order_print.html:7
+#, python-format
+msgid "طلب #%(id)s"
+msgstr "Order #%(id)s"
+
+#: templates/accounting/dashboard.html:318
+msgid "لم يُحوّل"
+msgstr "Not converted"
+
+#: templates/accounting/dashboard.html:322
+#: templates/accounting/orders/order_form.html:150
+msgid "إجمالي تقريبي"
+msgstr "Approximate total"
+
+#: templates/accounting/dashboard.html:331
+msgid "لا توجد طلبات مفتوحة بدون فاتورة."
+msgstr "There are no open orders without invoices."
+
+#: templates/accounting/dashboard.html:339
+msgid "فواتير غير مسددة"
+msgstr "Unpaid invoices"
+
+#: templates/accounting/dashboard.html:364
+msgid "متبقي"
+msgstr "Remaining"
+
+#: templates/accounting/dashboard.html:368
+msgid "حالة غير مدفوعة"
+msgstr "Unpaid status"
+
+#: templates/accounting/dashboard.html:377
+msgid "لا توجد فواتير غير مسددة تحتاج للمتابعة."
+msgstr "There are no unpaid invoices that require follow-up."
 
 #: templates/accounting/general_payment_apply.html:12
 #, python-format
 msgid "تسوية دفعة عامة رقم #%(id)s"
-msgstr ""
+msgstr "Apply general payment #%(id)s"
 
 #: templates/accounting/general_payment_apply.html:17
+#: templates/accounting/orders/order_detail.html:62
+#: templates/accounting/orders/order_form.html:38
+#: templates/accounting/orders/order_list.html:44
 msgid "الزبون"
-msgstr ""
+msgstr "Customer"
 
 #: templates/accounting/general_payment_apply.html:22
 msgid "المبلغ المتاح"
-msgstr ""
+msgstr "Available amount"
 
 #: templates/accounting/general_payment_apply.html:27
 msgid "يمكنك تسوية جزء من هذا المبلغ أو تسويته بالكامل على فاتورة معيّنة."
 msgstr ""
+"You can apply part of this amount or the full amount to a specific invoice."
 
 #: templates/accounting/general_payment_apply.html:40
 msgid "اختر الفاتورة"
-msgstr ""
+msgstr "Select invoice"
 
 #: templates/accounting/general_payment_apply.html:49
 msgid "مبلغ التسوية"
-msgstr ""
+msgstr "Settlement amount"
 
 #: templates/accounting/general_payment_apply.html:52
 #, python-format
@@ -262,319 +517,660 @@ msgid ""
 "              أقصى مبلغ ممكن: %(max)s\n"
 "            "
 msgstr ""
+"\n"
+"              Maximum allowed amount: %(max)s\n"
+"            "
 
 #: templates/accounting/general_payment_apply.html:64
 msgid "تنفيذ التسوية"
-msgstr ""
+msgstr "Apply settlement"
 
 #: templates/accounting/general_payment_apply.html:69
 #: templates/accounting/invoice_form.html:271
 msgid "إلغاء"
-msgstr ""
+msgstr "Cancel"
 
 #: templates/accounting/invoice_detail.html:5
 #, python-format
 msgid "فاتورة %(number)s | Mazoon Aluminum"
-msgstr ""
+msgstr "Invoice %(number)s | Mazoon Aluminum"
 
 #: templates/accounting/invoice_detail.html:9
 #, python-format
 msgid ""
 "\n"
-"    تفاصيل الفاتورة رقم %(number)s للعميل %(customer)s، مع عرض البنود "
+"        تفاصيل الفاتورة رقم %(number)s للعميل %(customer)s، مع عرض البنود "
 "والدفعات المرتبطة والمبلغ المتبقي.\n"
-"  "
+"    "
 msgstr ""
+"\n"
+"        Invoice %(number)s details for customer %(customer)s, showing line "
+"items, related payments, and remaining balance.\n"
+"    "
 
 #: templates/accounting/invoice_detail.html:20
 #: templates/accounting/invoice_print.html:7
 #, python-format
 msgid "فاتورة %(number)s"
-msgstr ""
+msgstr "Invoice %(number)s"
 
 #: templates/accounting/invoice_detail.html:23
 #, python-format
 msgid "عميل: %(name)s"
-msgstr ""
+msgstr "Customer: %(name)s"
 
 #: templates/accounting/invoice_detail.html:29
 msgid "تعديل الفاتورة"
-msgstr ""
+msgstr "Edit invoice"
 
-#: templates/accounting/invoice_detail.html:33
+#: templates/accounting/invoice_detail.html:35
+msgid "عرض الطلب"
+msgstr "View order"
+
+#: templates/accounting/invoice_detail.html:43
 msgid "+ إضافة دفعة"
-msgstr ""
+msgstr "+ Add payment"
 
-#: templates/accounting/invoice_detail.html:38
+#: templates/accounting/invoice_detail.html:48
 msgid "طباعة / PDF"
-msgstr ""
-
-#: templates/accounting/invoice_detail.html:41
-msgid "رجوع إلى القائمة"
-msgstr ""
+msgstr "Print / PDF"
 
 #: templates/accounting/invoice_detail.html:51
+msgid "رجوع إلى القائمة"
+msgstr "Back to list"
+
+#: templates/accounting/invoice_detail.html:61
 msgid "بيانات العميل"
-msgstr ""
+msgstr "Customer information"
 
-#: templates/accounting/invoice_detail.html:79
+#: templates/accounting/invoice_detail.html:89
 msgid "تفاصيل الفاتورة"
-msgstr ""
+msgstr "Invoice details"
 
-#: templates/accounting/invoice_detail.html:81
+#: templates/accounting/invoice_detail.html:91
 msgid "التاريخ:"
-msgstr ""
-
-#: templates/accounting/invoice_detail.html:85
-#: templates/accounting/invoice_print.html:270
-msgid "تاريخ الاستحقاق:"
-msgstr ""
+msgstr "Date:"
 
 #: templates/accounting/invoice_detail.html:95
-#: templates/accounting/invoice_print.html:274
-msgid "الحالة:"
-msgstr ""
+#: templates/accounting/invoice_print.html:270
+msgid "تاريخ الاستحقاق:"
+msgstr "Due date:"
 
-#: templates/accounting/invoice_detail.html:97
+#: templates/accounting/invoice_detail.html:105
+#: templates/accounting/invoice_print.html:274
+#: templates/accounting/orders/order_print.html:284
+msgid "الحالة:"
+msgstr "Status:"
+
+#: templates/accounting/invoice_detail.html:107
 #: templates/accounting/invoice_print.html:277
 msgid "مدفوعة"
-msgstr ""
+msgstr "Paid"
 
-#: templates/accounting/invoice_detail.html:99
+#: templates/accounting/invoice_detail.html:109
 #: templates/accounting/invoice_print.html:279
 msgid "مدفوعة جزئياً"
-msgstr ""
+msgstr "Partially paid"
 
-#: templates/accounting/invoice_detail.html:101
+#: templates/accounting/invoice_detail.html:111
 #: templates/accounting/invoice_print.html:281
 msgid "ملغاة"
-msgstr ""
+msgstr "Cancelled"
 
-#: templates/accounting/invoice_detail.html:103
+#: templates/accounting/invoice_detail.html:113
 msgid "مرسلة"
-msgstr ""
+msgstr "Sent"
 
-#: templates/accounting/invoice_detail.html:118
+#: templates/accounting/invoice_detail.html:128
 msgid "المبالغ"
-msgstr ""
+msgstr "Amounts"
 
-#: templates/accounting/invoice_detail.html:139
+#: templates/accounting/invoice_detail.html:149
 #: templates/accounting/invoice_print.html:332
 msgid "بنود الفاتورة"
-msgstr ""
+msgstr "Invoice items"
 
-#: templates/accounting/invoice_detail.html:145
-#: templates/accounting/invoice_print.html:337 templates/cart/detail.html:17
+#: templates/accounting/invoice_detail.html:155
+#: templates/accounting/invoice_print.html:337
+#: templates/accounting/orders/order_detail.html:132
+#: templates/accounting/orders/order_form.html:85
+#: templates/accounting/orders/order_print.html:369
+#: templates/cart/detail.html:17
 msgid "المنتج"
-msgstr ""
+msgstr "Product"
 
-#: templates/accounting/invoice_detail.html:146
-#: templates/accounting/invoice_detail.html:199
+#: templates/accounting/invoice_detail.html:156
+#: templates/accounting/invoice_detail.html:209
 #: templates/accounting/invoice_form.html:163
 #: templates/accounting/invoice_print.html:338
+#: templates/accounting/orders/order_detail.html:133
+#: templates/accounting/orders/order_print.html:370
 msgid "الوصف"
-msgstr ""
+msgstr "Description"
 
-#: templates/accounting/invoice_detail.html:147
+#: templates/accounting/invoice_detail.html:157
 #: templates/accounting/invoice_form.html:164
-#: templates/accounting/invoice_print.html:339 templates/cart/detail.html:18
+#: templates/accounting/invoice_print.html:339
+#: templates/accounting/orders/order_detail.html:134
+#: templates/accounting/orders/order_form.html:87
+#: templates/accounting/orders/order_print.html:371
+#: templates/cart/detail.html:18
 msgid "الكمية"
-msgstr ""
+msgstr "Quantity"
 
-#: templates/accounting/invoice_detail.html:148
+#: templates/accounting/invoice_detail.html:158
 #: templates/accounting/invoice_form.html:165
 #: templates/accounting/invoice_print.html:340
+#: templates/accounting/orders/order_detail.html:135
+#: templates/accounting/orders/order_form.html:88
+#: templates/accounting/orders/order_print.html:372
 msgid "سعر الوحدة"
-msgstr ""
+msgstr "Unit price"
 
-#: templates/accounting/invoice_detail.html:184
+#: templates/accounting/invoice_detail.html:194
 #: templates/accounting/invoice_print.html:376
 msgid "لا توجد بنود في هذه الفاتورة."
-msgstr ""
+msgstr "There are no items in this invoice."
 
-#: templates/accounting/invoice_detail.html:209
+#: templates/accounting/invoice_detail.html:219
 #: templates/accounting/invoice_print.html:397 templates/base.html:236
 msgid "الشروط والأحكام"
-msgstr ""
+msgstr "Terms and conditions"
 
-#: templates/accounting/invoice_detail.html:218
+#: templates/accounting/invoice_detail.html:228
 msgid "الدفعات المرتبطة"
-msgstr ""
+msgstr "Related payments"
 
-#: templates/accounting/invoice_detail.html:240
-msgid "لا توجد دفعات لهذه الفاتورة."
-msgstr ""
+#: templates/accounting/invoice_detail.html:235
+#: templates/accounting/payment_print.html:300
+msgid "طريقة الدفع"
+msgstr "Payment method"
+
+#: templates/accounting/invoice_detail.html:263
+msgid "لا توجد دفعات لهذه الفاتورة بعد."
+msgstr "There are no payments for this invoice yet."
 
 #: templates/accounting/invoice_form.html:6
 #, python-format
 msgid "تعديل فاتورة %(number)s | Mazoon Aluminum"
-msgstr ""
+msgstr "Edit invoice %(number)s | Mazoon Aluminum"
 
 #: templates/accounting/invoice_form.html:8
 msgid "فاتورة جديدة | Mazoon Aluminum"
-msgstr ""
+msgstr "New invoice | Mazoon Aluminum"
 
 #: templates/accounting/invoice_form.html:14
 #, python-format
 msgid "تعديل بيانات الفاتورة رقم %(number)s في نظام المحاسبة."
-msgstr ""
+msgstr "Edit the data of invoice %(number)s in the accounting system."
 
 #: templates/accounting/invoice_form.html:16
 msgid "إنشاء فاتورة جديدة لعميل في نظام المحاسبة الخاص بمزون ألمنيوم."
 msgstr ""
+"Create a new invoice for a customer in the Mazoon Aluminum accounting system."
 
 #: templates/accounting/invoice_form.html:29
 #, python-format
 msgid "تعديل فاتورة %(number)s"
-msgstr ""
+msgstr "Edit invoice %(number)s"
 
 #: templates/accounting/invoice_form.html:32
 msgid "وضع التحرير"
-msgstr ""
+msgstr "Edit mode"
 
 #: templates/accounting/invoice_form.html:36
 msgid ""
 "قم بتحديث بيانات الفاتورة بدقة، وسيتم حفظ التغييرات في السجلات المحاسبية."
 msgstr ""
-
-#: templates/accounting/invoice_form.html:40
-msgid "فاتورة جديدة"
-msgstr ""
+"Carefully update the invoice data; changes will be saved in the accounting "
+"records."
 
 #: templates/accounting/invoice_form.html:42
 msgid "فاتورة يدوية"
-msgstr ""
+msgstr "Manual invoice"
 
 #: templates/accounting/invoice_form.html:46
 msgid ""
 "املأ بيانات الفاتورة، خصوصًا العميل، تاريخ الإصدار، بنود الفاتورة، والشروط."
 msgstr ""
+"Fill in the invoice data, especially the customer, issue date, invoice items,"
+" and terms."
 
 #: templates/accounting/invoice_form.html:53
 msgid "رجوع إلى قائمة الفواتير"
-msgstr ""
+msgstr "Back to invoice list"
 
 #: templates/accounting/invoice_form.html:77
 msgid "بيانات الفاتورة"
-msgstr ""
+msgstr "Invoice data"
 
 #: templates/accounting/invoice_form.html:140
 msgid "بنود الفاتورة (منتجات أو بنود حرة)"
-msgstr ""
+msgstr "Invoice items (products or free items)"
 
 #: templates/accounting/invoice_form.html:143
 msgid ""
 "يمكنك اختيار منتج من القائمة أو تركه فارغًا وكتابة وصف حر للبند، مع تحديد "
 "الكمية والسعر."
 msgstr ""
+"You can choose a product from the list or leave it empty and write a free "
+"description, specifying quantity and price."
 
 #: templates/accounting/invoice_form.html:162
 msgid "المنتج (اختياري)"
-msgstr ""
+msgstr "Product (optional)"
 
 #: templates/accounting/invoice_form.html:231
 msgid "إضافة بند جديد"
-msgstr ""
+msgstr "Add new item"
 
 #: templates/accounting/invoice_form.html:255
 msgid "اكتب هنا الشروط والأحكام أو ملاحظات الدفع التي ستظهر في الفاتورة."
 msgstr ""
+"Write here the terms and conditions or payment notes that will appear on the "
+"invoice."
 
 #: templates/accounting/invoice_form.html:265
 msgid "حفظ التعديلات"
-msgstr ""
+msgstr "Save changes"
 
 #: templates/accounting/invoice_form.html:267
 msgid "حفظ الفاتورة"
-msgstr ""
+msgstr "Save invoice"
 
 #: templates/accounting/invoice_print.html:252
+#: templates/accounting/orders/order_print.html:258
+#: templates/accounting/payment_print.html:213
 msgid "سلطنة عمان – ورشة/شركة الألمنيوم"
-msgstr ""
+msgstr "Sultanate of Oman – Aluminum workshop/company"
 
 #: templates/accounting/invoice_print.html:253
+#: templates/accounting/orders/order_print.html:259
+#: templates/accounting/payment_print.html:214
 msgid "هاتف:"
-msgstr ""
+msgstr "Phone:"
 
 #: templates/accounting/invoice_print.html:254
+#: templates/accounting/orders/order_print.html:260
+#: templates/accounting/payment_print.html:215
 msgid "بريد إلكتروني:"
-msgstr ""
+msgstr "Email:"
 
 #: templates/accounting/invoice_print.html:259
 msgid "فاتورة"
-msgstr ""
+msgstr "Invoice"
 
 #: templates/accounting/invoice_print.html:262
 msgid "رقم الفاتورة:"
-msgstr ""
+msgstr "Invoice number:"
 
 #: templates/accounting/invoice_print.html:266
 msgid "تاريخ الإصدار:"
-msgstr ""
+msgstr "Issue date:"
 
 #: templates/accounting/invoice_print.html:290
+#: templates/accounting/orders/order_print.html:331
+#: templates/accounting/payment_print.html:264
 msgid "بيانات الزبون"
-msgstr ""
+msgstr "Customer details"
 
 #: templates/accounting/invoice_print.html:292
+#: templates/accounting/orders/order_print.html:333
+#: templates/accounting/payment_print.html:267
 msgid "الاسم:"
-msgstr ""
+msgstr "Name:"
 
 #: templates/accounting/invoice_print.html:294
+#: templates/accounting/orders/order_print.html:335
+#: templates/accounting/payment_print.html:272
 msgid "الشركة:"
-msgstr ""
+msgstr "Company:"
 
 #: templates/accounting/invoice_print.html:297
+#: templates/accounting/orders/order_print.html:338
 msgid "الرقم الضريبي:"
-msgstr ""
+msgstr "Tax number:"
 
 #: templates/accounting/invoice_print.html:300
+#: templates/accounting/orders/order_print.html:341
+#: templates/accounting/payment_print.html:278
 msgid "الهاتف:"
-msgstr ""
+msgstr "Phone:"
 
 #: templates/accounting/invoice_print.html:303
+#: templates/accounting/orders/order_print.html:344
+#: templates/accounting/payment_print.html:284
 msgid "العنوان:"
-msgstr ""
+msgstr "Address:"
 
 #: templates/accounting/invoice_print.html:310
 msgid "ملخص الفاتورة"
-msgstr ""
+msgstr "Invoice summary"
 
 #: templates/accounting/invoice_print.html:315
 msgid "إجمالي الفاتورة"
-msgstr ""
+msgstr "Invoice total"
 
 #: templates/accounting/invoice_print.html:319
 msgid "إجمالي المدفوع"
-msgstr ""
+msgstr "Total paid"
 
 #: templates/accounting/invoice_print.html:387
 msgid "الوصف / التفاصيل"
-msgstr ""
+msgstr "Description / details"
 
 #: templates/accounting/invoice_print.html:406
 msgid "الدفعات على هذه الفاتورة"
-msgstr ""
+msgstr "Payments on this invoice"
 
 #: templates/accounting/invoice_print.html:427
 msgid "لا توجد دفعات مسجلة على هذه الفاتورة."
-msgstr ""
+msgstr "There are no payments recorded on this invoice."
 
 #: templates/accounting/invoice_print.html:436
+#: templates/accounting/orders/order_print.html:427
 msgid "يمكنك استخدام أمر الطباعة في المتصفح (Ctrl + P) ثم اختيار"
+msgstr "You can use the browser print command (Ctrl + P) and then choose"
+
+#: templates/accounting/orders/order_detail.html:4
+#, python-format
+msgid "تفاصيل الطلب #%(id)s"
+msgstr "Order #%(id)s details"
+
+#: templates/accounting/orders/order_detail.html:5
+msgid "تفاصيل طلب الزبون مع البنود والإجمالي."
+msgstr "Customer order details with items and total."
+
+#: templates/accounting/orders/order_detail.html:13
+#, python-format
+msgid "الطلب #%(id)s"
+msgstr "Order #%(id)s"
+
+#: templates/accounting/orders/order_detail.html:16
+msgid "عرض تفاصيل الطلب، حالة المعالجة، وجميع البنود المرتبطة به."
 msgstr ""
+"View order details, processing status, and all related line items."
+
+#: templates/accounting/orders/order_detail.html:24
+msgid "تأكيد الطلب"
+msgstr "Confirm order"
+
+#: templates/accounting/orders/order_detail.html:31
+msgid "عرض الفاتورة"
+msgstr "View invoice"
+
+#: templates/accounting/orders/order_detail.html:44
+msgid "طباعة"
+msgstr "Print"
+
+#: templates/accounting/orders/order_detail.html:51
+msgid "رجوع"
+msgstr "Back"
+
+#: templates/accounting/orders/order_detail.html:73
+#: templates/accounting/orders/order_list.html:46
+msgid "نوع الطلب"
+msgstr "Order type"
+
+#: templates/accounting/orders/order_detail.html:77
+#: templates/accounting/orders/order_list.html:69
+#: templates/accounting/orders/order_print.html:278
+msgid "أونلاين"
+msgstr "Online"
+
+#: templates/accounting/orders/order_detail.html:81
+#: templates/accounting/orders/order_list.html:73
+#: templates/accounting/orders/order_print.html:280
+msgid "موظف"
+msgstr "Staff"
+
+#: templates/accounting/orders/order_detail.html:91
+#: templates/accounting/orders/order_list.html:79
+#: templates/accounting/orders/order_print.html:286
+#: templates/accounting/orders/order_print.html:287
+msgid "مؤكد"
+msgstr "Confirmed"
+
+#: templates/accounting/orders/order_detail.html:93
+#: templates/accounting/orders/order_list.html:81
+#: templates/accounting/orders/order_print.html:289
+#: templates/accounting/orders/order_print.html:290
+msgid "بانتظار التأكيد"
+msgstr "Pending confirmation"
+
+#: templates/accounting/orders/order_detail.html:95
+#: templates/accounting/orders/order_list.html:83
+#: templates/accounting/orders/order_print.html:292
+#: templates/accounting/orders/order_print.html:293
+msgid "ملغي"
+msgstr "Cancelled"
+
+#: templates/accounting/orders/order_detail.html:97
+#: templates/accounting/orders/order_list.html:85
+#: templates/accounting/orders/order_print.html:295
+#: templates/accounting/orders/order_print.html:296
+msgid "مسودة"
+msgstr "Draft"
+
+#: templates/accounting/orders/order_detail.html:104
+msgid "تم التأكيد بواسطة"
+msgstr "Confirmed by"
+
+#: templates/accounting/orders/order_detail.html:108
+msgid "وقت التأكيد"
+msgstr "Confirmation time"
+
+#: templates/accounting/orders/order_detail.html:115
+#: templates/accounting/orders/order_form.html:56
+#: templates/accounting/orders/order_print.html:419
+msgid "ملاحظات داخلية"
+msgstr "Internal notes"
+
+#: templates/accounting/orders/order_detail.html:157
+#: templates/accounting/orders/order_print.html:408
+msgid "لا توجد بنود في هذا الطلب."
+msgstr "There are no items in this order."
+
+#: templates/accounting/orders/order_detail.html:165
+#: templates/accounting/orders/order_print.html:355
+msgid "إجمالي الطلب"
+msgstr "Order total"
+
+#: templates/accounting/orders/order_form.html:4
+#: templates/accounting/orders/order_form.html:17
+#: templates/accounting/orders/order_list.html:22
+msgid "طلب جديد"
+msgstr "New order"
+
+#: templates/accounting/orders/order_form.html:5
+msgid "إنشاء أو تعديل طلب زبون مع بنود متعددة."
+msgstr "Create or edit a customer order with multiple items."
+
+#: templates/accounting/orders/order_form.html:15
+#, python-format
+msgid "تعديل طلب #%(id)s"
+msgstr "Edit order #%(id)s"
+
+#: templates/accounting/orders/order_form.html:21
+msgid "إدارة طلبات الزبائن مع إمكانية إضافة بنود من المنتجات أو كبنود حرة."
+msgstr ""
+"Manage customer orders with the ability to add items from products or as "
+"free items."
+
+#: templates/accounting/orders/order_form.html:25
+msgid "رجوع إلى الطلبات"
+msgstr "Back to orders"
+
+#: templates/accounting/orders/order_form.html:63
+msgid "هذه الملاحظات لا تظهر للزبون، وتستخدم فقط لأغراض داخلية."
+msgstr ""
+"These notes are not visible to the customer and are used for internal "
+"purposes only."
+
+#: templates/accounting/orders/order_form.html:74
+#: templates/accounting/orders/order_print.html:364
+msgid "بنود الطلب"
+msgstr "Order items"
+
+#: templates/accounting/orders/order_form.html:77
+msgid "بند جديد"
+msgstr "New item"
+
+#: templates/accounting/orders/order_form.html:86
+msgid "الوصف الحر"
+msgstr "Free description"
+
+#: templates/accounting/orders/order_form.html:147
+msgid "يمكنك ترك حقل المنتج فارغًا وكتابة وصف حر للبند."
+msgstr ""
+"You can leave the product field empty and write a free description for the "
+"item."
+
+#: templates/accounting/orders/order_form.html:160
+msgid "حفظ الطلب"
+msgstr "Save order"
+
+#: templates/accounting/orders/order_list.html:5
+msgid "قائمة طلبات الزبائن مع الحالة والإجمالي."
+msgstr "Customer orders list with status and total."
+
+#: templates/accounting/orders/order_list.html:17
+msgid "عرض جميع الطلبات المسجّلة في نظام المحاسبة، مع حالة الطلب والإجمالي."
+msgstr ""
+"View all orders recorded in the accounting system, with order status and "
+"total."
+
+#: templates/accounting/orders/order_list.html:30
+#, python-format
+msgid ""
+"\n"
+"        إجمالي %(count)s طلب\n"
+"      "
+msgstr ""
+"\n"
+"        Total of %(count)s orders\n"
+"      "
+
+#: templates/accounting/orders/order_list.html:43
+msgid "#"
+msgstr "#"
+
+#: templates/accounting/orders/order_list.html:49
+msgid "خيارات"
+msgstr "Options"
+
+#: templates/accounting/orders/order_list.html:93
+msgid "تفاصيل"
+msgstr "Details"
+
+#: templates/accounting/orders/order_print.html:265
+msgid "طلب"
+msgstr "Order"
+
+#: templates/accounting/orders/order_print.html:268
+msgid "رقم الطلب:"
+msgstr "Order number:"
+
+#: templates/accounting/orders/order_print.html:272
+msgid "تاريخ الإنشاء:"
+msgstr "Creation date:"
+
+#: templates/accounting/orders/order_print.html:276
+msgid "نوع الطلب:"
+msgstr "Order type:"
+
+#: templates/accounting/orders/order_print.html:300
+msgid "تم إدخاله بواسطة:"
+msgstr "Entered by:"
+
+#: templates/accounting/orders/order_print.html:309
+msgid "تم التأكيد بواسطة:"
+msgstr "Confirmed by:"
+
+#: templates/accounting/orders/order_print.html:313
+msgid "وقت التأكيد:"
+msgstr "Confirmation time:"
+
+#: templates/accounting/orders/order_print.html:318
+msgid "الفاتورة المرتبطة:"
+msgstr "Related invoice:"
+
+#: templates/accounting/orders/order_print.html:351
+msgid "ملخص الطلب"
+msgstr "Order summary"
+
+#: templates/accounting/payment_print.html:7
+#: templates/accounting/payment_print.html:220
+msgid "إيصال دفع"
+msgstr "Payment receipt"
+
+#: templates/accounting/payment_print.html:223
+msgid "رقم الإيصال:"
+msgstr "Receipt number:"
+
+#: templates/accounting/payment_print.html:227
+msgid "تاريخ الدفع:"
+msgstr "Payment date:"
+
+#: templates/accounting/payment_print.html:231
+msgid "المبلغ:"
+msgstr "Amount:"
+
+#: templates/accounting/payment_print.html:235
+msgid "طريقة الدفع:"
+msgstr "Payment method:"
+
+#: templates/accounting/payment_print.html:239
+msgid "نوع الدفعة:"
+msgstr "Payment type:"
+
+#: templates/accounting/payment_print.html:242
+msgid "دفعة مرتبطة بحساب / فاتورة"
+msgstr "Payment linked to account / invoice"
+
+#: templates/accounting/payment_print.html:246
+msgid "دفعة عامة (رصيد للعميل)"
+msgstr "General payment (customer credit)"
+
+#: templates/accounting/payment_print.html:252
+msgid "مرجع:"
+msgstr "Reference:"
+
+#: templates/accounting/payment_print.html:253
+msgid "فاتورة رقم"
+msgstr "Invoice number"
+
+#: templates/accounting/payment_print.html:293
+msgid "ملخص الدفع"
+msgstr "Payment summary"
+
+#: templates/accounting/payment_print.html:296
+msgid "المبلغ المدفوع"
+msgstr "Amount paid"
+
+#: templates/accounting/payment_print.html:317
+msgid "لاستخدام الإيصال رقميًا، يمكنك اختيار"
+msgstr "To use the receipt digitally, you can choose"
+
+#: templates/accounting/payment_print.html:319
+msgid "من شاشة الطباعة."
+msgstr "from the print screen."
+
+#: templates/accounting/payment_print.html:329
+msgid "إيصال دفع آلي من نظام مزون ألمنيوم"
+msgstr "Automatic payment receipt from Mazoon Aluminum system"
 
 #: templates/base.html:115 templates/base.html:234
 msgid "الرئيسية"
-msgstr ""
+msgstr "Home"
 
 #: templates/base.html:119
 msgid "عنّا"
-msgstr ""
+msgstr "About us"
 
 #: templates/base.html:123 templates/website/lab.html:62
 msgid "المختبر"
-msgstr ""
+msgstr "Lab"
 
 #: templates/base.html:127 templates/website/blog_list.html:10
 #: templates/website/blog_list.html:12 templates/website/blog_list.html:14
@@ -583,73 +1179,73 @@ msgstr ""
 #: templates/website/blog_list.html:119 templates/website/blog_list.html:121
 #: templates/website/blog_list.html:169 templates/website/blog_list.html:189
 msgid "المدونة"
-msgstr ""
+msgstr "Blog"
 
 #: templates/base.html:131 templates/website/product_list.html:62
 msgid "المنتجات"
-msgstr ""
+msgstr "Products"
 
 #: templates/base.html:135 templates/website/contact.html:64
 #: templates/website/contact.html:79
 msgid "اتصل بنا"
-msgstr ""
+msgstr "Contact us"
 
 #: templates/base.html:181
 msgid "تسجيل الخروج"
-msgstr ""
+msgstr "Log out"
 
 #: templates/base.html:189 templates/registration/login.html:4
 #: templates/registration/login.html:15
 msgid "تسجيل الدخول"
-msgstr ""
+msgstr "Log in"
 
 #: templates/base.html:231
 msgid "جميع الحقوق محفوظة"
-msgstr ""
+msgstr "All rights reserved"
 
 #: templates/base.html:235
 msgid "الخصوصية"
-msgstr ""
+msgstr "Privacy"
 
 #: templates/cart/detail.html:4 templates/cart/detail.html:7
 msgid "سلة المشتريات"
-msgstr ""
+msgstr "Shopping cart"
 
 #: templates/cart/detail.html:11
 msgid "سلتك فارغة حالياً."
-msgstr ""
+msgstr "Your cart is currently empty."
 
 #: templates/cart/detail.html:19
 msgid "السعر"
-msgstr ""
+msgstr "Price"
 
 #: templates/cart/detail.html:44
 msgid "متابعة التسوق"
-msgstr ""
+msgstr "Continue shopping"
 
 #: templates/cart/detail.html:50
 msgid "الإجمالي الكلي"
-msgstr ""
+msgstr "Grand total"
 
 #: templates/cart/detail.html:56
 msgid "إتمام الطلب"
-msgstr ""
+msgstr "Checkout"
 
 #: templates/portal/dashboard.html:4
 msgid "لوحة الزبون"
-msgstr ""
+msgstr "Customer dashboard"
 
 #: templates/portal/dashboard.html:12
 msgid "مرحبًا"
-msgstr ""
+msgstr "Welcome"
 
 #: templates/portal/dashboard.html:17
 msgid "تحديث بياناتي"
-msgstr ""
+msgstr "Update my details"
 
 #: templates/portal/dashboard.html:20
 msgid "طلباتي"
-msgstr ""
+msgstr "My orders"
 
 #: templates/portal/dashboard.html:33 templates/portal/dashboard.html:45
 #: templates/portal/dashboard.html:57 templates/portal/dashboard.html:98
@@ -657,67 +1253,55 @@ msgstr ""
 #: templates/website/home.html:203 templates/website/product_detail.html:57
 #: templates/website/product_list.html:103
 msgid "ر.ع"
-msgstr ""
+msgstr "OMR"
 
 #: templates/portal/dashboard.html:54
 msgid "الرصيد المتبقي"
-msgstr ""
-
-#: templates/portal/dashboard.html:71
-msgid "آخر الفواتير"
-msgstr ""
+msgstr "Remaining balance"
 
 #: templates/portal/dashboard.html:73
 msgid "كل الفواتير"
-msgstr ""
-
-#: templates/portal/dashboard.html:81
-msgid "رقم"
-msgstr ""
+msgstr "All invoices"
 
 #: templates/portal/dashboard.html:108
 msgid "لا توجد فواتير حتى الآن."
-msgstr ""
-
-#: templates/portal/dashboard.html:125
-msgid "آخر الدفعات"
-msgstr ""
+msgstr "There are no invoices yet."
 
 #: templates/portal/dashboard.html:127
 msgid "كل الدفعات"
-msgstr ""
+msgstr "All payments"
 
 #: templates/portal/dashboard.html:153
 msgid "لا توجد دفعات حتى الآن."
-msgstr ""
+msgstr "There are no payments yet."
 
 #: templates/registration/login.html:21
 msgid "اسم المستخدم أو كلمة المرور غير صحيحة. حاول مرة أخرى."
-msgstr ""
+msgstr "The username or password is incorrect. Please try again."
 
 #: templates/registration/login.html:29
 msgid "لديك صلاحية دخول، لكن لا تملك إذن للوصول لهذه الصفحة."
-msgstr ""
+msgstr "You are authenticated but do not have permission to access this page."
 
 #: templates/registration/login.html:33
 msgid "الرجاء تسجيل الدخول للوصول إلى الصفحة المطلوبة."
-msgstr ""
+msgstr "Please log in to access the requested page."
 
 #: templates/registration/login.html:44
 msgid "اسم المستخدم"
-msgstr ""
+msgstr "Username"
 
 #: templates/registration/login.html:63
 msgid "كلمة المرور"
-msgstr ""
+msgstr "Password"
 
 #: templates/registration/login.html:88
 msgid "دخول"
-msgstr ""
+msgstr "Log in"
 
 #: templates/website/about.html:64 templates/website/about.html:78
 msgid "من نحن"
-msgstr ""
+msgstr "Who we are"
 
 #: templates/website/about.html:66
 msgid "About us"
@@ -729,27 +1313,27 @@ msgstr ""
 
 #: templates/website/about.html:123
 msgid "قيمنا"
-msgstr ""
+msgstr "Our values"
 
 #: templates/website/about.html:125
 msgid "الجودة والاعتمادية في كل نظام."
-msgstr ""
+msgstr "Quality and reliability in every system."
 
 #: templates/website/about.html:126
 msgid "الابتكار المستمر في التصميم والأداء."
-msgstr ""
+msgstr "Continuous innovation in design and performance."
 
 #: templates/website/about.html:127
 msgid "الشراكة طويلة الأمد مع العملاء والمصنعين."
-msgstr ""
+msgstr "Long-term partnership with customers and manufacturers."
 
 #: templates/website/blog_detail.html:50
 msgid "تعليق"
-msgstr ""
+msgstr "Comment"
 
 #: templates/website/blog_detail.html:55
 msgid "الوسوم"
-msgstr ""
+msgstr "Tags"
 
 #: templates/website/blog_detail.html:75
 #, python-format
@@ -758,47 +1342,54 @@ msgid ""
 "          %(count)s تعليق\n"
 "        "
 msgstr ""
+"\n"
+"          %(count)s comment(s)\n"
+"        "
 
 #: templates/website/blog_detail.html:98
 msgid "لا توجد تعليقات بعد. كن أول من يعلق على هذه التدوينة."
-msgstr ""
+msgstr "No comments yet. Be the first to comment on this post."
 
 #: templates/website/blog_detail.html:105
 msgid "أضف تعليقاً"
-msgstr ""
+msgstr "Add a comment"
 
 #: templates/website/blog_detail.html:117
 msgid "البريد الإلكتروني (اختياري)"
-msgstr ""
+msgstr "Email (optional)"
 
 #: templates/website/blog_detail.html:122
 msgid "التعليق"
-msgstr ""
+msgstr "Comment text"
 
 #: templates/website/blog_detail.html:127
 msgid "إرسال التعليق"
-msgstr ""
+msgstr "Submit comment"
 
 #: templates/website/blog_detail.html:141
 msgid "عن هذه التدوينة"
-msgstr ""
+msgstr "About this post"
 
 #: templates/website/blog_detail.html:143
 msgid ""
 "يمكنك استخدام هذه المنطقة لإضافة وصف مختصر، ملاحظات تقنية، أو روابط لتدوينات "
 "مرتبطة."
 msgstr ""
+"You can use this area to add a short description, technical notes, or links "
+"to related posts."
 
 #: templates/website/blog_detail.html:150 templates/website/blog_list.html:336
 #: templates/website/product_detail.html:117
 msgid "ملاحظة"
-msgstr ""
+msgstr "Note"
 
 #: templates/website/blog_detail.html:152
 msgid ""
 "نموذج التعليقات هنا بسيط، ويمكن لاحقاً ربطه بنظام إشعارات أو موافقة يدوية من "
 "لوحة التحكم."
 msgstr ""
+"The comments form here is simple and can later be connected to a "
+"notification system or manual approval from the admin panel."
 
 #: templates/website/blog_list.html:18 templates/website/blog_list.html:20
 #: templates/website/blog_list.html:22 templates/website/blog_list.html:70
@@ -817,6 +1408,9 @@ msgid ""
 "        تدوينات مصنّفة تحت %(name)s في مدونة مزون ألمنيوم.\n"
 "      "
 msgstr ""
+"\n"
+"        Posts categorized under %(name)s in the Mazoon Aluminum blog.\n"
+"      "
 
 #: templates/website/blog_list.html:35 templates/website/blog_list.html:86
 #: templates/website/blog_list.html:141
@@ -835,6 +1429,9 @@ msgid ""
 "        تدوينات مرتبطة بالوسم %(name)s في مدونة مزون ألمنيوم.\n"
 "      "
 msgstr ""
+"\n"
+"        Posts tagged with %(name)s in the Mazoon Aluminum blog.\n"
+"      "
 
 #: templates/website/blog_list.html:45 templates/website/blog_list.html:96
 #: templates/website/blog_list.html:151
@@ -850,6 +1447,8 @@ msgstr ""
 msgid ""
 "اكتشف مقالات وأنشطة مزون ألمنيوم عن الأنظمة، المنتجات، والأخبار التقنية."
 msgstr ""
+"Discover Mazoon Aluminum articles and activities about systems, products, "
+"and technical news."
 
 #: templates/website/blog_list.html:53 templates/website/blog_list.html:104
 #: templates/website/blog_list.html:159
@@ -860,7 +1459,7 @@ msgstr ""
 
 #: templates/website/blog_list.html:186
 msgid "الوسم"
-msgstr ""
+msgstr "Tag"
 
 #: templates/website/blog_list.html:198
 #, python-format
@@ -869,36 +1468,41 @@ msgid ""
 "            نتائج البحث عن \"%(q)s\"\n"
 "          "
 msgstr ""
+"\n"
+"            Search results for \"%(q)s\"\n"
+"          "
 
 #: templates/website/blog_list.html:236
 msgid "اقرأ المزيد"
-msgstr ""
+msgstr "Read more"
 
 #: templates/website/blog_list.html:287
 msgid "لا توجد تدوينات متاحة حالياً."
-msgstr ""
+msgstr "There are no posts available at the moment."
 
 #: templates/website/blog_list.html:299
 msgid "بحث في المدونة"
-msgstr ""
+msgstr "Search in the blog"
 
 #: templates/website/blog_list.html:305
 msgid "كلمة البحث..."
-msgstr ""
+msgstr "Search term..."
 
 #: templates/website/blog_list.html:317
 msgid "التصنيفات"
-msgstr ""
+msgstr "Categories"
 
 #: templates/website/blog_list.html:321
 msgid "كل التدوينات"
-msgstr ""
+msgstr "All posts"
 
 #: templates/website/blog_list.html:338
 msgid ""
 "هذه صفحة قائمة التدوينات، ويمكن تطويرها لاحقاً لإضافة وسوم، مقالات مميزة، أو "
 "آخر الأخبار."
 msgstr ""
+"This is the blog list page, and it can later be enhanced with tags, featured "
+"articles, or the latest news."
 
 #: templates/website/contact.html:66 templates/website/contact.html:81
 msgid "Contact us"
@@ -907,6 +1511,8 @@ msgstr ""
 #: templates/website/contact.html:86
 msgid "يسعدنا تواصلك معنا بخصوص الأنظمة، التسعير، أو التعاون في المشاريع."
 msgstr ""
+"We are happy to hear from you regarding systems, pricing, or project "
+"collaboration."
 
 #: templates/website/contact.html:88
 msgid ""
@@ -916,32 +1522,34 @@ msgstr ""
 
 #: templates/website/contact.html:103
 msgid "الموضوع"
-msgstr ""
+msgstr "Subject"
 
 #: templates/website/contact.html:107
 msgid "الرسالة"
-msgstr ""
+msgstr "Message"
 
 #: templates/website/contact.html:112
 msgid "إرسال"
-msgstr ""
+msgstr "Send"
 
 #: templates/website/contact.html:124
 msgid "معلومات التواصل"
-msgstr ""
+msgstr "Contact information"
 
 #: templates/website/contact.html:126
 msgid "سلطنة عُمان"
-msgstr ""
+msgstr "Sultanate of Oman"
 
 #: templates/website/contact.html:131
 msgid "يمكنك تعديل هذه المعلومات لاحقاً لتطابق بيانات التواصل الحقيقية لشركتك."
 msgstr ""
+"You can edit this information later to match your company's real contact "
+"details."
 
 #: templates/website/home.html:7 templates/website/home.html:15
 #: templates/website/home.html:25
 msgid "مزون المنيوم - الرئيسية"
-msgstr ""
+msgstr "Mazoon Aluminum - Home"
 
 #: templates/website/home.html:11
 msgid ""
@@ -949,25 +1557,32 @@ msgid ""
 "الألمنيوم والألمنيوم العازل للحرارة، مع تركيز على الجودة والابتكار والشراكات "
 "المحلية."
 msgstr ""
+"Mazoon Aluminum is an Omani brand specialized in developing aluminum and "
+"thermal break aluminum window and door systems, with a focus on quality, "
+"innovation, and local partnerships."
 
 #: templates/website/home.html:17
 msgid ""
 "أنظمة ألمنيوم مبتكرة للنوافذ والأبواب مع أداء معتمد وشراكات محلية موثوقة."
 msgstr ""
+"Innovative aluminum systems for windows and doors with certified performance "
+"and trusted local partnerships."
 
 #: templates/website/home.html:27
 msgid ""
 "مزون المنيوم – حلول متكاملة لأنظمة النوافذ والأبواب من الألمنيوم والألمنيوم "
 "العازل للحرارة."
 msgstr ""
+"Mazoon Aluminum – Integrated solutions for aluminum and thermal break "
+"aluminum window and door systems."
 
 #: templates/website/home.html:41
 msgid "عشر سنوات من التميّز والريادة"
-msgstr ""
+msgstr "Ten years of excellence and leadership"
 
 #: templates/website/home.html:45
 msgid "أنظمة ألمنيوم مبتكرة للنوافذ والأبواب"
-msgstr ""
+msgstr "Innovative aluminum systems for windows and doors"
 
 #: templates/website/home.html:48
 msgid ""
@@ -975,173 +1590,197 @@ msgid ""
 "والأبواب من الألمنيوم والألمنيوم العازل للحرارة، بتركيز على الأداء المعتمد، "
 "والابتكار المستمر، والشراكات المحلية الموثوقة."
 msgstr ""
+"Mazoon Aluminum is a leading Omani brand specialized in developing and "
+"manufacturing aluminum and thermal break aluminum window and door systems, "
+"with a focus on certified performance, continuous innovation, and trusted "
+"local partnerships."
 
 #: templates/website/home.html:52
 msgid "استكشف الأنظمة"
-msgstr ""
+msgstr "Explore systems"
 
 #: templates/website/home.html:55
 msgid "تعرّف علينا أكثر"
-msgstr ""
+msgstr "Learn more about us"
 
 #: templates/website/home.html:64 templates/website/home.html:132
 msgid "أنظمة مزون للنوافذ والأبواب"
-msgstr ""
+msgstr "Mazoon systems for windows and doors"
 
 #: templates/website/home.html:76
 msgid "محاور التميز في مزون ألمنيوم"
-msgstr ""
+msgstr "Pillars of excellence at Mazoon Aluminum"
 
 #: templates/website/home.html:78
 msgid "أنظمة متطورة · أداء مُعتمد · ابتكار مستمر · شراكات ومشاريع"
 msgstr ""
+"Advanced systems · Certified performance · Continuous innovation · "
+"Partnerships and projects"
 
 #: templates/website/home.html:86
 msgid "أنظمة مزون"
-msgstr ""
+msgstr "Mazoon systems"
 
 #: templates/website/home.html:88
 msgid ""
 "مزون 45 · مزون 46 · مزون 56 العازل حرارياً، أنظمة مصممة لتوازن بين الجمال "
 "والمتانة وسهولة التصنيع."
 msgstr ""
+"Mazoon 45 · Mazoon 46 · Mazoon 56 thermal break systems, designed to balance "
+"aesthetics, durability, and ease of fabrication."
 
 #: templates/website/home.html:97
 msgid "أداء مُعتمد"
-msgstr ""
+msgstr "Certified performance"
 
 #: templates/website/home.html:99
 msgid ""
 "اختبارات معتمدة لأداء الهواء، الماء، الرياح، العزل الحراري، والعزل الصوتي "
 "لضمان أداء ثابت على المدى الطويل."
 msgstr ""
+"Certified tests for air, water, wind performance, thermal insulation, and "
+"sound insulation to ensure long-term consistent performance."
 
 #: templates/website/home.html:108
 msgid "البحث والتطوير"
-msgstr ""
+msgstr "Research and development"
 
 #: templates/website/home.html:110
 msgid ""
 "من التصميم الرقمي إلى النماذج الأولية والاختبارات الميدانية، نطوّر الأنظمة "
 "وفق احتياجات السوق المحلية."
 msgstr ""
+"From digital design to prototypes and field testing, we develop systems "
+"according to local market needs."
 
 #: templates/website/home.html:119
 msgid "المشاريع والشركاء"
-msgstr ""
+msgstr "Projects and partners"
 
 #: templates/website/home.html:121
 msgid ""
 "حلول متكاملة للمعماريين، الورش، وأصحاب المنازل، مع دعم فني وشركاء تصنيع "
 "وزجاج واكسسوارات موثوقين."
 msgstr ""
+"Integrated solutions for architects, workshops, and homeowners, with "
+"technical support and trusted partners for fabrication, glass, and "
+"accessories."
 
 #: templates/website/home.html:134
 msgid "جيل متطور من الأنظمة المفصلية، مع خيارات للعزل الحراري وتعدد غرف العزل."
 msgstr ""
+"An advanced generation of casement systems, with options for thermal "
+"insulation and multiple insulation chambers."
 
 #: templates/website/home.html:142
 msgid "مزون 45 – نظام مفصلي"
-msgstr ""
+msgstr "Mazoon 45 – Casement system"
 
 #: templates/website/home.html:144
 msgid ""
 "نظام مفصلي يجمع بين سهولة التصنيع وجودة الإنتاج مع تصميم أنيق يناسب الواجهات "
 "الحديثة."
 msgstr ""
+"A casement system that combines ease of fabrication and production quality "
+"with an elegant design suitable for modern facades."
 
 #: templates/website/home.html:147 templates/website/home.html:161
 #: templates/website/home.html:175
 msgid "إقرأ المزيد"
-msgstr ""
+msgstr "Read more"
 
 #: templates/website/home.html:156
 msgid "مزون 46 – تطوير مزون 45"
-msgstr ""
+msgstr "Mazoon 46 – Upgrade of Mazoon 45"
 
 #: templates/website/home.html:158
 msgid ""
 "يضيف غرف عزل إضافية لتحسين الأداء الصوتي والهوائي مع الحفاظ على سهولة "
 "التصنيع والمتانة العالية."
 msgstr ""
+"Adds additional insulation chambers to improve acoustic and air performance "
+"while maintaining ease of fabrication and high durability."
 
 #: templates/website/home.html:170
 msgid "مزون 56 – نظام مفصلي عازل للحرارة"
-msgstr ""
+msgstr "Mazoon 56 – Thermal break casement system"
 
 #: templates/website/home.html:172
 msgid ""
 "نظام ثيرمال بريك يوفر عزلًا حراريًا متقدمًا وترشيدًا في استهلاك الطاقة مع الحفاظ "
 "على جماليات التصميم."
 msgstr ""
+"A thermal break system that provides advanced thermal insulation and energy "
+"savings while preserving design aesthetics."
 
 #: templates/website/home.html:186
 msgid "منتجات مختارة"
-msgstr ""
+msgstr "Selected products"
 
 #: templates/website/home.html:188
 msgid "عرض جميع المنتجات"
-msgstr ""
+msgstr "View all products"
 
 #: templates/website/home.html:206 templates/website/product_detail.html:51
 msgid "متوفر"
-msgstr ""
+msgstr "Available"
 
 #: templates/website/home.html:213
 msgid "لا توجد منتجات حتى الآن."
-msgstr ""
+msgstr "There are no products yet."
 
 #: templates/website/home.html:221
 msgid "أحدث من المدونة"
-msgstr ""
+msgstr "Latest from the blog"
 
 #: templates/website/home.html:223
 msgid "الانتقال إلى المدونة"
-msgstr ""
+msgstr "Go to blog"
 
 #: templates/website/home.html:249
 msgid "لا توجد تدوينات حتى الآن."
-msgstr ""
+msgstr "There are no posts yet."
 
 #: templates/website/home.html:257
 msgid "شركاؤنا المحليون الموثوقون"
-msgstr ""
+msgstr "Our trusted local partners"
 
 #: templates/website/home.html:259
 msgid "سحب الألمنيوم · الزجاج · الأجهزة والاكسسوارات · باودر الصبغ"
 msgstr ""
+"Aluminum extrusion · Glass · Hardware and accessories · Powder coating"
 
 #: templates/website/home.html:267
 msgid "نابكو عمان لسحب الألمنيوم"
-msgstr ""
+msgstr "NAPCO Oman for aluminum extrusion"
 
 #: templates/website/home.html:269
 msgid "شريك سحب مقاطع الألمنيوم المعتمدة بمعايير ISO."
-msgstr ""
+msgstr "Extrusion partner for ISO-certified aluminum profiles."
 
 #: templates/website/home.html:277
 msgid "مصنع التسنيم لمعالجة الزجاج"
-msgstr ""
+msgstr "Al Tasneem Glass Processing Factory"
 
 #: templates/website/home.html:279
 msgid "توريد، معالجة، وتقسية الزجاج لمشاريع مزون."
-msgstr ""
+msgstr "Supply, processing, and tempering of glass for Mazoon projects."
 
 #: templates/website/home.html:287
 msgid "بهوان لهندسة المعادن والزجاج"
-msgstr ""
+msgstr "Bhawani Metal and Glass Engineering"
 
 #: templates/website/home.html:289
 msgid "حلول زجاج متقدمة للمشاريع الخاصة."
-msgstr ""
+msgstr "Advanced glass solutions for special projects."
 
 #: templates/website/home.html:297
 msgid "مجموعة تاول – باودر كوتنج"
-msgstr ""
+msgstr "Towell Group – Powder coating"
 
 #: templates/website/home.html:299
 msgid "الوكيل الرسمي لباودر الصبغ جوتن (جوتن عمان)."
-msgstr ""
+msgstr "Official agent for Jotun powder coating (Jotun Oman)."
 
 #: templates/website/lab.html:64
 msgid "Lab"
@@ -1149,7 +1788,7 @@ msgstr ""
 
 #: templates/website/lab.html:75
 msgid "مختبر مزون المنيوم"
-msgstr ""
+msgstr "Mazoon Aluminum Lab"
 
 #: templates/website/lab.html:77
 msgid "Mazoon Aluminum Lab"
@@ -1157,54 +1796,58 @@ msgstr ""
 
 #: templates/website/lab.html:118
 msgid "مجالات الاختبار"
-msgstr ""
+msgstr "Testing fields"
 
 #: templates/website/lab.html:120
 msgid "اختبارات أداء الهواء والماء والرياح."
-msgstr ""
+msgstr "Air, water, and wind performance tests."
 
 #: templates/website/lab.html:121
 msgid "اختبارات العزل الحراري والصوتي."
-msgstr ""
+msgstr "Thermal and acoustic insulation tests."
 
 #: templates/website/lab.html:122
 msgid "اختبارات جودة التشطيب والأكسسوارات."
-msgstr ""
+msgstr "Finish and accessories quality tests."
 
 #: templates/website/product_detail.html:48
 msgid "منتج مميز"
-msgstr ""
+msgstr "Featured product"
 
 #: templates/website/product_detail.html:66
 msgid "اطلب الآن"
-msgstr ""
+msgstr "Order now"
 
 #: templates/website/product_detail.html:82
 msgid "إضافة إلى السلة"
-msgstr ""
+msgstr "Add to cart"
 
 #: templates/website/product_detail.html:87
 msgid "عرض السلة"
-msgstr ""
+msgstr "View cart"
 
 #: templates/website/product_detail.html:92
 msgid "الرجاء تسجيل الدخول لتتمكن من الطلب أو إضافة المنتجات إلى السلة."
-msgstr ""
+msgstr "Please log in to place orders or add products to the cart."
 
 #: templates/website/product_detail.html:108
 msgid "عن هذا المنتج"
-msgstr ""
+msgstr "About this product"
 
 #: templates/website/product_detail.html:110
 msgid ""
 "يمكنك استخدام هذه المساحة لإضافة مواصفات فنية، ملفات تحميل (كتالوج PDF)، أو "
 "روابط لأنظمة مرتبطة."
 msgstr ""
+"You can use this area to add technical specifications, download files (PDF "
+"catalogs), or links to related systems."
 
 #: templates/website/product_detail.html:119
 msgid ""
 "يمكنك طلب هذا المنتج مباشرة أو إضافته أولاً إلى السلة ثم إتمام الطلب لاحقًا."
 msgstr ""
+"You can order this product directly or add it first to the cart and complete "
+"the order later."
 
 #: templates/website/product_list.html:64
 msgid "Products"
@@ -1212,7 +1855,7 @@ msgstr ""
 
 #: templates/website/product_list.html:72
 msgid "منتجات مزون المنيوم"
-msgstr ""
+msgstr "Mazoon Aluminum products"
 
 #: templates/website/product_list.html:74
 msgid "Mazoon Aluminum Products"
@@ -1221,6 +1864,7 @@ msgstr ""
 #: templates/website/product_list.html:79
 msgid "أنظمة نوافذ وأبواب تم تطويرها بعناية لتناسب المشاريع الحديثة."
 msgstr ""
+"Window and door systems carefully developed to suit modern projects."
 
 #: templates/website/product_list.html:81
 msgid "Carefully developed window and door systems for modern projects."
@@ -1228,20 +1872,20 @@ msgstr ""
 
 #: templates/website/product_list.html:108
 msgid "مميز"
-msgstr ""
+msgstr "Featured"
 
 #: templates/website/product_list.html:119
 msgid "لا توجد منتجات متاحة حالياً."
-msgstr ""
+msgstr "There are no products available at the moment."
 
 #: website/views.py:94
 msgid "تم إضافة تعليقك بنجاح."
-msgstr ""
+msgstr "Your comment has been added successfully."
 
 #: website/views.py:97
 msgid "الاسم والمحتوى مطلوبان."
-msgstr ""
+msgstr "Name and content are required."
 
 #: website/views.py:130
 msgid "تم إرسال رسالتك، سنعاود التواصل معك قريباً."
-msgstr ""
+msgstr "Your message has been sent. We will contact you soon."
