@@ -30,7 +30,7 @@ from .forms import (
     InvoiceItemFormSet,
     ApplyPaymentForm,
     OrderItemFormSet,
-    OrderForm,
+    OrderForm, PaymentForm,
 )
 from .models import Invoice, Payment, Customer, Order, InvoiceItem
 
@@ -857,3 +857,57 @@ class PaymentPrintView(DetailView):
     model = Payment
     template_name = "accounting/payment_print.html"
     context_object_name = "payment"
+
+# ============================================================
+# Payment List
+# ============================================================
+@method_decorator(accounting_staff_required, name="dispatch")
+class PaymentListView(ListView):
+    model = Payment
+    template_name = "accounting/payment_list.html"
+    context_object_name = "payments"
+    paginate_by = 20
+
+    def get_queryset(self):
+        qs = (
+            super()
+            .get_queryset()
+            .select_related("customer", "invoice")
+            .order_by("-date", "-id")
+        )
+
+        # Optional filters
+        customer = self.request.GET.get("customer")
+        if customer:
+            qs = qs.filter(customer__name__icontains=customer)
+
+        method = self.request.GET.get("method")
+        if method:
+            qs = qs.filter(method=method)
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["method_filter"] = self.request.GET.get("method", "")
+        ctx["customer_filter"] = self.request.GET.get("customer", "")
+        return ctx
+
+@method_decorator(accounting_staff_required, name="dispatch")
+class PaymentCreateView(CreateView):
+    """
+    إضافة دفعة جديدة من شاشة عامة.
+    يمكن ربطها بفاتورة أو تركها دفعة عامة (بدون فاتورة).
+    """
+    model = Payment
+    form_class = PaymentForm
+    template_name = "accounting/payment_form.html"
+
+    def get_initial(self):
+        initial = super().get_initial()
+        # تاريخ اليوم كقيمة افتراضية
+        initial.setdefault("date", timezone.now().date())
+        return initial
+
+    def get_success_url(self):
+        return reverse("accounting:payment_list")

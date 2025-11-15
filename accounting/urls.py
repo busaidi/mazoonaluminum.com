@@ -58,7 +58,11 @@ urlpatterns = [
         name="customer_add_payment",
     ),
 
+
+
     # Payments apply (general payment settlement)
+    path("payments/", views.PaymentListView.as_view(), name="payment_list"),
+    path("payments/new/", views.PaymentCreateView.as_view(), name="payment_create"),
     path(
         "payments/<int:pk>/apply/",
         views.apply_general_payment,
@@ -69,7 +73,7 @@ urlpatterns = [
     views.PaymentPrintView.as_view(),
     name="payment_print",
     ),
-
+    path("payments/", views.PaymentListView.as_view(), name="payment_list"),
 
 
     # Orders (staff)

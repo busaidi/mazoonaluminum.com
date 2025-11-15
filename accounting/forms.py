@@ -126,6 +126,39 @@ class PaymentForInvoiceForm(forms.ModelForm):
         return amount
 
 
+
+class PaymentForm(forms.ModelForm):
+    """
+    نموذج عام لإضافة دفعة:
+    - اختيار العميل
+    - (اختياري) ربطها بفاتورة
+    """
+
+    class Meta:
+        model = Payment
+        fields = ["customer", "invoice", "date", "amount", "method", "notes"]
+        widgets = {
+            "date": forms.DateInput(attrs={"type": "date"}),
+            "notes": forms.Textarea(attrs={"rows": 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Bootstrap styling (select vs input)
+        for name, field in self.fields.items():
+            css = field.widget.attrs.get("class", "")
+            if name in ("customer", "invoice", "method"):
+                field.widget.attrs["class"] = (css + " form-select").strip()
+            else:
+                field.widget.attrs["class"] = (css + " form-control").strip()
+
+    def clean_amount(self):
+        amount = self.cleaned_data.get("amount")
+        if amount is not None and amount <= 0:
+            raise forms.ValidationError(_("Amount must be greater than zero."))
+        return amount
+
 # ============================================================
 # Customer forms
 # ============================================================
