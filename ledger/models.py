@@ -95,6 +95,21 @@ class JournalEntry(models.Model):
     description = models.TextField(blank=True, verbose_name=_("الوصف"))
     posted = models.BooleanField(default=False, verbose_name=_("مرحّل"))
 
+    posted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("تاريخ الترحيل"),
+    )
+
+    posted_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="posted_journal_entries",
+        verbose_name=_("مُرحّل بواسطة"),
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         User,

@@ -75,28 +75,41 @@
         </p>
       </div>
       <div class="col-md-4">
-        <ul class="list-unstyled small mb-0">
-          <li class="mb-1">
-            <strong>{% trans "السنة المالية" %}:</strong>
-            {{ entry.fiscal_year|default:"-" }}
-          </li>
-          <li class="mb-1">
-            <strong>{% trans "أنشئ بواسطة" %}:</strong>
-            {{ entry.created_by|default:"-" }}
-          </li>
-          <li class="mb-1">
-            <strong>{% trans "تاريخ الإنشاء" %}:</strong>
-            {{ entry.created_at|date:"Y-m-d H:i" }}
-          </li>
-          <li class="mb-1">
-            <strong>{% trans "الحالة" %}:</strong>
-            {% if entry.posted %}
-              <span class="badge bg-success">{% trans "مُرحّل" %}</span>
-            {% else %}
-              <span class="badge bg-secondary">{% trans "مسودة" %}</span>
-            {% endif %}
-          </li>
-        </ul>
+          <ul class="list-unstyled small mb-0">
+  <li class="mb-1">
+    <strong>{% trans "السنة المالية" %}:</strong>
+    {{ entry.fiscal_year|default:"-" }}
+  </li>
+  <li class="mb-1">
+    <strong>{% trans "أنشئ بواسطة" %}:</strong>
+    {{ entry.created_by|default:"-" }}
+  </li>
+  <li class="mb-1">
+    <strong>{% trans "تاريخ الإنشاء" %}:</strong>
+    {{ entry.created_at|date:"Y-m-d H:i" }}
+  </li>
+
+  {% if entry.posted %}
+    <li class="mb-1">
+      <strong>{% trans "تاريخ الترحيل" %}:</strong>
+      {{ entry.posted_at|date:"Y-m-d H:i" }}
+    </li>
+    <li class="mb-1">
+      <strong>{% trans "مُرحّل بواسطة" %}:</strong>
+      {{ entry.posted_by|default:"-" }}
+    </li>
+  {% endif %}
+
+  <li class="mb-1">
+    <strong>{% trans "الحالة" %}:</strong>
+    {% if entry.posted %}
+      <span class="badge bg-success">{% trans "مُرحّل" %}</span>
+    {% else %}
+      <span class="badge bg-secondary">{% trans "مسودة" %}</span>
+    {% endif %}
+  </li>
+</ul>
+
       </div>
     </div>
   </div>

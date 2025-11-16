@@ -738,8 +738,12 @@ def journalentry_post_view(request, pk):
         messages.error(request, _("لا يمكن ترحيل قيد غير متوازن."))
         return redirect("ledger:journalentry_detail", pk=entry.pk)
 
+    # Set posting info
     entry.posted = True
-    entry.save(update_fields=["posted"])
+    entry.posted_at = timezone.now()
+    entry.posted_by = request.user
+    entry.save(update_fields=["posted", "posted_at", "posted_by"])
+
     messages.success(request, _("تم ترحيل القيد بنجاح."))
     return redirect("ledger:journalentry_detail", pk=entry.pk)
 
@@ -760,7 +764,11 @@ def journalentry_unpost_view(request, pk):
         messages.info(request, _("القيد غير مُرحّل."))
         return redirect("ledger:journalentry_detail", pk=entry.pk)
 
+    # Clear posting info
     entry.posted = False
-    entry.save(update_fields=["posted"])
+    entry.posted_at = None
+    entry.posted_by = None
+    entry.save(update_fields=["posted", "posted_at", "posted_by"])
+
     messages.success(request, _("تم إلغاء ترحيل القيد بنجاح."))
     return redirect("ledger:journalentry_detail", pk=entry.pk)
