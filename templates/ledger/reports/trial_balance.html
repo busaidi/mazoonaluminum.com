@@ -2,62 +2,142 @@
 {% load i18n %}
 
 {% block ledger_content %}
-<h2 class="h5 mb-3">{% trans "ميزان المراجعة" %}</h2>
+<div class="mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+  <div>
+    <h2 class="h5 mb-1">{% trans "ميزان المراجعة" %}</h2>
+    <p class="text-muted small mb-0">
+      {% trans "تجميع أرصدة الحسابات (مدين / دائن) حسب الفترة أو السنة المالية." %}
+    </p>
+  </div>
+</div>
 
-<form method="get" class="row g-2 mb-3 align-items-end">
-  <div class="col-auto">
-    <label class="form-label mb-1">{% trans "من تاريخ" %}</label>
-    {{ form.date_from }}
-  </div>
-  <div class="col-auto">
-    <label class="form-label mb-1">{% trans "إلى تاريخ" %}</label>
-    {{ form.date_to }}
-  </div>
-  <div class="col-auto">
-    <button type="submit" class="btn btn-primary btn-sm">
-      {% trans "تصفية" %}
-    </button>
-  </div>
-</form>
-
-{% if rows %}
-  <table class="table table-sm table-striped align-middle">
-    <thead class="table-light">
-      <tr>
-        <th>{% trans "الكود" %}</th>
-        <th>{% trans "اسم الحساب" %}</th>
-        <th>{% trans "النوع" %}</th>
-        <th class="text-end">{% trans "مدين" %}</th>
-        <th class="text-end">{% trans "دائن" %}</th>
-        <th class="text-end">{% trans "الرصيد (مدين - دائن)" %}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in rows %}
-        <tr>
-          <td>{{ row.account__code }}</td>
-          <td>{{ row.account__name }}</td>
-          <td>{{ row.account__type }}</td>
-          <td class="text-end">{{ row.debit }}</td>
-          <td class="text-end">{{ row.credit }}</td>
-          <td class="text-end">{{ row.balance }}</td>
-        </tr>
+{# لو فيه أخطاء في الفورم نعرضها عشان نعرف ليش ما يتفلتر #}
+{% if form.errors %}
+  <div class="alert alert-danger small">
+    {{ form.non_field_errors }}
+    <ul class="mb-0">
+      {% for field in form %}
+        {% for error in field.errors %}
+          <li>
+            <strong>{{ field.label }}:</strong> {{ error }}
+          </li>
+        {% endfor %}
       {% endfor %}
-    </tbody>
-    <tfoot class="table-light">
-      <tr>
-        <th colspan="3" class="text-end">
-          {% trans "الإجمالي" %}
-        </th>
-        <th class="text-end">{{ total_debit }}</th>
-        <th class="text-end">{{ total_credit }}</th>
-        <th class="text-end">{{ total_balance }}</th>
-      </tr>
-    </tfoot>
-  </table>
+    </ul>
+  </div>
+{% endif %}
+
+{# ===== نموذج الفلترة داخل كرت ===== #}
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end">
+
+      <div class="col-md-3 col-sm-6">
+        <label class="form-label mb-1">
+          {% trans "السنة المالية" %}
+        </label>
+        {{ form.fiscal_year }}
+      </div>
+
+      <div class="col-md-3 col-sm-6">
+        <label class="form-label mb-1">
+          {% trans "من تاريخ" %}
+        </label>
+        {{ form.date_from }}
+      </div>
+
+      <div class="col-md-3 col-sm-6">
+        <label class="form-label mb-1">
+          {% trans "إلى تاريخ" %}
+        </label>
+        {{ form.date_to }}
+      </div>
+
+      <div class="col-md-3 col-sm-6 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm mt-auto">
+          {% trans "تصفية" %}
+        </button>
+        <a href="{% url 'ledger:trial_balance' %}"
+           class="btn btn-outline-secondary btn-sm mt-auto">
+          {% trans "إعادة تعيين" %}
+        </a>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{# ===== جدول ميزان المراجعة ===== #}
+{% if rows %}
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h3 class="h6 mb-0">{% trans "نتائج ميزان المراجعة" %}</h3>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="text-nowrap">{% trans "الكود" %}</th>
+              <th class="text-nowrap">{% trans "اسم الحساب" %}</th>
+              <th class="text-nowrap">{% trans "النوع" %}</th>
+              <th class="text-end text-nowrap">{% trans "مدين" %}</th>
+              <th class="text-end text-nowrap">{% trans "دائن" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for row in rows %}
+            <tr>
+              <td class="text-nowrap">{{ row.account__code }}</td>
+              <td class="text-nowrap">{{ row.account__name }}</td>
+              <td class="text-nowrap">
+                {% if row.account__type == "asset" %}
+                  {% trans "أصل" %}
+                {% elif row.account__type == "liability" %}
+                  {% trans "التزامات" %}
+                {% elif row.account__type == "equity" %}
+                  {% trans "حقوق ملكية" %}
+                {% elif row.account__type == "revenue" %}
+                  {% trans "إيرادات" %}
+                {% elif row.account__type == "expense" %}
+                  {% trans "مصروفات" %}
+                {% else %}
+                  {{ row.account__type }}
+                {% endif %}
+              </td>
+              <td class="text-end text-nowrap">
+                {{ row.debit|default_if_none:"0.000" }}
+              </td>
+              <td class="text-end text-nowrap">
+                {{ row.credit|default_if_none:"0.000" }}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+
+          {% if totals %}
+            <tfoot>
+              <tr class="table-light fw-semibold">
+                <td colspan="3" class="text-end text-nowrap">
+                  {% trans "الإجمالي" %}
+                </td>
+                <td class="text-end text-nowrap">
+                  {{ totals.total_debit|default_if_none:"0.000" }}
+                </td>
+                <td class="text-end text-nowrap">
+                  {{ totals.total_credit|default_if_none:"0.000" }}
+                </td>
+              </tr>
+            </tfoot>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+  </div>
 {% else %}
-  <p class="text-muted">
-    {% trans "لا توجد بيانات لهذه الفترة." %}
+  <p class="text-muted small">
+    {% trans "لا توجد بيانات للفترة المحددة. جرّب تغيير الفترة أو اختيار سنة مالية مختلفة." %}
   </p>
 {% endif %}
 {% endblock %}

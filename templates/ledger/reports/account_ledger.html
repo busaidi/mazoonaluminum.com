@@ -2,78 +2,143 @@
 {% load i18n %}
 
 {% block ledger_content %}
-<h2 class="h5 mb-3">{% trans "دفتر حساب" %}</h2>
+<div class="mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+  <div>
+    <h2 class="h5 mb-1">{% trans "كشف حساب" %}</h2>
+    <p class="text-muted small mb-0">
+      {% trans "عرض حركة الحساب ورصيده التراكمي حسب الفترة أو السنة المالية." %}
+    </p>
+  </div>
+</div>
 
-<form method="get" class="row g-2 mb-3 align-items-end">
-  <div class="col-auto">
-    <label class="form-label mb-1">{% trans "الحساب" %}</label>
-    {{ form.account }}
+{# ===== نموذج الفلترة ===== #}
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3 col-sm-6">
+        <label class="form-label mb-1">
+          {% trans "الحساب" %}
+        </label>
+        {{ form.account }}
+      </div>
+      <div class="col-md-2 col-sm-6">
+        <label class="form-label mb-1">
+          {% trans "السنة المالية" %}
+        </label>
+        {{ form.fiscal_year }}
+      </div>
+      <div class="col-md-2 col-sm-6">
+        <label class="form-label mb-1">
+          {% trans "من تاريخ" %}
+        </label>
+        {{ form.date_from }}
+      </div>
+      <div class="col-md-2 col-sm-6">
+        <label class="form-label mb-1">
+          {% trans "إلى تاريخ" %}
+        </label>
+        {{ form.date_to }}
+      </div>
+      <div class="col-md-3 col-sm-6 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm mt-auto">
+          {% trans "تصفية" %}
+        </button>
+        <a href="{% url 'ledger:account_ledger' %}"
+           class="btn btn-outline-secondary btn-sm mt-auto">
+          {% trans "إعادة تعيين" %}
+        </a>
+      </div>
+    </form>
   </div>
-  <div class="col-auto">
-    <label class="form-label mb-1">{% trans "من تاريخ" %}</label>
-    {{ form.date_from }}
-  </div>
-  <div class="col-auto">
-    <label class="form-label mb-1">{% trans "إلى تاريخ" %}</label>
-    {{ form.date_to }}
-  </div>
-  <div class="col-auto">
-    <button type="submit" class="btn btn-primary btn-sm">
-      {% trans "تصفية" %}
-    </button>
-  </div>
-</form>
+</div>
 
 {% if account %}
-  <h3 class="h6 mb-2">
-    {% blocktrans with code=account.code name=account.name %}
-      الحساب: {{ code }} - {{ name }}
-    {% endblocktrans %}
-  </h3>
-{% endif %}
+  {# ===== كرت معلومات الحساب ===== #}
+  <div class="card shadow-sm border-0 mb-3">
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <div>
+        <h3 class="h6 mb-1">
+          {% blocktrans with code=account.code name=account.name %}
+            الحساب: {{ code }} - {{ name }}
+          {% endblocktrans %}
+        </h3>
+        <p class="text-muted small mb-0">
+          {% trans "نوع الحساب" %}:
+          <span class="badge bg-light text-muted border">
+            {{ account.get_type_display }}
+          </span>
+        </p>
+      </div>
+    </div>
+  </div>
 
-{% if lines %}
-  <table class="table table-sm table-striped align-middle">
-    <thead class="table-light">
-      <tr>
-        <th>{% trans "التاريخ" %}</th>
-        <th>{% trans "رقم القيد" %}</th>
-        <th>{% trans "الوصف" %}</th>
-        <th class="text-end">{% trans "مدين" %}</th>
-        <th class="text-end">{% trans "دائن" %}</th>
-        <th class="text-end">{% trans "الرصيد التراكمي" %}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for line in lines %}
-        <tr>
-          <td>{{ line.entry.date }}</td>
-          <td>
-            <a href="{% url 'ledger:journalentry_detail' line.entry.pk %}">
-              JE-{{ line.entry.id }}
-            </a>
-          </td>
-          <td>{{ line.description }}</td>
-          <td class="text-end">{{ line.debit }}</td>
-          <td class="text-end">{{ line.credit }}</td>
-          <td class="text-end">{{ line.running_balance }}</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-    <tfoot class="table-light">
-      <tr>
-        <th colspan="3" class="text-end">
-          {% trans "الإجمالي للفترة" %}
-        </th>
-        <th class="text-end">{{ total_debit }}</th>
-        <th class="text-end">{{ total_credit }}</th>
-        <th class="text-end">{{ total_balance }}</th>
-      </tr>
-    </tfoot>
-  </table>
-{% elif account %}
-  <p class="text-muted">
-    {% trans "لا توجد حركات لهذا الحساب في الفترة المحددة." %}
+  {# ===== جدول كشف الحساب ===== #}
+  {% if lines or opening_balance %}
+    <div class="card shadow-sm border-0">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h4 class="h6 mb-0">{% trans "تفاصيل الحركة" %}</h4>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-sm table-striped align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="text-nowrap">{% trans "التاريخ" %}</th>
+                <th class="text-nowrap">{% trans "رقم القيد" %}</th>
+                <th class="text-nowrap">{% trans "المرجع" %}</th>
+                <th class="text-nowrap">{% trans "الوصف" %}</th>
+                <th class="text-end text-nowrap">{% trans "مدين" %}</th>
+                <th class="text-end text-nowrap">{% trans "دائن" %}</th>
+                <th class="text-end text-nowrap">{% trans "الرصيد التراكمي" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="table-secondary">
+                <td colspan="6" class="text-end">
+                  {% trans "رصيد افتتاحي" %}
+                </td>
+                <td class="text-end">{{ opening_balance }}</td>
+              </tr>
+
+              {% for item in lines %}
+                <tr>
+                  <td class="text-nowrap">{{ item.date }}</td>
+                  <td class="text-nowrap">
+                    <a href="{% url 'ledger:journalentry_detail' item.entry_id %}">
+                      JE-{{ item.entry_id }}
+                    </a>
+                  </td>
+                  <td class="text-nowrap">
+                    {{ item.reference|default:"-" }}
+                  </td>
+                  <td class="small">
+                    {{ item.description|default:"-" }}
+                  </td>
+                  <td class="text-end text-nowrap">
+                    {{ item.debit }}
+                  </td>
+                  <td class="text-end text-nowrap">
+                    {{ item.credit }}
+                  </td>
+                  <td class="text-end text-nowrap">
+                    {{ item.balance }}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <p class="text-muted small">
+      {% trans "لا توجد حركات لهذا الحساب في الفترة المحددة." %}
+    </p>
+  {% endif %}
+{% else %}
+  <p class="text-muted small">
+    {% trans "الرجاء اختيار حساب وتحديد الفترة (اختياري) ثم الضغط على زر التصفية لعرض كشف الحساب." %}
   </p>
 {% endif %}
 {% endblock %}

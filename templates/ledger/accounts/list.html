@@ -2,48 +2,69 @@
 {% load i18n %}
 
 {% block ledger_content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h2 class="h5 mb-0">{% trans "القيود اليومية" %}</h2>
-  <a href="{% url 'ledger:journalentry_create' %}" class="btn btn-primary btn-sm">
-    + {% trans "قيد جديد" %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h2 class="h5 mb-0">{% trans "دليل الحسابات" %}</h2>
+  <a href="{% url 'ledger:account_create' %}" class="btn btn-primary btn-sm">
+    + {% trans "حساب جديد" %}
   </a>
 </div>
 
-<table class="table table-sm table-striped align-middle">
-  <thead class="table-light">
-    <tr>
-      <th>{% trans "رقم" %}</th>
-      <th>{% trans "التاريخ" %}</th>
-      <th>{% trans "المرجع" %}</th>
-      <th>{% trans "الوصف" %}</th>
-      <th>{% trans "إجمالي المدين" %}</th>
-      <th>{% trans "إجمالي الدائن" %}</th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for e in entries %}
-      <tr>
-        <td>JE-{{ e.id }}</td>
-        <td>{{ e.date }}</td>
-        <td>{{ e.reference|default:"-" }}</td>
-        <td>{{ e.description|default:"-"|truncatechars:40 }}</td>
-        <td>{{ e.total_debit }}</td>
-        <td>{{ e.total_credit }}</td>
-        <td class="text-end">
-          <a href="{% url 'ledger:journalentry_detail' e.pk %}"
-             class="btn btn-outline-secondary btn-sm">
-            {% trans "عرض" %}
-          </a>
-        </td>
-      </tr>
-    {% empty %}
-      <tr>
-        <td colspan="7" class="text-center text-muted">
-          {% trans "لا توجد قيود حتى الآن." %}
-        </td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="card shadow-sm border-0">
+  <div class="card-body">
+    {% if accounts %}
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 10%">{% trans "الكود" %}</th>
+              <th style="width: 30%">{% trans "اسم الحساب" %}</th>
+              <th style="width: 20%">{% trans "النوع" %}</th>
+              <th style="width: 25%">{% trans "الحساب الأب" %}</th>
+              <th style="width: 15%"></th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for account in accounts %}
+            <tr>
+              <td class="text-nowrap">
+                {{ account.code }}
+              </td>
+              <td>
+                {{ account.name }}
+              </td>
+              <td class="small">
+                {{ account.get_type_display }}
+              </td>
+              <td class="small text-muted">
+                {{ account.parent|default:"-" }}
+              </td>
+              <td class="text-end text-nowrap">
+                <a href="{% url 'ledger:account_edit' account.pk %}"
+                   class="btn btn-outline-secondary btn-sm">
+                  {% trans "تعديل" %}
+                </a>
+                {# رابط سريع لكشف حساب هذا الحساب #}
+                <a href="{% url 'ledger:account_ledger' %}?account={{ account.pk }}"
+                   class="btn btn-light btn-sm ms-1">
+                  {% trans "كشف حساب" %}
+                </a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted small py-3">
+                {% trans "لا توجد حسابات حتى الآن." %}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted small mb-0">
+        {% trans "لا توجد حسابات حتى الآن." %}
+      </p>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}

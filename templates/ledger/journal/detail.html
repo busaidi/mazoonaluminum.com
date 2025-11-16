@@ -2,16 +2,24 @@
 {% load i18n %}
 
 {% block ledger_content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
     <h2 class="h5 mb-1">
       {% blocktrans with id=entry.id %}قيد يومية رقم JE-{{ id }}{% endblocktrans %}
     </h2>
     <p class="text-muted small mb-0">
-      {% trans "التاريخ" %}: {{ entry.date }}
-      · {% trans "المرجع" %}: {{ entry.reference|default:"-" }}
+      <span>
+        <strong>{% trans "التاريخ" %}:</strong>
+        {{ entry.date }}
+      </span>
+      <span class="mx-1">·</span>
+      <span>
+        <strong>{% trans "المرجع" %}:</strong>
+        {{ entry.reference|default:"-" }}
+      </span>
     </p>
   </div>
+
   <div class="d-flex gap-2">
     <a href="{% url 'ledger:journalentry_list' %}" class="btn btn-light btn-sm">
       {% trans "رجوع إلى القيود" %}
@@ -19,69 +27,98 @@
   </div>
 </div>
 
-<div class="card mb-3 shadow-sm">
+{# ===== بيانات عامة عن القيد ===== #}
+<div class="card mb-3 shadow-sm border-0">
   <div class="card-body">
-    <p class="mb-1">
-      <strong>{% trans "الوصف" %}</strong>
-    </p>
-    <p class="text-muted small mb-2">
-      {{ entry.description|default:_("لا يوجد وصف.") }}
-    </p>
-    <p class="mb-0 small">
-      <strong>{% trans "الحالة" %}:</strong>
-      {% if entry.posted %}
-        <span class="badge bg-success">{% trans "مُرحّل" %}</span>
-      {% else %}
-        <span class="badge bg-secondary">{% trans "مسودة" %}</span>
-      {% endif %}
-    </p>
+    <div class="row g-3 align-items-start">
+      <div class="col-md-8">
+        <p class="mb-1">
+          <strong>{% trans "الوصف" %}</strong>
+        </p>
+        <p class="text-muted small mb-2">
+          {{ entry.description|default:_("لا يوجد وصف.") }}
+        </p>
+      </div>
+      <div class="col-md-4">
+        <ul class="list-unstyled small mb-0">
+          <li class="mb-1">
+            <strong>{% trans "السنة المالية" %}:</strong>
+            {{ entry.fiscal_year|default:"-" }}
+          </li>
+          <li class="mb-1">
+            <strong>{% trans "أنشئ بواسطة" %}:</strong>
+            {{ entry.created_by|default:"-" }}
+          </li>
+          <li class="mb-1">
+            <strong>{% trans "تاريخ الإنشاء" %}:</strong>
+            {{ entry.created_at|date:"Y-m-d H:i" }}
+          </li>
+          <li class="mb-1">
+            <strong>{% trans "الحالة" %}:</strong>
+            {% if entry.posted %}
+              <span class="badge bg-success">{% trans "مُرحّل" %}</span>
+            {% else %}
+              <span class="badge bg-secondary">{% trans "مسودة" %}</span>
+            {% endif %}
+          </li>
+        </ul>
+      </div>
+    </div>
   </div>
 </div>
 
-<div class="card shadow-sm">
+{# ===== أسطر القيد ===== #}
+<div class="card shadow-sm border-0">
   <div class="card-body">
     <h6 class="mb-3">{% trans "أسطر القيد" %}</h6>
-    <table class="table table-sm table-striped align-middle mb-0">
-      <thead class="table-light">
-        <tr>
-          <th style="width: 5%">{% trans "م" %}</th>
-          <th style="width: 30%">{% trans "الحساب" %}</th>
-          <th style="width: 35%">{% trans "الوصف" %}</th>
-          <th class="text-end" style="width: 15%">{% trans "مدين" %}</th>
-          <th class="text-end" style="width: 15%">{% trans "دائن" %}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for line in entry.lines.all %}
+
+    <div class="table-responsive">
+      <table class="table table-sm table-striped align-middle mb-0">
+        <thead class="table-light">
           <tr>
-            <td>{{ forloop.counter }}</td>
-            <td>{{ line.account }}</td>
-            <td>{{ line.description|default:"-" }}</td>
-            <td class="text-end">{{ line.debit }}</td>
-            <td class="text-end">{{ line.credit }}</td>
+            <th style="width: 5%">{% trans "م" %}</th>
+            <th style="width: 30%">{% trans "الحساب" %}</th>
+            <th style="width: 35%">{% trans "الوصف" %}</th>
+            <th class="text-end" style="width: 15%">{% trans "مدين" %}</th>
+            <th class="text-end" style="width: 15%">{% trans "دائن" %}</th>
           </tr>
-        {% empty %}
+        </thead>
+        <tbody>
+          {% for line in entry.lines.all %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td>{{ line.account }}</td>
+              <td class="small">{{ line.description|default:"-" }}</td>
+              <td class="text-end text-nowrap">{{ line.debit }}</td>
+              <td class="text-end text-nowrap">{{ line.credit }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted small py-3">
+                {% trans "لا توجد أسطر في هذا القيد." %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-light">
           <tr>
-            <td colspan="5" class="text-center text-muted">
-              {% trans "لا توجد أسطر في هذا القيد." %}
-            </td>
+            <th colspan="3" class="text-end">{% trans "الإجمالي" %}</th>
+            <th class="text-end text-nowrap">{{ entry.total_debit }}</th>
+            <th class="text-end text-nowrap">{{ entry.total_credit }}</th>
           </tr>
-        {% endfor %}
-      </tbody>
-      <tfoot class="table-light">
-        <tr>
-          <th colspan="3" class="text-end">{% trans "الإجمالي" %}</th>
-          <th class="text-end">{{ entry.total_debit }}</th>
-          <th class="text-end">{{ entry.total_credit }}</th>
-        </tr>
-      </tfoot>
-    </table>
+        </tfoot>
+      </table>
+    </div>
 
     <p class="mt-2 mb-0 small">
       {% if entry.is_balanced %}
-        <span class="text-success">{% trans "القيد متوازن." %}</span>
+        <span class="text-success">
+          {% trans "القيد متوازن: مجموع المدين يساوي مجموع الدائن." %}
+        </span>
       {% else %}
-        <span class="text-danger">{% trans "تحذير: القيد غير متوازن!" %}</span>
+        <span class="text-danger">
+          {% trans "تحذير: القيد غير متوازن! يرجى مراجعة الأسطر." %}
+        </span>
       {% endif %}
     </p>
   </div>

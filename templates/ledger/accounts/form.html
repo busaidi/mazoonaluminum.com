@@ -2,65 +2,105 @@
 {% load i18n %}
 
 {% block ledger_content %}
-<h2 class="h5 mb-3">{% trans "الحساب" %}</h2>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h2 class="h5 mb-0">
+    {% if form.instance.pk %}
+      {% trans "تعديل حساب" %}
+    {% else %}
+      {% trans "إنشاء حساب جديد" %}
+    {% endif %}
+  </h2>
+</div>
 
-<form method="post" class="card card-body shadow-sm">
-  {% csrf_token %}
-  {{ form.non_field_errors }}
+<form method="post" class="card shadow-sm border-0">
+  <div class="card-body">
+    {% csrf_token %}
 
-  <div class="row g-3">
-    <div class="col-md-3">
-      <label class="form-label" for="{{ form.code.id_for_label }}">{% trans "الكود" %}</label>
-      {{ form.code }}
-      {{ form.code.errors }}
-    </div>
+    {# حقول مخفية إن وجدت (مثل pk) #}
+    {% for hidden in form.hidden_fields %}
+      {{ hidden }}
+    {% endfor %}
 
-    <div class="col-md-5">
-      <label class="form-label" for="{{ form.name.id_for_label }}">{% trans "اسم الحساب" %}</label>
-      {{ form.name }}
-      {{ form.name.errors }}
-    </div>
-
-    <div class="col-md-4">
-      <label class="form-label" for="{{ form.type.id_for_label }}">{% trans "النوع" %}</label>
-      {{ form.type }}
-      {{ form.type.errors }}
-    </div>
-
-    <div class="col-md-6">
-      <label class="form-label" for="{{ form.parent.id_for_label }}">{% trans "الحساب الأب (إن وجد)" %}</label>
-      {{ form.parent }}
-      {{ form.parent.errors }}
-    </div>
-
-    <div class="col-md-3 d-flex align-items-center">
-      <div class="form-check mt-3">
-        {{ form.is_active }}
-        <label class="form-check-label ms-1" for="{{ form.is_active.id_for_label }}">
-          {% trans "نشط" %}
-        </label>
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger small">
+        {{ form.non_field_errors }}
       </div>
-      {{ form.is_active.errors }}
-    </div>
+    {% endif %}
 
-    <div class="col-md-3 d-flex align-items-center">
-      <div class="form-check mt-3">
-        {{ form.allow_settlement }}
-        <label class="form-check-label ms-1" for="{{ form.allow_settlement.id_for_label }}">
-          {% trans "السماح بالتسوية" %}
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label" for="{{ form.code.id_for_label }}">
+          {% trans "الكود" %}
         </label>
+        {{ form.code }}
+        {% for error in form.code.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
       </div>
-      {{ form.allow_settlement.errors }}
-    </div>
-  </div>
 
-  <div class="mt-3 d-flex justify-content-between">
-    <a href="{% url 'ledger:account_list' %}" class="btn btn-light btn-sm">
-      {% trans "رجوع" %}
-    </a>
-    <button type="submit" class="btn btn-primary btn-sm">
-      {% trans "حفظ" %}
-    </button>
+      <div class="col-md-5">
+        <label class="form-label" for="{{ form.name.id_for_label }}">
+          {% trans "اسم الحساب" %}
+        </label>
+        {{ form.name }}
+        {% for error in form.name.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label" for="{{ form.type.id_for_label }}">
+          {% trans "النوع" %}
+        </label>
+        {{ form.type }}
+        {% for error in form.type.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label" for="{{ form.parent.id_for_label }}">
+          {% trans "الحساب الأب (إن وجد)" %}
+        </label>
+        {{ form.parent }}
+        {% for error in form.parent.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="col-md-3 d-flex align-items-center">
+        <div class="form-check mt-3">
+          {{ form.is_active }}
+          <label class="form-check-label ms-1" for="{{ form.is_active.id_for_label }}">
+            {% trans "نشط" %}
+          </label>
+        </div>
+        {% for error in form.is_active.errors %}
+          <div class="text-danger small w-100">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="col-md-3 d-flex align-items-center">
+        <div class="form-check mt-3">
+          {{ form.allow_settlement }}
+          <label class="form-check-label ms-1" for="{{ form.allow_settlement.id_for_label }}">
+            {% trans "السماح بالتسوية" %}
+          </label>
+        </div>
+        {% for error in form.allow_settlement.errors %}
+          <div class="text-danger small w-100">{{ error }}</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="mt-3 d-flex justify-content-between">
+      <a href="{% url 'ledger:account_list' %}" class="btn btn-light btn-sm">
+        {% trans "رجوع" %}
+      </a>
+      <button type="submit" class="btn btn-primary btn-sm">
+        {% trans "حفظ" %}
+      </button>
+    </div>
   </div>
 </form>
 {% endblock %}

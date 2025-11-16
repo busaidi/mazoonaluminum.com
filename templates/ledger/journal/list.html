@@ -2,48 +2,112 @@
 {% load i18n %}
 
 {% block ledger_content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h2 class="h5 mb-0">{% trans "القيود اليومية" %}</h2>
-  <a href="{% url 'ledger:journalentry_create' %}" class="btn btn-primary btn-sm">
-    + {% trans "قيد جديد" %}
-  </a>
+<div class="mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+  <div>
+    <h2 class="h5 mb-1">{% trans "القيود اليومية" %}</h2>
+    <p class="text-muted small mb-0">
+      {% trans "قائمة قيود اليومية المسجلة في النظام مرتّبة من الأحدث إلى الأقدم." %}
+    </p>
+  </div>
+  <div>
+    <a href="{% url 'ledger:journalentry_create' %}" class="btn btn-primary btn-sm">
+      + {% trans "قيد جديد" %}
+    </a>
+  </div>
 </div>
 
-<table class="table table-sm table-striped align-middle">
-  <thead class="table-light">
-    <tr>
-      <th>{% trans "رقم" %}</th>
-      <th>{% trans "التاريخ" %}</th>
-      <th>{% trans "المرجع" %}</th>
-      <th>{% trans "الوصف" %}</th>
-      <th>{% trans "إجمالي المدين" %}</th>
-      <th>{% trans "إجمالي الدائن" %}</th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for e in entries %}
-      <tr>
-        <td>JE-{{ e.id }}</td>
-        <td>{{ e.date }}</td>
-        <td>{{ e.reference|default:"-" }}</td>
-        <td>{{ e.description|default:"-"|truncatechars:40 }}</td>
-        <td>{{ e.total_debit }}</td>
-        <td>{{ e.total_credit }}</td>
-        <td class="text-end">
-          <a href="{% url 'ledger:journalentry_detail' e.pk %}"
-             class="btn btn-outline-secondary btn-sm">
-            {% trans "عرض" %}
-          </a>
-        </td>
-      </tr>
-    {% empty %}
-      <tr>
-        <td colspan="7" class="text-center text-muted">
-          {% trans "لا توجد قيود حتى الآن." %}
-        </td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="card shadow-sm border-0">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-sm table-striped align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="text-nowrap">{% trans "رقم" %}</th>
+            <th class="text-nowrap">{% trans "التاريخ" %}</th>
+            <th class="text-nowrap">{% trans "المرجع" %}</th>
+            <th class="text-nowrap">{% trans "الوصف" %}</th>
+            <th class="text-nowrap text-end">{% trans "إجمالي المدين" %}</th>
+            <th class="text-nowrap text-end">{% trans "إجمالي الدائن" %}</th>
+            <th class="text-nowrap text-end">{% trans "إجراءات" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in entries %}
+            <tr>
+              <td class="text-nowrap">JE-{{ e.id }}</td>
+              <td class="text-nowrap">{{ e.date }}</td>
+              <td class="text-nowrap">{{ e.reference|default:"-" }}</td>
+              <td class="small">
+                {{ e.description|default:"-"|truncatechars:60 }}
+              </td>
+              <td class="text-end text-nowrap">
+                {{ e.total_debit }}
+              </td>
+              <td class="text-end text-nowrap">
+                {{ e.total_credit }}
+              </td>
+              <td class="text-end text-nowrap">
+                <a href="{% url 'ledger:journalentry_detail' e.pk %}"
+                   class="btn btn-outline-secondary btn-sm">
+                  {% trans "عرض" %}
+                </a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7" class="text-center text-muted small py-4">
+                {% trans "لا توجد قيود حتى الآن." %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# ===== التصفح (Pagination) ===== #}
+    {% if is_paginated %}
+      <nav class="mt-3">
+        <ul class="pagination pagination-sm mb-0 justify-content-center">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-item page-link"
+                 href="?page={{ page_obj.previous_page_number }}">
+                {% trans "السابق" %}
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                {% trans "السابق" %}
+              </span>
+            </li>
+          {% endif %}
+
+          <li class="page-item disabled">
+            <span class="page-link">
+              {% blocktrans with number=page_obj.number num_pages=page_obj.paginator.num_pages %}
+                صفحة {{ number }} من {{ num_pages }}
+              {% endblocktrans %}
+            </span>
+          </li>
+
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link"
+                 href="?page={{ page_obj.next_page_number }}">
+                {% trans "التالي" %}
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                {% trans "التالي" %}
+              </span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}

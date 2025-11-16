@@ -2,126 +2,169 @@
 {% load i18n %}
 
 {% block ledger_content %}
-<h2 class="h5 mb-3">{% trans "إنشاء قيد يومية" %}</h2>
+<div class="mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+  <div>
+    <h2 class="h5 mb-1">{% trans "إنشاء قيد يومية" %}</h2>
+    <p class="text-muted small mb-0">
+      {% trans "أدخل بيانات القيد ورصّح الأسطر بحيث يتساوى مجموع المدين مع مجموع الدائن." %}
+    </p>
+  </div>
+</div>
 
-<form method="post" class="card card-body shadow-sm">
-  {% csrf_token %}
+<form method="post" class="card shadow-sm border-0">
+  <div class="card-body">
+    {% csrf_token %}
 
-  {{ entry_form.non_field_errors }}
+    {# أخطاء عامة لرأس القيد #}
+    {% if entry_form.non_field_errors %}
+      <div class="alert alert-danger small">
+        {{ entry_form.non_field_errors }}
+      </div>
+    {% endif %}
 
-  <!-- رأس القيد -->
-  <div class="row g-3 mb-4">
+    {# ===== رأس القيد ===== #}
+    <div class="row g-3 mb-3">
 
-    <div class="col-md-3">
-      <label class="form-label" for="{{ entry_form.date.id_for_label }}">
-        {% trans "التاريخ" %}
-      </label>
-      {{ entry_form.date }}
-      {{ entry_form.date.errors }}
+      <div class="col-md-3">
+        <label class="form-label" for="{{ entry_form.date.id_for_label }}">
+          {% trans "التاريخ" %}
+        </label>
+        {{ entry_form.date }}
+        {% for error in entry_form.date.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label" for="{{ entry_form.reference.id_for_label }}">
+          {% trans "المرجع" %}
+        </label>
+        {{ entry_form.reference }}
+        {% for error in entry_form.reference.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label" for="{{ entry_form.description.id_for_label }}">
+          {% trans "الوصف" %}
+        </label>
+        {{ entry_form.description }}
+        {% for error in entry_form.description.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
     </div>
 
-    <div class="col-md-3">
-      <label class="form-label" for="{{ entry_form.reference.id_for_label }}">
-        {% trans "المرجع" %}
-      </label>
-      {{ entry_form.reference }}
-      {{ entry_form.reference.errors }}
+    <hr class="my-3">
+
+    {# ===== أسطر القيد ===== #}
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="mb-0">{% trans "أسطر القيد" %}</h6>
+      <small class="text-muted">
+        {% trans "يجب أن يكون مجموع المدين مساويًا لمجموع الدائن قبل الحفظ." %}
+      </small>
     </div>
 
-    <div class="col-md-6">
-      <label class="form-label" for="{{ entry_form.description.id_for_label }}">
-        {% trans "الوصف" %}
-      </label>
-      {{ entry_form.description }}
-      {{ entry_form.description.errors }}
+    {% if line_formset.non_form_errors %}
+      <div class="alert alert-danger small mb-2">
+        {{ line_formset.non_form_errors }}
+      </div>
+    {% endif %}
+
+    {{ line_formset.management_form }}
+
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-2" id="lines-table">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 35%">{% trans "الحساب" %}</th>
+            <th style="width: 25%">{% trans "الوصف" %}</th>
+            <th style="width: 15%" class="text-end">{% trans "مدين" %}</th>
+            <th style="width: 15%" class="text-end">{% trans "دائن" %}</th>
+            <th style="width: 10%"></th>
+          </tr>
+        </thead>
+
+        <tbody id="lines-body">
+          {% for form in line_formset %}
+            <tr class="line-row">
+              {# لو فيه حقول مخفية (id / DELETE) نعرضها في نفس الصف #}
+              {% for hidden in form.hidden_fields %}
+                {{ hidden }}
+              {% endfor %}
+
+              <td>
+                {{ form.account }}
+                {% for error in form.account.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </td>
+              <td>
+                {{ form.description }}
+                {% for error in form.description.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </td>
+              <td>
+                {{ form.debit }}
+                {% for error in form.debit.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </td>
+              <td>
+                {{ form.credit }}
+                {% for error in form.credit.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </td>
+              <td class="text-end">
+                {% if forloop.first %}
+                  {# لا نحذف أول صف #}
+                {% else %}
+                  <button type="button" class="btn btn-outline-danger btn-sm remove-row">
+                    &times;
+                  </button>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+
+      </table>
     </div>
 
+    <div class="mt-2 mb-3">
+      <button type="button" id="add-row" class="btn btn-outline-primary btn-sm">
+        + {% trans "إضافة سطر" %}
+      </button>
+    </div>
+
+    <hr class="my-3">
+
+    <div class="d-flex justify-content-between">
+      <a href="{% url 'ledger:journalentry_list' %}" class="btn btn-light btn-sm">
+        {% trans "رجوع" %}
+      </a>
+
+      <button type="submit" class="btn btn-primary btn-sm">
+        {% trans "حفظ القيد" %}
+      </button>
+    </div>
   </div>
-
-  <hr class="my-3">
-
-  <!-- جدول الأسطر -->
-  <h6 class="mb-2">{% trans "أسطر القيد" %}</h6>
-
-  {{ line_formset.non_form_errors }}
-  {{ line_formset.management_form }}
-
-  <table class="table table-sm align-middle" id="lines-table">
-    <thead class="table-light">
-      <tr>
-        <th style="width: 35%">{% trans "الحساب" %}</th>
-        <th style="width: 25%">{% trans "الوصف" %}</th>
-        <th style="width: 15%">{% trans "مدين" %}</th>
-        <th style="width: 15%">{% trans "دائن" %}</th>
-        <th style="width: 10%"></th>
-      </tr>
-    </thead>
-
-    <tbody id="lines-body">
-      {% for form in line_formset %}
-      <tr class="line-row">
-        <td>
-          {{ form.account }}
-          {{ form.account.errors }}
-        </td>
-        <td>
-          {{ form.description }}
-          {{ form.description.errors }}
-        </td>
-        <td>
-          {{ form.debit }}
-          {{ form.debit.errors }}
-        </td>
-        <td>
-          {{ form.credit }}
-          {{ form.credit.errors }}
-        </td>
-        <td class="text-end">
-          {% if forloop.first %}
-            <!-- لا نحذف أول صف -->
-          {% else %}
-            <button type="button" class="btn btn-outline-danger btn-sm remove-row">
-              &times;
-            </button>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-
-  </table>
-
-  <div class="mt-2">
-    <button type="button" id="add-row" class="btn btn-outline-primary btn-sm">
-      + {% trans "إضافة سطر" %}
-    </button>
-  </div>
-
-  <hr class="my-3">
-
-  <div class="d-flex justify-content-between">
-    <a href="{% url 'ledger:journalentry_list' %}" class="btn btn-light btn-sm">
-      {% trans "رجوع" %}
-    </a>
-
-    <button type="submit" class="btn btn-primary btn-sm">
-      {% trans "حفظ القيد" %}
-    </button>
-  </div>
-
 </form>
 
-<!-- JavaScript لإضافة/حذف الصفوف -->
+{# ===== JavaScript لإضافة/حذف الصفوف ===== #}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   const addBtn = document.getElementById("add-row");
   const linesBody = document.getElementById("lines-body");
 
-  // نلقط حقل TOTAL_FORMS لأي formset (ينتهي اسمه بـ -TOTAL_FORMS)
+  // نلقط حقل TOTAL_FORMS للفورمست
   const totalFormsInput = document.querySelector("input[name$='-TOTAL_FORMS']");
 
   if (!addBtn || !linesBody || !totalFormsInput) {
-    // لو في خطأ في IDs أو ما في formset، لا نكمل
     return;
   }
 
@@ -178,14 +221,13 @@ document.addEventListener("DOMContentLoaded", function () {
     totalFormsInput.value = currentCount + 1;
   });
 
-  // حذف صف
+  // حذف صف (فقط في الواجهة، نمنع حذف آخر صف)
   linesBody.addEventListener("click", function (e) {
     if (e.target.classList.contains("remove-row")) {
       const row = e.target.closest("tr");
       if (!row) return;
 
       const rows = linesBody.querySelectorAll(".line-row");
-      // لا نحذف آخر صف عشان يبقى شيء في الفورم
       if (rows.length <= 1) {
         return;
       }
