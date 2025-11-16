@@ -1,5 +1,4 @@
 from django.core.management.base import BaseCommand
-from django.utils.translation import gettext_lazy as _
 
 from ledger.models import Journal
 
@@ -17,8 +16,10 @@ class Command(BaseCommand):
         ]
 
         created = 0
+        updated = 0
+
         for code, name, type_, is_default in data:
-            obj, was_created = Journal.objects.get_or_create(
+            obj, was_created = Journal.objects.update_or_create(
                 code=code,
                 defaults={
                     "name": name,
@@ -29,5 +30,11 @@ class Command(BaseCommand):
             )
             if was_created:
                 created += 1
+            else:
+                updated += 1
 
-        self.stdout.write(self.style.SUCCESS(f"Seeded {created} journals."))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Seeded journals: {created} created, {updated} updated."
+            )
+        )
