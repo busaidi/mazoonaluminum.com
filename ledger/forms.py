@@ -4,7 +4,7 @@ from decimal import Decimal
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from .models import Account, JournalEntry, FiscalYear
+from .models import Account, JournalEntry, FiscalYear, Journal
 
 
 class AccountForm(forms.ModelForm):
@@ -221,3 +221,60 @@ class FiscalYearForm(forms.ModelForm):
             )
 
         return cleaned_data
+
+
+class JournalEntryFilterForm(forms.Form):
+    """
+    Simple filter form for journal entries list:
+    - Text search (reference/description)
+    - Date range
+    - Posted status
+    - Journal
+    """
+
+    POSTED_CHOICES = (
+        ("", _("الكل")),
+        ("posted", _("مُرحّل")),
+        ("draft", _("مسودة")),
+    )
+
+    q = forms.CharField(
+        required=False,
+        label=_("بحث"),
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control form-control-sm",
+                "placeholder": _("بحث بالمرجع أو الوصف"),
+            }
+        ),
+    )
+    date_from = forms.DateField(
+        required=False,
+        label=_("من تاريخ"),
+        widget=forms.DateInput(
+            attrs={"type": "date", "class": "form-control form-control-sm"}
+        ),
+    )
+    date_to = forms.DateField(
+        required=False,
+        label=_("إلى تاريخ"),
+        widget=forms.DateInput(
+            attrs={"type": "date", "class": "form-control form-control-sm"}
+        ),
+    )
+    posted = forms.ChoiceField(
+        required=False,
+        label=_("الحالة"),
+        choices=POSTED_CHOICES,
+        widget=forms.Select(
+            attrs={"class": "form-select form-select-sm"},
+        ),
+    )
+    journal = forms.ModelChoiceField(
+        required=False,
+        label=_("دفتر اليومية"),
+        queryset=Journal.objects.filter(is_active=True).order_by("code"),
+        widget=forms.Select(
+            attrs={"class": "form-select form-select-sm"},
+        ),
+    )

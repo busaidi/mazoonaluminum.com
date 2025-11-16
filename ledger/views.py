@@ -3,7 +3,7 @@ from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.db.models import Sum, Value, DecimalField
+from django.db.models import Sum, Value, DecimalField, Q
 from django.db.models.functions import Coalesce
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
@@ -26,7 +26,7 @@ from .forms import (
     JournalLineFormSet,
     TrialBalanceFilterForm,
     AccountLedgerFilterForm,
-    FiscalYearForm,
+    FiscalYearForm, JournalEntryFilterForm,
 )
 from .models import Account, JournalEntry, JournalLine, FiscalYear, get_default_journal_for_manual_entry
 
@@ -156,18 +156,36 @@ class AccountUpdateView(FiscalYearRequiredMixin, StaffRequiredMixin, UpdateView)
 
 
 class JournalEntryListView(FiscalYearRequiredMixin, StaffRequiredMixin, ListView):
+    """
+    List journal entries with simple filtering:
+    - Text search (q) on reference/description
+    - Date range (date_from, date_to)
+    - Posted status (posted / draft / all)
+    - Journal
+    """
+
     model = JournalEntry
     template_name = "ledger/journal/list.html"
     context_object_name = "entries"
     paginate_by = 50
 
+    def get_filter_form(self):
+        """
+        Build and cache the filter form based on GET params.
+        """
+        if not hasattr(self, "_filter_form"):
+            self._filter_form = JournalEntryFilterForm(self.request.GET or None)
+        return self._filter_form
+
     def get_queryset(self):
         """
-        Use annotate to avoid N+1 queries when showing totals per entry.
+        Base queryset:
+        - Annotate totals to avoid N+1 queries.
+        - Apply filters from the filter form if valid.
         """
-        return (
+        qs = (
             JournalEntry.objects
-            .prefetch_related("lines")
+            .prefetch_related("lines", "journal")
             .annotate(
                 total_debit_value=Coalesce(
                     Sum("lines__debit"),
@@ -182,6 +200,59 @@ class JournalEntryListView(FiscalYearRequiredMixin, StaffRequiredMixin, ListView
             )
             .order_by("-date", "-id")
         )
+
+        form = self.get_filter_form()
+        if not form.is_valid():
+            return qs
+
+        q = form.cleaned_data.get("q")
+        date_from = form.cleaned_data.get("date_from")
+        date_to = form.cleaned_data.get("date_to")
+        posted = form.cleaned_data.get("posted")
+        journal = form.cleaned_data.get("journal")
+
+        # Text search (reference / description)
+        if q:
+            qs = qs.filter(
+                Q(reference__icontains=q)
+                | Q(description__icontains=q)
+            )
+
+        # Date range filter
+        if date_from:
+            qs = qs.filter(date__gte=date_from)
+        if date_to:
+            qs = qs.filter(date__lte=date_to)
+
+        # Posted / draft filter
+        if posted == "posted":
+            qs = qs.filter(posted=True)
+        elif posted == "draft":
+            qs = qs.filter(posted=False)
+
+        # Journal filter
+        if journal:
+            qs = qs.filter(journal=journal)
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        """
+        Add filter form and current query string (without page)
+        to keep filters when paginating.
+        """
+        ctx = super().get_context_data(**kwargs)
+
+        # Filter form
+        ctx["filter_form"] = self.get_filter_form()
+
+        # Build query string for pagination (excluding "page")
+        query_dict = self.request.GET.copy()
+        query_dict.pop("page", None)
+        ctx["current_query"] = query_dict.urlencode()
+
+        return ctx
+
 
 
 class JournalEntryDetailView(FiscalYearRequiredMixin, StaffRequiredMixin, DetailView):
