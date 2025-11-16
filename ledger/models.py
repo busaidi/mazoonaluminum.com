@@ -9,6 +9,60 @@ from django.utils.translation import gettext_lazy as _
 User = get_user_model()
 
 
+
+
+def generate_journal_entry_number(journal, fiscal_year, date):
+    """
+    Generate a journal entry number of the form:
+    <PREFIX>-<YEAR>-<SEQ>
+
+    Examples:
+      GEN-2025-0001
+      CASH-2025-0001
+      SALES-2025-0001
+
+    - PREFIX comes from journal.code (or "JE" if no journal).
+    - YEAR comes from fiscal_year.year (fallback to date.year).
+    - SEQ is a running sequence per (journal, year).
+    """
+    from .models import JournalEntry  # safe: resolved at runtime
+
+    # Determine year
+    if fiscal_year is not None:
+        year = fiscal_year.year
+    elif date is not None:
+        year = date.year
+    else:
+        year = timezone.now().year
+
+    # Determine prefix
+    if journal is not None and journal.code:
+        prefix = journal.code.upper()
+    else:
+        prefix = "JE"
+
+    base_prefix = f"{prefix}-{year}-"
+
+    # Get last entry for this journal + year (by id for stability)
+    qs = JournalEntry.objects.filter(number__startswith=base_prefix)
+    if journal is not None:
+        qs = qs.filter(journal=journal)
+    else:
+        qs = qs.filter(journal__isnull=True)
+
+    last_entry = qs.order_by("id").last()
+
+    if last_entry and last_entry.number:
+        try:
+            last_seq = int(last_entry.number.split("-")[-1])
+        except (ValueError, IndexError):
+            last_seq = 0
+        new_seq = last_seq + 1
+    else:
+        new_seq = 1
+
+    return f"{base_prefix}{new_seq:04d}"
+
 class FiscalYear(models.Model):
     """
     سنة مالية بسيطة: سنة + تاريخ بداية + تاريخ نهاية + حالة إقفال.
@@ -149,6 +203,13 @@ class JournalEntry(models.Model):
     date = models.DateField(default=timezone.now, verbose_name=_("التاريخ"))
     reference = models.CharField(max_length=50, blank=True, verbose_name=_("المرجع"))
     description = models.TextField(blank=True, verbose_name=_("الوصف"))
+    number = models.CharField(
+        max_length=32,
+        unique=True,
+        null=True,
+        blank=True,
+        verbose_name=_("رقم القيد"),
+    )
     posted = models.BooleanField(default=False, verbose_name=_("مرحّل"))
 
     posted_at = models.DateTimeField(
@@ -195,11 +256,23 @@ class JournalEntry(models.Model):
 
     def save(self, *args, **kwargs):
         """
-        لو ما تم تعيين السنة المالية، نحاول نعيّنها تلقائياً من تاريخ القيد.
+        - لو ما تم تعيين السنة المالية، نحاول نعيّنها تلقائياً من تاريخ القيد.
+        - لو لم يتم تعيين رقم القيد (number)، نولّده بناءً على الدفتر والسنة.
         """
+        # Auto-assign fiscal year from date if not set
         if self.date and self.fiscal_year is None:
             self.fiscal_year = FiscalYear.for_date(self.date)
+
+        # Auto-generate number only once (do not change it on later saves)
+        if not self.number:
+            self.number = generate_journal_entry_number(
+                journal=self.journal,
+                fiscal_year=self.fiscal_year,
+                date=self.date,
+            )
+
         super().save(*args, **kwargs)
+
 
 
 class JournalLine(models.Model):

@@ -7,7 +7,12 @@
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
     <h2 class="h5 mb-1">
-      {% blocktrans with entry_id=entry.id %}قيد يومية رقم JE-{{ entry_id }}{% endblocktrans %}
+      {% if entry.number %}
+  {% blocktrans with number=entry.number %}قيد يومية رقم {{ number }}{% endblocktrans %}
+{% else %}
+  {% blocktrans with entry_id=entry.id %}قيد يومية رقم JE-{{ entry_id }}{% endblocktrans %}
+{% endif %}
+
     </h2>
     <p class="text-muted small mb-0">
       <span>
