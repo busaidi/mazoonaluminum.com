@@ -164,6 +164,13 @@
                         </a>
                     </li>
                 {% endif %}
+{% if request.user.is_authenticated and request.user.is_staff %}
+  <li class="nav-item">
+    <a class="nav-link" href="{% url 'ledger:dashboard' %}">
+      {% trans "دفتر الأستاذ" %}
+    </a>
+  </li>
+{% endif %}
 
 
                 {# المستخدم + تسجيل الدخول / الخروج #}

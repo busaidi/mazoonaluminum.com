@@ -77,7 +77,7 @@ class InvoiceListView(ListView):
     Staff list of invoices with optional status filter.
     """
     model = Invoice
-    template_name = "accounting/invoice_list.html"
+    template_name = "accounting/invoices/invoice_list.html"
     context_object_name = "invoices"
     paginate_by = 20
 
@@ -107,7 +107,7 @@ class InvoiceCreateView(CreateView):
     """
     model = Invoice
     form_class = InvoiceForm
-    template_name = "accounting/invoice_form.html"
+    template_name = "accounting/invoices/invoice_form.html"
 
     def get_initial(self):
         initial = super().get_initial()
@@ -183,7 +183,7 @@ class InvoiceUpdateView(UpdateView):
     """
     model = Invoice
     form_class = InvoiceForm
-    template_name = "accounting/invoice_form.html"
+    template_name = "accounting/invoices/invoice_form.html"
     slug_field = "number"
     slug_url_kwarg = "number"
 
@@ -245,7 +245,7 @@ class InvoiceDetailView(DetailView):
     Staff invoice detail page (with items, payments, etc).
     """
     model = Invoice
-    template_name = "accounting/invoice_detail.html"
+    template_name = "accounting/invoices/invoice_detail.html"
     context_object_name = "invoice"
     slug_field = "number"
     slug_url_kwarg = "number"
@@ -257,7 +257,7 @@ class InvoicePaymentCreateView(FormView):
     Create a payment for a specific invoice.
     URL: /accounting/invoices/<number>/payments/new/
     """
-    template_name = "accounting/invoice_payment_form.html"
+    template_name = "accounting/invoices/invoice_payment_form.html"
     form_class = PaymentForInvoiceForm
 
     def dispatch(self, request, *args, **kwargs):
@@ -299,7 +299,7 @@ class InvoicePrintView(DetailView):
     Print page for invoice (staff side).
     """
     model = Invoice
-    template_name = "accounting/invoice_print.html"
+    template_name = "accounting/invoices/invoice_print.html"
     context_object_name = "invoice"
     slug_field = "number"
     slug_url_kwarg = "number"
@@ -373,7 +373,7 @@ class CustomerListView(ListView):
     Staff list of customers, with simple search by name/company.
     """
     model = Customer
-    template_name = "accounting/customer_list.html"
+    template_name = "accounting/customers/customer_list.html"
     context_object_name = "customers"
     paginate_by = 20
 
@@ -394,7 +394,7 @@ class CustomerCreateView(CreateView):
     """
     model = Customer
     form_class = CustomerForm
-    template_name = "accounting/customer_form.html"
+    template_name = "accounting/customers/customer_form.html"
 
     def get_success_url(self):
         return reverse("accounting:customer_list")
@@ -407,7 +407,7 @@ class CustomerUpdateView(UpdateView):
     """
     model = Customer
     form_class = CustomerForm
-    template_name = "accounting/customer_form.html"
+    template_name = "accounting/customers/customer_form.html"
 
     def get_success_url(self):
         return reverse("accounting:customer_list")
@@ -420,7 +420,7 @@ class CustomerDeleteView(DeleteView):
     If ProtectedError is raised, show a friendly message instead of 500.
     """
     model = Customer
-    template_name = "accounting/customer_confirm_delete.html"
+    template_name = "accounting/customers/customer_confirm_delete.html"
     success_url = reverse_lazy("accounting:customer_list")
 
     def post(self, request, *args, **kwargs):
@@ -452,7 +452,7 @@ class CustomerDetailView(DetailView):
     - Balance summary
     """
     model = Customer
-    template_name = "accounting/customer_detail.html"
+    template_name = "accounting/customers/customer_detail.html"
     context_object_name = "customer"
 
     def get_context_data(self, **kwargs):
@@ -499,7 +499,7 @@ class CustomerPaymentCreateView(FormView):
     Create a general payment for a customer (not bound to a specific invoice).
     URL: /accounting/customers/<pk>/payments/new/
     """
-    template_name = "accounting/customer_payment_form.html"
+    template_name = "accounting/customers/customer_payment_form.html"
     form_class = PaymentForInvoiceForm
 
     def dispatch(self, request, *args, **kwargs):
@@ -590,7 +590,7 @@ def apply_general_payment(request, pk):
 
     return render(
         request,
-        "accounting/general_payment_apply.html",
+        "accounting/payment/general_payment_apply.html",
         {
             "payment": payment,
             "customer": customer,
@@ -855,7 +855,7 @@ class PaymentPrintView(DetailView):
     Print page for payment receipt.
     """
     model = Payment
-    template_name = "accounting/payment_print.html"
+    template_name = "accounting/payment/payment_print.html"
     context_object_name = "payment"
 
 # ============================================================
@@ -864,7 +864,7 @@ class PaymentPrintView(DetailView):
 @method_decorator(accounting_staff_required, name="dispatch")
 class PaymentListView(ListView):
     model = Payment
-    template_name = "accounting/payment_list.html"
+    template_name = "accounting/payment/payment_list.html"
     context_object_name = "payments"
     paginate_by = 20
 
@@ -904,7 +904,7 @@ class PaymentCreateView(CreateView):
     """
     model = Payment
     form_class = PaymentForm
-    template_name = "accounting/payment_form.html"
+    template_name = "accounting/payment/payment_form.html"
 
     def get_initial(self):
         initial = super().get_initial()
@@ -927,7 +927,7 @@ class PaymentUpdateView(UpdateView):
     """
     model = Payment
     form_class = PaymentForm
-    template_name = "accounting/payment_form.html"
+    template_name = "accounting/payment/payment_form.html"
     context_object_name = "payment"
 
     def get_form(self, form_class=None):

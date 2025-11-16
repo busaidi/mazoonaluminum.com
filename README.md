@@ -44,6 +44,9 @@ python manage.py seed_agent_customer
 python manage.py seed_website_data
 ```
 ```bash
+python manage.py seed_accounts
+```
+```bash
 python manage.py runserver
 ```
 

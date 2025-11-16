@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     "accounting",
     "portal",
     "cart",
+    "ledger",
 ]
 
 MIDDLEWARE = [

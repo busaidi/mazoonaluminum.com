@@ -1,0 +1,49 @@
+{% extends "ledger/base_ledger.html" %}
+{% load i18n %}
+
+{% block ledger_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="h5 mb-0">{% trans "القيود اليومية" %}</h2>
+  <a href="{% url 'ledger:journalentry_create' %}" class="btn btn-primary btn-sm">
+    + {% trans "قيد جديد" %}
+  </a>
+</div>
+
+<table class="table table-sm table-striped align-middle">
+  <thead class="table-light">
+    <tr>
+      <th>{% trans "رقم" %}</th>
+      <th>{% trans "التاريخ" %}</th>
+      <th>{% trans "المرجع" %}</th>
+      <th>{% trans "الوصف" %}</th>
+      <th>{% trans "إجمالي المدين" %}</th>
+      <th>{% trans "إجمالي الدائن" %}</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for e in entries %}
+      <tr>
+        <td>JE-{{ e.id }}</td>
+        <td>{{ e.date }}</td>
+        <td>{{ e.reference|default:"-" }}</td>
+        <td>{{ e.description|default:"-"|truncatechars:40 }}</td>
+        <td>{{ e.total_debit }}</td>
+        <td>{{ e.total_credit }}</td>
+        <td class="text-end">
+          <a href="{% url 'ledger:journalentry_detail' e.pk %}"
+             class="btn btn-outline-secondary btn-sm">
+            {% trans "عرض" %}
+          </a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="7" class="text-center text-muted">
+          {% trans "لا توجد قيود حتى الآن." %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

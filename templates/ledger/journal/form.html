@@ -1,0 +1,199 @@
+{% extends "ledger/base_ledger.html" %}
+{% load i18n %}
+
+{% block ledger_content %}
+<h2 class="h5 mb-3">{% trans "إنشاء قيد يومية" %}</h2>
+
+<form method="post" class="card card-body shadow-sm">
+  {% csrf_token %}
+
+  {{ entry_form.non_field_errors }}
+
+  <!-- رأس القيد -->
+  <div class="row g-3 mb-4">
+
+    <div class="col-md-3">
+      <label class="form-label" for="{{ entry_form.date.id_for_label }}">
+        {% trans "التاريخ" %}
+      </label>
+      {{ entry_form.date }}
+      {{ entry_form.date.errors }}
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label" for="{{ entry_form.reference.id_for_label }}">
+        {% trans "المرجع" %}
+      </label>
+      {{ entry_form.reference }}
+      {{ entry_form.reference.errors }}
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label" for="{{ entry_form.description.id_for_label }}">
+        {% trans "الوصف" %}
+      </label>
+      {{ entry_form.description }}
+      {{ entry_form.description.errors }}
+    </div>
+
+  </div>
+
+  <hr class="my-3">
+
+  <!-- جدول الأسطر -->
+  <h6 class="mb-2">{% trans "أسطر القيد" %}</h6>
+
+  {{ line_formset.non_form_errors }}
+  {{ line_formset.management_form }}
+
+  <table class="table table-sm align-middle" id="lines-table">
+    <thead class="table-light">
+      <tr>
+        <th style="width: 35%">{% trans "الحساب" %}</th>
+        <th style="width: 25%">{% trans "الوصف" %}</th>
+        <th style="width: 15%">{% trans "مدين" %}</th>
+        <th style="width: 15%">{% trans "دائن" %}</th>
+        <th style="width: 10%"></th>
+      </tr>
+    </thead>
+
+    <tbody id="lines-body">
+      {% for form in line_formset %}
+      <tr class="line-row">
+        <td>
+          {{ form.account }}
+          {{ form.account.errors }}
+        </td>
+        <td>
+          {{ form.description }}
+          {{ form.description.errors }}
+        </td>
+        <td>
+          {{ form.debit }}
+          {{ form.debit.errors }}
+        </td>
+        <td>
+          {{ form.credit }}
+          {{ form.credit.errors }}
+        </td>
+        <td class="text-end">
+          {% if forloop.first %}
+            <!-- لا نحذف أول صف -->
+          {% else %}
+            <button type="button" class="btn btn-outline-danger btn-sm remove-row">
+              &times;
+            </button>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+
+  </table>
+
+  <div class="mt-2">
+    <button type="button" id="add-row" class="btn btn-outline-primary btn-sm">
+      + {% trans "إضافة سطر" %}
+    </button>
+  </div>
+
+  <hr class="my-3">
+
+  <div class="d-flex justify-content-between">
+    <a href="{% url 'ledger:journalentry_list' %}" class="btn btn-light btn-sm">
+      {% trans "رجوع" %}
+    </a>
+
+    <button type="submit" class="btn btn-primary btn-sm">
+      {% trans "حفظ القيد" %}
+    </button>
+  </div>
+
+</form>
+
+<!-- JavaScript لإضافة/حذف الصفوف -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const addBtn = document.getElementById("add-row");
+  const linesBody = document.getElementById("lines-body");
+
+  // نلقط حقل TOTAL_FORMS لأي formset (ينتهي اسمه بـ -TOTAL_FORMS)
+  const totalFormsInput = document.querySelector("input[name$='-TOTAL_FORMS']");
+
+  if (!addBtn || !linesBody || !totalFormsInput) {
+    // لو في خطأ في IDs أو ما في formset، لا نكمل
+    return;
+  }
+
+  // prefix حق الفورمست (مثلاً: "journalline_set")
+  const prefix = totalFormsInput.name.replace("-TOTAL_FORMS", "");
+
+  addBtn.addEventListener("click", function () {
+    const currentCount = parseInt(totalFormsInput.value, 10);
+
+    const firstRow = linesBody.querySelector(".line-row");
+    if (!firstRow) return;
+
+    const newRow = firstRow.cloneNode(true);
+
+    // نفرغ القيم + نحدّث name/id بالتسلسل الجديد
+    newRow.querySelectorAll("input, select, textarea").forEach((el) => {
+      // تفريغ القيمة
+      if (el.type === "checkbox" || el.type === "radio") {
+        el.checked = false;
+      } else {
+        el.value = "";
+      }
+
+      // تحديث name
+      if (el.name) {
+        el.name = el.name.replace(
+          new RegExp(prefix + "-\\d+"),
+          prefix + "-" + currentCount
+        );
+      }
+
+      // تحديث id
+      if (el.id) {
+        el.id = el.id.replace(
+          new RegExp(prefix + "-\\d+"),
+          prefix + "-" + currentCount
+        );
+      }
+    });
+
+    // آخر عمود: زر إزالة
+    const lastTd = newRow.querySelector("td:last-child");
+    if (lastTd) {
+      lastTd.innerHTML = `
+        <button type="button" class="btn btn-outline-danger btn-sm remove-row">
+          &times;
+        </button>
+      `;
+    }
+
+    linesBody.appendChild(newRow);
+
+    // زيادة عدد الفورمات
+    totalFormsInput.value = currentCount + 1;
+  });
+
+  // حذف صف
+  linesBody.addEventListener("click", function (e) {
+    if (e.target.classList.contains("remove-row")) {
+      const row = e.target.closest("tr");
+      if (!row) return;
+
+      const rows = linesBody.querySelectorAll(".line-row");
+      // لا نحذف آخر صف عشان يبقى شيء في الفورم
+      if (rows.length <= 1) {
+        return;
+      }
+
+      row.remove();
+    }
+  });
+});
+</script>
+
+{% endblock %}

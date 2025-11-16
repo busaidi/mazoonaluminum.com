@@ -134,7 +134,7 @@ class PortalInvoicePrintView(CustomerPortalMixin, DetailView):
     تستخدم نفس قالب الطباعة في المحاسبة.
     """
     model = Invoice
-    template_name = "accounting/invoice_print.html"
+    template_name = "accounting/invoices/invoice_print.html"
     context_object_name = "invoice"
     slug_field = "number"
     slug_url_kwarg = "number"

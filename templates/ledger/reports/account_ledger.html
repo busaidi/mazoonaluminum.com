@@ -1,0 +1,67 @@
+{% extends "ledger/base_ledger.html" %}
+{% load i18n %}
+
+{% block ledger_content %}
+<h2 class="h5 mb-3">{% trans "كشف حساب" %}</h2>
+
+<form method="get" class="row g-2 mb-3 align-items-end">
+  <div class="col-auto">
+    <label class="form-label mb-1">{% trans "الحساب" %}</label>
+    {{ form.account }}
+  </div>
+  <div class="col-auto">
+    <label class="form-label mb-1">{% trans "من تاريخ" %}</label>
+    {{ form.date_from }}
+  </div>
+  <div class="col-auto">
+    <label class="form-label mb-1">{% trans "إلى تاريخ" %}</label>
+    {{ form.date_to }}
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-primary btn-sm">
+      {% trans "تصفية" %}
+    </button>
+  </div>
+</form>
+
+{% if account %}
+  <h3 class="h6 mb-2">
+    {% blocktrans with code=account.code name=account.name %}
+      الحساب: {{ code }} - {{ name }}
+    {% endblocktrans %}
+  </h3>
+{% endif %}
+
+{% if lines %}
+  <table class="table table-sm table-striped align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>{% trans "التاريخ" %}</th>
+        <th>{% trans "القيد" %}</th>
+        <th>{% trans "الوصف" %}</th>
+        <th class="text-end">{% trans "مدين" %}</th>
+        <th class="text-end">{% trans "دائن" %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in lines %}
+        <tr>
+          <td>{{ line.entry.date }}</td>
+          <td>
+            <a href="{% url 'ledger:journalentry_detail' line.entry.pk %}">
+              JE-{{ line.entry.id }}
+            </a>
+          </td>
+          <td>{{ line.description|default:"-" }}</td>
+          <td class="text-end">{{ line.debit }}</td>
+          <td class="text-end">{{ line.credit }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% elif account %}
+  <p class="text-muted">
+    {% trans "لا توجد حركات لهذا الحساب في الفترة المحددة." %}
+  </p>
+{% endif %}
+{% endblock %}

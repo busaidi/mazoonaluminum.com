@@ -1,0 +1,51 @@
+{% extends "ledger/base_ledger.html" %}
+{% load i18n %}
+
+{% block ledger_content %}
+<h2 class="h5 mb-3">{% trans "ميزان المراجعة" %}</h2>
+
+<form method="get" class="row g-2 mb-3 align-items-end">
+  <div class="col-auto">
+    <label class="form-label mb-1">{% trans "من تاريخ" %}</label>
+    {{ form.date_from }}
+  </div>
+  <div class="col-auto">
+    <label class="form-label mb-1">{% trans "إلى تاريخ" %}</label>
+    {{ form.date_to }}
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-primary btn-sm">
+      {% trans "تصفية" %}
+    </button>
+  </div>
+</form>
+
+{% if rows %}
+  <table class="table table-sm table-striped align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>{% trans "الكود" %}</th>
+        <th>{% trans "اسم الحساب" %}</th>
+        <th>{% trans "النوع" %}</th>
+        <th class="text-end">{% trans "مدين" %}</th>
+        <th class="text-end">{% trans "دائن" %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          <td>{{ row.account__code }}</td>
+          <td>{{ row.account__name }}</td>
+          <td>{{ row.account__type }}</td>
+          <td class="text-end">{{ row.debit }}</td>
+          <td class="text-end">{{ row.credit }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="text-muted">
+    {% trans "لا توجد بيانات لهذه الفترة." %}
+  </p>
+{% endif %}
+{% endblock %}
