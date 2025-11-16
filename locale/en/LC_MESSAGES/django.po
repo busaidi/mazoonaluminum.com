@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-11-15 14:41+0400\n"
+"POT-Creation-Date: 2025-11-16 16:28+0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -22,31 +22,32 @@ msgstr ""
 msgid "Due date cannot be before issue date."
 msgstr ""
 
-#: accounting/forms.py:125
+#: accounting/forms.py:125 accounting/forms.py:159
 msgid "Amount must be greater than zero."
 msgstr ""
 
-#: accounting/forms.py:198
+#: accounting/forms.py:231
 #, fuzzy
 #| msgid "المبلغ المدفوع"
 msgid "الكمية المطلوبة"
 msgstr "Amount paid"
 
-#: accounting/forms.py:201
+#: accounting/forms.py:234
 #, fuzzy
 #| msgid "البريد الإلكتروني (اختياري)"
 msgid "ملاحظات إضافية (اختياري)"
 msgstr "Email (optional)"
 
-#: accounting/forms.py:221 templates/accounting/general_payment_apply.html:17
-#: templates/accounting/orders/order_detail.html:62
+#: accounting/forms.py:254 templates/accounting/orders/order_detail.html:62
 #: templates/accounting/orders/order_form.html:38
 #: templates/accounting/orders/order_list.html:44
+#: templates/accounting/payment/general_payment_apply.html:17
 msgid "الزبون"
 msgstr "Customer"
 
-#: accounting/forms.py:225 templates/accounting/invoice_detail.html:146
-#: templates/accounting/invoice_print.html:337
+#: accounting/forms.py:258
+#: templates/accounting/invoices/invoice_detail.html:146
+#: templates/accounting/invoices/invoice_print.html:337
 #: templates/accounting/orders/order_detail.html:117
 #: templates/accounting/orders/order_form.html:85
 #: templates/accounting/orders/order_print.html:369
@@ -54,9 +55,10 @@ msgstr "Customer"
 msgid "المنتج"
 msgstr "Product"
 
-#: accounting/forms.py:231 templates/accounting/invoice_detail.html:148
-#: templates/accounting/invoice_form.html:164
-#: templates/accounting/invoice_print.html:339
+#: accounting/forms.py:264
+#: templates/accounting/invoices/invoice_detail.html:148
+#: templates/accounting/invoices/invoice_form.html:164
+#: templates/accounting/invoices/invoice_print.html:339
 #: templates/accounting/orders/order_detail.html:119
 #: templates/accounting/orders/order_form.html:87
 #: templates/accounting/orders/order_print.html:371
@@ -64,33 +66,34 @@ msgstr "Product"
 msgid "الكمية"
 msgstr "Quantity"
 
-#: accounting/forms.py:234
+#: accounting/forms.py:267
 #, fuzzy
 #| msgid "ملاحظات داخلية"
 msgid "ملاحظات (اختياري)"
 msgstr "Internal notes"
 
-#: accounting/forms.py:298 templates/accounting/general_payment_apply.html:40
+#: accounting/forms.py:331
+#: templates/accounting/payment/general_payment_apply.html:40
 msgid "اختر الفاتورة"
 msgstr "Select invoice"
 
-#: accounting/forms.py:308
+#: accounting/forms.py:341
 #, fuzzy
 #| msgid "المبلغ المدفوع"
 msgid "المبلغ المراد تسويته"
 msgstr "Amount paid"
 
-#: accounting/forms.py:312
+#: accounting/forms.py:345
 #, fuzzy
 #| msgid "المبلغ"
 msgid "أدخل المبلغ"
 msgstr "Amount"
 
-#: accounting/forms.py:331
+#: accounting/forms.py:364
 msgid "المبلغ يجب أن يكون أكبر من صفر."
 msgstr ""
 
-#: accounting/forms.py:333
+#: accounting/forms.py:366
 #, fuzzy
 #| msgid "الابتكار المستمر في التصميم والأداء."
 msgid "المبلغ أكبر من المبلغ المتاح في الدفعة."
@@ -113,276 +116,537 @@ msgstr "This order has already been converted to an invoice."
 msgid "تم إنشاء الفاتورة %(number)s من هذا الطلب."
 msgstr "Invoice %(number)s has been created from this order."
 
-#: templates/accounting/customer_detail.html:12
-#, python-format
-msgid "الزبون: %(name)s"
-msgstr "Customer: %(name)s"
+#: ledger/forms.py:20 templates/ledger/accounts/form.html:33
+#: templates/ledger/accounts/list.html:19
+#: templates/ledger/reports/trial_balance.html:82
+msgid "الكود"
+msgstr ""
 
-#: templates/accounting/customer_detail.html:15
-msgid "تعديل بيانات الزبون"
-msgstr "Edit customer details"
+#: ledger/forms.py:21 templates/ledger/accounts/form.html:43
+#: templates/ledger/accounts/list.html:20
+#: templates/ledger/reports/trial_balance.html:83
+#, fuzzy
+#| msgid "اسم المستخدم"
+msgid "اسم الحساب"
+msgstr "Username"
 
-#: templates/accounting/customer_detail.html:20
-#: templates/accounting/customer_list.html:46
-msgid "الشركة"
-msgstr "Company"
+#: ledger/forms.py:22 templates/accounting/customers/customer_detail.html:162
+#: templates/ledger/accounts/form.html:53
+#: templates/ledger/accounts/list.html:21
+#: templates/ledger/reports/trial_balance.html:84
+msgid "النوع"
+msgstr "Type"
 
-#: templates/accounting/customer_detail.html:24
-#: templates/accounting/customer_list.html:47
-msgid "الهاتف"
-msgstr "Phone"
+#: ledger/forms.py:23 templates/ledger/accounts/list.html:22
+#, fuzzy
+#| msgid "اطلب الآن"
+msgid "الحساب الأب"
+msgstr "Order now"
 
-#: templates/accounting/customer_detail.html:28
-#: templates/website/contact.html:99
-msgid "البريد الإلكتروني"
-msgstr "Email"
+#: ledger/forms.py:24
+msgid "نشط؟"
+msgstr ""
 
-#: templates/accounting/customer_detail.html:32
-msgid "الرقم الضريبي"
-msgstr "Tax number"
+#: ledger/forms.py:25
+#, fuzzy
+#| msgid "تنفيذ التسوية"
+msgid "يُستخدم في التسويات؟"
+msgstr "Apply settlement"
 
-#: templates/accounting/customer_detail.html:36
-msgid "العنوان"
-msgstr "Address"
-
-#: templates/accounting/customer_detail.html:47
-#: templates/portal/dashboard.html:30
-msgid "إجمالي الفواتير"
-msgstr "Total invoices"
-
-#: templates/accounting/customer_detail.html:56
-#: templates/portal/dashboard.html:42
-msgid "إجمالي الدفعات"
-msgstr "Total payments"
-
-#: templates/accounting/customer_detail.html:65
-#: templates/accounting/customer_list.html:49
-msgid "الرصيد"
-msgstr "Balance"
-
-#: templates/accounting/customer_detail.html:78
-#: templates/accounting/dashboard.html:93
-msgid "الفواتير"
-msgstr "Invoices"
-
-#: templates/accounting/customer_detail.html:82
-#: templates/accounting/orders/order_detail.html:37
-msgid "إنشاء فاتورة"
-msgstr "Create invoice"
-
-#: templates/accounting/customer_detail.html:90
-msgid "رقم الفاتورة"
-msgstr "Invoice number"
-
-#: templates/accounting/customer_detail.html:91
-#: templates/accounting/customer_detail.html:147
-#: templates/accounting/customer_detail.html:209
-#: templates/accounting/dashboard.html:162
-#: templates/accounting/dashboard.html:209
-#: templates/accounting/dashboard.html:250
-#: templates/accounting/invoice_detail.html:224
-#: templates/accounting/invoice_print.html:410
+#: ledger/forms.py:37 ledger/models.py:93
+#: templates/accounting/customers/customer_detail.html:101
+#: templates/accounting/customers/customer_detail.html:161
+#: templates/accounting/customers/customer_detail.html:231
+#: templates/accounting/dashboard.html:205
+#: templates/accounting/dashboard.html:257
+#: templates/accounting/dashboard.html:303
+#: templates/accounting/invoices/invoice_detail.html:224
+#: templates/accounting/invoices/invoice_print.html:410
 #: templates/accounting/orders/order_detail.html:69
 #: templates/accounting/orders/order_list.html:45
+#: templates/accounting/payment/payment_list.html:60
+#: templates/ledger/dashboard.html:147 templates/ledger/journal/detail.html:12
+#: templates/ledger/journal/form.html:30 templates/ledger/journal/list.html:26
+#: templates/ledger/reports/account_ledger.html:87
 #: templates/portal/dashboard.html:82 templates/portal/dashboard.html:135
 msgid "التاريخ"
 msgstr "Date"
 
-#: templates/accounting/customer_detail.html:92
-#: templates/accounting/customer_detail.html:150
-#: templates/accounting/invoice_detail.html:122
-#: templates/accounting/invoice_detail.html:150
-#: templates/accounting/invoice_form.html:166
-#: templates/accounting/invoice_print.html:341
+#: ledger/forms.py:38 ledger/models.py:94 templates/ledger/dashboard.html:148
+#: templates/ledger/journal/detail.html:17
+#: templates/ledger/journal/form.html:40 templates/ledger/journal/list.html:27
+#: templates/ledger/reports/account_ledger.html:89
+#, fuzzy
+#| msgid "مرجع:"
+msgid "المرجع"
+msgstr "Reference:"
+
+#: ledger/forms.py:39 ledger/forms.py:61 ledger/models.py:95
+#: ledger/models.py:149 templates/accounting/invoices/invoice_detail.html:147
+#: templates/accounting/invoices/invoice_detail.html:200
+#: templates/accounting/invoices/invoice_form.html:163
+#: templates/accounting/invoices/invoice_print.html:338
+#: templates/accounting/orders/order_detail.html:118
+#: templates/accounting/orders/order_print.html:370
+#: templates/ledger/dashboard.html:149 templates/ledger/journal/detail.html:36
+#: templates/ledger/journal/detail.html:81
+#: templates/ledger/journal/form.html:50 templates/ledger/journal/form.html:83
+#: templates/ledger/journal/list.html:28
+#: templates/ledger/reports/account_ledger.html:90
+msgid "الوصف"
+msgstr "Description"
+
+#: ledger/forms.py:55 ledger/forms.py:122 ledger/models.py:144
+#: templates/ledger/journal/detail.html:80
+#: templates/ledger/journal/form.html:82
+#: templates/ledger/reports/account_ledger.html:20
+msgid "الحساب"
+msgstr ""
+
+#: ledger/forms.py:68 ledger/models.py:155 templates/ledger/dashboard.html:57
+#: templates/ledger/journal/detail.html:82
+#: templates/ledger/journal/form.html:84
+#: templates/ledger/reports/account_ledger.html:91
+#: templates/ledger/reports/trial_balance.html:85
+msgid "مدين"
+msgstr ""
+
+#: ledger/forms.py:75 ledger/models.py:161 templates/ledger/dashboard.html:61
+#: templates/ledger/journal/detail.html:83
+#: templates/ledger/journal/form.html:85
+#: templates/ledger/reports/account_ledger.html:92
+#: templates/ledger/reports/trial_balance.html:86
+msgid "دائن"
+msgstr ""
+
+#: ledger/forms.py:80
+msgid "حذف؟"
+msgstr ""
+
+#: ledger/forms.py:98 ledger/forms.py:128 ledger/models.py:91
+#: templates/ledger/journal/detail.html:45
+#: templates/ledger/reports/account_ledger.html:26
+#: templates/ledger/reports/trial_balance.html:37
+#, fuzzy
+#| msgid "المبلغ المدفوع"
+msgid "السنة المالية"
+msgstr "Amount paid"
+
+#: ledger/forms.py:99 ledger/forms.py:129
+#, fuzzy
+#| msgid "كل الفواتير"
+msgid "كل السنوات"
+msgstr "All invoices"
+
+#: ledger/forms.py:104 ledger/forms.py:134
+#: templates/ledger/reports/account_ledger.html:32
+#: templates/ledger/reports/trial_balance.html:44
+#, fuzzy
+#| msgid "التاريخ"
+msgid "من تاريخ"
+msgstr "Date"
+
+#: ledger/forms.py:111 ledger/forms.py:141
+#: templates/ledger/reports/account_ledger.html:38
+#: templates/ledger/reports/trial_balance.html:51
+#, fuzzy
+#| msgid "التاريخ"
+msgid "إلى تاريخ"
+msgstr "Date"
+
+#: ledger/management/commands/seed_fiscal_year.py:13
+msgid "إنشاء سنة مالية افتراضية للسنة الحالية في نظام دفتر الأستاذ."
+msgstr ""
+
+#: ledger/management/commands/seed_fiscal_year.py:30
+#, fuzzy, python-format
+#| msgid "تم إنشاء الفاتورة %(number)s من هذا الطلب."
+msgid "تم إنشاء السنة المالية %(year)s بنجاح."
+msgstr "Invoice %(number)s has been created from this order."
+
+#: ledger/management/commands/seed_fiscal_year.py:33
+#, python-format
+msgid "السنة المالية %(year)s موجودة مسبقًا."
+msgstr ""
+
+#: ledger/models.py:16
+msgid "السنة"
+msgstr ""
+
+#: ledger/models.py:17
+#, fuzzy
+#| msgid "تاريخ الإصدار:"
+msgid "تاريخ البداية"
+msgstr "Issue date:"
+
+#: ledger/models.py:18
+#, fuzzy
+#| msgid "تاريخ الإنشاء:"
+msgid "تاريخ النهاية"
+msgstr "Creation date:"
+
+#: ledger/models.py:19
+msgid "مقفلة؟"
+msgstr ""
+
+#: ledger/models.py:49 templates/ledger/reports/trial_balance.html:96
+msgid "أصل"
+msgstr ""
+
+#: ledger/models.py:50 templates/ledger/reports/trial_balance.html:98
+msgid "التزامات"
+msgstr ""
+
+#: ledger/models.py:51 templates/ledger/reports/trial_balance.html:100
+msgid "حقوق ملكية"
+msgstr ""
+
+#: ledger/models.py:52 templates/ledger/reports/trial_balance.html:102
+msgid "إيرادات"
+msgstr ""
+
+#: ledger/models.py:53 templates/ledger/reports/trial_balance.html:104
+msgid "مصروفات"
+msgstr ""
+
+#: ledger/models.py:70
+msgid "Allow this account to be used in settlements."
+msgstr ""
+
+#: ledger/models.py:96
+msgid "مرحّل"
+msgstr ""
+
+#: ledger/models.py:104 templates/ledger/journal/detail.html:49
+#, fuzzy
+#| msgid "تم إدخاله بواسطة:"
+msgid "أنشئ بواسطة"
+msgstr "Entered by:"
+
+#: ledger/models.py:139
+#, fuzzy
+#| msgid "بنود الفاتورة"
+msgid "قيد اليومية"
+msgstr "Invoice items"
+
+#: ledger/views.py:40
+#, fuzzy
+#| msgid "لديك صلاحية دخول، لكن لا تملك إذن للوصول لهذه الصفحة."
+msgid "ليس لديك صلاحية للوصول إلى هذه الصفحة."
+msgstr "You are authenticated but do not have permission to access this page."
+
+#: ledger/views.py:58
+#, fuzzy
+#| msgid "تم إضافة تعليقك بنجاح."
+msgid "تم إنشاء الحساب بنجاح."
+msgstr "Your comment has been added successfully."
+
+#: ledger/views.py:68
+#, fuzzy
+#| msgid "تم إضافة تعليقك بنجاح."
+msgid "تم تحديث الحساب بنجاح."
+msgstr "Your comment has been added successfully."
+
+#: ledger/views.py:106
+#, fuzzy
+#| msgid "الرجاء تسجيل الدخول للوصول إلى الصفحة المطلوبة."
+msgid "الرجاء تصحيح الأخطاء في النموذج."
+msgstr "Please log in to access the requested page."
+
+#: ledger/views.py:151
+#, fuzzy
+#| msgid "لا يوجد زبائن حاليًا."
+msgid "لا يوجد أي سطر صالح في القيد."
+msgstr "There are no customers at the moment."
+
+#: ledger/views.py:164
+msgid "القيد غير متوازن: مجموع المدين لا يساوي مجموع الدائن."
+msgstr ""
+
+#: ledger/views.py:172
+#, fuzzy
+#| msgid "تم إضافة تعليقك بنجاح."
+msgid "تم إنشاء قيد اليومية بنجاح."
+msgstr "Your comment has been added successfully."
+
+#: templates/accounting/customers/customer_detail.html:4
+#, fuzzy
+#| msgid "تفاصيل الفاتورة"
+msgid "تفاصيل الزبون"
+msgstr "Invoice details"
+
+#: templates/accounting/customers/customer_detail.html:6
+#, fuzzy, python-format
+#| msgid "تفاصيل طلب الزبون مع البنود والإجمالي."
+msgid "تفاصيل حساب الزبون %(name)s مع الفواتير والطلبات والدفعات."
+msgstr "Customer order details with items and total."
+
+#: templates/accounting/customers/customer_detail.html:17
+#, python-format
+msgid "الزبون: %(name)s"
+msgstr "Customer: %(name)s"
+
+#: templates/accounting/customers/customer_detail.html:20
+msgid "تعديل بيانات الزبون"
+msgstr "Edit customer details"
+
+#: templates/accounting/customers/customer_detail.html:26
+#: templates/accounting/customers/customer_list.html:46
+msgid "الشركة"
+msgstr "Company"
+
+#: templates/accounting/customers/customer_detail.html:30
+#: templates/accounting/customers/customer_list.html:47
+msgid "الهاتف"
+msgstr "Phone"
+
+#: templates/accounting/customers/customer_detail.html:34
+#: templates/website/contact.html:99
+msgid "البريد الإلكتروني"
+msgstr "Email"
+
+#: templates/accounting/customers/customer_detail.html:38
+msgid "الرقم الضريبي"
+msgstr "Tax number"
+
+#: templates/accounting/customers/customer_detail.html:42
+msgid "العنوان"
+msgstr "Address"
+
+#: templates/accounting/customers/customer_detail.html:54
+#: templates/portal/dashboard.html:30
+msgid "إجمالي الفواتير"
+msgstr "Total invoices"
+
+#: templates/accounting/customers/customer_detail.html:63
+#: templates/portal/dashboard.html:42
+msgid "إجمالي الدفعات"
+msgstr "Total payments"
+
+#: templates/accounting/customers/customer_detail.html:72
+#: templates/accounting/customers/customer_list.html:49
+msgid "الرصيد"
+msgstr "Balance"
+
+#: templates/accounting/customers/customer_detail.html:88
+#: templates/accounting/dashboard.html:112
+msgid "الفواتير"
+msgstr "Invoices"
+
+#: templates/accounting/customers/customer_detail.html:92
+#: templates/accounting/orders/order_detail.html:37
+msgid "إنشاء فاتورة"
+msgstr "Create invoice"
+
+#: templates/accounting/customers/customer_detail.html:100
+msgid "رقم الفاتورة"
+msgstr "Invoice number"
+
+#: templates/accounting/customers/customer_detail.html:102
+#: templates/accounting/customers/customer_detail.html:164
+#: templates/accounting/invoices/invoice_detail.html:122
+#: templates/accounting/invoices/invoice_detail.html:150
+#: templates/accounting/invoices/invoice_form.html:166
+#: templates/accounting/invoices/invoice_print.html:341
 #: templates/accounting/orders/order_detail.html:121
 #: templates/accounting/orders/order_form.html:89
 #: templates/accounting/orders/order_list.html:48
 #: templates/accounting/orders/order_print.html:373
-#: templates/cart/detail.html:20 templates/portal/dashboard.html:83
+#: templates/cart/detail.html:20 templates/ledger/dashboard.html:150
+#: templates/ledger/journal/detail.html:105
+#: templates/ledger/reports/trial_balance.html:123
+#: templates/portal/dashboard.html:83
 msgid "الإجمالي"
 msgstr "Total"
 
-#: templates/accounting/customer_detail.html:93
-#: templates/accounting/invoice_detail.html:126
+#: templates/accounting/customers/customer_detail.html:103
+#: templates/accounting/invoices/invoice_detail.html:126
 msgid "المدفوع"
 msgstr "Paid"
 
-#: templates/accounting/customer_detail.html:94
-#: templates/accounting/dashboard.html:163
-#: templates/accounting/invoice_detail.html:130
-#: templates/accounting/invoice_print.html:323
+#: templates/accounting/customers/customer_detail.html:104
+#: templates/accounting/dashboard.html:206
+#: templates/accounting/invoices/invoice_detail.html:130
+#: templates/accounting/invoices/invoice_print.html:323
 #: templates/portal/dashboard.html:84
 msgid "المتبقي"
 msgstr "Remaining"
 
-#: templates/accounting/customer_detail.html:95
-#: templates/accounting/customer_detail.html:149
-#: templates/accounting/dashboard.html:210
+#: templates/accounting/customers/customer_detail.html:105
+#: templates/accounting/customers/customer_detail.html:163
+#: templates/accounting/dashboard.html:258
 #: templates/accounting/orders/order_detail.html:80
 #: templates/accounting/orders/order_form.html:47
 #: templates/accounting/orders/order_list.html:47
+#: templates/ledger/journal/detail.html:57
 msgid "الحالة"
 msgstr "Status"
 
-#: templates/accounting/customer_detail.html:112
-#: templates/accounting/customer_detail.html:175
+#: templates/accounting/customers/customer_detail.html:106
+#: templates/accounting/customers/customer_detail.html:165
+#: templates/accounting/customers/customer_detail.html:236
+#: templates/accounting/invoices/invoice_detail.html:228
+#: templates/accounting/payment/payment_list.html:66
+#: templates/ledger/dashboard.html:151 templates/ledger/journal/list.html:31
+msgid "إجراءات"
+msgstr "Actions"
+
+#: templates/accounting/customers/customer_detail.html:126
+#: templates/accounting/customers/customer_detail.html:197
+#: templates/ledger/dashboard.html:169 templates/ledger/journal/list.html:52
 msgid "عرض"
 msgstr "View"
 
-#: templates/accounting/customer_detail.html:119
+#: templates/accounting/customers/customer_detail.html:133
 msgid "لا توجد فواتير لهذا الزبون."
 msgstr "There are no invoices for this customer."
 
-#: templates/accounting/customer_detail.html:134
-#: templates/accounting/dashboard.html:131
+#: templates/accounting/customers/customer_detail.html:148
+#: templates/accounting/dashboard.html:150
 #: templates/accounting/orders/order_list.html:4
 #: templates/accounting/orders/order_list.html:14
 msgid "الطلبات"
 msgstr "Orders"
 
-#: templates/accounting/customer_detail.html:138
+#: templates/accounting/customers/customer_detail.html:152
 msgid "إنشاء طلب جديد"
 msgstr "Create new order"
 
-#: templates/accounting/customer_detail.html:146
+#: templates/accounting/customers/customer_detail.html:160
 msgid "رقم الطلب"
 msgstr "Order number"
 
-#: templates/accounting/customer_detail.html:148
-msgid "النوع"
-msgstr "Type"
-
-#: templates/accounting/customer_detail.html:162
-msgid "طلب أونلاين"
-msgstr "Online order"
-
-#: templates/accounting/customer_detail.html:166
-msgid "طلب من الموظف"
-msgstr "Staff order"
-
-#: templates/accounting/customer_detail.html:182
+#: templates/accounting/customers/customer_detail.html:204
 msgid "لا توجد طلبات لهذا الزبون."
 msgstr "There are no orders for this customer."
 
-#: templates/accounting/customer_detail.html:197
+#: templates/accounting/customers/customer_detail.html:219
+#: templates/accounting/dashboard.html:169
+#: templates/accounting/payment/payment_list.html:4
+#: templates/accounting/payment/payment_list.html:15
 msgid "الدفعات"
 msgstr "Payments"
 
-#: templates/accounting/customer_detail.html:201
+#: templates/accounting/customers/customer_detail.html:223
 msgid "إضافة دفعة عامة"
 msgstr "Add general payment"
 
-#: templates/accounting/customer_detail.html:210
-#: templates/accounting/dashboard.html:252
-#: templates/accounting/invoice_detail.html:225
-#: templates/accounting/invoice_print.html:411
+#: templates/accounting/customers/customer_detail.html:232
+#: templates/accounting/dashboard.html:305
+#: templates/accounting/invoices/invoice_detail.html:225
+#: templates/accounting/invoices/invoice_print.html:411
+#: templates/accounting/payment/payment_list.html:62
 #: templates/portal/dashboard.html:136
 msgid "المبلغ"
 msgstr "Amount"
 
-#: templates/accounting/customer_detail.html:211
-#: templates/accounting/invoice_print.html:412
+#: templates/accounting/customers/customer_detail.html:233
+#: templates/accounting/invoices/invoice_print.html:412
+#: templates/accounting/payment/payment_list.html:63
 #: templates/portal/dashboard.html:137
 msgid "الطريقة"
 msgstr "Method"
 
-#: templates/accounting/customer_detail.html:212
-#: templates/accounting/invoice_detail.html:227
+#: templates/accounting/customers/customer_detail.html:234
+#: templates/accounting/dashboard.html:306
+#: templates/accounting/invoices/invoice_detail.html:227
+#: templates/accounting/payment/payment_list.html:64
 msgid "الفاتورة"
 msgstr "Invoice"
 
-#: templates/accounting/customer_detail.html:213
-#: templates/accounting/invoice_print.html:413
-#: templates/accounting/payment_print.html:309
+#: templates/accounting/customers/customer_detail.html:235
+#: templates/accounting/invoices/invoice_print.html:413
+#: templates/accounting/payment/payment_list.html:65
+#: templates/accounting/payment/payment_print.html:309
 msgid "ملاحظات"
 msgstr "Notes"
 
-#: templates/accounting/customer_detail.html:214
-#: templates/accounting/invoice_detail.html:228
-msgid "إجراءات"
-msgstr "Actions"
-
-#: templates/accounting/customer_detail.html:232
-#: templates/accounting/invoice_detail.html:241
+#: templates/accounting/customers/customer_detail.html:254
+#: templates/accounting/dashboard.html:322
+#: templates/accounting/invoices/invoice_detail.html:241
 msgid "دفعة عامة"
 msgstr "General payment"
 
-#: templates/accounting/customer_detail.html:242
-#: templates/accounting/invoice_detail.html:247
-#: templates/accounting/payment_print.html:324
+#: templates/accounting/customers/customer_detail.html:264
+#: templates/accounting/invoices/invoice_detail.html:247
+#: templates/accounting/payment/payment_print.html:324
 msgid "طباعة الإيصال"
 msgstr "Print receipt"
 
-#: templates/accounting/customer_detail.html:248
+#: templates/accounting/customers/customer_detail.html:270
 msgid "تسوية / ربط بالفاتورة"
 msgstr "Apply / link to invoice"
 
-#: templates/accounting/customer_detail.html:256
+#: templates/accounting/customers/customer_detail.html:278
 msgid "لا توجد دفعات لهذا الزبون."
 msgstr "There are no payments for this customer."
 
-#: templates/accounting/customer_list.html:5
+#: templates/accounting/customers/customer_list.html:5
 msgid "الزبائن | مزون ألمنيوم"
 msgstr "Customers | Mazoon Aluminum"
 
-#: templates/accounting/customer_list.html:9
+#: templates/accounting/customers/customer_list.html:9
 msgid "قائمة الزبائن مع إمكانية البحث وإدارة بيانات العملاء في نظام المحاسبة."
 msgstr ""
 "Customer list with search and data management in the accounting system."
 
-#: templates/accounting/customer_list.html:17
+#: templates/accounting/customers/customer_list.html:17
 msgid "الزبائن"
 msgstr "Customers"
 
-#: templates/accounting/customer_list.html:20
+#: templates/accounting/customers/customer_list.html:20
 msgid "+ زبون جديد"
 msgstr "+ New customer"
 
-#: templates/accounting/customer_list.html:30
+#: templates/accounting/customers/customer_list.html:30
 msgid "بحث بالاسم أو الشركة"
 msgstr "Search by name or company"
 
-#: templates/accounting/customer_list.html:35
+#: templates/accounting/customers/customer_list.html:35
+#: templates/accounting/payment/payment_list.html:49
 #: templates/website/blog_list.html:307
 msgid "بحث"
 msgstr "Search"
 
-#: templates/accounting/customer_list.html:45
+#: templates/accounting/customers/customer_list.html:45
 #: templates/website/blog_detail.html:112 templates/website/contact.html:95
 msgid "الاسم"
 msgstr "Name"
 
-#: templates/accounting/customer_list.html:48
+#: templates/accounting/customers/customer_list.html:48
 msgid "البريد"
 msgstr "Email"
 
-#: templates/accounting/customer_list.html:68
+#: templates/accounting/customers/customer_list.html:68
 #: templates/accounting/orders/order_detail.html:48
+#: templates/accounting/payment/payment_list.html:113
+#: templates/ledger/accounts/list.html:44
 msgid "تعديل"
 msgstr "Edit"
 
-#: templates/accounting/customer_list.html:72
-#: templates/accounting/invoice_form.html:167
+#: templates/accounting/customers/customer_list.html:72
+#: templates/accounting/invoices/invoice_form.html:167
 #: templates/accounting/orders/order_form.html:90
 #: templates/accounting/orders/order_form.html:132
 #: templates/cart/detail.html:33
 msgid "حذف"
 msgstr "Delete"
 
-#: templates/accounting/customer_list.html:79
+#: templates/accounting/customers/customer_list.html:79
 msgid "لا يوجد زبائن حاليًا."
 msgstr "There are no customers at the moment."
 
-#: templates/accounting/customer_list.html:90
+#: templates/accounting/customers/customer_list.html:90
 msgid "صفحات الزبائن"
 msgstr "Customer pages"
 
-#: templates/accounting/customer_list.html:97
-#: templates/accounting/customer_list.html:103
+#: templates/accounting/customers/customer_list.html:97
+#: templates/accounting/customers/customer_list.html:103
+#: templates/ledger/journal/list.html:75 templates/ledger/journal/list.html:81
 msgid "السابق"
 msgstr "Previous"
 
-#: templates/accounting/customer_list.html:110
+#: templates/accounting/customers/customer_list.html:110
 #, python-format
 msgid ""
 "\n"
@@ -393,8 +657,9 @@ msgstr ""
 "                  Page %(number)s of %(total)s\n"
 "                "
 
-#: templates/accounting/customer_list.html:120
-#: templates/accounting/customer_list.html:126
+#: templates/accounting/customers/customer_list.html:120
+#: templates/accounting/customers/customer_list.html:126
+#: templates/ledger/journal/list.html:98 templates/ledger/journal/list.html:104
 msgid "التالي"
 msgstr "Next"
 
@@ -420,199 +685,202 @@ msgid "إنشاء فاتورة جديدة"
 msgstr "Create new invoice"
 
 #: templates/accounting/dashboard.html:28
-#: templates/accounting/dashboard.html:121
+#, fuzzy
+#| msgid "إضافة دفعة عامة"
+msgid "تسجيل دفعة جديدة"
+msgstr "Add general payment"
+
+#: templates/accounting/dashboard.html:31
+#: templates/accounting/dashboard.html:140
 msgid "إضافة زبون"
 msgstr "Add customer"
 
-#: templates/accounting/dashboard.html:31
+#: templates/accounting/dashboard.html:34
 msgid "إدارة الطلبات"
 msgstr "Manage orders"
 
-#: templates/accounting/dashboard.html:42
+#: templates/accounting/dashboard.html:45
 msgid "عدد الفواتير"
 msgstr "Number of invoices"
 
-#: templates/accounting/dashboard.html:53
+#: templates/accounting/dashboard.html:56
 msgid "عدد العملاء"
 msgstr "Number of customers"
 
-#: templates/accounting/dashboard.html:64
+#: templates/accounting/dashboard.html:67
+#, fuzzy
+#| msgid "آخر الدفعات"
+msgid "عدد الدفعات"
+msgstr "Latest payments"
+
+#: templates/accounting/dashboard.html:78
 msgid "عدد الطلبات"
 msgstr "Number of orders"
 
-#: templates/accounting/dashboard.html:75
+#: templates/accounting/dashboard.html:93
 msgid "إجمالي المتبقي على العملاء"
 msgstr "Total outstanding balance for customers"
 
-#: templates/accounting/dashboard.html:81
+#: templates/accounting/dashboard.html:99
 msgid "إجمالي الفواتير ناقص الدفعات المسجّلة."
 msgstr "Total invoice amount minus recorded payments."
 
-#: templates/accounting/dashboard.html:95
+#: templates/accounting/dashboard.html:114
 msgid "عرض وإدارة فواتير العملاء، ومتابعة المبالغ المتبقية والمدفوعة."
 msgstr ""
 "View and manage customer invoices, and track outstanding and paid amounts."
 
-#: templates/accounting/dashboard.html:99
+#: templates/accounting/dashboard.html:118
 msgid "عرض كل الفواتير"
 msgstr "View all invoices"
 
-#: templates/accounting/dashboard.html:102
-#: templates/accounting/invoice_form.html:40
+#: templates/accounting/dashboard.html:121
+#: templates/accounting/invoices/invoice_form.html:40
 msgid "فاتورة جديدة"
 msgstr "New invoice"
 
-#: templates/accounting/dashboard.html:112
+#: templates/accounting/dashboard.html:131
 msgid "العملاء"
 msgstr "Customers"
 
-#: templates/accounting/dashboard.html:114
+#: templates/accounting/dashboard.html:133
 msgid "إدارة بيانات العملاء وربطهم بالفواتير والدفعات والطلبات."
 msgstr ""
 "Manage customer data and link them with invoices, payments, and orders."
 
-#: templates/accounting/dashboard.html:118
+#: templates/accounting/dashboard.html:137
 msgid "عرض كل العملاء"
 msgstr "View all customers"
 
-#: templates/accounting/dashboard.html:133
+#: templates/accounting/dashboard.html:152
 msgid "متابعة طلبات العملاء قبل وبعد تحويلها إلى فواتير."
 msgstr "Track customer orders before and after converting them to invoices."
 
-#: templates/accounting/dashboard.html:137
+#: templates/accounting/dashboard.html:156
 msgid "عرض كل الطلبات"
 msgstr "View all orders"
 
-#: templates/accounting/dashboard.html:140
+#: templates/accounting/dashboard.html:159
 msgid "إنشاء طلب"
 msgstr "Create order"
 
-#: templates/accounting/dashboard.html:155 templates/portal/dashboard.html:71
+#: templates/accounting/dashboard.html:171
+#, fuzzy
+#| msgid "إدارة بيانات العملاء وربطهم بالفواتير والدفعات والطلبات."
+msgid "تسجيل دفعات العملاء وتسويتها على الفواتير أو كدفعات عامة."
+msgstr ""
+"Manage customer data and link them with invoices, payments, and orders."
+
+#: templates/accounting/dashboard.html:175
+#, fuzzy
+#| msgid "عرض كل الطلبات"
+msgid "عرض كل الدفعات"
+msgstr "View all orders"
+
+#: templates/accounting/dashboard.html:178
+#, fuzzy
+#| msgid "تسجيل الخروج"
+msgid "تسجيل دفعة"
+msgstr "Log out"
+
+#: templates/accounting/dashboard.html:194 templates/portal/dashboard.html:71
 msgid "آخر الفواتير"
 msgstr "Latest invoices"
 
-#: templates/accounting/dashboard.html:160 templates/portal/dashboard.html:81
+#: templates/accounting/dashboard.html:196
+#: templates/accounting/dashboard.html:248
+#: templates/accounting/dashboard.html:296
+#, fuzzy
+#| msgid "عرض الطلب"
+msgid "عرض الكل"
+msgstr "View order"
+
+#: templates/accounting/dashboard.html:203 templates/ledger/dashboard.html:146
+#: templates/ledger/journal/list.html:25 templates/portal/dashboard.html:81
 msgid "رقم"
 msgstr "No."
 
-#: templates/accounting/dashboard.html:161
-#: templates/accounting/dashboard.html:208
-#: templates/accounting/dashboard.html:251
+#: templates/accounting/dashboard.html:204
+#: templates/accounting/dashboard.html:256
+#: templates/accounting/dashboard.html:304
+#: templates/accounting/payment/payment_list.html:61
 msgid "العميل"
 msgstr "Customer"
 
-#: templates/accounting/dashboard.html:187
+#: templates/accounting/dashboard.html:230
 msgid "لا توجد فواتير بعد."
 msgstr "There are no invoices yet."
 
-#: templates/accounting/dashboard.html:202
+#: templates/accounting/dashboard.html:246
 msgid "آخر الطلبات"
 msgstr "Latest orders"
 
-#: templates/accounting/dashboard.html:230
+#: templates/accounting/dashboard.html:278
 #: templates/accounting/orders/order_list.html:98
 msgid "لا توجد طلبات حتى الآن."
 msgstr "There are no orders yet."
 
-#: templates/accounting/dashboard.html:245 templates/portal/dashboard.html:125
+#: templates/accounting/dashboard.html:294 templates/portal/dashboard.html:125
 msgid "آخر الدفعات"
 msgstr "Latest payments"
 
-#: templates/accounting/dashboard.html:265
+#: templates/accounting/dashboard.html:330
 msgid "لا توجد دفعات مسجلة حتى الآن."
 msgstr "There are no payments recorded yet."
 
-#: templates/accounting/dashboard.html:286
+#: templates/accounting/dashboard.html:350
 msgid "قائمة التنبيهات"
 msgstr "Alerts list"
 
-#: templates/accounting/dashboard.html:289
+#: templates/accounting/dashboard.html:353
 msgid "للمتابعة السريعة للحالات المفتوحة"
 msgstr "For quickly following up on open cases"
 
-#: templates/accounting/dashboard.html:297
+#: templates/accounting/dashboard.html:361
 msgid "طلبات لم تُحوّل إلى فاتورة"
 msgstr "Orders not converted to invoices"
 
-#: templates/accounting/dashboard.html:306
+#: templates/accounting/dashboard.html:370
 #: templates/accounting/orders/order_print.html:7
 #, python-format
 msgid "طلب #%(id)s"
 msgstr "Order #%(id)s"
 
-#: templates/accounting/dashboard.html:318
+#: templates/accounting/dashboard.html:382
 msgid "لم يُحوّل"
 msgstr "Not converted"
 
-#: templates/accounting/dashboard.html:322
+#: templates/accounting/dashboard.html:386
 #: templates/accounting/orders/order_form.html:150
 msgid "إجمالي تقريبي"
 msgstr "Approximate total"
 
-#: templates/accounting/dashboard.html:331
+#: templates/accounting/dashboard.html:395
 msgid "لا توجد طلبات مفتوحة بدون فاتورة."
 msgstr "There are no open orders without invoices."
 
-#: templates/accounting/dashboard.html:339
+#: templates/accounting/dashboard.html:403
 msgid "فواتير غير مسددة"
 msgstr "Unpaid invoices"
 
-#: templates/accounting/dashboard.html:364
+#: templates/accounting/dashboard.html:428
 msgid "متبقي"
 msgstr "Remaining"
 
-#: templates/accounting/dashboard.html:368
+#: templates/accounting/dashboard.html:432
 msgid "حالة غير مدفوعة"
 msgstr "Unpaid status"
 
-#: templates/accounting/dashboard.html:377
+#: templates/accounting/dashboard.html:441
 msgid "لا توجد فواتير غير مسددة تحتاج للمتابعة."
 msgstr "There are no unpaid invoices that require follow-up."
 
-#: templates/accounting/general_payment_apply.html:12
-#, python-format
-msgid "تسوية دفعة عامة رقم #%(id)s"
-msgstr "Apply general payment #%(id)s"
-
-#: templates/accounting/general_payment_apply.html:22
-msgid "المبلغ المتاح"
-msgstr "Available amount"
-
-#: templates/accounting/general_payment_apply.html:27
-msgid "يمكنك تسوية جزء من هذا المبلغ أو تسويته بالكامل على فاتورة معيّنة."
-msgstr ""
-"You can apply part of this amount or the full amount to a specific invoice."
-
-#: templates/accounting/general_payment_apply.html:49
-msgid "مبلغ التسوية"
-msgstr "Settlement amount"
-
-#: templates/accounting/general_payment_apply.html:52
-#, python-format
-msgid ""
-"\n"
-"              أقصى مبلغ ممكن: %(max)s\n"
-"            "
-msgstr ""
-"\n"
-"              Maximum allowed amount: %(max)s\n"
-"            "
-
-#: templates/accounting/general_payment_apply.html:64
-msgid "تنفيذ التسوية"
-msgstr "Apply settlement"
-
-#: templates/accounting/general_payment_apply.html:69
-#: templates/accounting/invoice_form.html:271
-msgid "إلغاء"
-msgstr "Cancel"
-
-#: templates/accounting/invoice_detail.html:5
+#: templates/accounting/invoices/invoice_detail.html:5
 #, python-format
 msgid "فاتورة %(number)s | Mazoon Aluminum"
 msgstr "Invoice %(number)s | Mazoon Aluminum"
 
-#: templates/accounting/invoice_detail.html:9
+#: templates/accounting/invoices/invoice_detail.html:9
 #, python-format
 msgid ""
 "\n"
@@ -625,169 +893,160 @@ msgstr ""
 "items, related payments, and remaining balance.\n"
 "    "
 
-#: templates/accounting/invoice_detail.html:20
-#: templates/accounting/invoice_print.html:7
+#: templates/accounting/invoices/invoice_detail.html:20
+#: templates/accounting/invoices/invoice_print.html:7
 #, python-format
 msgid "فاتورة %(number)s"
 msgstr "Invoice %(number)s"
 
-#: templates/accounting/invoice_detail.html:23
+#: templates/accounting/invoices/invoice_detail.html:23
 #, python-format
 msgid "عميل: %(name)s"
 msgstr "Customer: %(name)s"
 
-#: templates/accounting/invoice_detail.html:29
+#: templates/accounting/invoices/invoice_detail.html:29
 msgid "تعديل الفاتورة"
 msgstr "Edit invoice"
 
-#: templates/accounting/invoice_detail.html:35
+#: templates/accounting/invoices/invoice_detail.html:35
 msgid "عرض الطلب"
 msgstr "View order"
 
-#: templates/accounting/invoice_detail.html:43
+#: templates/accounting/invoices/invoice_detail.html:43
 msgid "+ إضافة دفعة"
 msgstr "+ Add payment"
 
-#: templates/accounting/invoice_detail.html:48
+#: templates/accounting/invoices/invoice_detail.html:48
 msgid "طباعة / PDF"
 msgstr "Print / PDF"
 
-#: templates/accounting/invoice_detail.html:51
+#: templates/accounting/invoices/invoice_detail.html:51
 msgid "رجوع إلى القائمة"
 msgstr "Back to list"
 
-#: templates/accounting/invoice_detail.html:61
+#: templates/accounting/invoices/invoice_detail.html:61
 msgid "بيانات العميل"
 msgstr "Customer information"
 
-#: templates/accounting/invoice_detail.html:89
+#: templates/accounting/invoices/invoice_detail.html:89
 msgid "تفاصيل الفاتورة"
 msgstr "Invoice details"
 
-#: templates/accounting/invoice_detail.html:91
+#: templates/accounting/invoices/invoice_detail.html:91
 msgid "التاريخ:"
 msgstr "Date:"
 
-#: templates/accounting/invoice_detail.html:95
-#: templates/accounting/invoice_print.html:270
+#: templates/accounting/invoices/invoice_detail.html:95
+#: templates/accounting/invoices/invoice_print.html:270
 msgid "تاريخ الاستحقاق:"
 msgstr "Due date:"
 
-#: templates/accounting/invoice_detail.html:105
-#: templates/accounting/invoice_print.html:274
+#: templates/accounting/invoices/invoice_detail.html:105
+#: templates/accounting/invoices/invoice_print.html:274
 #: templates/accounting/orders/order_print.html:284
 msgid "الحالة:"
 msgstr "Status:"
 
-#: templates/accounting/invoice_detail.html:119
+#: templates/accounting/invoices/invoice_detail.html:119
 msgid "المبالغ"
 msgstr "Amounts"
 
-#: templates/accounting/invoice_detail.html:140
-#: templates/accounting/invoice_print.html:332
+#: templates/accounting/invoices/invoice_detail.html:140
+#: templates/accounting/invoices/invoice_print.html:332
 msgid "بنود الفاتورة"
 msgstr "Invoice items"
 
-#: templates/accounting/invoice_detail.html:147
-#: templates/accounting/invoice_detail.html:200
-#: templates/accounting/invoice_form.html:163
-#: templates/accounting/invoice_print.html:338
-#: templates/accounting/orders/order_detail.html:118
-#: templates/accounting/orders/order_print.html:370
-msgid "الوصف"
-msgstr "Description"
-
-#: templates/accounting/invoice_detail.html:149
-#: templates/accounting/invoice_form.html:165
-#: templates/accounting/invoice_print.html:340
+#: templates/accounting/invoices/invoice_detail.html:149
+#: templates/accounting/invoices/invoice_form.html:165
+#: templates/accounting/invoices/invoice_print.html:340
 #: templates/accounting/orders/order_detail.html:120
 #: templates/accounting/orders/order_form.html:88
 #: templates/accounting/orders/order_print.html:372
 msgid "سعر الوحدة"
 msgstr "Unit price"
 
-#: templates/accounting/invoice_detail.html:185
-#: templates/accounting/invoice_print.html:376
+#: templates/accounting/invoices/invoice_detail.html:185
+#: templates/accounting/invoices/invoice_print.html:376
 msgid "لا توجد بنود في هذه الفاتورة."
 msgstr "There are no items in this invoice."
 
-#: templates/accounting/invoice_detail.html:210
-#: templates/accounting/invoice_print.html:397 templates/base.html:235
+#: templates/accounting/invoices/invoice_detail.html:210
+#: templates/accounting/invoices/invoice_print.html:397 templates/base.html:242
 msgid "الشروط والأحكام"
 msgstr "Terms and conditions"
 
-#: templates/accounting/invoice_detail.html:219
+#: templates/accounting/invoices/invoice_detail.html:219
 msgid "الدفعات المرتبطة"
 msgstr "Related payments"
 
-#: templates/accounting/invoice_detail.html:226
-#: templates/accounting/payment_print.html:300
+#: templates/accounting/invoices/invoice_detail.html:226
+#: templates/accounting/payment/payment_print.html:300
 msgid "طريقة الدفع"
 msgstr "Payment method"
 
-#: templates/accounting/invoice_detail.html:254
+#: templates/accounting/invoices/invoice_detail.html:254
 msgid "لا توجد دفعات لهذه الفاتورة بعد."
 msgstr "There are no payments for this invoice yet."
 
-#: templates/accounting/invoice_form.html:6
+#: templates/accounting/invoices/invoice_form.html:6
 #, python-format
 msgid "تعديل فاتورة %(number)s | Mazoon Aluminum"
 msgstr "Edit invoice %(number)s | Mazoon Aluminum"
 
-#: templates/accounting/invoice_form.html:8
+#: templates/accounting/invoices/invoice_form.html:8
 msgid "فاتورة جديدة | Mazoon Aluminum"
 msgstr "New invoice | Mazoon Aluminum"
 
-#: templates/accounting/invoice_form.html:14
+#: templates/accounting/invoices/invoice_form.html:14
 #, python-format
 msgid "تعديل بيانات الفاتورة رقم %(number)s في نظام المحاسبة."
 msgstr "Edit the data of invoice %(number)s in the accounting system."
 
-#: templates/accounting/invoice_form.html:16
+#: templates/accounting/invoices/invoice_form.html:16
 msgid "إنشاء فاتورة جديدة لعميل في نظام المحاسبة الخاص بمزون ألمنيوم."
 msgstr ""
 "Create a new invoice for a customer in the Mazoon Aluminum accounting system."
 
-#: templates/accounting/invoice_form.html:29
+#: templates/accounting/invoices/invoice_form.html:29
 #, python-format
 msgid "تعديل فاتورة %(number)s"
 msgstr "Edit invoice %(number)s"
 
-#: templates/accounting/invoice_form.html:32
+#: templates/accounting/invoices/invoice_form.html:32
 msgid "وضع التحرير"
 msgstr "Edit mode"
 
-#: templates/accounting/invoice_form.html:36
+#: templates/accounting/invoices/invoice_form.html:36
 msgid ""
 "قم بتحديث بيانات الفاتورة بدقة، وسيتم حفظ التغييرات في السجلات المحاسبية."
 msgstr ""
 "Carefully update the invoice data; changes will be saved in the accounting "
 "records."
 
-#: templates/accounting/invoice_form.html:42
+#: templates/accounting/invoices/invoice_form.html:42
 msgid "فاتورة يدوية"
 msgstr "Manual invoice"
 
-#: templates/accounting/invoice_form.html:46
+#: templates/accounting/invoices/invoice_form.html:46
 msgid ""
 "املأ بيانات الفاتورة، خصوصًا العميل، تاريخ الإصدار، بنود الفاتورة، والشروط."
 msgstr ""
 "Fill in the invoice data, especially the customer, issue date, invoice "
 "items, and terms."
 
-#: templates/accounting/invoice_form.html:53
+#: templates/accounting/invoices/invoice_form.html:53
 msgid "رجوع إلى قائمة الفواتير"
 msgstr "Back to invoice list"
 
-#: templates/accounting/invoice_form.html:77
+#: templates/accounting/invoices/invoice_form.html:77
 msgid "بيانات الفاتورة"
 msgstr "Invoice data"
 
-#: templates/accounting/invoice_form.html:140
+#: templates/accounting/invoices/invoice_form.html:140
 msgid "بنود الفاتورة (منتجات أو بنود حرة)"
 msgstr "Invoice items (products or free items)"
 
-#: templates/accounting/invoice_form.html:143
+#: templates/accounting/invoices/invoice_form.html:143
 msgid ""
 "يمكنك اختيار منتج من القائمة أو تركه فارغًا وكتابة وصف حر للبند، مع تحديد "
 "الكمية والسعر."
@@ -795,130 +1054,137 @@ msgstr ""
 "You can choose a product from the list or leave it empty and write a free "
 "description, specifying quantity and price."
 
-#: templates/accounting/invoice_form.html:162
+#: templates/accounting/invoices/invoice_form.html:162
 msgid "المنتج (اختياري)"
 msgstr "Product (optional)"
 
-#: templates/accounting/invoice_form.html:231
+#: templates/accounting/invoices/invoice_form.html:231
 msgid "إضافة بند جديد"
 msgstr "Add new item"
 
-#: templates/accounting/invoice_form.html:255
+#: templates/accounting/invoices/invoice_form.html:255
 msgid "اكتب هنا الشروط والأحكام أو ملاحظات الدفع التي ستظهر في الفاتورة."
 msgstr ""
 "Write here the terms and conditions or payment notes that will appear on the "
 "invoice."
 
-#: templates/accounting/invoice_form.html:265
+#: templates/accounting/invoices/invoice_form.html:265
+#: templates/accounting/payment/payment_form.html:85
 msgid "حفظ التعديلات"
 msgstr "Save changes"
 
-#: templates/accounting/invoice_form.html:267
+#: templates/accounting/invoices/invoice_form.html:267
 msgid "حفظ الفاتورة"
 msgstr "Save invoice"
 
-#: templates/accounting/invoice_print.html:252
+#: templates/accounting/invoices/invoice_form.html:271
+#: templates/accounting/payment/general_payment_apply.html:69
+#: templates/accounting/payment/payment_form.html:81
+msgid "إلغاء"
+msgstr "Cancel"
+
+#: templates/accounting/invoices/invoice_print.html:252
 #: templates/accounting/orders/order_print.html:258
-#: templates/accounting/payment_print.html:213
+#: templates/accounting/payment/payment_print.html:213
 msgid "سلطنة عمان – ورشة/شركة الألمنيوم"
 msgstr "Sultanate of Oman – Aluminum workshop/company"
 
-#: templates/accounting/invoice_print.html:253
+#: templates/accounting/invoices/invoice_print.html:253
 #: templates/accounting/orders/order_print.html:259
-#: templates/accounting/payment_print.html:214
+#: templates/accounting/payment/payment_print.html:214
 msgid "هاتف:"
 msgstr "Phone:"
 
-#: templates/accounting/invoice_print.html:254
+#: templates/accounting/invoices/invoice_print.html:254
 #: templates/accounting/orders/order_print.html:260
-#: templates/accounting/payment_print.html:215
+#: templates/accounting/payment/payment_print.html:215
 msgid "بريد إلكتروني:"
 msgstr "Email:"
 
-#: templates/accounting/invoice_print.html:259
+#: templates/accounting/invoices/invoice_print.html:259
 msgid "فاتورة"
 msgstr "Invoice"
 
-#: templates/accounting/invoice_print.html:262
+#: templates/accounting/invoices/invoice_print.html:262
 msgid "رقم الفاتورة:"
 msgstr "Invoice number:"
 
-#: templates/accounting/invoice_print.html:266
+#: templates/accounting/invoices/invoice_print.html:266
 msgid "تاريخ الإصدار:"
 msgstr "Issue date:"
 
-#: templates/accounting/invoice_print.html:277
+#: templates/accounting/invoices/invoice_print.html:277
 msgid "مدفوعة"
 msgstr "Paid"
 
-#: templates/accounting/invoice_print.html:279
+#: templates/accounting/invoices/invoice_print.html:279
 msgid "مدفوعة جزئياً"
 msgstr "Partially paid"
 
-#: templates/accounting/invoice_print.html:281
+#: templates/accounting/invoices/invoice_print.html:281
 msgid "ملغاة"
 msgstr "Cancelled"
 
-#: templates/accounting/invoice_print.html:290
+#: templates/accounting/invoices/invoice_print.html:290
 #: templates/accounting/orders/order_print.html:331
-#: templates/accounting/payment_print.html:264
+#: templates/accounting/payment/payment_print.html:264
 msgid "بيانات الزبون"
 msgstr "Customer details"
 
-#: templates/accounting/invoice_print.html:292
+#: templates/accounting/invoices/invoice_print.html:292
 #: templates/accounting/orders/order_print.html:333
-#: templates/accounting/payment_print.html:267
+#: templates/accounting/payment/payment_print.html:267
 msgid "الاسم:"
 msgstr "Name:"
 
-#: templates/accounting/invoice_print.html:294
+#: templates/accounting/invoices/invoice_print.html:294
 #: templates/accounting/orders/order_print.html:335
-#: templates/accounting/payment_print.html:272
+#: templates/accounting/payment/payment_print.html:272
 msgid "الشركة:"
 msgstr "Company:"
 
-#: templates/accounting/invoice_print.html:297
+#: templates/accounting/invoices/invoice_print.html:297
 #: templates/accounting/orders/order_print.html:338
 msgid "الرقم الضريبي:"
 msgstr "Tax number:"
 
-#: templates/accounting/invoice_print.html:300
+#: templates/accounting/invoices/invoice_print.html:300
 #: templates/accounting/orders/order_print.html:341
-#: templates/accounting/payment_print.html:278
+#: templates/accounting/payment/payment_print.html:278
 msgid "الهاتف:"
 msgstr "Phone:"
 
-#: templates/accounting/invoice_print.html:303
+#: templates/accounting/invoices/invoice_print.html:303
 #: templates/accounting/orders/order_print.html:344
-#: templates/accounting/payment_print.html:284
+#: templates/accounting/payment/payment_print.html:284
 msgid "العنوان:"
 msgstr "Address:"
 
-#: templates/accounting/invoice_print.html:310
+#: templates/accounting/invoices/invoice_print.html:310
 msgid "ملخص الفاتورة"
 msgstr "Invoice summary"
 
-#: templates/accounting/invoice_print.html:315
+#: templates/accounting/invoices/invoice_print.html:315
 msgid "إجمالي الفاتورة"
 msgstr "Invoice total"
 
-#: templates/accounting/invoice_print.html:319
+#: templates/accounting/invoices/invoice_print.html:319
 msgid "إجمالي المدفوع"
 msgstr "Total paid"
 
-#: templates/accounting/invoice_print.html:387
+#: templates/accounting/invoices/invoice_print.html:387
 msgid "الوصف / التفاصيل"
 msgstr "Description / details"
 
-#: templates/accounting/invoice_print.html:406
+#: templates/accounting/invoices/invoice_print.html:406
 msgid "الدفعات على هذه الفاتورة"
 msgstr "Payments on this invoice"
 
-#: templates/accounting/invoice_print.html:427
+#: templates/accounting/invoices/invoice_print.html:427
 msgid "لا توجد دفعات مسجلة على هذه الفاتورة."
 msgstr "There are no payments recorded on this invoice."
 
-#: templates/accounting/invoice_print.html:436
+#: templates/accounting/invoices/invoice_print.html:436
 #: templates/accounting/orders/order_print.html:427
 msgid "يمكنك استخدام أمر الطباعة في المتصفح (Ctrl + P) ثم اختيار"
 msgstr "You can use the browser print command (Ctrl + P) and then choose"
@@ -954,6 +1220,8 @@ msgid "طباعة"
 msgstr "Print"
 
 #: templates/accounting/orders/order_detail.html:51
+#: templates/ledger/accounts/form.html:98
+#: templates/ledger/journal/form.html:148
 msgid "رجوع"
 msgstr "Back"
 
@@ -1106,6 +1374,7 @@ msgstr "Cancelled"
 
 #: templates/accounting/orders/order_print.html:295
 #: templates/accounting/orders/order_print.html:296
+#: templates/ledger/journal/detail.html:61
 msgid "مسودة"
 msgstr "Draft"
 
@@ -1129,68 +1398,184 @@ msgstr "Related invoice:"
 msgid "ملخص الطلب"
 msgstr "Order summary"
 
-#: templates/accounting/payment_print.html:7
-#: templates/accounting/payment_print.html:220
+#: templates/accounting/payment/general_payment_apply.html:12
+#, python-format
+msgid "تسوية دفعة عامة رقم #%(id)s"
+msgstr "Apply general payment #%(id)s"
+
+#: templates/accounting/payment/general_payment_apply.html:22
+msgid "المبلغ المتاح"
+msgstr "Available amount"
+
+#: templates/accounting/payment/general_payment_apply.html:27
+msgid "يمكنك تسوية جزء من هذا المبلغ أو تسويته بالكامل على فاتورة معيّنة."
+msgstr ""
+"You can apply part of this amount or the full amount to a specific invoice."
+
+#: templates/accounting/payment/general_payment_apply.html:49
+msgid "مبلغ التسوية"
+msgstr "Settlement amount"
+
+#: templates/accounting/payment/general_payment_apply.html:52
+#, python-format
+msgid ""
+"\n"
+"              أقصى مبلغ ممكن: %(max)s\n"
+"            "
+msgstr ""
+"\n"
+"              Maximum allowed amount: %(max)s\n"
+"            "
+
+#: templates/accounting/payment/general_payment_apply.html:64
+msgid "تنفيذ التسوية"
+msgstr "Apply settlement"
+
+#: templates/accounting/payment/payment_form.html:6
+#: templates/accounting/payment/payment_form.html:18
+#, fuzzy
+#| msgid "تعديل الفاتورة"
+msgid "تعديل دفعة"
+msgstr "Edit invoice"
+
+#: templates/accounting/payment/payment_form.html:8
+#, fuzzy
+#| msgid "+ إضافة دفعة"
+msgid "إضافة دفعة"
+msgstr "+ Add payment"
+
+#: templates/accounting/payment/payment_form.html:20
+#: templates/accounting/payment/payment_list.html:22
+#, fuzzy
+#| msgid "إضافة دفعة عامة"
+msgid "إضافة دفعة جديدة"
+msgstr "Add general payment"
+
+#: templates/accounting/payment/payment_form.html:24
+#, fuzzy
+#| msgid "رجوع إلى الطلبات"
+msgid "رجوع إلى الدفعات"
+msgstr "Back to orders"
+
+#: templates/accounting/payment/payment_form.html:49
+msgid "يمكن تركها فارغة لتكون دفعة عامة."
+msgstr ""
+
+#: templates/accounting/payment/payment_form.html:87
+#, fuzzy
+#| msgid "حفظ الطلب"
+msgid "حفظ الدفعة"
+msgstr "Save order"
+
+#: templates/accounting/payment/payment_list.html:6
+#, fuzzy
+#| msgid ""
+#| "قائمة الزبائن مع إمكانية البحث وإدارة بيانات العملاء في نظام المحاسبة."
+msgid ""
+"قائمة الدفعات مع إمكانية البحث والتصفية والتسوية على الفواتير في نظام "
+"المحاسبة."
+msgstr ""
+"Customer list with search and data management in the accounting system."
+
+#: templates/accounting/payment/payment_list.html:17
+#, fuzzy
+#| msgid "إدارة بيانات العملاء وربطهم بالفواتير والدفعات والطلبات."
+msgid "إدارة دفعات العملاء وتسويتها على الفواتير أو كدفعات عامة."
+msgstr ""
+"Manage customer data and link them with invoices, payments, and orders."
+
+#: templates/accounting/payment/payment_list.html:33
+#, fuzzy
+#| msgid "بيانات العميل"
+msgid "بحث باسم العميل"
+msgstr "Customer information"
+
+#: templates/accounting/payment/payment_list.html:38
+#, fuzzy
+#| msgid "طريقة الدفع"
+msgid "كل طرق الدفع"
+msgstr "Payment method"
+
+#: templates/accounting/payment/payment_list.html:99
+#, fuzzy
+#| msgid "دفعة مرتبطة بحساب / فاتورة"
+msgid "دفعة عامة (بدون فاتورة)"
+msgstr "Payment linked to account / invoice"
+
+#: templates/accounting/payment/payment_list.html:120
+#, fuzzy
+#| msgid "مبلغ التسوية"
+msgid "تسوية"
+msgstr "Settlement amount"
+
+#: templates/accounting/payment/payment_list.html:129
+#, fuzzy
+#| msgid "لا توجد دفعات حتى الآن."
+msgid "لا توجد دفعات"
+msgstr "There are no payments yet."
+
+#: templates/accounting/payment/payment_print.html:7
+#: templates/accounting/payment/payment_print.html:220
 msgid "إيصال دفع"
 msgstr "Payment receipt"
 
-#: templates/accounting/payment_print.html:223
+#: templates/accounting/payment/payment_print.html:223
 msgid "رقم الإيصال:"
 msgstr "Receipt number:"
 
-#: templates/accounting/payment_print.html:227
+#: templates/accounting/payment/payment_print.html:227
 msgid "تاريخ الدفع:"
 msgstr "Payment date:"
 
-#: templates/accounting/payment_print.html:231
+#: templates/accounting/payment/payment_print.html:231
 msgid "المبلغ:"
 msgstr "Amount:"
 
-#: templates/accounting/payment_print.html:235
+#: templates/accounting/payment/payment_print.html:235
 msgid "طريقة الدفع:"
 msgstr "Payment method:"
 
-#: templates/accounting/payment_print.html:239
+#: templates/accounting/payment/payment_print.html:239
 msgid "نوع الدفعة:"
 msgstr "Payment type:"
 
-#: templates/accounting/payment_print.html:242
+#: templates/accounting/payment/payment_print.html:242
 msgid "دفعة مرتبطة بحساب / فاتورة"
 msgstr "Payment linked to account / invoice"
 
-#: templates/accounting/payment_print.html:246
+#: templates/accounting/payment/payment_print.html:246
 msgid "دفعة عامة (رصيد للعميل)"
 msgstr "General payment (customer credit)"
 
-#: templates/accounting/payment_print.html:252
+#: templates/accounting/payment/payment_print.html:252
 msgid "مرجع:"
 msgstr "Reference:"
 
-#: templates/accounting/payment_print.html:253
+#: templates/accounting/payment/payment_print.html:253
 msgid "فاتورة رقم"
 msgstr "Invoice number"
 
-#: templates/accounting/payment_print.html:293
+#: templates/accounting/payment/payment_print.html:293
 msgid "ملخص الدفع"
 msgstr "Payment summary"
 
-#: templates/accounting/payment_print.html:296
+#: templates/accounting/payment/payment_print.html:296
 msgid "المبلغ المدفوع"
 msgstr "Amount paid"
 
-#: templates/accounting/payment_print.html:317
+#: templates/accounting/payment/payment_print.html:317
 msgid "لاستخدام الإيصال رقميًا، يمكنك اختيار"
 msgstr "To use the receipt digitally, you can choose"
 
-#: templates/accounting/payment_print.html:319
+#: templates/accounting/payment/payment_print.html:319
 msgid "من شاشة الطباعة."
 msgstr "from the print screen."
 
-#: templates/accounting/payment_print.html:329
+#: templates/accounting/payment/payment_print.html:329
 msgid "إيصال دفع آلي من نظام مزون ألمنيوم"
 msgstr "Automatic payment receipt from Mazoon Aluminum system"
 
-#: templates/base.html:114 templates/base.html:233
+#: templates/base.html:114 templates/base.html:240
 msgid "الرئيسية"
 msgstr "Home"
 
@@ -1227,20 +1612,26 @@ msgstr "Contact us"
 msgid "بوابة الزبون"
 msgstr "Customer Portal"
 
-#: templates/base.html:180
+#: templates/base.html:170
+#, fuzzy
+#| msgid "آخر الطلبات"
+msgid "دفتر الأستاذ"
+msgstr "Latest orders"
+
+#: templates/base.html:187
 msgid "تسجيل الخروج"
 msgstr "Log out"
 
-#: templates/base.html:188 templates/registration/login.html:4
+#: templates/base.html:195 templates/registration/login.html:4
 #: templates/registration/login.html:15
 msgid "تسجيل الدخول"
 msgstr "Log in"
 
-#: templates/base.html:230
+#: templates/base.html:237
 msgid "جميع الحقوق محفوظة"
 msgstr "All rights reserved"
 
-#: templates/base.html:234
+#: templates/base.html:241
 msgid "الخصوصية"
 msgstr "Privacy"
 
@@ -1267,6 +1658,415 @@ msgstr "Grand total"
 #: templates/cart/detail.html:56
 msgid "إتمام الطلب"
 msgstr "Checkout"
+
+#: templates/ledger/accounts/form.html:8
+#, fuzzy
+#| msgid "تعديل"
+msgid "تعديل حساب"
+msgstr "Edit"
+
+#: templates/ledger/accounts/form.html:10 templates/ledger/dashboard.html:92
+#, fuzzy
+#| msgid "إنشاء طلب جديد"
+msgid "إنشاء حساب جديد"
+msgstr "Create new order"
+
+#: templates/ledger/accounts/form.html:63
+msgid "الحساب الأب (إن وجد)"
+msgstr ""
+
+#: templates/ledger/accounts/form.html:75
+msgid "نشط"
+msgstr ""
+
+#: templates/ledger/accounts/form.html:87
+#, fuzzy
+#| msgid "مبلغ التسوية"
+msgid "السماح بالتسوية"
+msgstr "Settlement amount"
+
+#: templates/ledger/accounts/form.html:101
+#, fuzzy
+#| msgid "حذف"
+msgid "حفظ"
+msgstr "Delete"
+
+#: templates/ledger/accounts/list.html:6
+#, fuzzy
+#| msgid "كل الدفعات"
+msgid "دليل الحسابات"
+msgstr "All payments"
+
+#: templates/ledger/accounts/list.html:8
+#, fuzzy
+#| msgid "طلب جديد"
+msgid "حساب جديد"
+msgstr "New order"
+
+#: templates/ledger/accounts/list.html:49 templates/ledger/base_ledger.html:34
+#: templates/ledger/reports/account_ledger.html:7
+msgid "كشف حساب"
+msgstr ""
+
+#: templates/ledger/accounts/list.html:56
+#: templates/ledger/accounts/list.html:65
+#, fuzzy
+#| msgid "لا توجد طلبات حتى الآن."
+msgid "لا توجد حسابات حتى الآن."
+msgstr "There are no orders yet."
+
+#: templates/ledger/base_ledger.html:4
+#, fuzzy
+#| msgid "فاتورة جديدة | Mazoon Aluminum"
+msgid "دفتر الأستاذ | Mazoon Aluminum"
+msgstr "New invoice | Mazoon Aluminum"
+
+#: templates/ledger/base_ledger.html:6
+msgid "ملخص نظام دفتر الأستاذ (Ledger) للحسابات العامة والتقارير الأساسية."
+msgstr ""
+
+#: templates/ledger/base_ledger.html:14
+msgid "دفتر الأستاذ (Ledger)"
+msgstr ""
+
+#: templates/ledger/base_ledger.html:16
+msgid "عرض الحسابات، القيود اليومية، وميزان المراجعة وكشف حساب كل حساب."
+msgstr ""
+
+#: templates/ledger/base_ledger.html:22
+msgid "الملخص"
+msgstr ""
+
+#: templates/ledger/base_ledger.html:25
+msgid "الحسابات"
+msgstr ""
+
+#: templates/ledger/base_ledger.html:28
+msgid "القيود"
+msgstr ""
+
+#: templates/ledger/base_ledger.html:31
+#: templates/ledger/reports/trial_balance.html:7
+#, fuzzy
+#| msgid "لوحة المحاسبة"
+msgid "ميزان المراجعة"
+msgstr "Accounting dashboard"
+
+#: templates/ledger/dashboard.html:7
+#, fuzzy
+#| msgid "ملخص الطلب"
+msgid "الملخص العام"
+msgstr "Order summary"
+
+#: templates/ledger/dashboard.html:9
+#, python-format
+msgid ""
+"\n"
+"        نظرة سريعة على الحسابات والقيود من %(start)s إلى %(end)s.\n"
+"      "
+msgstr ""
+
+#: templates/ledger/dashboard.html:22
+#, fuzzy
+#| msgid "عدد الطلبات"
+msgid "عدد الحسابات"
+msgstr "Number of orders"
+
+#: templates/ledger/dashboard.html:31
+#, fuzzy
+#| msgid "إجمالي المدفوع"
+msgid "إجمالي القيود"
+msgstr "Total paid"
+
+#: templates/ledger/dashboard.html:40
+#, fuzzy
+#| msgid "عن هذا المنتج"
+msgid "قيود هذا الشهر"
+msgstr "About this product"
+
+#: templates/ledger/dashboard.html:54
+#, fuzzy
+#| msgid "إجمالي الطلب"
+msgid "إجمالي حركة الشهر"
+msgstr "Order total"
+
+#: templates/ledger/dashboard.html:67
+msgid "تنبيه: إجمالي المدين لا يساوي إجمالي الدائن خلال الفترة المحددة."
+msgstr ""
+
+#: templates/ledger/dashboard.html:71
+msgid "الحركة الشهرية متوازنة (مدين = دائن)."
+msgstr ""
+
+#: templates/ledger/dashboard.html:87
+#, fuzzy
+#| msgid "إجراءات"
+msgid "إجراءات سريعة"
+msgstr "Actions"
+
+#: templates/ledger/dashboard.html:98
+#, fuzzy
+#| msgid "إنشاء طلب جديد"
+msgid "إنشاء قيد جديد"
+msgstr "Create new order"
+
+#: templates/ledger/dashboard.html:103
+#, fuzzy
+#| msgid "عرض جميع المنتجات"
+msgid "عرض ميزان المراجعة"
+msgstr "View all products"
+
+#: templates/ledger/dashboard.html:109
+#, fuzzy
+#| msgid "عرض الفاتورة"
+msgid "عرض دفتر حساب"
+msgstr "View invoice"
+
+#: templates/ledger/dashboard.html:115
+#, fuzzy
+#| msgid "عرض كل الطلبات"
+msgid "عرض دليل الحسابات"
+msgstr "View all orders"
+
+#: templates/ledger/dashboard.html:121
+#, fuzzy
+#| msgid "عرض جميع المنتجات"
+msgid "عرض جميع القيود"
+msgstr "View all products"
+
+#: templates/ledger/dashboard.html:134
+#, fuzzy
+#| msgid "أحدث من المدونة"
+msgid "أحدث القيود"
+msgstr "Latest from the blog"
+
+#: templates/ledger/dashboard.html:137
+#, fuzzy
+#| msgid "عرض كل الفواتير"
+msgid "عرض كل القيود"
+msgstr "View all invoices"
+
+#: templates/ledger/dashboard.html:179 templates/ledger/journal/list.html:59
+#, fuzzy
+#| msgid "لا توجد تدوينات حتى الآن."
+msgid "لا توجد قيود حتى الآن."
+msgstr "There are no posts yet."
+
+#: templates/ledger/journal/detail.html:8
+#, fuzzy, python-format
+#| msgid "تسوية دفعة عامة رقم #%(id)s"
+msgid "قيد يومية رقم JE-%(id)s"
+msgstr "Apply general payment #%(id)s"
+
+#: templates/ledger/journal/detail.html:25
+#, fuzzy
+#| msgid "رجوع إلى القائمة"
+msgid "رجوع إلى القيود"
+msgstr "Back to list"
+
+#: templates/ledger/journal/detail.html:39
+#, fuzzy
+#| msgid "لا توجد فواتير بعد."
+msgid "لا يوجد وصف."
+msgstr "There are no invoices yet."
+
+#: templates/ledger/journal/detail.html:53
+#, fuzzy
+#| msgid "تاريخ الإنشاء:"
+msgid "تاريخ الإنشاء"
+msgstr "Creation date:"
+
+#: templates/ledger/journal/detail.html:59
+msgid "مُرحّل"
+msgstr ""
+
+#: templates/ledger/journal/detail.html:73
+#: templates/ledger/journal/form.html:64
+#, fuzzy
+#| msgid "سعر الوحدة"
+msgid "أسطر القيد"
+msgstr "Unit price"
+
+#: templates/ledger/journal/detail.html:79
+msgid "م"
+msgstr ""
+
+#: templates/ledger/journal/detail.html:98
+#, fuzzy
+#| msgid "لا توجد بنود في هذا الطلب."
+msgid "لا توجد أسطر في هذا القيد."
+msgstr "There are no items in this order."
+
+#: templates/ledger/journal/detail.html:116
+msgid "القيد متوازن: مجموع المدين يساوي مجموع الدائن."
+msgstr ""
+
+#: templates/ledger/journal/detail.html:120
+msgid "تحذير: القيد غير متوازن! يرجى مراجعة الأسطر."
+msgstr ""
+
+#: templates/ledger/journal/form.html:7
+#, fuzzy
+#| msgid "إنشاء فاتورة"
+msgid "إنشاء قيد يومية"
+msgstr "Create invoice"
+
+#: templates/ledger/journal/form.html:9
+msgid "أدخل بيانات القيد ورصّح الأسطر بحيث يتساوى مجموع المدين مع مجموع الدائن."
+msgstr ""
+
+#: templates/ledger/journal/form.html:66
+msgid "يجب أن يكون مجموع المدين مساويًا لمجموع الدائن قبل الحفظ."
+msgstr ""
+
+#: templates/ledger/journal/form.html:140
+#, fuzzy
+#| msgid "+ إضافة دفعة"
+msgid "إضافة سطر"
+msgstr "+ Add payment"
+
+#: templates/ledger/journal/form.html:152
+#, fuzzy
+#| msgid "حفظ الطلب"
+msgid "حفظ القيد"
+msgstr "Save order"
+
+#: templates/ledger/journal/list.html:7
+#, fuzzy
+#| msgid "البريد الإلكتروني"
+msgid "القيود اليومية"
+msgstr "Email"
+
+#: templates/ledger/journal/list.html:9
+#, fuzzy
+#| msgid "عرض جميع الطلبات المسجّلة في نظام المحاسبة، مع حالة الطلب والإجمالي."
+msgid "قائمة قيود اليومية المسجلة في النظام مرتّبة من الأحدث إلى الأقدم."
+msgstr ""
+"View all orders recorded in the accounting system, with order status and "
+"total."
+
+#: templates/ledger/journal/list.html:14
+#, fuzzy
+#| msgid "بند جديد"
+msgid "قيد جديد"
+msgstr "New item"
+
+#: templates/ledger/journal/list.html:29
+#, fuzzy
+#| msgid "إجمالي المدفوع"
+msgid "إجمالي المدين"
+msgstr "Total paid"
+
+#: templates/ledger/journal/list.html:30
+#, fuzzy
+#| msgid "إجمالي الدفعات"
+msgid "إجمالي الدائن"
+msgstr "Total payments"
+
+#: templates/ledger/journal/list.html:88
+#, fuzzy, python-format
+#| msgid ""
+#| "\n"
+#| "                  صفحة %(number)s من %(total)s\n"
+#| "                "
+msgid ""
+"\n"
+"                صفحة %(number)s من %(num_pages)s\n"
+"              "
+msgstr ""
+"\n"
+"                  Page %(number)s of %(total)s\n"
+"                "
+
+#: templates/ledger/reports/account_ledger.html:9
+#, fuzzy
+#| msgid "عرض جميع الطلبات المسجّلة في نظام المحاسبة، مع حالة الطلب والإجمالي."
+msgid "عرض حركة الحساب ورصيده التراكمي حسب الفترة أو السنة المالية."
+msgstr ""
+"View all orders recorded in the accounting system, with order status and "
+"total."
+
+#: templates/ledger/reports/account_ledger.html:44
+#: templates/ledger/reports/trial_balance.html:58
+msgid "تصفية"
+msgstr ""
+
+#: templates/ledger/reports/account_ledger.html:48
+#: templates/ledger/reports/trial_balance.html:62
+msgid "إعادة تعيين"
+msgstr ""
+
+#: templates/ledger/reports/account_ledger.html:61
+#, fuzzy, python-format
+#| msgid ""
+#| "\n"
+#| "                  صفحة %(number)s من %(total)s\n"
+#| "                "
+msgid ""
+"\n"
+"            الحساب: %(code)s - %(name)s\n"
+"          "
+msgstr ""
+"\n"
+"                  Page %(number)s of %(total)s\n"
+"                "
+
+#: templates/ledger/reports/account_ledger.html:66
+#, fuzzy
+#| msgid "نوع الطلب"
+msgid "نوع الحساب"
+msgstr "Order type"
+
+#: templates/ledger/reports/account_ledger.html:80
+#, fuzzy
+#| msgid "تفاصيل الفاتورة"
+msgid "تفاصيل الحركة"
+msgstr "Invoice details"
+
+#: templates/ledger/reports/account_ledger.html:88
+#, fuzzy
+#| msgid "رقم الطلب"
+msgid "رقم القيد"
+msgstr "Order number"
+
+#: templates/ledger/reports/account_ledger.html:93
+#, fuzzy
+#| msgid "الرصيد المتبقي"
+msgid "الرصيد التراكمي"
+msgstr "Remaining balance"
+
+#: templates/ledger/reports/account_ledger.html:99
+#, fuzzy
+#| msgid "الرصيد المتبقي"
+msgid "رصيد افتتاحي"
+msgstr "Remaining balance"
+
+#: templates/ledger/reports/account_ledger.html:136
+#, fuzzy
+#| msgid "لا توجد دفعات لهذه الفاتورة بعد."
+msgid "لا توجد حركات لهذا الحساب في الفترة المحددة."
+msgstr "There are no payments for this invoice yet."
+
+#: templates/ledger/reports/account_ledger.html:141
+msgid ""
+"الرجاء اختيار حساب وتحديد الفترة (اختياري) ثم الضغط على زر التصفية لعرض كشف "
+"الحساب."
+msgstr ""
+
+#: templates/ledger/reports/trial_balance.html:9
+msgid "تجميع أرصدة الحسابات (مدين / دائن) حسب الفترة أو السنة المالية."
+msgstr ""
+
+#: templates/ledger/reports/trial_balance.html:75
+#, fuzzy
+#| msgid "عرض جميع المنتجات"
+msgid "نتائج ميزان المراجعة"
+msgstr "View all products"
+
+#: templates/ledger/reports/trial_balance.html:140
+msgid ""
+"لا توجد بيانات للفترة المحددة. جرّب تغيير الفترة أو اختيار سنة مالية مختلفة."
+msgstr ""
 
 #: templates/portal/dashboard.html:4
 msgid "لوحة الزبون"
@@ -1945,3 +2745,9 @@ msgstr "Name and content are required."
 #: website/views.py:236
 msgid "تم إرسال رسالتك، سنعاود التواصل معك قريباً."
 msgstr "Your message has been sent. We will contact you soon."
+
+#~ msgid "طلب أونلاين"
+#~ msgstr "Online order"
+
+#~ msgid "طلب من الموظف"
+#~ msgstr "Staff order"

@@ -1,4 +1,6 @@
 # ledger/forms.py
+from decimal import Decimal
+
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
@@ -81,10 +83,38 @@ class JournalLineForm(forms.Form):
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
 
+    # ✅ الإصلاح: إضافة تحقق مخصص
+    def clean(self):
+        cleaned_data = super().clean()
+        debit = cleaned_data.get("debit") or Decimal("0")
+        credit = cleaned_data.get("credit") or Decimal("0")
+        account = cleaned_data.get("account")
+
+        # ✅ لا يسمح بالقيم السالبة
+        if debit < 0:
+            self.add_error("debit", _("قيمة المدين لا يمكن أن تكون سالبة."))
+
+        if credit < 0:
+            self.add_error("credit", _("قيمة الدائن لا يمكن أن تكون سالبة."))
+
+        # ✅ لا يسمح أن يكون السطر مدينًا ودائنًا معاً
+        if debit > 0 and credit > 0:
+            raise forms.ValidationError(
+                _("لا يمكن أن يكون السطر مدينًا ودائنًا في نفس الوقت.")
+            )
+
+        # ✅ تحقق من وجود حساب إذا كان هناك مبلغ
+        if (debit > 0 or credit > 0) and not account:
+            raise forms.ValidationError(
+                _("يجب اختيار حساب للسطر الذي يحتوي على مبلغ مدين أو دائن.")
+            )
+
+        return cleaned_data
+
 
 JournalLineFormSet = forms.formset_factory(
     JournalLineForm,
-    extra=3,
+    extra=2,
     can_delete=True,
 )
 

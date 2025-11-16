@@ -49,7 +49,9 @@ python manage.py seed_accounts
 ```bash
 python manage.py runserver
 ```
-
+```bash
+python manage.py test ledger -v 2
+```
 
 Open:
 
@@ -63,6 +65,8 @@ To regenerate messages (if you change text):
 ```bash
 # Make sure gettext is installed (Ubuntu: sudo apt install gettext)
 django-admin makemessages -l en
+```
+```bash
 django-admin compilemessages
 ```
 

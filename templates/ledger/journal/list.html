@@ -40,11 +40,12 @@
               <td class="small">
                 {{ e.description|default:"-"|truncatechars:60 }}
               </td>
+              {# ✅ الإصلاح: استخدام القيم المحسوبة مسبقاً #}
               <td class="text-end text-nowrap">
-                {{ e.total_debit }}
+                {{ e.total_debit_value }}
               </td>
               <td class="text-end text-nowrap">
-                {{ e.total_credit }}
+                {{ e.total_credit_value }}
               </td>
               <td class="text-end text-nowrap">
                 <a href="{% url 'ledger:journalentry_detail' e.pk %}"

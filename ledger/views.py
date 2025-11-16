@@ -30,6 +30,7 @@ from .models import Account, JournalEntry, JournalLine
 
 # ========= مكسين للتحقق من صلاحية الستاف =========
 
+
 class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     def test_func(self):
         return self.request.user.is_staff
@@ -42,6 +43,7 @@ class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
 
 
 # ========= الحسابات =========
+
 
 class AccountListView(StaffRequiredMixin, ListView):
     model = Account
@@ -71,11 +73,27 @@ class AccountUpdateView(StaffRequiredMixin, UpdateView):
 
 # ========= قيود اليومية =========
 
+
 class JournalEntryListView(StaffRequiredMixin, ListView):
     model = JournalEntry
     template_name = "ledger/journal/list.html"
     context_object_name = "entries"
     paginate_by = 50
+
+    def get_queryset(self):
+        # ✅ الإصلاح: استخدام annotate لتجنب مشكلة N+1
+        return JournalEntry.objects.prefetch_related('lines').annotate(
+            total_debit_value=Coalesce(
+                Sum('lines__debit'),
+                Value(0),
+                output_field=DecimalField(max_digits=12, decimal_places=3)
+            ),
+            total_credit_value=Coalesce(
+                Sum('lines__credit'),
+                Value(0),
+                output_field=DecimalField(max_digits=12, decimal_places=3)
+            )
+        ).order_by("-date", "-id")
 
 
 class JournalEntryDetailView(StaffRequiredMixin, DetailView):
@@ -88,9 +106,7 @@ class JournalEntryCreateView(StaffRequiredMixin, View):
     template_name = "ledger/journal/form.html"
 
     def get(self, request, *args, **kwargs):
-        entry_form = JournalEntryForm(
-            initial={"date": timezone.now().date()}
-        )
+        entry_form = JournalEntryForm(initial={"date": timezone.now().date()})
         line_formset = JournalLineFormSet()
         return render(
             request,
@@ -118,6 +134,7 @@ class JournalEntryCreateView(StaffRequiredMixin, View):
         total_debit = Decimal("0")
         total_credit = Decimal("0")
         has_any_line = False
+        has_line_errors = False
 
         for order, form in enumerate(line_formset.forms):
             if form.cleaned_data.get("DELETE"):
@@ -130,6 +147,29 @@ class JournalEntryCreateView(StaffRequiredMixin, View):
 
             # سطر فاضي بالكامل → نتجاهله
             if not account and not description and debit == 0 and credit == 0:
+                continue
+
+            # تحقق منطقي من السطر قبل الحفظ
+            # لا يسمح بمبلغ مدين/دائن بدون حساب
+            if (debit != 0 or credit != 0) and account is None:
+                form.add_error(
+                    "account",
+                    _("يجب اختيار حساب للسطر الذي يحتوي على مبلغ مدين أو دائن."),
+                )
+                has_line_errors = True
+                continue
+
+            # لا يسمح بأن يكون السطر مدين ودائن في نفس الوقت
+            if debit and credit:
+                form.add_error(
+                    "debit",
+                    _("لا يمكن أن يكون السطر مدينًا ودائنًا في نفس الوقت."),
+                )
+                form.add_error(
+                    "credit",
+                    _("لا يمكن أن يكون السطر مدينًا ودائنًا في نفس الوقت."),
+                )
+                has_line_errors = True
                 continue
 
             has_any_line = True
@@ -145,6 +185,17 @@ class JournalEntryCreateView(StaffRequiredMixin, View):
 
             total_debit += debit
             total_credit += credit
+
+        # لو في أخطاء في أسطر القيد نرجع النموذج ونحذف القيد
+        if has_line_errors:
+            entry.lines.all().delete()
+            entry.delete()
+            messages.error(request, _("الرجاء تصحيح الأخطاء في أسطر القيد."))
+            return render(
+                request,
+                self.template_name,
+                {"entry_form": entry_form, "line_formset": line_formset},
+            )
 
         if not has_any_line:
             entry.delete()
@@ -174,6 +225,7 @@ class JournalEntryCreateView(StaffRequiredMixin, View):
 
 
 # ========= تقرير ميزان المراجعة =========
+
 
 def trial_balance_view(request):
     form = TrialBalanceFilterForm(request.GET or None)
@@ -266,7 +318,6 @@ def account_ledger_view(request):
 
             if fiscal_year:
                 opening_qs = opening_qs.filter(
-                    entry__fiscal_year=fiscal_year,
                     entry__date__lt=fiscal_year.start_date,
                 )
 
@@ -285,14 +336,29 @@ def account_ledger_view(request):
                     output_field=DecimalField(max_digits=12, decimal_places=3),
                 ),
             )
-            opening_balance = (
-                opening_totals["debit"] - opening_totals["credit"]
+
+            # ✅ الإصلاح: حساب الرصيد بناءً على نوع الحساب
+            def calculate_balance(account_type, debit, credit):
+                if account_type in [Account.Type.ASSET, Account.Type.EXPENSE]:
+                    return debit - credit  # طبيعة مدينة
+                else:  # liability, equity, revenue
+                    return credit - debit  # طبيعة دائنة
+
+            opening_balance = calculate_balance(
+                account.type,
+                opening_totals["debit"],
+                opening_totals["credit"]
             )
 
-            # بناء خطوط مع رصيد تراكمي
+            # ✅ الإصلاح: حساب الرصيد التراكمي بشكل صحيح
             balance = opening_balance
             for line in lines_qs:
-                balance += (line.debit - line.credit)
+                # حسب تغيير الرصيد بناءً على نوع الحساب
+                if account.type in [Account.Type.ASSET, Account.Type.EXPENSE]:
+                    balance += line.debit - line.credit
+                else:
+                    balance += line.credit - line.debit
+
                 running_lines.append(
                     {
                         "date": line.entry.date,
@@ -313,8 +379,8 @@ def account_ledger_view(request):
     }
     return render(request, "ledger/reports/account_ledger.html", context)
 
-
 # ========= لوحة معلومات بسيطة =========
+
 
 class LedgerDashboardView(StaffRequiredMixin, TemplateView):
     template_name = "ledger/dashboard.html"
@@ -353,9 +419,7 @@ class LedgerDashboardView(StaffRequiredMixin, TemplateView):
         month_debit = month_totals["debit"] or Decimal("0")
         month_credit = month_totals["credit"] or Decimal("0")
 
-        recent_entries = (
-            JournalEntry.objects.order_by("-date", "-id")[:10]
-        )
+        recent_entries = JournalEntry.objects.order_by("-date", "-id")[:10]
 
         ctx.update(
             {
