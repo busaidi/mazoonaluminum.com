@@ -2,10 +2,12 @@
 {% load i18n %}
 
 {% block ledger_content %}
+
+{# ===== Header: title + meta + actions ===== #}
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
     <h2 class="h5 mb-1">
-      {% blocktrans with id=entry.id %}قيد يومية رقم JE-{{ id }}{% endblocktrans %}
+      {% blocktrans with entry_id=entry.id %}قيد يومية رقم JE-{{ entry_id }}{% endblocktrans %}
     </h2>
     <p class="text-muted small mb-0">
       <span>
@@ -20,14 +22,47 @@
     </p>
   </div>
 
-  <div class="d-flex gap-2">
+  <div class="d-flex align-items-center gap-2">
+    {% if entry.posted %}
+      <span class="badge bg-success">{% trans "مُرحّل" %}</span>
+    {% else %}
+      <span class="badge bg-secondary">{% trans "مسودة" %}</span>
+    {% endif %}
+
     <a href="{% url 'ledger:journalentry_list' %}" class="btn btn-light btn-sm">
       {% trans "رجوع إلى القيود" %}
     </a>
+
+    {% if not entry.posted %}
+      <a href="{% url 'ledger:journalentry_edit' pk=entry.pk %}"
+         class="btn btn-outline-primary btn-sm">
+        {% trans "تعديل" %}
+      </a>
+    {% endif %}
+
+    {% if entry.posted %}
+      <form method="post"
+            action="{% url 'ledger:journalentry_unpost' pk=entry.pk %}"
+            class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-danger btn-sm">
+          {% trans "إلغاء الترحيل" %}
+        </button>
+      </form>
+    {% else %}
+      <form method="post"
+            action="{% url 'ledger:journalentry_post' pk=entry.pk %}"
+            class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success btn-sm">
+          {% trans "ترحيل" %}
+        </button>
+      </form>
+    {% endif %}
   </div>
 </div>
 
-{# ===== بيانات عامة عن القيد ===== #}
+{# ===== General info ===== #}
 <div class="card mb-3 shadow-sm border-0">
   <div class="card-body">
     <div class="row g-3 align-items-start">
@@ -67,7 +102,7 @@
   </div>
 </div>
 
-{# ===== أسطر القيد ===== #}
+{# ===== Journal lines ===== #}
 <div class="card shadow-sm border-0">
   <div class="card-body">
     <h6 class="mb-3">{% trans "أسطر القيد" %}</h6>
@@ -87,7 +122,16 @@
           {% for line in entry.lines.all %}
             <tr>
               <td>{{ forloop.counter }}</td>
-              <td>{{ line.account }}</td>
+              <td>
+                {% if line.account %}
+                  <a href="{% url 'ledger:account_ledger' %}?account={{ line.account.pk }}{% if entry.fiscal_year %}&fiscal_year={{ entry.fiscal_year.pk }}{% endif %}"
+                     class="text-decoration-none">
+                    {{ line.account }}
+                  </a>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
               <td class="small">{{ line.description|default:"-" }}</td>
               <td class="text-end text-nowrap">{{ line.debit }}</td>
               <td class="text-end text-nowrap">{{ line.credit }}</td>
@@ -123,4 +167,5 @@
     </p>
   </div>
 </div>
+
 {% endblock %}

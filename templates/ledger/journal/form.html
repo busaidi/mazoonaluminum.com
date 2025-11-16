@@ -4,12 +4,22 @@
 {% block ledger_content %}
 <div class="mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
   <div>
-    <h2 class="h5 mb-1">{% trans "إنشاء قيد يومية" %}</h2>
-    <p class="text-muted small mb-0">
-      {% trans "أدخل بيانات القيد ورصّح الأسطر بحيث يتساوى مجموع المدين مع مجموع الدائن." %}
-    </p>
+    {% if is_update %}
+      <h2 class="h5 mb-1">
+        {% blocktrans with entry_id=entry.id %}تعديل قيد يومية JE-{{ entry_id }}{% endblocktrans %}
+      </h2>
+      <p class="text-muted small mb-0">
+        {% trans "يمكنك تعديل بيانات القيد غير المُرحّل وتصحيح الأسطر ثم إعادة ترحيله." %}
+      </p>
+    {% else %}
+      <h2 class="h5 mb-1">{% trans "إنشاء قيد يومية" %}</h2>
+      <p class="text-muted small mb-0">
+        {% trans "أدخل بيانات القيد ورصّح الأسطر بحيث يتساوى مجموع المدين مع مجموع الدائن." %}
+      </p>
+    {% endif %}
   </div>
 </div>
+
 
 <form method="post" class="card shadow-sm border-0">
   <div class="card-body">
@@ -144,14 +154,19 @@
     <hr class="my-3">
 
     <div class="d-flex justify-content-between">
-      <a href="{% url 'ledger:journalentry_list' %}" class="btn btn-light btn-sm">
-        {% trans "رجوع" %}
-      </a>
+  <a href="{% url 'ledger:journalentry_list' %}" class="btn btn-light btn-sm">
+    {% trans "رجوع" %}
+  </a>
 
-      <button type="submit" class="btn btn-primary btn-sm">
-        {% trans "حفظ القيد" %}
-      </button>
-    </div>
+  <button type="submit" class="btn btn-primary btn-sm">
+    {% if is_update %}
+      {% trans "تحديث القيد" %}
+    {% else %}
+      {% trans "حفظ القيد" %}
+    {% endif %}
+  </button>
+</div>
+
   </div>
 </form>
 

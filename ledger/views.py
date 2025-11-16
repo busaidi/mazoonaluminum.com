@@ -1,10 +1,9 @@
-# ledger/views.py
 from decimal import Decimal
 from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.db.models import Sum, Value, DecimalField, Q
+from django.db.models import Sum, Value, DecimalField
 from django.db.models.functions import Coalesce
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
@@ -19,22 +18,30 @@ from django.views.generic import (
     TemplateView,
 )
 
+from accounting.views import is_accounting_staff, accounting_staff_required
+
 from .forms import (
     AccountForm,
     JournalEntryForm,
     JournalLineFormSet,
     TrialBalanceFilterForm,
-    AccountLedgerFilterForm, FiscalYearForm,
+    AccountLedgerFilterForm,
+    FiscalYearForm,
 )
 from .models import Account, JournalEntry, JournalLine, FiscalYear
 
 
-# ========= مكسين للتحقق من صلاحية الستاف =========
+# ========= Staff / Fiscal Year helpers =========
 
 
 class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    """
+    Mixin for views that require an accounting staff user.
+    Uses the same logic as `is_accounting_staff` in the accounting app.
+    """
+
     def test_func(self):
-        return self.request.user.is_staff
+        return is_accounting_staff(self.request.user)
 
     def handle_no_permission(self):
         if not self.request.user.is_authenticated:
@@ -43,11 +50,10 @@ class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
         return redirect("login")
 
 
-
 class FiscalYearRequiredMixin:
     """
-    يتحقق من وجود سنة مالية واحدة على الأقل قبل السماح بالدخول
-    إلى شاشات دفتر الأستاذ.
+    Mixin that ensures at least one FiscalYear exists
+    before allowing access to ledger screens.
     """
 
     def dispatch(self, request, *args, **kwargs):
@@ -62,8 +68,9 @@ class FiscalYearRequiredMixin:
 
 def fiscal_year_required(view_func):
     """
-    نفس الفكرة لكن للفيوهات الدوال (function-based views).
+    Decorator version of FiscalYearRequiredMixin for function-based views.
     """
+
     @wraps(view_func)
     def _wrapped(request, *args, **kwargs):
         if not FiscalYear.objects.exists():
@@ -77,14 +84,17 @@ def fiscal_year_required(view_func):
     return _wrapped
 
 
+# ========= Initial fiscal year setup =========
 
+
+@accounting_staff_required
 def fiscal_year_setup_view(request):
     """
-    معالج إعداد أول سنة مالية.
-    لو فيه سنة مالية أصلاً، يرجع المستخدم للداشبورد.
+    Handle creation of the first fiscal year.
+    If a fiscal year already exists, redirect to the dashboard.
     """
     if FiscalYear.objects.exists():
-        # لو النظام مهيأ من قبل، ما في داعي للويزرد
+        # System already initialized, no need to run the wizard again
         return redirect("ledger:dashboard")
 
     if request.method == "POST":
@@ -112,7 +122,10 @@ def fiscal_year_setup_view(request):
         {"form": form},
     )
 
-# ========= الحسابات =========
+
+# ========= Accounts =========
+
+
 class AccountListView(FiscalYearRequiredMixin, StaffRequiredMixin, ListView):
     model = Account
     template_name = "ledger/accounts/list.html"
@@ -139,7 +152,7 @@ class AccountUpdateView(FiscalYearRequiredMixin, StaffRequiredMixin, UpdateView)
         return reverse("ledger:account_list")
 
 
-# ========= قيود اليومية =========
+# ========= Journal entries =========
 
 
 class JournalEntryListView(FiscalYearRequiredMixin, StaffRequiredMixin, ListView):
@@ -149,19 +162,26 @@ class JournalEntryListView(FiscalYearRequiredMixin, StaffRequiredMixin, ListView
     paginate_by = 50
 
     def get_queryset(self):
-        # ✅ الإصلاح: استخدام annotate لتجنب مشكلة N+1
-        return JournalEntry.objects.prefetch_related('lines').annotate(
-            total_debit_value=Coalesce(
-                Sum('lines__debit'),
-                Value(0),
-                output_field=DecimalField(max_digits=12, decimal_places=3)
-            ),
-            total_credit_value=Coalesce(
-                Sum('lines__credit'),
-                Value(0),
-                output_field=DecimalField(max_digits=12, decimal_places=3)
+        """
+        Use annotate to avoid N+1 queries when showing totals per entry.
+        """
+        return (
+            JournalEntry.objects
+            .prefetch_related("lines")
+            .annotate(
+                total_debit_value=Coalesce(
+                    Sum("lines__debit"),
+                    Value(0),
+                    output_field=DecimalField(max_digits=12, decimal_places=3),
+                ),
+                total_credit_value=Coalesce(
+                    Sum("lines__credit"),
+                    Value(0),
+                    output_field=DecimalField(max_digits=12, decimal_places=3),
+                ),
             )
-        ).order_by("-date", "-id")
+            .order_by("-date", "-id")
+        )
 
 
 class JournalEntryDetailView(FiscalYearRequiredMixin, StaffRequiredMixin, DetailView):
@@ -194,9 +214,10 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
                 {"entry_form": entry_form, "line_formset": line_formset},
             )
 
+        # Create the journal entry (without lines yet)
         entry = entry_form.save(commit=False)
         entry.created_by = request.user
-        # السنة المالية ستُحدد تلقائيًا في save() حسب التاريخ
+        # Fiscal year will be automatically set in save() based on date
         entry.save()
 
         total_debit = Decimal("0")
@@ -213,12 +234,12 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
             debit = form.cleaned_data.get("debit") or Decimal("0")
             credit = form.cleaned_data.get("credit") or Decimal("0")
 
-            # سطر فاضي بالكامل → نتجاهله
+            # Completely empty line → skip
             if not account and not description and debit == 0 and credit == 0:
                 continue
 
-            # تحقق منطقي من السطر قبل الحفظ
-            # لا يسمح بمبلغ مدين/دائن بدون حساب
+            # Logical validation before saving the line
+            # 1) Cannot have an amount without an account
             if (debit != 0 or credit != 0) and account is None:
                 form.add_error(
                     "account",
@@ -227,7 +248,7 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
                 has_line_errors = True
                 continue
 
-            # لا يسمح بأن يكون السطر مدين ودائن في نفس الوقت
+            # 2) Cannot be both debit and credit at the same time
             if debit and credit:
                 form.add_error(
                     "debit",
@@ -254,7 +275,7 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
             total_debit += debit
             total_credit += credit
 
-        # لو في أخطاء في أسطر القيد نرجع النموذج ونحذف القيد
+        # If there are errors in lines, rollback and return the form
         if has_line_errors:
             entry.lines.all().delete()
             entry.delete()
@@ -265,6 +286,7 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
                 {"entry_form": entry_form, "line_formset": line_formset},
             )
 
+        # If no valid lines at all, rollback and return the form
         if not has_any_line:
             entry.delete()
             messages.error(request, _("لا يوجد أي سطر صالح في القيد."))
@@ -274,8 +296,8 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
                 {"entry_form": entry_form, "line_formset": line_formset},
             )
 
+        # Ensure the entry is balanced (total debit == total credit)
         if total_debit != total_credit:
-            # rollback بسيط
             entry.lines.all().delete()
             entry.delete()
             messages.error(
@@ -292,15 +314,166 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
         return redirect("ledger:journalentry_detail", pk=entry.pk)
 
 
-# ========= تقرير ميزان المراجعة =========
+# ========= Edit unposted Journal =========
+class JournalEntryUpdateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
+    """
+    Edit an existing (unposted) journal entry using the same form as creation.
+    """
 
+    template_name = "ledger/journal/form.html"
+
+    def get_entry(self):
+        return get_object_or_404(JournalEntry, pk=self.kwargs["pk"])
+
+    def dispatch(self, request, *args, **kwargs):
+        self.entry = self.get_entry()
+
+        # Do not allow editing a posted entry
+        if self.entry.posted:
+            messages.error(request, _("لا يمكن تعديل قيد مُرحّل."))
+            return redirect("ledger:journalentry_detail", pk=self.entry.pk)
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        # Header part of the form
+        entry_form = JournalEntryForm(instance=self.entry)
+
+        # Lines: build initial data from existing lines
+        initial = []
+        for line in self.entry.lines.all().order_by("order", "id"):
+            initial.append(
+                {
+                    "account": line.account,
+                    "description": line.description,
+                    "debit": line.debit,
+                    "credit": line.credit,
+                }
+            )
+        line_formset = JournalLineFormSet(initial=initial)
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "entry_form": entry_form,
+                "line_formset": line_formset,
+                "entry": self.entry,
+                "is_update": True,
+            },
+        )
+
+    def post(self, request, *args, **kwargs):
+        entry_form = JournalEntryForm(request.POST, instance=self.entry)
+        line_formset = JournalLineFormSet(request.POST)
+
+        if not (entry_form.is_valid() and line_formset.is_valid()):
+            messages.error(request, _("الرجاء تصحيح الأخطاء في النموذج."))
+            return render(
+                request,
+                self.template_name,
+                {
+                    "entry_form": entry_form,
+                    "line_formset": line_formset,
+                    "entry": self.entry,
+                    "is_update": True,
+                },
+            )
+
+        # Do not touch the database until we are sure everything is valid
+        entry = entry_form.save(commit=False)
+
+        total_debit = Decimal("0")
+        total_credit = Decimal("0")
+        has_any_line = False
+        new_lines = []
+
+        for order, form in enumerate(line_formset.forms):
+            if form.cleaned_data.get("DELETE"):
+                continue
+
+            account = form.cleaned_data.get("account")
+            description = form.cleaned_data.get("description") or ""
+            debit = form.cleaned_data.get("debit") or Decimal("0")
+            credit = form.cleaned_data.get("credit") or Decimal("0")
+
+            # Completely empty line → skip
+            if not account and not description and debit == 0 and credit == 0:
+                continue
+
+            has_any_line = True
+
+            new_lines.append(
+                {
+                    "account": account,
+                    "description": description,
+                    "debit": debit,
+                    "credit": credit,
+                    "order": order,
+                }
+            )
+
+            total_debit += debit
+            total_credit += credit
+
+        # No valid lines at all
+        if not has_any_line:
+            messages.error(request, _("لا يوجد أي سطر صالح في القيد."))
+            return render(
+                request,
+                self.template_name,
+                {
+                    "entry_form": entry_form,
+                    "line_formset": line_formset,
+                    "entry": self.entry,
+                    "is_update": True,
+                },
+            )
+
+        # Must be balanced
+        if total_debit != total_credit:
+            messages.error(
+                request,
+                _("القيد غير متوازن: مجموع المدين لا يساوي مجموع الدائن."),
+            )
+            return render(
+                request,
+                self.template_name,
+                {
+                    "entry_form": entry_form,
+                    "line_formset": line_formset,
+                    "entry": self.entry,
+                    "is_update": True,
+                },
+            )
+
+        # At this point everything is valid → save entry and rewrite lines
+        entry.save()
+
+        # Replace existing lines with the new set
+        self.entry.lines.all().delete()
+        for line_data in new_lines:
+            JournalLine.objects.create(entry=entry, **line_data)
+
+        messages.success(request, _("تم تحديث قيد اليومية بنجاح."))
+        return redirect("ledger:journalentry_detail", pk=entry.pk)
+
+# ========= Trial balance report =========
+
+
+@accounting_staff_required
 @fiscal_year_required
 def trial_balance_view(request):
     form = TrialBalanceFilterForm(request.GET or None)
     rows = None
     totals = None
 
-    qs = JournalLine.objects.select_related("account", "entry")
+    # Start from all posted lines
+    qs = (
+        JournalLine.objects
+        .select_related("account", "entry")
+        .filter(entry__posted=True)
+    )
 
     if form.is_valid():
         fiscal_year = form.cleaned_data.get("fiscal_year")
@@ -350,7 +523,10 @@ def trial_balance_view(request):
     return render(request, "ledger/reports/trial_balance.html", context)
 
 
-# ========= كشف حساب (Account Ledger) =========
+# ========= Account ledger report =========
+
+
+@accounting_staff_required
 @fiscal_year_required
 def account_ledger_view(request):
     form = AccountLedgerFilterForm(request.GET or None)
@@ -366,12 +542,17 @@ def account_ledger_view(request):
         date_to = form.cleaned_data.get("date_to")
 
         if account:
-            # ===== 1) الاستعلام الأساسي لخطوط الحساب =====
-            lines_qs = JournalLine.objects.select_related("entry").filter(
-                account=account
+            # 1) Base queryset for this account (posted entries only)
+            lines_qs = (
+                JournalLine.objects
+                .select_related("entry")
+                .filter(
+                    account=account,
+                    entry__posted=True,
+                )
             )
 
-            # فلترة بالسنة المالية أو بالتواريخ
+            # Filter by fiscal year or date range
             if fiscal_year:
                 lines_qs = lines_qs.filter(entry__fiscal_year=fiscal_year)
             else:
@@ -382,32 +563,34 @@ def account_ledger_view(request):
 
             lines_qs = lines_qs.order_by("entry__date", "entry_id", "id")
 
-            # دالة مساعدة لحساب الرصيد حسب نوع الحساب
+            # Helper to compute balance delta based on account type
             def calculate_balance(account_type, debit, credit):
                 debit = debit or Decimal("0")
                 credit = credit or Decimal("0")
                 if account_type in [Account.Type.ASSET, Account.Type.EXPENSE]:
-                    # طبيعة مدينة
+                    # Natural debit balance
                     return debit - credit
                 else:
-                    # LIAB / EQUITY / REVENUE → طبيعة دائنة
+                    # Liability / equity / revenue → natural credit balance
                     return credit - debit
 
-            # ===== 2) حساب الرصيد الافتتاحي =====
-            # فقط لو عندنا بداية فترة (سنة مالية أو date_from)
+            # 2) Opening balance (before the selected period)
             opening_balance = Decimal("0")
 
             if fiscal_year or date_from:
-                opening_qs = JournalLine.objects.filter(account=account)
+                opening_qs = JournalLine.objects.filter(
+                    account=account,
+                    entry__posted=True,
+                )
 
                 if fiscal_year:
-                    # كل ما قبل بداية السنة المالية المحددة
+                    # All lines before the start of the selected fiscal year
                     opening_qs = opening_qs.filter(
                         entry__date__lt=fiscal_year.start_date,
                     )
 
                 if date_from and not fiscal_year:
-                    # فترة تواريخ فقط بدون سنة مالية
+                    # Date-based period only
                     opening_qs = opening_qs.filter(entry__date__lt=date_from)
 
                 opening_totals = opening_qs.aggregate(
@@ -433,7 +616,7 @@ def account_ledger_view(request):
                     opening_totals["credit"],
                 )
 
-            # ===== 3) بناء الخطوط مع الرصيد التراكمي =====
+            # 3) Build running lines with cumulative balance
             balance = opening_balance
 
             for line in lines_qs:
@@ -465,7 +648,7 @@ def account_ledger_view(request):
     return render(request, "ledger/reports/account_ledger.html", context)
 
 
-# ========= لوحة معلومات بسيطة =========
+# ========= Dashboard =========
 
 
 class LedgerDashboardView(FiscalYearRequiredMixin, StaffRequiredMixin, TemplateView):
@@ -477,16 +660,21 @@ class LedgerDashboardView(FiscalYearRequiredMixin, StaffRequiredMixin, TemplateV
         today = timezone.now().date()
         month_start = today.replace(day=1)
 
+        # Total accounts
         accounts_count = Account.objects.count()
-        entries_qs = JournalEntry.objects.all()
+
+        # Only posted journal entries are considered in stats
+        entries_qs = JournalEntry.objects.filter(posted=True)
         entries_count = entries_qs.count()
 
+        # Posted entries for the current month
         month_entries = entries_qs.filter(
             date__gte=month_start,
             date__lte=today,
         )
         month_entries_count = month_entries.count()
 
+        # Monthly totals (debit / credit) for posted entries
         month_totals = (
             JournalLine.objects.filter(entry__in=month_entries)
             .aggregate(
@@ -505,7 +693,11 @@ class LedgerDashboardView(FiscalYearRequiredMixin, StaffRequiredMixin, TemplateV
         month_debit = month_totals["debit"] or Decimal("0")
         month_credit = month_totals["credit"] or Decimal("0")
 
-        recent_entries = JournalEntry.objects.order_by("-date", "-id")[:10]
+        # Recent posted entries
+        recent_entries = (
+            JournalEntry.objects.filter(posted=True)
+            .order_by("-date", "-id")[:10]
+        )
 
         ctx.update(
             {
@@ -520,3 +712,55 @@ class LedgerDashboardView(FiscalYearRequiredMixin, StaffRequiredMixin, TemplateV
             }
         )
         return ctx
+
+
+# ========= Posting / Unposting journal entries =========
+
+
+@accounting_staff_required
+@fiscal_year_required
+def journalentry_post_view(request, pk):
+    """
+    Post a journal entry:
+    - Only allowed via POST
+    - Entry must be balanced
+    """
+    entry = get_object_or_404(JournalEntry, pk=pk)
+
+    if request.method != "POST":
+        return redirect("ledger:journalentry_detail", pk=entry.pk)
+
+    if entry.posted:
+        messages.info(request, _("القيد مُرحّل بالفعل."))
+        return redirect("ledger:journalentry_detail", pk=entry.pk)
+
+    if not entry.is_balanced:
+        messages.error(request, _("لا يمكن ترحيل قيد غير متوازن."))
+        return redirect("ledger:journalentry_detail", pk=entry.pk)
+
+    entry.posted = True
+    entry.save(update_fields=["posted"])
+    messages.success(request, _("تم ترحيل القيد بنجاح."))
+    return redirect("ledger:journalentry_detail", pk=entry.pk)
+
+
+@accounting_staff_required
+@fiscal_year_required
+def journalentry_unpost_view(request, pk):
+    """
+    Unpost a journal entry:
+    - Only allowed via POST
+    """
+    entry = get_object_or_404(JournalEntry, pk=pk)
+
+    if request.method != "POST":
+        return redirect("ledger:journalentry_detail", pk=entry.pk)
+
+    if not entry.posted:
+        messages.info(request, _("القيد غير مُرحّل."))
+        return redirect("ledger:journalentry_detail", pk=entry.pk)
+
+    entry.posted = False
+    entry.save(update_fields=["posted"])
+    messages.success(request, _("تم إلغاء ترحيل القيد بنجاح."))
+    return redirect("ledger:journalentry_detail", pk=entry.pk)

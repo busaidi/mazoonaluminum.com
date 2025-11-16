@@ -18,6 +18,11 @@ urlpatterns = [
     path("entries/", views.JournalEntryListView.as_view(), name="journalentry_list"),
     path("entries/new/", views.JournalEntryCreateView.as_view(), name="journalentry_create"),
     path("entries/<int:pk>/", views.JournalEntryDetailView.as_view(), name="journalentry_detail"),
+    path("entries/<int:pk>/edit/", views.JournalEntryUpdateView.as_view(), name="journalentry_edit"),
+
+    #posted unposted
+    path("entries/<int:pk>/post/",views.journalentry_post_view,name="journalentry_post",),
+    path("entries/<int:pk>/unpost/",views.journalentry_unpost_view,name="journalentry_unpost",),
 
     # Reports
     path("reports/trial-balance/", views.trial_balance_view, name="trial_balance"),

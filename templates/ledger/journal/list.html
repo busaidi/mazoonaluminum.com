@@ -28,6 +28,7 @@
             <th class="text-nowrap">{% trans "الوصف" %}</th>
             <th class="text-nowrap text-end">{% trans "إجمالي المدين" %}</th>
             <th class="text-nowrap text-end">{% trans "إجمالي الدائن" %}</th>
+            <th class="text-nowrap text-center">{% trans "الحالة" %}</th>
             <th class="text-nowrap text-end">{% trans "إجراءات" %}</th>
           </tr>
         </thead>
@@ -40,12 +41,23 @@
               <td class="small">
                 {{ e.description|default:"-"|truncatechars:60 }}
               </td>
-              {# ✅ الإصلاح: استخدام القيم المحسوبة مسبقاً #}
+              {# precomputed totals from annotate #}
               <td class="text-end text-nowrap">
                 {{ e.total_debit_value }}
               </td>
               <td class="text-end text-nowrap">
                 {{ e.total_credit_value }}
+              </td>
+              <td class="text-center">
+                {% if e.posted %}
+                  <span class="badge bg-success">
+                    {% trans "مُرحّل" %}
+                  </span>
+                {% else %}
+                  <span class="badge bg-secondary">
+                    {% trans "مسودة" %}
+                  </span>
+                {% endif %}
               </td>
               <td class="text-end text-nowrap">
                 <a href="{% url 'ledger:journalentry_detail' e.pk %}"
@@ -56,7 +68,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="7" class="text-center text-muted small py-4">
+              <td colspan="8" class="text-center text-muted small py-4">
                 {% trans "لا توجد قيود حتى الآن." %}
               </td>
             </tr>
@@ -65,7 +77,7 @@
       </table>
     </div>
 
-    {# ===== التصفح (Pagination) ===== #}
+    {# pagination #}
     {% if is_paginated %}
       <nav class="mt-3">
         <ul class="pagination pagination-sm mb-0 justify-content-center">
