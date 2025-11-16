@@ -80,6 +80,10 @@
     <strong>{% trans "السنة المالية" %}:</strong>
     {{ entry.fiscal_year|default:"-" }}
   </li>
+          <li class="mb-1">
+  <strong>{% trans "دفتر اليومية" %}:</strong>
+  {{ entry.journal|default:"-" }}
+</li>
   <li class="mb-1">
     <strong>{% trans "أنشئ بواسطة" %}:</strong>
     {{ entry.created_by|default:"-" }}

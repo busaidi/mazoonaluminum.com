@@ -34,20 +34,35 @@ class JournalEntryForm(forms.ModelForm):
     class Meta:
         model = JournalEntry
         # ما نخلي المستخدم يختار السنة المالية يدوياً الآن، نعيّنها من التاريخ تلقائياً
-        fields = ["date", "reference", "description"]
+        fields = ["date", "reference", "description", "journal",]
         labels = {
             "date": _("التاريخ"),
             "reference": _("المرجع"),
             "description": _("الوصف"),
+            "journal": _("دفتر اليومية"),
         }
         widgets = {
             "date": forms.DateInput(
-                attrs={"type": "date", "class": "form-control"}
+                attrs={"type": "date", "class": "form-control form-control-sm"}
+            ),
+            "reference": forms.TextInput(
+                attrs={"class": "form-control form-control-sm"}
             ),
             "description": forms.Textarea(
-                attrs={"rows": 2, "class": "form-control"}
+                attrs={"class": "form-control form-control-sm", "rows": 2}
+            ),
+            "journal": forms.Select(          # 👈 الويجت
+                attrs={"class": "form-select form-select-sm"}
             ),
         }
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            # Optional: order journals nicely / only active ones
+            from .models import Journal
+            self.fields["journal"].queryset = Journal.objects.filter(is_active=True).order_by("code")
+            self.fields["journal"].label = _("دفتر اليومية")
+            self.fields["journal"].empty_label = _("اختر دفتر اليومية")
 
 
 class JournalLineForm(forms.Form):

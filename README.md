@@ -47,6 +47,9 @@ python manage.py seed_website_data
 python manage.py seed_accounts
 ```
 ```bash
+python manage.py seed_journals
+```
+```bash
 python manage.py runserver
 ```
 ```bash

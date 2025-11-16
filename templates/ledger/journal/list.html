@@ -25,6 +25,7 @@
             <th class="text-nowrap">{% trans "رقم" %}</th>
             <th class="text-nowrap">{% trans "التاريخ" %}</th>
             <th class="text-nowrap">{% trans "المرجع" %}</th>
+              <th class="text-nowrap">{% trans "دفتر" %}</th>
             <th class="text-nowrap">{% trans "الوصف" %}</th>
             <th class="text-nowrap text-end">{% trans "إجمالي المدين" %}</th>
             <th class="text-nowrap text-end">{% trans "إجمالي الدائن" %}</th>
@@ -38,6 +39,9 @@
               <td class="text-nowrap">JE-{{ e.id }}</td>
               <td class="text-nowrap">{{ e.date }}</td>
               <td class="text-nowrap">{{ e.reference|default:"-" }}</td>
+            <td class="text-nowrap">
+  {{ e.journal|default:"-" }}
+</td>
               <td class="small">
                 {{ e.description|default:"-"|truncatechars:60 }}
               </td>

@@ -33,39 +33,50 @@
     {% endif %}
 
     {# ===== رأس القيد ===== #}
-    <div class="row g-3 mb-3">
+<div class="row g-3 mb-3">
 
-      <div class="col-md-3">
-        <label class="form-label" for="{{ entry_form.date.id_for_label }}">
-          {% trans "التاريخ" %}
-        </label>
-        {{ entry_form.date }}
-        {% for error in entry_form.date.errors %}
-          <div class="text-danger small">{{ error }}</div>
-        {% endfor %}
-      </div>
+  <div class="col-md-3">
+    <label class="form-label" for="{{ entry_form.date.id_for_label }}">
+      {% trans "التاريخ" %}
+    </label>
+    {{ entry_form.date }}
+    {% for error in entry_form.date.errors %}
+      <div class="text-danger small">{{ error }}</div>
+    {% endfor %}
+  </div>
 
-      <div class="col-md-3">
-        <label class="form-label" for="{{ entry_form.reference.id_for_label }}">
-          {% trans "المرجع" %}
-        </label>
-        {{ entry_form.reference }}
-        {% for error in entry_form.reference.errors %}
-          <div class="text-danger small">{{ error }}</div>
-        {% endfor %}
-      </div>
+  <div class="col-md-3">
+    <label class="form-label" for="{{ entry_form.reference.id_for_label }}">
+      {% trans "المرجع" %}
+    </label>
+    {{ entry_form.reference }}
+    {% for error in entry_form.reference.errors %}
+      <div class="text-danger small">{{ error }}</div>
+    {% endfor %}
+  </div>
 
-      <div class="col-md-6">
-        <label class="form-label" for="{{ entry_form.description.id_for_label }}">
-          {% trans "الوصف" %}
-        </label>
-        {{ entry_form.description }}
-        {% for error in entry_form.description.errors %}
-          <div class="text-danger small">{{ error }}</div>
-        {% endfor %}
-      </div>
+  <div class="col-md-3">
+    <label class="form-label" for="{{ entry_form.journal.id_for_label }}">
+      {% trans "دفتر اليومية" %}
+    </label>
+    {{ entry_form.journal }}
+    {% for error in entry_form.journal.errors %}
+      <div class="text-danger small">{{ error }}</div>
+    {% endfor %}
+  </div>
 
-    </div>
+  <div class="col-md-3">
+    <label class="form-label" for="{{ entry_form.description.id_for_label }}">
+      {% trans "الوصف" %}
+    </label>
+    {{ entry_form.description }}
+    {% for error in entry_form.description.errors %}
+      <div class="text-danger small">{{ error }}</div>
+    {% endfor %}
+  </div>
+
+</div>
+
 
     <hr class="my-3">
 

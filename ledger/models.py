@@ -77,6 +77,54 @@ class Account(models.Model):
         return f"{self.code} - {self.name}"
 
 
+class Journal(models.Model):
+    """
+    Simple journal (book) model:
+    - General, Cash, Bank, Sales, Purchase, etc.
+    """
+
+    class Type(models.TextChoices):
+        GENERAL = "general", _("دفتر عام")
+        CASH = "cash", _("دفتر الكاش")
+        BANK = "bank", _("دفتر البنك")
+        SALES = "sales", _("دفتر المبيعات")
+        PURCHASE = "purchase", _("دفتر المشتريات")
+
+    code = models.CharField(
+        max_length=20,
+        unique=True,
+        verbose_name=_("كود الدفتر"),
+    )
+    name = models.CharField(
+        max_length=100,
+        verbose_name=_("اسم الدفتر"),
+    )
+    type = models.CharField(
+        max_length=20,
+        choices=Type.choices,
+        default=Type.GENERAL,
+        verbose_name=_("نوع الدفتر"),
+    )
+    is_default = models.BooleanField(
+        default=False,
+        verbose_name=_("دفتر افتراضي"),
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_("نشط"),
+    )
+
+    class Meta:
+        ordering = ["code"]
+        verbose_name = _("دفتر اليومية")
+        verbose_name_plural = _("دفاتر اليومية")
+
+    def __str__(self) -> str:
+        return f"{self.code} - {self.name}"
+
+
+
+
 class JournalEntry(models.Model):
     """
     قيد يومية بسيط، مربوط بسنة مالية.
@@ -89,6 +137,14 @@ class JournalEntry(models.Model):
         on_delete=models.PROTECT,
         related_name="entries",
         verbose_name=_("السنة المالية"),
+    )
+    journal = models.ForeignKey(
+        "Journal",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="entries",
+        verbose_name=_("دفتر اليومية"),
     )
     date = models.DateField(default=timezone.now, verbose_name=_("التاريخ"))
     reference = models.CharField(max_length=50, blank=True, verbose_name=_("المرجع"))
