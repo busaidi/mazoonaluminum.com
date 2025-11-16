@@ -1,0 +1,66 @@
+{% extends "ledger/base_ledger.html" %}
+{% load i18n %}
+
+{% block ledger_content %}
+<div class="py-4">
+
+  <div class="mb-3">
+    <h1 class="h5 mb-1">
+      {% trans "إعداد السنة المالية الأولى" %}
+    </h1>
+    <p class="text-muted small mb-0">
+      {% trans "قبل استخدام دفتر الأستاذ، يجب إنشاء سنة مالية واحدة على الأقل." %}
+    </p>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+      <form method="post" class="row g-3">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div class="col-md-3">
+          <label class="form-label" for="{{ form.year.id_for_label }}">
+            {% trans "السنة" %}
+          </label>
+          {{ form.year }}
+          {{ form.year.errors }}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label" for="{{ form.start_date.id_for_label }}">
+            {% trans "تاريخ البداية" %}
+          </label>
+          {{ form.start_date }}
+          {{ form.start_date.errors }}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label" for="{{ form.end_date.id_for_label }}">
+            {% trans "تاريخ النهاية" %}
+          </label>
+          {{ form.end_date }}
+          {{ form.end_date.errors }}
+        </div>
+
+        <div class="col-md-3">
+          <div class="form-check mt-4 pt-2">
+            {{ form.is_closed }}
+            <label class="form-check-label" for="{{ form.is_closed.id_for_label }}">
+              {% trans "مقفلة؟" %}
+            </label>
+            {{ form.is_closed.errors }}
+          </div>
+        </div>
+
+        <div class="col-12 d-flex gap-2 mt-2">
+          <button type="submit" class="btn btn-primary">
+            {% trans "حفظ وبدء الاستخدام" %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

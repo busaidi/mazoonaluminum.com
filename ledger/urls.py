@@ -6,6 +6,7 @@ app_name = "ledger"
 
 urlpatterns = [
     # Dashboard
+    path("setup/fiscal-year/", views.fiscal_year_setup_view, name="fiscal_year_setup"),
     path("", views.LedgerDashboardView.as_view(), name="dashboard"),
 
     # Accounts

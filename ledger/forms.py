@@ -173,3 +173,36 @@ class AccountLedgerFilterForm(forms.Form):
             attrs={"type": "date", "class": "form-control form-control-sm"}
         ),
     )
+
+
+
+class FiscalYearForm(forms.ModelForm):
+    class Meta:
+        model = FiscalYear
+        fields = ["year", "start_date", "end_date", "is_closed"]
+        labels = {
+            "year": _("السنة"),
+            "start_date": _("تاريخ البداية"),
+            "end_date": _("تاريخ النهاية"),
+            "is_closed": _("مقفلة؟"),
+        }
+        widgets = {
+            "start_date": forms.DateInput(
+                attrs={"type": "date", "class": "form-control form-control-sm"}
+            ),
+            "end_date": forms.DateInput(
+                attrs={"type": "date", "class": "form-control form-control-sm"}
+            ),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start = cleaned_data.get("start_date")
+        end = cleaned_data.get("end_date")
+
+        if start and end and start > end:
+            raise forms.ValidationError(
+                _("تاريخ البداية لا يمكن أن يكون بعد تاريخ النهاية.")
+            )
+
+        return cleaned_data

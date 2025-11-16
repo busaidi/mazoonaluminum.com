@@ -1,5 +1,6 @@
 # ledger/views.py
 from decimal import Decimal
+from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
@@ -23,9 +24,9 @@ from .forms import (
     JournalEntryForm,
     JournalLineFormSet,
     TrialBalanceFilterForm,
-    AccountLedgerFilterForm,
+    AccountLedgerFilterForm, FiscalYearForm,
 )
-from .models import Account, JournalEntry, JournalLine
+from .models import Account, JournalEntry, JournalLine, FiscalYear
 
 
 # ========= مكسين للتحقق من صلاحية الستاف =========
@@ -42,16 +43,83 @@ class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
         return redirect("login")
 
 
+
+class FiscalYearRequiredMixin:
+    """
+    يتحقق من وجود سنة مالية واحدة على الأقل قبل السماح بالدخول
+    إلى شاشات دفتر الأستاذ.
+    """
+
+    def dispatch(self, request, *args, **kwargs):
+        if not FiscalYear.objects.exists():
+            messages.warning(
+                request,
+                _("يجب إنشاء سنة مالية واحدة على الأقل قبل استخدام دفتر الأستاذ."),
+            )
+            return redirect("ledger:fiscal_year_setup")
+        return super().dispatch(request, *args, **kwargs)
+
+
+def fiscal_year_required(view_func):
+    """
+    نفس الفكرة لكن للفيوهات الدوال (function-based views).
+    """
+    @wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        if not FiscalYear.objects.exists():
+            messages.warning(
+                request,
+                _("يجب إنشاء سنة مالية واحدة على الأقل قبل استخدام دفتر الأستاذ."),
+            )
+            return redirect("ledger:fiscal_year_setup")
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped
+
+
+
+def fiscal_year_setup_view(request):
+    """
+    معالج إعداد أول سنة مالية.
+    لو فيه سنة مالية أصلاً، يرجع المستخدم للداشبورد.
+    """
+    if FiscalYear.objects.exists():
+        # لو النظام مهيأ من قبل، ما في داعي للويزرد
+        return redirect("ledger:dashboard")
+
+    if request.method == "POST":
+        form = FiscalYearForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(
+                request,
+                _("تم إنشاء السنة المالية الأولى بنجاح. يمكنك الآن استخدام دفتر الأستاذ."),
+            )
+            return redirect("ledger:dashboard")
+    else:
+        today = timezone.now().date()
+        initial = {
+            "year": today.year,
+            "start_date": today.replace(month=1, day=1),
+            "end_date": today.replace(month=12, day=31),
+            "is_closed": False,
+        }
+        form = FiscalYearForm(initial=initial)
+
+    return render(
+        request,
+        "ledger/setup/fiscal_year_setup.html",
+        {"form": form},
+    )
+
 # ========= الحسابات =========
-
-
-class AccountListView(StaffRequiredMixin, ListView):
+class AccountListView(FiscalYearRequiredMixin, StaffRequiredMixin, ListView):
     model = Account
     template_name = "ledger/accounts/list.html"
     context_object_name = "accounts"
 
 
-class AccountCreateView(StaffRequiredMixin, CreateView):
+class AccountCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, CreateView):
     model = Account
     form_class = AccountForm
     template_name = "ledger/accounts/form.html"
@@ -61,7 +129,7 @@ class AccountCreateView(StaffRequiredMixin, CreateView):
         return reverse("ledger:account_list")
 
 
-class AccountUpdateView(StaffRequiredMixin, UpdateView):
+class AccountUpdateView(FiscalYearRequiredMixin, StaffRequiredMixin, UpdateView):
     model = Account
     form_class = AccountForm
     template_name = "ledger/accounts/form.html"
@@ -74,7 +142,7 @@ class AccountUpdateView(StaffRequiredMixin, UpdateView):
 # ========= قيود اليومية =========
 
 
-class JournalEntryListView(StaffRequiredMixin, ListView):
+class JournalEntryListView(FiscalYearRequiredMixin, StaffRequiredMixin, ListView):
     model = JournalEntry
     template_name = "ledger/journal/list.html"
     context_object_name = "entries"
@@ -96,13 +164,13 @@ class JournalEntryListView(StaffRequiredMixin, ListView):
         ).order_by("-date", "-id")
 
 
-class JournalEntryDetailView(StaffRequiredMixin, DetailView):
+class JournalEntryDetailView(FiscalYearRequiredMixin, StaffRequiredMixin, DetailView):
     model = JournalEntry
     template_name = "ledger/journal/detail.html"
     context_object_name = "entry"
 
 
-class JournalEntryCreateView(StaffRequiredMixin, View):
+class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
     template_name = "ledger/journal/form.html"
 
     def get(self, request, *args, **kwargs):
@@ -226,7 +294,7 @@ class JournalEntryCreateView(StaffRequiredMixin, View):
 
 # ========= تقرير ميزان المراجعة =========
 
-
+@fiscal_year_required
 def trial_balance_view(request):
     form = TrialBalanceFilterForm(request.GET or None)
     rows = None
@@ -283,7 +351,7 @@ def trial_balance_view(request):
 
 
 # ========= كشف حساب (Account Ledger) =========
-
+@fiscal_year_required
 def account_ledger_view(request):
     form = AccountLedgerFilterForm(request.GET or None)
 
@@ -298,6 +366,7 @@ def account_ledger_view(request):
         date_to = form.cleaned_data.get("date_to")
 
         if account:
+            # ===== 1) الاستعلام الأساسي لخطوط الحساب =====
             lines_qs = JournalLine.objects.select_related("entry").filter(
                 account=account
             )
@@ -313,60 +382,76 @@ def account_ledger_view(request):
 
             lines_qs = lines_qs.order_by("entry__date", "entry_id", "id")
 
-            # حساب رصيد افتتاحي (قبل date_from أو بداية السنة المالية)
-            opening_qs = JournalLine.objects.filter(account=account)
+            # دالة مساعدة لحساب الرصيد حسب نوع الحساب
+            def calculate_balance(account_type, debit, credit):
+                debit = debit or Decimal("0")
+                credit = credit or Decimal("0")
+                if account_type in [Account.Type.ASSET, Account.Type.EXPENSE]:
+                    # طبيعة مدينة
+                    return debit - credit
+                else:
+                    # LIAB / EQUITY / REVENUE → طبيعة دائنة
+                    return credit - debit
 
-            if fiscal_year:
-                opening_qs = opening_qs.filter(
-                    entry__date__lt=fiscal_year.start_date,
+            # ===== 2) حساب الرصيد الافتتاحي =====
+            # فقط لو عندنا بداية فترة (سنة مالية أو date_from)
+            opening_balance = Decimal("0")
+
+            if fiscal_year or date_from:
+                opening_qs = JournalLine.objects.filter(account=account)
+
+                if fiscal_year:
+                    # كل ما قبل بداية السنة المالية المحددة
+                    opening_qs = opening_qs.filter(
+                        entry__date__lt=fiscal_year.start_date,
+                    )
+
+                if date_from and not fiscal_year:
+                    # فترة تواريخ فقط بدون سنة مالية
+                    opening_qs = opening_qs.filter(entry__date__lt=date_from)
+
+                opening_totals = opening_qs.aggregate(
+                    debit=Coalesce(
+                        Sum("debit"),
+                        Value(0),
+                        output_field=DecimalField(
+                            max_digits=12, decimal_places=3
+                        ),
+                    ),
+                    credit=Coalesce(
+                        Sum("credit"),
+                        Value(0),
+                        output_field=DecimalField(
+                            max_digits=12, decimal_places=3
+                        ),
+                    ),
                 )
 
-            if date_from and not fiscal_year:
-                opening_qs = opening_qs.filter(entry__date__lt=date_from)
+                opening_balance = calculate_balance(
+                    account.type,
+                    opening_totals["debit"],
+                    opening_totals["credit"],
+                )
 
-            opening_totals = opening_qs.aggregate(
-                debit=Coalesce(
-                    Sum("debit"),
-                    Value(0),
-                    output_field=DecimalField(max_digits=12, decimal_places=3),
-                ),
-                credit=Coalesce(
-                    Sum("credit"),
-                    Value(0),
-                    output_field=DecimalField(max_digits=12, decimal_places=3),
-                ),
-            )
-
-            # ✅ الإصلاح: حساب الرصيد بناءً على نوع الحساب
-            def calculate_balance(account_type, debit, credit):
-                if account_type in [Account.Type.ASSET, Account.Type.EXPENSE]:
-                    return debit - credit  # طبيعة مدينة
-                else:  # liability, equity, revenue
-                    return credit - debit  # طبيعة دائنة
-
-            opening_balance = calculate_balance(
-                account.type,
-                opening_totals["debit"],
-                opening_totals["credit"]
-            )
-
-            # ✅ الإصلاح: حساب الرصيد التراكمي بشكل صحيح
+            # ===== 3) بناء الخطوط مع الرصيد التراكمي =====
             balance = opening_balance
+
             for line in lines_qs:
-                # حسب تغيير الرصيد بناءً على نوع الحساب
-                if account.type in [Account.Type.ASSET, Account.Type.EXPENSE]:
-                    balance += line.debit - line.credit
-                else:
-                    balance += line.credit - line.debit
+                delta = calculate_balance(
+                    account.type,
+                    line.debit,
+                    line.credit,
+                )
+                balance += delta
 
                 running_lines.append(
                     {
                         "date": line.entry.date,
                         "entry_id": line.entry.id,
-                        "reference": line.entry.reference,
+                        "reference": line.entry.reference or "-",
                         "description": line.description or line.entry.description,
-                        "debit": line.debit,
-                        "credit": line.credit,
+                        "debit": line.debit or Decimal("0"),
+                        "credit": line.credit or Decimal("0"),
                         "balance": balance,
                     }
                 )
@@ -379,10 +464,11 @@ def account_ledger_view(request):
     }
     return render(request, "ledger/reports/account_ledger.html", context)
 
+
 # ========= لوحة معلومات بسيطة =========
 
 
-class LedgerDashboardView(StaffRequiredMixin, TemplateView):
+class LedgerDashboardView(FiscalYearRequiredMixin, StaffRequiredMixin, TemplateView):
     template_name = "ledger/dashboard.html"
 
     def get_context_data(self, **kwargs):
