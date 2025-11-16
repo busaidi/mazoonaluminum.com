@@ -67,18 +67,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
     <!-- Bootstrap 5.3.x -->
-        {# Bootstrap 5.3.x - نسخة RTL للعربي، ونسخة عادية للإنجليزي #}
+    {# Bootstrap 5.3.x - نسخة RTL للعربي، ونسخة عادية للإنجليزي #}
     {% if LANGUAGE_CODE == "ar" %}
         <link
-            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.rtl.min.css"
-            rel="stylesheet"
-            crossorigin="anonymous"
+                href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.rtl.min.css"
+                rel="stylesheet"
+                crossorigin="anonymous"
         />
     {% else %}
         <link
-            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
-            rel="stylesheet"
-            crossorigin="anonymous"
+                href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+                rel="stylesheet"
+                crossorigin="anonymous"
         />
     {% endif %}
 
@@ -92,10 +92,10 @@
 <nav class="navbar navbar-expand-lg navbar-light mazoon-navbar shadow-sm">
     <div class="container">
         <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{% url 'home' %}">
-    <img src="{% static 'img/logo_mazoon_black.png' %}"
-         alt="Mazoon Aluminum logo"
-         class="navbar-logo">
-</a>
+            <img src="{% static 'img/logo_mazoon_black.png' %}"
+                 alt="Mazoon Aluminum logo"
+                 class="navbar-logo">
+        </a>
 
         <button
                 class="navbar-toggler"
@@ -164,13 +164,14 @@
                         </a>
                     </li>
                 {% endif %}
-{% if request.user.is_authenticated and request.user.is_staff %}
-  <li class="nav-item">
-    <a class="nav-link" href="{% url 'ledger:dashboard' %}">
-      {% trans "دفتر الأستاذ" %}
-    </a>
-  </li>
-{% endif %}
+                {% if request.user.is_authenticated and request.user.is_staff %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.namespace == 'ledger' %}active{% endif %}"
+                           href="{% url 'ledger:dashboard' %}">
+                            {% trans "دفتر الأستاذ" %}
+                        </a>
+                    </li>
+                {% endif %}
 
 
                 {# المستخدم + تسجيل الدخول / الخروج #}
