@@ -1,4 +1,3 @@
-# ledger/models.py
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -8,125 +7,21 @@ from django.utils.translation import gettext_lazy as _
 
 User = get_user_model()
 
-def get_default_journal_for_manual_entry():
-    """
-    Returns the default journal for manual entries (typically General Journal).
-    Fallback:
-      - First active GENERAL journal
-      - Otherwise any active journal
-      - Otherwise None
-    """
-    from .models import Journal  # local import to avoid circular imports
 
-    qs = Journal.objects.filter(is_active=True)
+# ==============================================================================
+# Fiscal Year
+# ==============================================================================
 
-    # Prefer general type with is_default=True
-    journal = (
-        qs.filter(type=Journal.Type.GENERAL, is_default=True).first()
-        or qs.filter(type=Journal.Type.GENERAL).first()
-    )
-
-    if journal:
-        return journal
-
-    # Fallback: any active journal
-    return qs.first()
-
-
-def get_default_journal_for_sales_invoice():
-    """
-    Default journal for sales invoices (Sales Journal).
-    To be used later from the accounting app when auto-posting invoices.
-    """
-    from .models import Journal
-
-    qs = Journal.objects.filter(is_active=True)
-    return (
-        qs.filter(type=Journal.Type.SALES, is_default=True).first()
-        or qs.filter(type=Journal.Type.SALES).first()
-    )
-
-
-def get_default_journal_for_customer_payment():
-    """
-    Default journal for customer payments (Cash / Bank Journal).
-    To be used later from the accounting app when auto-posting payments.
-    """
-    from .models import Journal
-
-    qs = Journal.objects.filter(is_active=True)
-
-    # Prefer CASH, then BANK
-    journal = (
-        qs.filter(type=Journal.Type.CASH, is_default=True).first()
-        or qs.filter(type=Journal.Type.CASH).first()
-        or qs.filter(type=Journal.Type.BANK, is_default=True).first()
-        or qs.filter(type=Journal.Type.BANK).first()
-    )
-
-    if journal:
-        return journal
-
-    return None
-
-
-
-def generate_journal_entry_number(journal, fiscal_year, date):
-    """
-    Generate a journal entry number of the form:
-    <PREFIX>-<YEAR>-<SEQ>
-
-    Examples:
-      GEN-2025-0001
-      CASH-2025-0001
-      SALES-2025-0001
-
-    - PREFIX comes from journal.code (or "JE" if no journal).
-    - YEAR comes from fiscal_year.year (fallback to date.year).
-    - SEQ is a running sequence per (journal, year).
-    """
-    from .models import JournalEntry  # safe: resolved at runtime
-
-    # Determine year
-    if fiscal_year is not None:
-        year = fiscal_year.year
-    elif date is not None:
-        year = date.year
-    else:
-        year = timezone.now().year
-
-    # Determine prefix
-    if journal is not None and journal.code:
-        prefix = journal.code.upper()
-    else:
-        prefix = "JE"
-
-    base_prefix = f"{prefix}-{year}-"
-
-    # Get last entry for this journal + year (by id for stability)
-    qs = JournalEntry.objects.filter(number__startswith=base_prefix)
-    if journal is not None:
-        qs = qs.filter(journal=journal)
-    else:
-        qs = qs.filter(journal__isnull=True)
-
-    last_entry = qs.order_by("id").last()
-
-    if last_entry and last_entry.number:
-        try:
-            last_seq = int(last_entry.number.split("-")[-1])
-        except (ValueError, IndexError):
-            last_seq = 0
-        new_seq = last_seq + 1
-    else:
-        new_seq = 1
-
-    return f"{base_prefix}{new_seq:04d}"
 
 class FiscalYear(models.Model):
     """
-    سنة مالية بسيطة: سنة + تاريخ بداية + تاريخ نهاية + حالة إقفال.
+    Simple fiscal year:
+    - year (e.g. 2025)
+    - start_date
+    - end_date
+    - is_closed
     """
+
     year = models.PositiveIntegerField(unique=True, verbose_name=_("السنة"))
     start_date = models.DateField(verbose_name=_("تاريخ البداية"))
     end_date = models.DateField(verbose_name=_("تاريخ النهاية"))
@@ -141,21 +36,27 @@ class FiscalYear(models.Model):
     @classmethod
     def for_date(cls, date):
         """
-        حاول إيجاد السنة المالية التي تحتوي هذا التاريخ.
-        ولو ما حصل، يحاول بالسنة فقط (year = date.year).
+        Try to find the fiscal year that contains the given date.
+        Fallback: match by year only (year = date.year).
         """
         if not date:
             return None
 
+        # First: try by range
         fy = cls.objects.filter(
             start_date__lte=date,
             end_date__gte=date,
         ).first()
-
         if fy:
             return fy
 
+        # Fallback: year field
         return cls.objects.filter(year=date.year).first()
+
+
+# ==============================================================================
+# Account
+# ==============================================================================
 
 
 class Account(models.Model):
@@ -178,7 +79,7 @@ class Account(models.Model):
     )
     is_active = models.BooleanField(default=True)
 
-    # يسمح باستخدام الحساب في التسوية (مثل العملاء والموردين)
+    # Allow this account to be used in settlements (customers, suppliers, etc.)
     allow_settlement = models.BooleanField(
         default=True,
         help_text=_("Allow this account to be used in settlements."),
@@ -189,6 +90,11 @@ class Account(models.Model):
 
     def __str__(self) -> str:
         return f"{self.code} - {self.name}"
+
+
+# ==============================================================================
+# Journal (Books)
+# ==============================================================================
 
 
 class Journal(models.Model):
@@ -237,11 +143,14 @@ class Journal(models.Model):
         return f"{self.code} - {self.name}"
 
 
+# ==============================================================================
+# Journal Entry / Lines
+# ==============================================================================
 
 
 class JournalEntry(models.Model):
     """
-    قيد يومية بسيط، مربوط بسنة مالية.
+    Basic journal entry linked to a fiscal year and a journal.
     """
 
     fiscal_year = models.ForeignKey(
@@ -277,7 +186,6 @@ class JournalEntry(models.Model):
         blank=True,
         verbose_name=_("تاريخ الترحيل"),
     )
-
     posted_by = models.ForeignKey(
         User,
         null=True,
@@ -300,6 +208,9 @@ class JournalEntry(models.Model):
         ordering = ["-date", "-id"]
 
     def __str__(self) -> str:
+        # Prefer the generated number if available
+        if self.number:
+            return f"{self.number} ({self.date})"
         return f"JE-{self.id} ({self.date})"
 
     @property
@@ -316,8 +227,8 @@ class JournalEntry(models.Model):
 
     def save(self, *args, **kwargs):
         """
-        - لو ما تم تعيين السنة المالية، نحاول نعيّنها تلقائياً من تاريخ القيد.
-        - لو لم يتم تعيين رقم القيد (number)، نولّده بناءً على الدفتر والسنة.
+        - Auto-assign fiscal year from date if not set.
+        - Auto-generate entry number (once) based on journal + year.
         """
         # Auto-assign fiscal year from date if not set
         if self.date and self.fiscal_year is None:
@@ -332,7 +243,6 @@ class JournalEntry(models.Model):
             )
 
         super().save(*args, **kwargs)
-
 
 
 class JournalLine(models.Model):
@@ -377,3 +287,117 @@ class JournalLine(models.Model):
 
     def __str__(self) -> str:
         return f"{self.entry_id} - {self.account}"
+
+
+# ==============================================================================
+# Helpers: default journals
+# ==============================================================================
+
+
+def _get_default_journal_by_types(preferred_types):
+    """
+    Internal helper to pick a default journal according to a list of
+    preferred types, in order, falling back to any active journal.
+    """
+    qs = Journal.objects.filter(is_active=True)
+
+    for journal_type in preferred_types:
+        # Prefer is_default=True for the given type
+        journal = (
+            qs.filter(type=journal_type, is_default=True).first()
+            or qs.filter(type=journal_type).first()
+        )
+        if journal:
+            return journal
+
+    # Final fallback: any active journal
+    return qs.first()
+
+
+def get_default_journal_for_manual_entry():
+    """
+    Default journal for manual entries:
+    - Typically GENERAL journal.
+    - Fallback: any active journal.
+    """
+    return _get_default_journal_by_types([Journal.Type.GENERAL])
+
+
+def get_default_journal_for_sales_invoice():
+    """
+    Default journal for sales invoices (Sales Journal).
+    To be used from the accounting app when auto-posting invoices.
+    """
+    return _get_default_journal_by_types([Journal.Type.SALES])
+
+
+def get_default_journal_for_customer_payment():
+    """
+    Default journal for customer payments (Cash / Bank).
+    Order:
+      1) CASH (is_default=True, then any CASH)
+      2) BANK (is_default=True, then any BANK)
+      3) Any active journal as a last resort.
+    """
+    return _get_default_journal_by_types(
+        [Journal.Type.CASH, Journal.Type.BANK]
+    )
+
+
+# ==============================================================================
+# Helpers: journal entry numbering
+# ==============================================================================
+
+
+def generate_journal_entry_number(journal, fiscal_year, date):
+    """
+    Generate a journal entry number of the form:
+        <PREFIX>-<YEAR>-<SEQ>
+
+    Examples:
+        GEN-2025-0001
+        CASH-2025-0001
+        SALES-2025-0001
+
+    - PREFIX comes from journal.code (or "JE" if no journal).
+    - YEAR comes from fiscal_year.year (fallback to date.year / current year).
+    - SEQ is a running sequence per (journal, year) combination.
+    """
+    # Determine year
+    if fiscal_year is not None:
+        year = fiscal_year.year
+    elif date is not None:
+        year = date.year
+    else:
+        year = timezone.now().year
+
+    # Determine prefix
+    if journal is not None and journal.code:
+        prefix = journal.code.upper()
+    else:
+        prefix = "JE"
+
+    base_prefix = f"{prefix}-{year}-"
+
+    # Import here to avoid potential circular imports at module load time
+    from .models import JournalEntry as _JournalEntry  # type: ignore
+
+    # Filter entries that match the prefix and (optionally) the specific journal
+    qs = _JournalEntry.objects.filter(number__startswith=base_prefix)
+    if journal is not None:
+        qs = qs.filter(journal=journal)
+    else:
+        qs = qs.filter(journal__isnull=True)
+
+    last_entry = qs.order_by("id").last()
+
+    if last_entry and last_entry.number:
+        try:
+            last_seq = int(last_entry.number.split("-")[-1])
+        except (ValueError, IndexError):
+            last_seq = 0
+        new_seq = last_seq + 1
+    else:
+        new_seq = 1
+
+    return f"{base_prefix}{new_seq:04d}"
