@@ -28,7 +28,7 @@ from .forms import (
     AccountLedgerFilterForm,
     FiscalYearForm,
 )
-from .models import Account, JournalEntry, JournalLine, FiscalYear
+from .models import Account, JournalEntry, JournalLine, FiscalYear, get_default_journal_for_manual_entry
 
 
 # ========= Staff / Fiscal Year helpers =========
@@ -191,18 +191,46 @@ class JournalEntryDetailView(FiscalYearRequiredMixin, StaffRequiredMixin, Detail
 
 
 class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
+    """
+    Create a manual journal entry:
+    - Prefills date with today
+    - Prefills journal with the default manual journal (usually General Journal)
+    - Validates lines and ensures the entry is balanced before saving
+    """
+
     template_name = "ledger/journal/form.html"
 
     def get(self, request, *args, **kwargs):
-        entry_form = JournalEntryForm(initial={"date": timezone.now().date()})
+        """
+        Render empty form for a new journal entry with sensible defaults.
+        """
+        initial = {
+            "date": timezone.now().date(),
+        }
+
+        # Default journal for manual entries (e.g. General Journal)
+        default_journal = get_default_journal_for_manual_entry()
+        if default_journal is not None:
+            initial["journal"] = default_journal
+
+        entry_form = JournalEntryForm(initial=initial)
         line_formset = JournalLineFormSet()
         return render(
             request,
             self.template_name,
-            {"entry_form": entry_form, "line_formset": line_formset},
+            {
+                "entry_form": entry_form,
+                "line_formset": line_formset,
+            },
         )
 
     def post(self, request, *args, **kwargs):
+        """
+        Validate and create a new journal entry with its lines.
+        Only creates the entry if:
+        - There is at least one valid line
+        - The entry is balanced (total debit == total credit)
+        """
         entry_form = JournalEntryForm(request.POST)
         line_formset = JournalLineFormSet(request.POST)
 
@@ -211,13 +239,16 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
             return render(
                 request,
                 self.template_name,
-                {"entry_form": entry_form, "line_formset": line_formset},
+                {
+                    "entry_form": entry_form,
+                    "line_formset": line_formset,
+                },
             )
 
         # Create the journal entry (without lines yet)
         entry = entry_form.save(commit=False)
         entry.created_by = request.user
-        # Fiscal year will be automatically set in save() based on date
+        # Fiscal year and number will be automatically set in save()
         entry.save()
 
         total_debit = Decimal("0")
@@ -238,7 +269,6 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
             if not account and not description and debit == 0 and credit == 0:
                 continue
 
-            # Logical validation before saving the line
             # 1) Cannot have an amount without an account
             if (debit != 0 or credit != 0) and account is None:
                 form.add_error(
@@ -283,7 +313,10 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
             return render(
                 request,
                 self.template_name,
-                {"entry_form": entry_form, "line_formset": line_formset},
+                {
+                    "entry_form": entry_form,
+                    "line_formset": line_formset,
+                },
             )
 
         # If no valid lines at all, rollback and return the form
@@ -293,7 +326,10 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
             return render(
                 request,
                 self.template_name,
-                {"entry_form": entry_form, "line_formset": line_formset},
+                {
+                    "entry_form": entry_form,
+                    "line_formset": line_formset,
+                },
             )
 
         # Ensure the entry is balanced (total debit == total credit)
@@ -307,12 +343,14 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
             return render(
                 request,
                 self.template_name,
-                {"entry_form": entry_form, "line_formset": line_formset},
+                {
+                    "entry_form": entry_form,
+                    "line_formset": line_formset,
+                },
             )
 
         messages.success(request, _("تم إنشاء قيد اليومية بنجاح."))
         return redirect("ledger:journalentry_detail", pk=entry.pk)
-
 
 # ========= Edit unposted Journal =========
 class JournalEntryUpdateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):

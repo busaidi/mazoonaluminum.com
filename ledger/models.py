@@ -8,6 +8,66 @@ from django.utils.translation import gettext_lazy as _
 
 User = get_user_model()
 
+def get_default_journal_for_manual_entry():
+    """
+    Returns the default journal for manual entries (typically General Journal).
+    Fallback:
+      - First active GENERAL journal
+      - Otherwise any active journal
+      - Otherwise None
+    """
+    from .models import Journal  # local import to avoid circular imports
+
+    qs = Journal.objects.filter(is_active=True)
+
+    # Prefer general type with is_default=True
+    journal = (
+        qs.filter(type=Journal.Type.GENERAL, is_default=True).first()
+        or qs.filter(type=Journal.Type.GENERAL).first()
+    )
+
+    if journal:
+        return journal
+
+    # Fallback: any active journal
+    return qs.first()
+
+
+def get_default_journal_for_sales_invoice():
+    """
+    Default journal for sales invoices (Sales Journal).
+    To be used later from the accounting app when auto-posting invoices.
+    """
+    from .models import Journal
+
+    qs = Journal.objects.filter(is_active=True)
+    return (
+        qs.filter(type=Journal.Type.SALES, is_default=True).first()
+        or qs.filter(type=Journal.Type.SALES).first()
+    )
+
+
+def get_default_journal_for_customer_payment():
+    """
+    Default journal for customer payments (Cash / Bank Journal).
+    To be used later from the accounting app when auto-posting payments.
+    """
+    from .models import Journal
+
+    qs = Journal.objects.filter(is_active=True)
+
+    # Prefer CASH, then BANK
+    journal = (
+        qs.filter(type=Journal.Type.CASH, is_default=True).first()
+        or qs.filter(type=Journal.Type.CASH).first()
+        or qs.filter(type=Journal.Type.BANK, is_default=True).first()
+        or qs.filter(type=Journal.Type.BANK).first()
+    )
+
+    if journal:
+        return journal
+
+    return None
 
 
 
