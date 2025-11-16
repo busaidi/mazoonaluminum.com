@@ -182,9 +182,12 @@ class JournalEntryCreateView(LoginRequiredMixin, StaffRequiredMixin, View):
 
 
 def trial_balance_view(request):
-    """Simple trial balance grouped by account."""
+    """Simple trial balance grouped by account, with totals and balance."""
     form = TrialBalanceFilterForm(request.GET or None)
     rows = None
+    total_debit = Decimal("0")
+    total_credit = Decimal("0")
+    total_balance = Decimal("0")
 
     qs = JournalLine.objects.select_related("account", "entry")
 
@@ -198,7 +201,7 @@ def trial_balance_view(request):
 
         decimal_field = DecimalField(max_digits=12, decimal_places=3)
 
-        rows = (
+        qs = (
             qs.values(
                 "account__code",
                 "account__name",
@@ -217,21 +220,42 @@ def trial_balance_view(request):
             .order_by("account__code")
         )
 
-    return render(
-        request,
-        "ledger/reports/trial_balance.html",
-        {"form": form, "rows": rows},
-    )
+        # Convert to list and compute balance + totals
+        rows = []
+        for row in qs:
+            debit = row["debit"] or Decimal("0")
+            credit = row["credit"] or Decimal("0")
+            balance = debit - credit
+
+            row["balance"] = balance
+
+            total_debit += debit
+            total_credit += credit
+            total_balance += balance
+
+            rows.append(row)
+
+    context = {
+        "form": form,
+        "rows": rows,
+        "total_debit": total_debit,
+        "total_credit": total_credit,
+        "total_balance": total_balance,
+    }
+    return render(request, "ledger/reports/trial_balance.html", context)
 
 
 
 
 
 def account_ledger_view(request):
-    """Account ledger report for a single account in a given period."""
+    """Account ledger report for a single account with running balance."""
     form = AccountLedgerFilterForm(request.GET or None)
     lines = None
     account = None
+    total_debit = Decimal("0")
+    total_credit = Decimal("0")
+    total_balance = Decimal("0")
 
     if form.is_valid():
         account = form.cleaned_data["account"]
@@ -245,12 +269,43 @@ def account_ledger_view(request):
         if date_to:
             qs = qs.filter(entry__date__lte=date_to)
 
-        lines = qs.order_by("entry__date", "entry_id", "id")
+        qs = qs.order_by("entry__date", "entry_id", "id")
+
+        # Compute totals for the period
+        decimal_field = DecimalField(max_digits=12, decimal_places=3)
+        agg = qs.aggregate(
+            debit=Coalesce(
+                Sum("debit", output_field=decimal_field),
+                Value(Decimal("0"), output_field=decimal_field),
+            ),
+            credit=Coalesce(
+                Sum("credit", output_field=decimal_field),
+                Value(Decimal("0"), output_field=decimal_field),
+            ),
+        )
+
+        total_debit = agg["debit"] or Decimal("0")
+        total_credit = agg["credit"] or Decimal("0")
+        total_balance = total_debit - total_credit
+
+        # Build running balance per line
+        running_balance = Decimal("0")
+        lines = []
+        for line in qs:
+            debit = line.debit or Decimal("0")
+            credit = line.credit or Decimal("0")
+            running_balance += debit - credit
+            # Attach running balance to the instance (for template use)
+            line.running_balance = running_balance
+            lines.append(line)
 
     context = {
         "form": form,
         "account": account,
         "lines": lines,
+        "total_debit": total_debit,
+        "total_credit": total_credit,
+        "total_balance": total_balance,
     }
     return render(request, "ledger/reports/account_ledger.html", context)
 

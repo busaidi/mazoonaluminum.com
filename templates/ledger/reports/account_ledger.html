@@ -2,7 +2,7 @@
 {% load i18n %}
 
 {% block ledger_content %}
-<h2 class="h5 mb-3">{% trans "كشف حساب" %}</h2>
+<h2 class="h5 mb-3">{% trans "دفتر حساب" %}</h2>
 
 <form method="get" class="row g-2 mb-3 align-items-end">
   <div class="col-auto">
@@ -37,10 +37,11 @@
     <thead class="table-light">
       <tr>
         <th>{% trans "التاريخ" %}</th>
-        <th>{% trans "القيد" %}</th>
+        <th>{% trans "رقم القيد" %}</th>
         <th>{% trans "الوصف" %}</th>
         <th class="text-end">{% trans "مدين" %}</th>
         <th class="text-end">{% trans "دائن" %}</th>
+        <th class="text-end">{% trans "الرصيد التراكمي" %}</th>
       </tr>
     </thead>
     <tbody>
@@ -52,12 +53,23 @@
               JE-{{ line.entry.id }}
             </a>
           </td>
-          <td>{{ line.description|default:"-" }}</td>
+          <td>{{ line.description }}</td>
           <td class="text-end">{{ line.debit }}</td>
           <td class="text-end">{{ line.credit }}</td>
+          <td class="text-end">{{ line.running_balance }}</td>
         </tr>
       {% endfor %}
     </tbody>
+    <tfoot class="table-light">
+      <tr>
+        <th colspan="3" class="text-end">
+          {% trans "الإجمالي للفترة" %}
+        </th>
+        <th class="text-end">{{ total_debit }}</th>
+        <th class="text-end">{{ total_credit }}</th>
+        <th class="text-end">{{ total_balance }}</th>
+      </tr>
+    </tfoot>
   </table>
 {% elif account %}
   <p class="text-muted">
