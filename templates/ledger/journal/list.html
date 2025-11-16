@@ -77,6 +77,7 @@
             <th class="text-nowrap">{% trans "الوصف" %}</th>
             <th class="text-nowrap text-end">{% trans "إجمالي المدين" %}</th>
             <th class="text-nowrap text-end">{% trans "إجمالي الدائن" %}</th>
+            <th class="text-nowrap text-center">{% trans "الحالة" %}</th>
             <th class="text-nowrap text-end">{% trans "إجراءات" %}</th>
           </tr>
         </thead>
@@ -104,16 +105,53 @@
               <td class="text-end text-nowrap">
                 {{ e.total_credit_value }}
               </td>
+
+              {# حالة القيد (مسودة / مُرحّل) #}
+              <td class="text-center text-nowrap">
+                {% if e.posted %}
+                  <span class="badge bg-success">
+                    {% trans "مُرحّل" %}
+                  </span>
+                {% else %}
+                  <span class="badge bg-secondary">
+                    {% trans "مسودة" %}
+                  </span>
+                {% endif %}
+              </td>
+
+              {# الإجراءات: عرض + ترحيل / إلغاء الترحيل من الليست #}
               <td class="text-end text-nowrap">
                 <a href="{% url 'ledger:journalentry_detail' e.pk %}"
                    class="btn btn-outline-secondary btn-sm">
                   {% trans "عرض" %}
                 </a>
+
+                {% if e.posted %}
+                  <form method="post"
+                        action="{% url 'ledger:journalentry_unpost' pk=e.pk %}"
+                        class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="btn btn-outline-danger btn-sm">
+                      {% trans "إلغاء الترحيل" %}
+                    </button>
+                  </form>
+                {% else %}
+                  <form method="post"
+                        action="{% url 'ledger:journalentry_post' pk=e.pk %}"
+                        class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="btn btn-success btn-sm">
+                      {% trans "ترحيل" %}
+                    </button>
+                  </form>
+                {% endif %}
               </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="8" class="text-center text-muted small py-4">
+              <td colspan="9" class="text-center text-muted small py-4">
                 {% trans "لا توجد قيود حتى الآن." %}
               </td>
             </tr>
