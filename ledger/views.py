@@ -8,7 +8,7 @@ from django.db import transaction
 from django.db.models import Sum, Value, DecimalField, Q
 from django.db.models.functions import Coalesce
 from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.views import View
@@ -93,37 +93,132 @@ def ledger_staff_required(view_func):
 
 class FiscalYearRequiredMixin:
     """
-    Mixin that ensures at least one FiscalYear exists
-    before allowing access to ledger screens.
+    Mixin أذكى للتحقق من تهيئة السنوات المالية:
+
+    - لو ما فيه أي سنة مالية → تحويل لإعداد السنة الأولى.
+    - لو فيه سنوات لكن كلها مقفلة → السماح بالدخول مع إظهار تحذير عام.
+    - لو فيه سنة/سنوات مفتوحة لكن تاريخ اليوم خارج نطاقها → إظهار تنبيه معلوماتي.
     """
 
     def dispatch(self, request, *args, **kwargs):
-        if not FiscalYear.objects.exists():
+        qs = FiscalYear.objects.all()
+
+        # 1) لا توجد أي سنة مالية → لازم نمر على معالج الإعداد
+        if not qs.exists():
             messages.warning(
                 request,
                 _("يجب إنشاء سنة مالية واحدة على الأقل قبل استخدام دفتر الأستاذ."),
             )
-            return redirect("ledger:fiscal_year_setup")
+            return redirect("ledger:fiscal_year_list")
+
+        # 2) توجد سنوات، لكن كلها مقفلة
+        open_years = qs.filter(is_closed=False)
+        if not open_years.exists():
+            messages.warning(
+                request,
+                _(
+                    "كل السنوات المالية مقفلة حاليًا. يمكنك استعراض التقارير، "
+                    "ولكن لا يمكن إنشاء قيود جديدة إلا بعد فتح سنة مالية جديدة."
+                ),
+            )
+            # نسمح بالوصول للـ view (تقارير، عرض حسابات، ... إلخ)
+            return super().dispatch(request, *args, **kwargs)
+
+        # 3) توجد سنوات مفتوحة، لكن تاريخ اليوم لا يقع ضمن أي سنة مفتوحة
+        today = timezone.now().date()
+        if not open_years.filter(start_date__lte=today, end_date__gte=today).exists():
+            messages.info(
+                request,
+                _(
+                    "توجد سنة مالية مفتوحة، لكن تاريخ اليوم لا يقع ضمن نطاقها. "
+                    "تأكد من اختيار الفترة/السنة الصحيحة في التقارير."
+                ),
+            )
+
         return super().dispatch(request, *args, **kwargs)
+
 
 
 def fiscal_year_required(view_func):
     """
     Decorator version of FiscalYearRequiredMixin for function-based views.
+    نفس منطق الميكسين:
+      - لا توجد أي سنة مالية → تحويل للإعداد.
+      - كل السنوات مقفلة → تحذير مع السماح بالدخول (للتقارير).
+      - سنة مفتوحة لكن اليوم خارج نطاقها → تنبيه معلوماتي فقط.
     """
 
     @wraps(view_func)
     def _wrapped(request, *args, **kwargs):
-        if not FiscalYear.objects.exists():
+        qs = FiscalYear.objects.all()
+
+        # 1) لا توجد أي سنة مالية
+        if not qs.exists():
             messages.warning(
                 request,
                 _("يجب إنشاء سنة مالية واحدة على الأقل قبل استخدام دفتر الأستاذ."),
             )
-            return redirect("ledger:fiscal_year_setup")
+            return redirect("ledger:fiscal_year_list")
+
+        open_years = qs.filter(is_closed=False)
+
+        # 2) كل السنوات مقفلة
+        if not open_years.exists():
+            messages.warning(
+                request,
+                _(
+                    "كل السنوات المالية مقفلة حاليًا. يمكنك استعراض التقارير، "
+                    "ولكن لا يمكن إنشاء قيود جديدة إلا بعد فتح سنة مالية جديدة."
+                ),
+            )
+            return view_func(request, *args, **kwargs)
+
+        # 3) سنة/سنوات مفتوحة لكن تاريخ اليوم خارج نطاقها
+        today = timezone.now().date()
+        if not open_years.filter(start_date__lte=today, end_date__gte=today).exists():
+            messages.info(
+                request,
+                _(
+                    "توجد سنة مالية مفتوحة، لكن تاريخ اليوم لا يقع ضمن نطاقها. "
+                    "تأكد من اختيار الفترة/السنة الصحيحة في التقارير."
+                ),
+            )
+
         return view_func(request, *args, **kwargs)
 
     return _wrapped
 
+
+
+
+
+
+def ensure_open_fiscal_year_for_date(date):
+    """
+    Helper للتأكد أن التاريخ يقع داخل سنة مالية "مفتوحة".
+    يستخدم في إنشاء/تعديل قيود اليومية.
+    يرفع ValidationError لو:
+      - ما فيه سنة تغطي التاريخ
+      - أو السنة مقفلة
+    """
+    if not date:
+        raise ValidationError(_("يجب تحديد تاريخ للقيد."))
+
+    fy = FiscalYear.for_date(date)
+    if fy is None:
+        raise ValidationError(
+            _(
+                "لا توجد سنة مالية تغطي هذا التاريخ. "
+                "يرجى إنشاء سنة مالية مناسبة أو تعديل التاريخ."
+            )
+        )
+
+    if fy.is_closed:
+        raise ValidationError(
+            _("لا يمكن إنشاء أو تعديل قيد ضمن سنة مالية مقفلة.")
+        )
+
+    return fy
 
 # ========= Initial fiscal year setup =========
 
@@ -348,6 +443,10 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
 
         try:
             with transaction.atomic():
+                # أولاً: تأكيد أن التاريخ داخل سنة مالية مفتوحة
+                date = entry_form.cleaned_data.get("date")
+                ensure_open_fiscal_year_for_date(date)
+
                 # إنشاء رأس القيد بدون حفظ الخطوط بعد
                 entry = entry_form.save(commit=False)
                 entry.created_by = request.user
@@ -358,6 +457,7 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
                 lines, total_debit, total_credit = build_lines_from_formset(
                     line_formset
                 )
+
 
                 # التأكد من توازن القيد
                 if total_debit != total_credit:
@@ -458,9 +558,12 @@ class JournalEntryUpdateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
 
         try:
             with transaction.atomic():
+                # تأكيد أن التاريخ الجديد داخل سنة مالية مفتوحة
+                date = entry_form.cleaned_data.get("date")
+                ensure_open_fiscal_year_for_date(date)
+
                 entry = entry_form.save(commit=False)
 
-                # بناء الأسطر الجديدة
                 lines, total_debit, total_credit = build_lines_from_formset(
                     line_formset
                 )
@@ -507,10 +610,9 @@ def trial_balance_view(request):
     rows = None
     totals = None
 
-    # Start from all posted lines (نستخدم helper من المانجر)
     qs = (
         JournalLine.objects
-        .posted()  # == filter(entry__posted=True)
+        .posted()
         .select_related("account", "entry")
     )
 
@@ -519,13 +621,16 @@ def trial_balance_view(request):
         date_from = form.cleaned_data.get("date_from")
         date_to = form.cleaned_data.get("date_to")
 
-        if fiscal_year:
-            qs = qs.filter(entry__fiscal_year=fiscal_year)
+        # نحدد سنة مالية فعّالة لو ما تم اختيار شيء وما فيه تواريخ
+        effective_fiscal_year = fiscal_year
+        if not effective_fiscal_year and not date_from and not date_to:
+            today = timezone.now().date()
+            effective_fiscal_year = FiscalYear.for_date(today)
+
+        if effective_fiscal_year:
+            qs = qs.filter(entry__fiscal_year=effective_fiscal_year)
         else:
-            if fiscal_year:
-                qs = qs.filter(entry__fiscal_year=fiscal_year)
-            else:
-                qs = qs.within_period(date_from, date_to)
+            qs = qs.within_period(date_from, date_to)
 
         rows = (
             qs.values(
@@ -548,11 +653,18 @@ def trial_balance_view(request):
             .order_by("account__code")
         )
 
-        if rows:
-            totals = rows.aggregate(
-                total_debit=Sum("debit"),
-                total_credit=Sum("credit"),
-            )
+        totals = rows.aggregate(
+            total_debit=Coalesce(
+                Sum("debit"),
+                Value(0),
+                output_field=DecimalField(max_digits=12, decimal_places=3),
+            ),
+            total_credit=Coalesce(
+                Sum("credit"),
+                Value(0),
+                output_field=DecimalField(max_digits=12, decimal_places=3),
+            ),
+        )
 
     context = {
         "form": form,
@@ -564,7 +676,6 @@ def trial_balance_view(request):
 
 # ========= Account ledger report =========
 
-
 @ledger_staff_required
 @fiscal_year_required
 def account_ledger_view(request):
@@ -573,6 +684,7 @@ def account_ledger_view(request):
     account = None
     opening_balance = Decimal("0")
     running_lines = []
+    effective_fiscal_year = None   # ← نضيفه هنا
 
     if form.is_valid():
         account = form.cleaned_data.get("account")
@@ -584,19 +696,22 @@ def account_ledger_view(request):
             # 1) Base queryset for this account (posted entries only)
             lines_qs = (
                 JournalLine.objects
-                .posted()     # helper من المانجر
+                .posted()
                 .select_related("entry")
                 .filter(account=account)
             )
 
+            # تحديد السنة المالية الفعّالة
+            effective_fiscal_year = fiscal_year
+            if not effective_fiscal_year and not date_from and not date_to:
+                today = timezone.now().date()
+                effective_fiscal_year = FiscalYear.for_date(today)
+
             # Filter by fiscal year or date range
-            if fiscal_year:
-                lines_qs = lines_qs.filter(entry__fiscal_year=fiscal_year)
+            if effective_fiscal_year:
+                lines_qs = lines_qs.filter(entry__fiscal_year=effective_fiscal_year)
             else:
-                if fiscal_year:
-                    lines_qs = lines_qs.filter(entry__fiscal_year=fiscal_year)
-                else:
-                    lines_qs = lines_qs.within_period(date_from, date_to)
+                lines_qs = lines_qs.within_period(date_from, date_to)
 
             lines_qs = lines_qs.order_by("entry__date", "entry_id", "id")
 
@@ -605,44 +720,36 @@ def account_ledger_view(request):
                 debit = debit or Decimal("0")
                 credit = credit or Decimal("0")
                 if account_type in [Account.Type.ASSET, Account.Type.EXPENSE]:
-                    # Natural debit balance
                     return debit - credit
                 else:
-                    # Liability / equity / revenue → natural credit balance
                     return credit - debit
 
             # 2) Opening balance (before the selected period)
             opening_balance = Decimal("0")
 
-            if fiscal_year or date_from:
+            if effective_fiscal_year or date_from:
                 opening_qs = JournalLine.objects.posted().filter(
                     account=account,
                 )
 
-                if fiscal_year:
-                    # All lines before the start of the selected fiscal year
+                if effective_fiscal_year:
+                    # قبل بداية السنة المالية
                     opening_qs = opening_qs.filter(
-                        entry__date__lt=fiscal_year.start_date,
+                        entry__date__lt=effective_fiscal_year.start_date
                     )
-
-                if date_from and not fiscal_year:
-                    # Date-based period only
+                elif date_from:
                     opening_qs = opening_qs.filter(entry__date__lt=date_from)
 
                 opening_totals = opening_qs.aggregate(
                     debit=Coalesce(
                         Sum("debit"),
                         Value(0),
-                        output_field=DecimalField(
-                            max_digits=12, decimal_places=3
-                        ),
+                        output_field=DecimalField(max_digits=12, decimal_places=3),
                     ),
                     credit=Coalesce(
                         Sum("credit"),
                         Value(0),
-                        output_field=DecimalField(
-                            max_digits=12, decimal_places=3
-                        ),
+                        output_field=DecimalField(max_digits=12, decimal_places=3),
                     ),
                 )
 
@@ -663,25 +770,23 @@ def account_ledger_view(request):
                 )
                 balance += delta
 
-                running_lines.append(
-                    {
-                        "date": line.entry.date,
-                        "entry_id": line.entry.id,
-                        "entry_number": line.entry.display_number,  # ← هنا
-                        "reference": line.entry.reference or "-",
-                        "description": line.description or line.entry.description,
-                        "debit": line.debit or Decimal("0"),
-                        "credit": line.credit or Decimal("0"),
-                        "balance": balance,
-                    }
-                )
-
+                running_lines.append({
+                    "date": line.entry.date,
+                    "entry_id": line.entry.id,
+                    "entry_number": line.entry.display_number,
+                    "reference": line.entry.reference or "-",
+                    "description": line.description or line.entry.description,
+                    "debit": line.debit or Decimal("0"),
+                    "credit": line.credit or Decimal("0"),
+                    "balance": balance,
+                })
 
     context = {
         "form": form,
         "account": account,
         "opening_balance": opening_balance,
         "lines": running_lines,
+        "effective_fiscal_year": effective_fiscal_year,  # ← هنا نمرّره للواجهة
     }
     return render(request, "ledger/reports/account_ledger.html", context)
 
@@ -787,6 +892,26 @@ def journalentry_post_view(request, pk):
         return redirect("ledger:journalentry_detail", pk=entry.pk)
 
     # Set posting info
+    fy = entry.fiscal_year or FiscalYear.for_date(entry.date)
+    if fy is None:
+        messages.error(
+            request,
+            _("لا توجد سنة مالية تغطي تاريخ هذا القيد، لا يمكن ترحيله."),
+        )
+        if next_url:
+            return redirect(next_url)
+        return redirect("ledger:journalentry_detail", pk=entry.pk)
+
+    if fy.is_closed:
+        messages.error(
+            request,
+            _("لا يمكن ترحيل قيد ضمن سنة مالية مقفلة."),
+        )
+        if next_url:
+            return redirect(next_url)
+        return redirect("ledger:journalentry_detail", pk=entry.pk)
+
+    # Set posting info
     with transaction.atomic():
         entry.posted = True
         entry.posted_at = timezone.now()
@@ -823,6 +948,18 @@ def journalentry_unpost_view(request, pk):
         return redirect("ledger:journalentry_detail", pk=entry.pk)
 
     # Clear posting info
+    # التحقق من السنة المالية (لا نسمح بإلغاء الترحيل في سنة مقفلة)
+    fy = entry.fiscal_year or FiscalYear.for_date(entry.date)
+    if fy and fy.is_closed:
+        messages.error(
+            request,
+            _("لا يمكن إلغاء ترحيل قيد ضمن سنة مالية مقفلة."),
+        )
+        if next_url:
+            return redirect(next_url)
+        return redirect("ledger:journalentry_detail", pk=entry.pk)
+
+    # Clear posting info
     with transaction.atomic():
         entry.posted = False
         entry.posted_at = None
@@ -834,4 +971,50 @@ def journalentry_unpost_view(request, pk):
     if next_url:
         return redirect(next_url)
     return redirect("ledger:journalentry_detail", pk=entry.pk)
+
+
+
+class FiscalYearListView(StaffRequiredMixin, ListView):
+    model = FiscalYear
+    template_name = "ledger/settings/fiscal_year_list.html"
+    context_object_name = "years"
+
+    def get_queryset(self):
+        return (
+            FiscalYear.objects.all()
+            .order_by("-start_date")
+        )
+
+class FiscalYearCreateView(StaffRequiredMixin, CreateView):
+    model = FiscalYear
+    form_class = FiscalYearForm
+    template_name = "ledger/settings/fiscal_year_form.html"
+    success_url = reverse_lazy("ledger:fiscal_year_list")
+
+    def form_valid(self, form):
+        messages.success(self.request, _("تم إنشاء السنة المالية بنجاح"))
+        return super().form_valid(form)
+
+class FiscalYearUpdateView(StaffRequiredMixin, UpdateView):
+    model = FiscalYear
+    form_class = FiscalYearForm
+    template_name = "ledger/settings/fiscal_year_form.html"
+    success_url = reverse_lazy("ledger:fiscal_year_list")
+
+    def form_valid(self, form):
+        fy = form.instance
+        if fy.is_closed:
+            messages.warning(self.request, _("لا يمكن تعديل سنة مالية مقفلة"))
+            return redirect("ledger:fiscal_year_list")
+        messages.success(self.request, _("تم تحديث بيانات السنة المالية"))
+        return super().form_valid(form)
+
+class FiscalYearCloseView(StaffRequiredMixin, View):
+    def post(self, request, pk):
+        fy = get_object_or_404(FiscalYear, pk=pk)
+        fy.is_closed = True
+        fy.save()
+        messages.success(request, _("تم إقفال السنة المالية"))
+        return redirect("ledger:fiscal_year_list")
+
 

@@ -28,4 +28,11 @@ urlpatterns = [
     # Reports
     path("reports/trial-balance/", views.trial_balance_view, name="trial_balance"),
     path("reports/account-ledger/", views.account_ledger_view, name="account_ledger"),
+
+    # Fiscal Years Management
+    path("settings/fiscal-years/", views.FiscalYearListView.as_view(), name="fiscal_year_list"),
+    path("settings/fiscal-years/new/", views.FiscalYearCreateView.as_view(), name="fiscal_year_create"),
+    path("settings/fiscal-years/<int:pk>/edit/", views.FiscalYearUpdateView.as_view(), name="fiscal_year_edit"),
+    path("settings/fiscal-years/<int:pk>/close/", views.FiscalYearCloseView.as_view(), name="fiscal_year_close"),
+
 ]

@@ -12,6 +12,13 @@
     <p class="text-muted small mb-0">
       {% trans "عرض حركة الحساب ورصيده التراكمي حسب الفترة أو السنة المالية." %}
     </p>
+      {% if effective_fiscal_year %}
+  <p class="text-muted mb-2">
+    {% trans "السنة المالية:" %} {{ effective_fiscal_year.year }}
+    ({{ effective_fiscal_year.start_date }} — {{ effective_fiscal_year.end_date }})
+  </p>
+{% endif %}
+
   </div>
 </div>
 
