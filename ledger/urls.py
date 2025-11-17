@@ -1,6 +1,7 @@
 # ledger/urls.py
 from django.urls import path
 from . import views
+from .views import JournalEntryUpdateView
 
 app_name = "ledger"
 
@@ -18,7 +19,7 @@ urlpatterns = [
     path("entries/", views.JournalEntryListView.as_view(), name="journalentry_list"),
     path("entries/new/", views.JournalEntryCreateView.as_view(), name="journalentry_create"),
     path("entries/<int:pk>/", views.JournalEntryDetailView.as_view(), name="journalentry_detail"),
-    path("entries/<int:pk>/edit/", views.JournalEntryUpdateView.as_view(), name="journalentry_edit"),
+    path("entries/<int:pk>/edit/",views.JournalEntryUpdateView.as_view(),name="journalentry_update",),
 
     #posted unposted
     path("entries/<int:pk>/post/",views.journalentry_post_view,name="journalentry_post",),

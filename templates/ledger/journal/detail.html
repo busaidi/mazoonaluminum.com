@@ -55,7 +55,7 @@
 
     {# تعديل متاح فقط لو مسودة #}
     {% if not entry.posted %}
-      <a href="{% url 'ledger:journalentry_edit' pk=entry.pk %}"
+      <a href="{% url 'ledger:journalentry_update' pk=entry.pk %}"
          class="btn btn-outline-primary btn-sm">
         {% trans "تعديل" %}
       </a>

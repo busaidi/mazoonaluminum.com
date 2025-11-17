@@ -47,17 +47,48 @@ from .services import build_lines_from_formset
 class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     """
     Mixin for views that require an accounting staff user.
-    Uses the same logic as `is_accounting_staff` in the accounting app.
+    Uses the same logic as `is_accounting_staff` in the accounting app,
+    but يسمح أيضاً لأي مستخدم is_staff أو is_superuser يدخل.
     """
 
     def test_func(self):
-        return is_accounting_staff(self.request.user)
+        user = self.request.user
+        if not user.is_authenticated:
+            return False
+
+        if user.is_staff or user.is_superuser:
+            return True
+
+        return is_accounting_staff(user)
 
     def handle_no_permission(self):
         if not self.request.user.is_authenticated:
             return super().handle_no_permission()
         messages.error(self.request, _("ليس لديك صلاحية للوصول إلى هذه الصفحة."))
         return redirect("login")
+
+def ledger_staff_required(view_func):
+    """
+    Decorator بسيط ليتطلب مستخدم ستاف/سوبر يوزر.
+    نستخدمه بدلاً من accounting_staff_required في شاشة الدفتر.
+    """
+
+    @wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        user = request.user
+        if not user.is_authenticated:
+            return redirect("login")
+
+        if not (user.is_staff or user.is_superuser or is_accounting_staff(user)):
+            messages.error(
+                request,
+                _("ليس لديك صلاحية للوصول إلى هذه الصفحة."),
+            )
+            return redirect("login")
+
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped
 
 
 class FiscalYearRequiredMixin:
@@ -97,7 +128,7 @@ def fiscal_year_required(view_func):
 # ========= Initial fiscal year setup =========
 
 
-@accounting_staff_required
+@ledger_staff_required
 def fiscal_year_setup_view(request):
     """
     Handle creation of the first fiscal year.
@@ -469,7 +500,7 @@ class JournalEntryUpdateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
 # ========= Trial balance report =========
 
 
-@accounting_staff_required
+@ledger_staff_required
 @fiscal_year_required
 def trial_balance_view(request):
     form = TrialBalanceFilterForm(request.GET or None)
@@ -534,7 +565,7 @@ def trial_balance_view(request):
 # ========= Account ledger report =========
 
 
-@accounting_staff_required
+@ledger_staff_required
 @fiscal_year_required
 def account_ledger_view(request):
     form = AccountLedgerFilterForm(request.GET or None)
@@ -725,7 +756,7 @@ class LedgerDashboardView(FiscalYearRequiredMixin, StaffRequiredMixin, TemplateV
 # ========= Posting / Unposting journal entries =========
 
 
-@accounting_staff_required
+@ledger_staff_required
 @fiscal_year_required
 def journalentry_post_view(request, pk):
     """
@@ -769,7 +800,7 @@ def journalentry_post_view(request, pk):
     return redirect("ledger:journalentry_detail", pk=entry.pk)
 
 
-@accounting_staff_required
+@ledger_staff_required
 @fiscal_year_required
 def journalentry_unpost_view(request, pk):
     """

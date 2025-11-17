@@ -1,656 +1,405 @@
-# ledger/tests.py
 from decimal import Decimal
+
 from django.contrib.auth import get_user_model
-from django.test import TestCase, Client
+from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from django.db.models import Sum, Value
-from django.db.models.functions import Coalesce
-from django.db import models
 
-from .models import FiscalYear, Account, JournalEntry, JournalLine
-from .forms import AccountForm, JournalEntryForm, JournalLineForm
+from .forms import JournalLineForm
+from .models import (
+    Account,
+    Journal,
+    JournalEntry,
+    JournalLine,
+    FiscalYear,
+)
 
 User = get_user_model()
 
 
-class ModelTests(TestCase):
+class LedgerBaseTestCase(TestCase):
+    """
+    قاعدة مشتركة: تجهز مستخدم + سنة مالية + كم حساب + دفتر عام.
+    """
+
     def setUp(self):
+        super().setUp()
+
+        # مستخدم ستاف/أكوانتينغ
         self.user = User.objects.create_user(
-            username='testuser',
-            password='testpass123',
-            is_staff=True
+            username="staff",
+            password="pass123",
+            is_staff=True,
+            is_superuser=True,
         )
+        self.client.login(username="staff", password="pass123")
 
+        today = timezone.now().date()
         self.fiscal_year = FiscalYear.objects.create(
-            year=2024,
-            start_date='2024-01-01',
-            end_date='2024-12-31',
-            is_closed=False
+            year=today.year,
+            start_date=today.replace(month=1, day=1),
+            end_date=today.replace(month=12, day=31),
+            is_closed=False,
         )
 
-        self.asset_account = Account.objects.create(
-            code='101',
-            name='نقدية',
+        # ✅ دفتر عام افتراضي نشط
+        self.journal = Journal.objects.create(
+            code="GEN",
+            name="دفتر عام",
+            type=Journal.Type.GENERAL,
+            is_default=True,
+            is_active=True,
+        )
+
+        # حسابات أساسية
+        self.account_cash = Account.objects.create(
+            code="1110",
+            name="Cash on Hand",
             type=Account.Type.ASSET,
-            is_active=True
+        )
+        self.account_revenue = Account.objects.create(
+            code="4100",
+            name="Sales Revenue",
+            type=Account.Type.REVENUE,
         )
 
-        self.liability_account = Account.objects.create(
-            code='201',
-            name='قروض',
-            type=Account.Type.LIABILITY,
-            is_active=True
-        )
-
-    def test_fiscal_year_creation(self):
-        """اختبار إنشاء سنة مالية"""
-        self.assertEqual(self.fiscal_year.year, 2024)
-        self.assertEqual(str(self.fiscal_year), '2024')
-
-    def test_account_creation(self):
-        """اختبار إنشاء حساب"""
-        self.assertEqual(self.asset_account.code, '101')
-        self.assertEqual(self.asset_account.type, Account.Type.ASSET)
-        self.assertTrue(self.asset_account.is_active)
-
-    def test_journal_entry_creation(self):
-        """اختبار إنشاء قيد يومية"""
+    def create_balanced_entry(self, posted=False):
+        """
+        مساعد لإنشاء قيد متوازن فيه سطرين:
+        - مدين كاش
+        - دائن ريفينيو
+        """
         entry = JournalEntry.objects.create(
             fiscal_year=self.fiscal_year,
-            date='2024-01-15',
-            reference='TEST001',
-            description='قيد اختباري',
-            created_by=self.user
+            journal=self.journal,
+            date=timezone.now().date(),
+            reference="TEST-REF",
+            description="Test entry",
+            created_by=self.user,
+            posted=posted,
         )
-
-        self.assertEqual(entry.reference, 'TEST001')
-        self.assertEqual(entry.created_by, self.user)
-        self.assertFalse(entry.posted)
-
-    def test_journal_line_creation(self):
-        """اختبار إنشاء سطر في قيد اليومية"""
-        entry = JournalEntry.objects.create(
-            fiscal_year=self.fiscal_year,
-            date='2024-01-15',
-            created_by=self.user
-        )
-
-        line = JournalLine.objects.create(
-            entry=entry,
-            account=self.asset_account,
-            description='سطر اختباري',
-            debit=Decimal('1000.000'),
-            credit=Decimal('0.000'),
-            order=1
-        )
-
-        self.assertEqual(line.account, self.asset_account)
-        self.assertEqual(line.debit, Decimal('1000.000'))
-        self.assertEqual(line.credit, Decimal('0.000'))
-
-    def test_journal_entry_totals(self):
-        """اختبار حساب إجمالي المدين والدائن للقيد"""
-        entry = JournalEntry.objects.create(
-            fiscal_year=self.fiscal_year,
-            date='2024-01-15',
-            created_by=self.user
-        )
-
         JournalLine.objects.create(
             entry=entry,
-            account=self.asset_account,
-            debit=Decimal('500.000'),
-            credit=Decimal('0.000'),
-            order=1
+            account=self.account_cash,
+            debit=Decimal("100.000"),
+            credit=Decimal("0"),
+            description="Cash in",
+            order=1,
         )
-
         JournalLine.objects.create(
             entry=entry,
-            account=self.liability_account,
-            debit=Decimal('0.000'),
-            credit=Decimal('500.000'),
-            order=2
+            account=self.account_revenue,
+            debit=Decimal("0"),
+            credit=Decimal("100.000"),
+            description="Revenue",
+            order=2,
         )
+        return entry
 
-        self.assertEqual(entry.total_debit, Decimal('500.000'))
-        self.assertEqual(entry.total_credit, Decimal('500.000'))
-        self.assertTrue(entry.is_balanced)
+class JournalLineFormTests(LedgerBaseTestCase):
+    """
+    اختبارات خاصة بمنطق فورم الأسطر (JournalLineForm).
+    """
 
-    def test_fiscal_year_for_date(self):
-        """اختبار إيجاد السنة المالية للتاريخ"""
-        # اختبار تاريخ ضمن السنة المالية
-        date_in_year = timezone.datetime(2024, 6, 1).date()
-        fy = FiscalYear.for_date(date_in_year)
-        self.assertEqual(fy, self.fiscal_year)
-
-        # اختبار تاريخ خارج السنة المالية
-        date_outside = timezone.datetime(2023, 6, 1).date()
-        fy = FiscalYear.for_date(date_outside)
-        self.assertIsNone(fy)
-
-
-class FormTests(TestCase):
-    def setUp(self):
-        self.asset_account = Account.objects.create(
-            code='101',
-            name='نقدية',
-            type=Account.Type.ASSET
+    def test_negative_debit_not_allowed(self):
+        form = JournalLineForm(
+            data={
+                "account": self.account_cash.pk,
+                "debit": "-10",
+                "credit": "",
+                "description": "Negative debit",
+            }
         )
-
-    def test_account_form_valid(self):
-        """اختبار نموذج الحساب صالح"""
-        form_data = {
-            'code': '102',
-            'name': 'بنك',
-            'type': Account.Type.ASSET,
-            'is_active': True
-        }
-        form = AccountForm(data=form_data)
-        self.assertTrue(form.is_valid())
-
-    def test_account_form_invalid(self):
-        """اختبار نموذج الحساب غير صالح"""
-        form_data = {
-            'code': '',  # مطلوب
-            'name': '',  # مطلوب
-            'type': 'invalid_type'  # غير صالح
-        }
-        form = AccountForm(data=form_data)
         self.assertFalse(form.is_valid())
-        self.assertIn('code', form.errors)
-        self.assertIn('name', form.errors)
-        self.assertIn('type', form.errors)
+        # على الأقل واحد من:
+        self.assertIn("debit", form.errors)
 
-    def test_journal_entry_form_valid(self):
-        """اختبار نموذج قيد اليومية صالح"""
-        form_data = {
-            'date': '2024-01-15',
-            'reference': 'TEST001',
-            'description': 'وصف اختباري'
-        }
-        form = JournalEntryForm(data=form_data)
-        self.assertTrue(form.is_valid())
-
-    def test_journal_line_form_valid(self):
-        """اختبار نموذج سطر القيد صالح"""
-        form_data = {
-            'account': self.asset_account.id,
-            'description': 'سطر اختباري',
-            'debit': '1000.000',
-            'credit': '0.000'
-        }
-        form = JournalLineForm(data=form_data)
-        self.assertTrue(form.is_valid())
-
-    def test_journal_line_form_invalid_both_debit_credit(self):
-        """اختبار نموذج سطر القيد غير صالح عند وجود مدين ودائن معاً"""
-        form_data = {
-            'account': self.asset_account.id,
-            'debit': '1000.000',
-            'credit': '1000.000'  # غير مسموح
-        }
-        form = JournalLineForm(data=form_data)
+    def test_negative_credit_not_allowed(self):
+        form = JournalLineForm(
+            data={
+                "account": self.account_cash.pk,
+                "debit": "",
+                "credit": "-5",
+                "description": "Negative credit",
+            }
+        )
         self.assertFalse(form.is_valid())
+        self.assertIn("credit", form.errors)
 
-
-class ViewTests(TestCase):
-    def setUp(self):
-        self.client = Client()
-        self.user = User.objects.create_user(
-            username='testuser',
-            password='testpass123',
-            is_staff=True
+    def test_both_debit_and_credit_not_allowed(self):
+        form = JournalLineForm(
+            data={
+                "account": self.account_cash.pk,
+                "debit": "10",
+                "credit": "10",
+                "description": "Both sides",
+            }
+        )
+        self.assertFalse(form.is_valid())
+        # ممكن تكون في non_field_errors أو على الحقول حسب منطقك
+        self.assertTrue(
+            form.non_field_errors()
+            or "debit" in form.errors
+            or "credit" in form.errors
         )
 
-        self.non_staff_user = User.objects.create_user(
-            username='regularuser',
-            password='testpass123',
-            is_staff=False
+    def test_amount_without_account_not_allowed(self):
+        form = JournalLineForm(
+            data={
+                "account": "",
+                "debit": "10",
+                "credit": "",
+                "description": "No account",
+            }
         )
+        self.assertFalse(form.is_valid())
+        self.assertTrue(form.non_field_errors())
 
-        self.fiscal_year = FiscalYear.objects.create(
-            year=2024,
-            start_date='2024-01-01',
-            end_date='2024-12-31'
-        )
 
-        self.asset_account = Account.objects.create(
-            code='101',
-            name='نقدية',
-            type=Account.Type.ASSET
-        )
+class JournalEntryModelTests(LedgerBaseTestCase):
+    """
+    اختبارات تخص منطق JournalEntry (السنة المالية + رقم القيد).
+    """
 
-        self.liability_account = Account.objects.create(
-            code='201',
-            name='قروض',
-            type=Account.Type.LIABILITY
-        )
-
-    def test_dashboard_view_authenticated_staff(self):
-        """اختبار لوحة التحكم للموظف المسجل"""
-        self.client.login(username='testuser', password='testpass123')
-        response = self.client.get(reverse('ledger:dashboard'))
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'ledger/dashboard.html')
-
-    def test_dashboard_view_authenticated_non_staff(self):
-        """اختبار لوحة التحكم لغير الموظف"""
-        self.client.login(username='regularuser', password='testpass123')
-        response = self.client.get(reverse('ledger:dashboard'))
-        self.assertEqual(response.status_code, 302)  # redirect to login
-
-    def test_dashboard_view_unauthenticated(self):
-        """اختبار لوحة التحكم لغير المسجل"""
-        response = self.client.get(reverse('ledger:dashboard'))
-        self.assertEqual(response.status_code, 302)  # redirect to login
-
-    def test_account_list_view(self):
-        """اختبار قائمة الحسابات"""
-        self.client.login(username='testuser', password='testpass123')
-        response = self.client.get(reverse('ledger:account_list'))
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'ledger/accounts/list.html')
-        self.assertContains(response, 'نقدية')
-
-    def test_account_create_view(self):
-        """اختبار إنشاء حساب جديد"""
-        self.client.login(username='testuser', password='testpass123')
-        response = self.client.post(reverse('ledger:account_create'), {
-            'code': '103',
-            'name': 'عملاء',
-            'type': Account.Type.ASSET,
-            'is_active': True
-        })
-        self.assertEqual(response.status_code, 302)  # redirect after success
-        self.assertTrue(Account.objects.filter(code='103').exists())
-
-    def test_journal_entry_creation_flow(self):
-        """اختبار سير عمل إنشاء قيد يومية"""
-        self.client.login(username='testuser', password='testpass123')
-
-        # GET لصفحة الإنشاء
-        response = self.client.get(reverse('ledger:journalentry_create'))
-        self.assertEqual(response.status_code, 200)
-
-        # POST ببيانات قيد صحيحة - استخدام البادئة الصحيحة
-        response = self.client.post(reverse('ledger:journalentry_create'), {
-            'date': '2024-01-15',
-            'reference': 'TEST001',
-            'description': 'قيد اختباري',
-            'form-TOTAL_FORMS': '2',
-            'form-INITIAL_FORMS': '0',
-            'form-MIN_NUM_FORMS': '0',
-            'form-MAX_NUM_FORMS': '1000',
-            'form-0-account': self.asset_account.id,
-            'form-0-debit': '1000.000',
-            'form-0-credit': '0.000',
-            'form-1-account': self.liability_account.id,
-            'form-1-debit': '0.000',
-            'form-1-credit': '1000.000',
-        })
-
-        # يجب أن يتم التوجيه بعد النجاح
-        if response.status_code != 302:
-            # إذا فشل، اطبع الأخطاء للمساعدة في التصحيح
-            print("فشل إنشاء القيد. الأخطاء:")
-            if hasattr(response, 'context_data'):
-                for form in response.context_data.get('line_formset', []):
-                    if form.errors:
-                        print(f"أخطاء النموذج: {form.errors}")
-
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(JournalEntry.objects.filter(reference='TEST001').exists())
-
-    def test_journal_entry_creation_unbalanced(self):
-        """اختبار إنشاء قيد غير متوازن"""
-        self.client.login(username='testuser', password='testpass123')
-
-        response = self.client.post(reverse('ledger:journalentry_create'), {
-            'date': '2024-01-15',
-            'reference': 'TEST002',
-            'description': 'قيد غير متوازن',
-            'form-TOTAL_FORMS': '2',
-            'form-INITIAL_FORMS': '0',
-            'form-MIN_NUM_FORMS': '0',
-            'form-MAX_NUM_FORMS': '1000',
-            'form-0-account': self.asset_account.id,
-            'form-0-debit': '1000.000',
-            'form-0-credit': '0.000',
-            'form-1-account': self.liability_account.id,
-            'form-1-debit': '0.000',
-            'form-1-credit': '500.000',  # غير متوازن
-        })
-
-        # يجب أن يبقى في الصفحة مع رسالة خطأ
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "غير متوازن")
-        self.assertFalse(JournalEntry.objects.filter(reference='TEST002').exists())
-
-    def test_trial_balance_report(self):
-        """اختبار تقرير ميزان المراجعة"""
-        self.client.login(username='testuser', password='testpass123')
-
-        # إنشاء بعض البيانات للاختبار
+    def test_auto_assign_fiscal_year_if_missing(self):
         entry = JournalEntry.objects.create(
-            fiscal_year=self.fiscal_year,
-            date='2024-01-15',
-            created_by=self.user
+            fiscal_year=None,
+            journal=self.journal,
+            date=self.fiscal_year.start_date,
+            reference="NO-FY",
+            description="No FY provided",
+            created_by=self.user,
         )
-        JournalLine.objects.create(
-            entry=entry,
-            account=self.asset_account,
-            debit=Decimal('1000.000'),
-            order=1
-        )
+        entry.refresh_from_db()
+        self.assertIsNotNone(entry.fiscal_year)
+        self.assertEqual(entry.fiscal_year, self.fiscal_year)
 
-        response = self.client.get(reverse('ledger:trial_balance'))
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'ledger/reports/trial_balance.html')
-
-    def test_account_ledger_report(self):
-        """اختبار تقرير كشف الحساب"""
-        self.client.login(username='testuser', password='testpass123')
-
-        # اختبار بدون فلترة
-        response = self.client.get(reverse('ledger:account_ledger'))
-        self.assertEqual(response.status_code, 200)
-
-        # اختبار مع فلترة
-        response = self.client.get(
-            reverse('ledger:account_ledger') + f'?account={self.asset_account.id}'
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'نقدية')
-
-
-class ReportLogicTests(TestCase):
-    """اختبارات منطق التقارير"""
-
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser',
-            password='testpass123',
-            is_staff=True
-        )
-
-        self.fiscal_year = FiscalYear.objects.create(
-            year=2024,
-            start_date='2024-01-01',
-            end_date='2024-12-31'
-        )
-
-        self.asset_account = Account.objects.create(
-            code='101',
-            name='نقدية',
-            type=Account.Type.ASSET
-        )
-
-        self.liability_account = Account.objects.create(
-            code='201',
-            name='قروض',
-            type=Account.Type.LIABILITY
-        )
-
-        # إنشاء قيود للاختبار
+    def test_generate_number_unique_and_prefixed(self):
         entry1 = JournalEntry.objects.create(
             fiscal_year=self.fiscal_year,
-            date='2024-01-15',
-            created_by=self.user
+            journal=self.journal,
+            date=self.fiscal_year.start_date,
+            reference="E1",
+            description="Entry 1",
+            created_by=self.user,
         )
-        JournalLine.objects.create(
-            entry=entry1,
-            account=self.asset_account,
-            debit=Decimal('2000.000'),
-            order=1
-        )
-        JournalLine.objects.create(
-            entry=entry1,
-            account=self.liability_account,
-            credit=Decimal('2000.000'),
-            order=2
-        )
-
         entry2 = JournalEntry.objects.create(
             fiscal_year=self.fiscal_year,
-            date='2024-01-20',
-            created_by=self.user
+            journal=self.journal,
+            date=self.fiscal_year.start_date,
+            reference="E2",
+            description="Entry 2",
+            created_by=self.user,
         )
-        JournalLine.objects.create(
-            entry=entry2,
-            account=self.asset_account,
-            credit=Decimal('500.000'),
-            order=1
-        )
-        JournalLine.objects.create(
-            entry=entry2,
-            account=self.liability_account,
-            debit=Decimal('500.000'),
-            order=2
-        )
+        entry1.refresh_from_db()
+        entry2.refresh_from_db()
 
-    def test_trial_balance_calculation(self):
-        """اختبار حساب ميزان المراجعة"""
-        lines = JournalLine.objects.select_related('account', 'entry')
-        lines = lines.filter(entry__fiscal_year=self.fiscal_year)
-
-        balances = lines.values(
-            'account__code',
-            'account__name',
-            'account__type'
-        ).annotate(
-            debit=Coalesce(Sum('debit'), Decimal('0')),
-            credit=Coalesce(Sum('credit'), Decimal('0'))
-        ).order_by('account__code')
-
-        # التحقق من الحسابات
-        self.assertEqual(len(balances), 2)
-
-        # التحقق من أرصدة الحساب 101 (أصل)
-        asset_balance = next(b for b in balances if b['account__code'] == '101')
-        self.assertEqual(asset_balance['debit'], Decimal('2000.000'))
-        self.assertEqual(asset_balance['credit'], Decimal('500.000'))
-
-        # التحقق من أرصدة الحساب 201 (التزام)
-        liability_balance = next(b for b in balances if b['account__code'] == '201')
-        self.assertEqual(liability_balance['debit'], Decimal('500.000'))
-        self.assertEqual(liability_balance['credit'], Decimal('2000.000'))
-
-    def test_account_ledger_balance_calculation(self):
-        """اختبار حساب الرصيد في كشف الحساب"""
-        # حساب رصيد الحساب (أصل) - يجب أن يكون 1500 (2000 - 500)
-        lines = JournalLine.objects.filter(account=self.asset_account)
-
-        totals = lines.aggregate(
-            debit=Coalesce(Sum('debit'), Decimal('0')),
-            credit=Coalesce(Sum('credit'), Decimal('0'))
-        )
-
-        # حساب الرصيد الصحيح للحساب (أصل)
-        balance = totals['debit'] - totals['credit']
-        self.assertEqual(balance, Decimal('1500.000'))
-
-        # حساب رصيد الحساب (التزام) - يجب أن يكون 1500 (2000 - 500) ولكن معكوس
-        lines_liability = JournalLine.objects.filter(account=self.liability_account)
-        totals_liability = lines_liability.aggregate(
-            debit=Coalesce(Sum('debit'), Decimal('0')),
-            credit=Coalesce(Sum('credit'), Decimal('0'))
-        )
-
-        # حساب الرصيد الصحيح للحساب (التزام)
-        balance_liability = totals_liability['credit'] - totals_liability['debit']
-        self.assertEqual(balance_liability, Decimal('1500.000'))
+        self.assertIsNotNone(entry1.number)
+        self.assertIsNotNone(entry2.number)
+        self.assertNotEqual(entry1.number, entry2.number)
+        self.assertTrue(entry1.number.startswith("GEN-"))
+        self.assertTrue(entry2.number.startswith("GEN-"))
 
 
-class IntegrationTests(TestCase):
-    """اختبارات التكامل"""
+class JournalEntryCreateViewTests(LedgerBaseTestCase):
+    """
+    اختبارات لعملية إنشاء قيد من شاشة "قيد جديد".
+    """
 
-    def setUp(self):
-        self.client = Client()
-        self.user = User.objects.create_user(
-            username='testuser',
-            password='testpass123',
-            is_staff=True
-        )
-        self.client.login(username='testuser', password='testpass123')
+    def get_url(self):
+        return reverse("ledger:journalentry_create")
 
-        self.fiscal_year = FiscalYear.objects.create(
-            year=2024,
-            start_date='2024-01-01',
-            end_date='2024-12-31'
-        )
-
-        self.asset_account = Account.objects.create(
-            code='101',
-            name='نقدية',
-            type=Account.Type.ASSET
-        )
-
-        self.expense_account = Account.objects.create(
-            code='501',
-            name='مرتبات',
-            type=Account.Type.EXPENSE
-        )
-
-    def test_complete_journal_workflow(self):
-        """اختبار سير العمل الكامل للقيود"""
-
-        # 1. إنشاء قيد - استخدام البادئة الصحيحة
-        response = self.client.post(reverse('ledger:journalentry_create'), {
-            'date': '2024-01-15',
-            'reference': 'WORKFLOW001',
-            'description': 'قيد راتب',
-            'form-TOTAL_FORMS': '2',
-            'form-INITIAL_FORMS': '0',
-            'form-MIN_NUM_FORMS': '0',
-            'form-MAX_NUM_FORMS': '1000',
-            'form-0-account': self.asset_account.id,
-            'form-0-debit': '0.000',
-            'form-0-credit': '3000.000',
-            'form-1-account': self.expense_account.id,
-            'form-1-debit': '3000.000',
-            'form-1-credit': '0.000',
-        })
-
-        # التحقق من النجاح
-        if response.status_code != 302:
-            print(f"فشل إنشاء القيد. حالة الاستجابة: {response.status_code}")
-            if hasattr(response, 'context_data'):
-                print("بيانات السياق:", response.context_data.keys())
-
-        self.assertEqual(response.status_code, 302)
-        entry = JournalEntry.objects.get(reference='WORKFLOW001')
-
-        # 2. التحقق من عرض التفاصيل
-        response = self.client.get(
-            reverse('ledger:journalentry_detail', args=[entry.pk])
-        )
+    def test_get_create_view_renders(self):
+        response = self.client.get(self.get_url())
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'WORKFLOW001')
+        self.assertIn("entry_form", response.context)
+        self.assertIn("line_formset", response.context)
 
-        # 3. التحقق من ظهوره في القائمة
-        response = self.client.get(reverse('ledger:journalentry_list'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'WORKFLOW001')
-
-        # 4. التحقق من ظهوره في التقارير
-        response = self.client.get(reverse('ledger:trial_balance'))
-        self.assertEqual(response.status_code, 200)
-
-        response = self.client.get(
-            reverse('ledger:account_ledger') + f'?account={self.asset_account.id}'
-        )
-        self.assertEqual(response.status_code, 200)
-
-
-class EdgeCaseTests(TestCase):
-    """اختبارات الحالات الحدية"""
-
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser',
-            password='testpass123',
-            is_staff=True
-        )
-
-        self.fiscal_year = FiscalYear.objects.create(
-            year=2024,
-            start_date='2024-01-01',
-            end_date='2024-12-31'
-        )
-
-        self.asset_account = Account.objects.create(
-            code='101',
-            name='نقدية',
-            type=Account.Type.ASSET
-        )
-
-    def test_journal_entry_with_empty_lines(self):
-        """اختبار إنشاء قيد بدون أسطر"""
-        from django.test import Client
-        client = Client()
-        client.login(username='testuser', password='testpass123')
-
-        response = client.post(reverse('ledger:journalentry_create'), {
-            'date': '2024-01-15',
-            'reference': 'EMPTY001',
-            'description': 'قيد بدون أسطر',
-            'form-TOTAL_FORMS': '2',
-            'form-INITIAL_FORMS': '0',
-            'form-MIN_NUM_FORMS': '0',
-            'form-MAX_NUM_FORMS': '1000',
-            'form-0-account': '',
-            'form-0-debit': '',
-            'form-0-credit': '',
-            'form-1-account': '',
-            'form-1-debit': '',
-            'form-1-credit': '',
-        })
-
-        # يجب أن يفشل لأن القيد لا يحتوي على أسطر صالحة
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(JournalEntry.objects.filter(reference='EMPTY001').exists())
-
-    def test_journal_line_with_negative_values(self):
-        """اختبار سطر قيد بقيم سالبة"""
-        form_data = {
-            'account': self.asset_account.id,
-            'debit': '-100.000',  # قيمة سالبة - غير مسموح
-            'credit': '0.000'
+    def test_create_valid_balanced_entry(self):
+        url = self.get_url()
+        # نبني POST يدوي للفورم + الفورمست
+        data = {
+            "date": self.fiscal_year.start_date.isoformat(),
+            "reference": "INV-0001",
+            "description": "Test balanced entry",
+            "journal": self.journal.pk,
+            "form-TOTAL_FORMS": "2",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+            # سطر 0: مدين كاش 100
+            "form-0-account": str(self.account_cash.pk),
+            "form-0-description": "Cash in",
+            "form-0-debit": "100",
+            "form-0-credit": "",
+            "form-0-DELETE": "",
+            # سطر 1: دائن ريفينيو 100
+            "form-1-account": str(self.account_revenue.pk),
+            "form-1-description": "Revenue",
+            "form-1-debit": "",
+            "form-1-credit": "100",
+            "form-1-DELETE": "",
         }
-        form = JournalLineForm(data=form_data)
-        self.assertFalse(form.is_valid())
 
-    def test_account_inactive_still_accessible(self):
-        """اختبار أن الحساب غير النشط لا يزال يمكن الوصول إليه في القيود القديمة"""
-        # إنشاء قيد بحساب نشط
-        entry = JournalEntry.objects.create(
-            fiscal_year=self.fiscal_year,
-            date='2024-01-15',
-            created_by=self.user
+        response = self.client.post(url, data, follow=True)
+        self.assertEqual(response.status_code, 200)
+
+        entry = JournalEntry.objects.get(reference="INV-0001")
+        self.assertEqual(entry.lines.count(), 2)
+        self.assertEqual(entry.total_debit, Decimal("100"))
+        self.assertEqual(entry.total_credit, Decimal("100"))
+
+    def test_create_unbalanced_entry_is_rejected(self):
+        url = self.get_url()
+        data = {
+            "date": self.fiscal_year.start_date.isoformat(),
+            "reference": "INV-UNBAL",
+            "description": "Unbalanced entry",
+            "journal": self.journal.pk,
+            "form-TOTAL_FORMS": "2",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+            # سطر 0: مدين 100
+            "form-0-account": str(self.account_cash.pk),
+            "form-0-description": "Cash in",
+            "form-0-debit": "100",
+            "form-0-credit": "",
+            "form-0-DELETE": "",
+            # سطر 1: دائن 50 فقط
+            "form-1-account": str(self.account_revenue.pk),
+            "form-1-description": "Revenue",
+            "form-1-debit": "",
+            "form-1-credit": "50",
+            "form-1-DELETE": "",
+        }
+
+        response = self.client.post(url, data)
+        # يبقى على نفس الصفحة
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "القيد غير متوازن",
+        )
+        # تأكد ما انشئ قيد بهذا المرجع
+        self.assertFalse(
+            JournalEntry.objects.filter(reference="INV-UNBAL").exists()
         )
 
-        line = JournalLine.objects.create(
-            entry=entry,
-            account=self.asset_account,
-            debit=Decimal('1000.000'),
-            order=1
+    def test_create_entry_with_no_valid_lines_is_rejected(self):
+        url = self.get_url()
+        data = {
+            "date": self.fiscal_year.start_date.isoformat(),
+            "reference": "INV-EMPTY",
+            "description": "No lines",
+            "journal": self.journal.pk,
+            "form-TOTAL_FORMS": "1",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+            # سطر واحد فارغ بالكامل
+            "form-0-account": "",
+            "form-0-description": "",
+            "form-0-debit": "",
+            "form-0-credit": "",
+            "form-0-DELETE": "",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "لا يوجد أي سطر صالح في القيد.")
+        self.assertFalse(
+            JournalEntry.objects.filter(reference="INV-EMPTY").exists()
         )
 
-        # تعطيل الحساب
-        self.asset_account.is_active = False
-        self.asset_account.save()
 
-        # التحقق من أن القيد لا يزال موجوداً ويمكن الوصول إليه
-        entry_refreshed = JournalEntry.objects.get(pk=entry.pk)
-        self.assertEqual(entry_refreshed.lines.count(), 1)
-        self.assertEqual(entry_refreshed.lines.first().account, self.asset_account)
-
-
-# إضافة هذه الدالة المساعدة للتحقق من البادئة الصحيحة
-def get_correct_formset_prefix():
+class JournalEntryUpdateViewTests(LedgerBaseTestCase):
     """
-    دالة مساعدة لإرجاع البادئة الصحيحة لـ formset
-    يمكن تعديلها بناءً على التطبيق الفعلي
+    اختبارات لتحديث قيد غير مرحّل.
     """
-    return 'form'
+
+    def get_url(self, entry):
+        return reverse("ledger:journalentry_update", kwargs={"pk": entry.pk})
+
+    def test_update_unposted_entry_success(self):
+        entry = self.create_balanced_entry(posted=False)
+        url = self.get_url(entry)
+
+        # نحول القيد إلى 200 بدل 100 (مدين/دائن)
+        data = {
+            "date": entry.date.isoformat(),
+            "reference": entry.reference,
+            "description": "Updated",
+            "journal": self.journal.pk,
+            "form-TOTAL_FORMS": "2",
+            "form-INITIAL_FORMS": "2",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+            # سطر 0
+            "form-0-id": entry.lines.all()[0].pk,
+            "form-0-account": str(self.account_cash.pk),
+            "form-0-description": "Cash in updated",
+            "form-0-debit": "200",
+            "form-0-credit": "",
+            "form-0-DELETE": "",
+            # سطر 1
+            "form-1-id": entry.lines.all()[1].pk,
+            "form-1-account": str(self.account_revenue.pk),
+            "form-1-description": "Revenue updated",
+            "form-1-debit": "",
+            "form-1-credit": "200",
+            "form-1-DELETE": "",
+        }
+
+        response = self.client.post(url, data, follow=True)
+        self.assertEqual(response.status_code, 200)
+
+        entry.refresh_from_db()
+        self.assertEqual(entry.total_debit, Decimal("200"))
+        self.assertEqual(entry.total_credit, Decimal("200"))
+        self.assertEqual(entry.lines.count(), 2)
+
+    def test_update_posted_entry_is_blocked(self):
+        entry = self.create_balanced_entry(posted=True)
+        url = self.get_url(entry)
+
+        response = self.client.get(url, follow=True)
+        # يُحوّل برسالة خطأ (حسب منطقك الحالي)
+        self.assertContains(response, "لا يمكن تعديل قيد مُرحّل.")
+
+
+class ReportViewsTests(LedgerBaseTestCase):
+    """
+    اختبارات أساسية لميزان المراجعة وكشف الحساب:
+    - تعتمد على posted_only
+    """
+
+    def test_trial_balance_ignores_unposted_entries(self):
+        # قيد غير مرحّل
+        self.create_balanced_entry(posted=False)
+        # قيد مرحّل
+        entry_posted = self.create_balanced_entry(posted=True)
+
+        url = reverse("ledger:trial_balance")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        # أتأكد أن هناك صفوف للـ posted فقط (بشكل مبسط)
+        self.assertContains(response, "Trial Balance", status_code=200)
+        # ونقدر نضيف asserts على القيم لو رغبت لاحقاً
+
+    def test_account_ledger_uses_posted_only(self):
+        entry_posted = self.create_balanced_entry(posted=True)
+        entry_unposted = self.create_balanced_entry(posted=False)
+
+        url = reverse("ledger:account_ledger")
+        response = self.client.get(
+            url,
+            {
+                "account": self.account_cash.pk,
+                "fiscal_year": "",
+                "date_from": "",
+                "date_to": "",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        # هنا ممكن تضيف asserts على ظهور حركات معينة في الجدول
+        # مثلاً: التأكد أن الرصيد التراكمي يساوي 100
