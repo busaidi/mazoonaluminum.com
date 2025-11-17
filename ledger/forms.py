@@ -30,11 +30,12 @@ class AccountForm(forms.ModelForm):
 
 # ======= Journal Entry / Lines =======
 
+
 class JournalEntryForm(forms.ModelForm):
     class Meta:
         model = JournalEntry
         # ما نخلي المستخدم يختار السنة المالية يدوياً الآن، نعيّنها من التاريخ تلقائياً
-        fields = ["date", "reference", "description", "journal",]
+        fields = ["date", "reference", "description", "journal"]
         labels = {
             "date": _("التاريخ"),
             "reference": _("المرجع"),
@@ -43,7 +44,10 @@ class JournalEntryForm(forms.ModelForm):
         }
         widgets = {
             "date": forms.DateInput(
-                attrs={"type": "date", "class": "form-control form-control-sm"}
+                attrs={
+                    "type": "date",
+                    "class": "form-control form-control-sm",
+                }
             ),
             "reference": forms.TextInput(
                 attrs={"class": "form-control form-control-sm"}
@@ -51,23 +55,29 @@ class JournalEntryForm(forms.ModelForm):
             "description": forms.Textarea(
                 attrs={"class": "form-control form-control-sm", "rows": 2}
             ),
-            "journal": forms.Select(          # 👈 الويجت
+            "journal": forms.Select(
                 attrs={"class": "form-select form-select-sm"}
             ),
         }
 
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            # Optional: order journals nicely / only active ones
-            from .models import Journal
-            self.fields["journal"].queryset = Journal.objects.filter(is_active=True).order_by("code")
-            self.fields["journal"].label = _("دفتر اليومية")
-            self.fields["journal"].empty_label = _("اختر دفتر اليومية")
+    def __init__(self, *args, **kwargs):
+        """
+        ضبط كويِري سِت للدفاتر:
+        - فقط الدفاتر النشطة
+        - مرتبة بالكود
+        """
+        super().__init__(*args, **kwargs)
+        # نستخدم المانجر: Journal.objects.active()
+        self.fields["journal"].queryset = (
+            Journal.objects.active().order_by("code")
+        )
+        self.fields["journal"].label = _("دفتر اليومية")
+        self.fields["journal"].empty_label = _("اختر دفتر اليومية")
 
 
 class JournalLineForm(forms.Form):
     account = forms.ModelChoiceField(
-        queryset=Account.objects.filter(is_active=True),
+        queryset=Account.objects.active(),
         required=False,
         label=_("الحساب"),
         widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
@@ -83,14 +93,18 @@ class JournalLineForm(forms.Form):
         decimal_places=3,
         required=False,
         label=_("مدين"),
-        widget=forms.NumberInput(attrs={"class": "form-control form-control-sm"}),
+        widget=forms.NumberInput(
+            attrs={"class": "form-control form-control-sm"}
+        ),
     )
     credit = forms.DecimalField(
         max_digits=12,
         decimal_places=3,
         required=False,
         label=_("دائن"),
-        widget=forms.NumberInput(attrs={"class": "form-control form-control-sm"}),
+        widget=forms.NumberInput(
+            attrs={"class": "form-control form-control-sm"}
+        ),
     )
     DELETE = forms.BooleanField(
         required=False,
@@ -98,27 +112,32 @@ class JournalLineForm(forms.Form):
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
 
-    # ✅ الإصلاح: إضافة تحقق مخصص
     def clean(self):
+        """
+        تحقق مخصص للسطر:
+        - لا يسمح بالقيم السالبة
+        - لا يمكن أن يكون مدينًا ودائنًا في نفس الوقت
+        - إذا في مبلغ لازم يكون في حساب
+        """
         cleaned_data = super().clean()
         debit = cleaned_data.get("debit") or Decimal("0")
         credit = cleaned_data.get("credit") or Decimal("0")
         account = cleaned_data.get("account")
 
-        # ✅ لا يسمح بالقيم السالبة
+        # لا يسمح بالقيم السالبة
         if debit < 0:
             self.add_error("debit", _("قيمة المدين لا يمكن أن تكون سالبة."))
 
         if credit < 0:
             self.add_error("credit", _("قيمة الدائن لا يمكن أن تكون سالبة."))
 
-        # ✅ لا يسمح أن يكون السطر مدينًا ودائنًا معاً
+        # لا يسمح أن يكون السطر مدينًا ودائنًا معاً
         if debit > 0 and credit > 0:
             raise forms.ValidationError(
                 _("لا يمكن أن يكون السطر مدينًا ودائنًا في نفس الوقت.")
             )
 
-        # ✅ تحقق من وجود حساب إذا كان هناك مبلغ
+        # تحقق من وجود حساب إذا كان هناك مبلغ
         if (debit > 0 or credit > 0) and not account:
             raise forms.ValidationError(
                 _("يجب اختيار حساب للسطر الذي يحتوي على مبلغ مدين أو دائن.")
@@ -135,6 +154,7 @@ JournalLineFormSet = forms.formset_factory(
 
 
 # ======= Reports Forms =======
+
 
 class TrialBalanceFilterForm(forms.Form):
     fiscal_year = forms.ModelChoiceField(
@@ -162,7 +182,7 @@ class TrialBalanceFilterForm(forms.Form):
 
 class AccountLedgerFilterForm(forms.Form):
     account = forms.ModelChoiceField(
-        queryset=Account.objects.filter(is_active=True),
+        queryset=Account.objects.active(),
         required=False,
         label=_("الحساب"),
         widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
@@ -188,7 +208,6 @@ class AccountLedgerFilterForm(forms.Form):
             attrs={"type": "date", "class": "form-control form-control-sm"}
         ),
     )
-
 
 
 class FiscalYearForm(forms.ModelForm):
@@ -273,7 +292,7 @@ class JournalEntryFilterForm(forms.Form):
     journal = forms.ModelChoiceField(
         required=False,
         label=_("دفتر اليومية"),
-        queryset=Journal.objects.filter(is_active=True).order_by("code"),
+        queryset=Journal.objects.active().order_by("code"),
         widget=forms.Select(
             attrs={"class": "form-select form-select-sm"},
         ),

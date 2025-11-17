@@ -1,9 +1,17 @@
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.db import models
+from django.db import models, transaction, IntegrityError
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+
+from .managers import (
+    FiscalYearManager,
+    AccountManager,
+    JournalManager,
+    JournalEntryManager,
+    JournalLineManager,
+)
 
 User = get_user_model()
 
@@ -27,6 +35,8 @@ class FiscalYear(models.Model):
     end_date = models.DateField(verbose_name=_("تاريخ النهاية"))
     is_closed = models.BooleanField(default=False, verbose_name=_("مقفلة؟"))
 
+    objects = FiscalYearManager()
+
     class Meta:
         ordering = ["-year"]
 
@@ -38,20 +48,10 @@ class FiscalYear(models.Model):
         """
         Try to find the fiscal year that contains the given date.
         Fallback: match by year only (year = date.year).
+
+        التفويض للـ Manager عشان يظل المنطق في طبقة واحدة.
         """
-        if not date:
-            return None
-
-        # First: try by range
-        fy = cls.objects.filter(
-            start_date__lte=date,
-            end_date__gte=date,
-        ).first()
-        if fy:
-            return fy
-
-        # Fallback: year field
-        return cls.objects.filter(year=date.year).first()
+        return cls.objects.for_date(date)
 
 
 # ==============================================================================
@@ -84,6 +84,8 @@ class Account(models.Model):
         default=True,
         help_text=_("Allow this account to be used in settlements."),
     )
+
+    objects = AccountManager()
 
     class Meta:
         ordering = ["code"]
@@ -133,6 +135,8 @@ class Journal(models.Model):
         default=True,
         verbose_name=_("نشط"),
     )
+
+    objects = JournalManager()
 
     class Meta:
         ordering = ["code"]
@@ -204,6 +208,8 @@ class JournalEntry(models.Model):
         verbose_name=_("أنشئ بواسطة"),
     )
 
+    objects = JournalEntryManager()
+
     class Meta:
         ordering = ["-date", "-id"]
 
@@ -212,6 +218,15 @@ class JournalEntry(models.Model):
         if self.number:
             return f"{self.number} ({self.date})"
         return f"JE-{self.id} ({self.date})"
+
+    @property
+    def display_number(self) -> str:
+        """
+        رقم عرض موحد:
+        - إذا عندي number حقيقي (مثلاً GEN-2025-0001) أستخدمه
+        - وإلا أستخدم JE-<id> كـ fallback
+        """
+        return self.number or f"JE-{self.id}"
 
     @property
     def total_debit(self) -> Decimal:
@@ -227,22 +242,50 @@ class JournalEntry(models.Model):
 
     def save(self, *args, **kwargs):
         """
-        - Auto-assign fiscal year from date if not set.
-        - Auto-generate entry number (once) based on journal + year.
+        - تعيين السنة المالية من التاريخ تلقائياً إذا لم تُحدّد.
+        - توليد رقم القيد (مرة واحدة) بناءً على الدفتر + السنة.
+        - التعامل مع حالات التضارب النادرة في UNIQUE على number.
         """
-        # Auto-assign fiscal year from date if not set
+        # 1) تعيين السنة المالية تلقائيًا إن لم تكن محددة
         if self.date and self.fiscal_year is None:
+            # نحن داخل نفس الملف، نقدر نستخدم FiscalYear مباشرة
             self.fiscal_year = FiscalYear.for_date(self.date)
 
-        # Auto-generate number only once (do not change it on later saves)
+        # 2) توليد رقم القيد إن لم يكن موجوداً
         if not self.number:
-            self.number = generate_journal_entry_number(
+            self.number = JournalEntry.objects.generate_number(
                 journal=self.journal,
                 fiscal_year=self.fiscal_year,
                 date=self.date,
             )
 
-        super().save(*args, **kwargs)
+        # 3) محاولة الحفظ مع معالجة تضارب UNIQUE على number
+        max_retries = 3
+        for _ in range(max_retries):
+            try:
+                with transaction.atomic():
+                    return super().save(*args, **kwargs)
+            except IntegrityError as exc:
+                msg = str(exc).lower()
+                # نتحقق بطريقة أوسع شوي من رسالة الخطأ
+                if (
+                    "journalentry.number" in msg
+                    or "ledger_journalentry.number" in msg
+                    or "unique constraint failed: ledger_journalentry.number" in msg
+                ) and not self.pk:
+                    # أعِد توليد الرقم بناءً على الوضع الحالي في قاعدة البيانات
+                    self.number = JournalEntry.objects.generate_number(
+                        journal=self.journal,
+                        fiscal_year=self.fiscal_year,
+                        date=self.date,
+                    )
+                    continue
+                # أي خطأ آخر نرفعه كما هو
+                raise
+
+        # لو (نادرًا) فشل بعد عدة محاولات
+        raise IntegrityError("Could not generate a unique JournalEntry.number")
+
 
 
 class JournalLine(models.Model):
@@ -276,6 +319,8 @@ class JournalLine(models.Model):
     )
     order = models.PositiveIntegerField(default=0)
 
+    objects = JournalLineManager()
+
     class Meta:
         ordering = ["order", "id"]
         constraints = [
@@ -290,28 +335,8 @@ class JournalLine(models.Model):
 
 
 # ==============================================================================
-# Helpers: default journals
+# Helpers: default journals (واجهة بسيطة على Manager)
 # ==============================================================================
-
-
-def _get_default_journal_by_types(preferred_types):
-    """
-    Internal helper to pick a default journal according to a list of
-    preferred types, in order, falling back to any active journal.
-    """
-    qs = Journal.objects.filter(is_active=True)
-
-    for journal_type in preferred_types:
-        # Prefer is_default=True for the given type
-        journal = (
-            qs.filter(type=journal_type, is_default=True).first()
-            or qs.filter(type=journal_type).first()
-        )
-        if journal:
-            return journal
-
-    # Final fallback: any active journal
-    return qs.first()
 
 
 def get_default_journal_for_manual_entry():
@@ -319,8 +344,11 @@ def get_default_journal_for_manual_entry():
     Default journal for manual entries:
     - Typically GENERAL journal.
     - Fallback: any active journal.
+
+    واجهة خفيفة تستدعي Journal.objects.get_default_for_manual_entry()
+    عشان ما تكسر أي كود قديم يستخدم هذه الدوال.
     """
-    return _get_default_journal_by_types([Journal.Type.GENERAL])
+    return Journal.objects.get_default_for_manual_entry()
 
 
 def get_default_journal_for_sales_invoice():
@@ -328,7 +356,7 @@ def get_default_journal_for_sales_invoice():
     Default journal for sales invoices (Sales Journal).
     To be used from the accounting app when auto-posting invoices.
     """
-    return _get_default_journal_by_types([Journal.Type.SALES])
+    return Journal.objects.get_default_for_sales_invoice()
 
 
 def get_default_journal_for_customer_payment():
@@ -339,65 +367,23 @@ def get_default_journal_for_customer_payment():
       2) BANK (is_default=True, then any BANK)
       3) Any active journal as a last resort.
     """
-    return _get_default_journal_by_types(
-        [Journal.Type.CASH, Journal.Type.BANK]
-    )
+    return Journal.objects.get_default_for_customer_payment()
 
 
 # ==============================================================================
-# Helpers: journal entry numbering
+# Helpers: journal entry numbering (واجهة على الـ Manager)
 # ==============================================================================
 
 
 def generate_journal_entry_number(journal, fiscal_year, date):
     """
-    Generate a journal entry number of the form:
-        <PREFIX>-<YEAR>-<SEQ>
+    Backwards-compatible helper.
 
-    Examples:
-        GEN-2025-0001
-        CASH-2025-0001
-        SALES-2025-0001
-
-    - PREFIX comes from journal.code (or "JE" if no journal).
-    - YEAR comes from fiscal_year.year (fallback to date.year / current year).
-    - SEQ is a running sequence per (journal, year) combination.
+    الآن المنطق الحقيقي في JournalEntryManager.generate_number،
+    وهذه الدالة مجرد واجهة لو فيه أي كود قديم يستدعيها.
     """
-    # Determine year
-    if fiscal_year is not None:
-        year = fiscal_year.year
-    elif date is not None:
-        year = date.year
-    else:
-        year = timezone.now().year
-
-    # Determine prefix
-    if journal is not None and journal.code:
-        prefix = journal.code.upper()
-    else:
-        prefix = "JE"
-
-    base_prefix = f"{prefix}-{year}-"
-
-    # Import here to avoid potential circular imports at module load time
-    from .models import JournalEntry as _JournalEntry  # type: ignore
-
-    # Filter entries that match the prefix and (optionally) the specific journal
-    qs = _JournalEntry.objects.filter(number__startswith=base_prefix)
-    if journal is not None:
-        qs = qs.filter(journal=journal)
-    else:
-        qs = qs.filter(journal__isnull=True)
-
-    last_entry = qs.order_by("id").last()
-
-    if last_entry and last_entry.number:
-        try:
-            last_seq = int(last_entry.number.split("-")[-1])
-        except (ValueError, IndexError):
-            last_seq = 0
-        new_seq = last_seq + 1
-    else:
-        new_seq = 1
-
-    return f"{base_prefix}{new_seq:04d}"
+    return JournalEntry.objects.generate_number(
+        journal=journal,
+        fiscal_year=fiscal_year,
+        date=date,
+    )

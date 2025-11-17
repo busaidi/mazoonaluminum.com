@@ -28,7 +28,7 @@
   <div class="col-md-3 col-sm-6">
     <div class="card shadow-sm border-0 h-100">
       <div class="card-body py-3">
-        <p class="text-muted small mb-1">{% trans "إجمالي القيود" %}</p>
+        <p class="text-muted small mb-1">{% trans "إجمالي القيود المُرحّلة" %}</p>
         <h2 class="h4 mb-0">{{ entries_count }}</h2>
       </div>
     </div>
@@ -95,7 +95,8 @@
           <li class="mb-2">
             <a href="{% url 'ledger:journalentry_create' %}"
                class="link-dark text-decoration-none">
-              ▸ {% trans "إنشاء قيد جديد" %}</a>
+              ▸ {% trans "إنشاء قيد جديد" %}
+            </a>
           </li>
           <li class="mb-2">
             <a href="{% url 'ledger:trial_balance' %}"
@@ -131,7 +132,7 @@
     <div class="card shadow-sm border-0 h-100">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-2">
-          <h2 class="h6 mb-0">{% trans "أحدث القيود" %}</h2>
+          <h2 class="h6 mb-0">{% trans "أحدث القيود المُرحّلة" %}</h2>
           <a href="{% url 'ledger:journalentry_list' %}"
              class="btn btn-sm btn-outline-secondary">
             {% trans "عرض كل القيود" %}
@@ -143,8 +144,9 @@
             <table class="table table-sm table-striped align-middle mb-0">
               <thead class="table-light">
               <tr>
-                <th class="text-nowrap">{% trans "رقم" %}</th>
+                <th class="text-nowrap">{% trans "رقم القيد" %}</th>
                 <th class="text-nowrap">{% trans "التاريخ" %}</th>
+                <th class="text-nowrap">{% trans "الدفتر" %}</th>
                 <th class="text-nowrap">{% trans "المرجع" %}</th>
                 <th class="text-nowrap">{% trans "الوصف" %}</th>
                 <th class="text-nowrap">{% trans "الإجمالي" %}</th>
@@ -154,8 +156,23 @@
               <tbody>
               {% for e in recent_entries %}
                 <tr>
-                  <td class="text-nowrap">JE-{{ e.id }}</td>
-                  <td class="text-nowrap">{{ e.date }}</td>
+                  <td class="text-nowrap">
+                    {% if e.number %}
+                      {{ e.number }}
+                    {% else %}
+                      JE-{{ e.id }}
+                    {% endif %}
+                  </td>
+                  <td class="text-nowrap">{{ e.date|date:"SHORT_DATE_FORMAT" }}</td>
+                  <td class="text-nowrap">
+                    {% if e.journal %}
+                      <span class="badge bg-light text-muted border small">
+                        {{ e.journal.code }}
+                      </span>
+                    {% else %}
+                      <span class="text-muted small">-</span>
+                    {% endif %}
+                  </td>
                   <td class="text-nowrap">{{ e.reference|default:"-" }}</td>
                   <td class="small">
                     {{ e.description|default:"-"|truncatechars:60 }}

@@ -3,41 +3,57 @@
 
 {% block ledger_content %}
 
-{# ===== Header: title + meta + actions ===== #}
+{# ===== Header: عنوان + ميتا + أزرار ===== #}
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
     <h2 class="h5 mb-1">
       {% if entry.number %}
-  {% blocktrans with number=entry.number %}قيد يومية رقم {{ number }}{% endblocktrans %}
-{% else %}
-  {% blocktrans with entry_id=entry.id %}قيد يومية رقم JE-{{ entry_id }}{% endblocktrans %}
-{% endif %}
-
+        {% blocktrans with number=entry.number %}
+          قيد يومية رقم {{ number }}
+        {% endblocktrans %}
+      {% else %}
+        {% blocktrans with entry_id=entry.id %}
+          قيد يومية رقم JE-{{ entry_id }}
+        {% endblocktrans %}
+      {% endif %}
     </h2>
+
     <p class="text-muted small mb-0">
-      <span>
+      <span class="me-2">
         <strong>{% trans "التاريخ" %}:</strong>
-        {{ entry.date }}
+        {{ entry.date|date:"SHORT_DATE_FORMAT" }}
       </span>
-      <span class="mx-1">·</span>
-      <span>
+      <span class="mx-1 text-muted">·</span>
+      <span class="me-2">
         <strong>{% trans "المرجع" %}:</strong>
         {{ entry.reference|default:"-" }}
       </span>
+      {% if entry.journal %}
+        <span class="mx-1 text-muted">·</span>
+        <span>
+          <strong>{% trans "دفتر" %}:</strong>
+          <span class="badge bg-light text-muted border small">
+            {{ entry.journal.code }}{% if entry.journal.name %} – {{ entry.journal.name }}{% endif %}
+          </span>
+        </span>
+      {% endif %}
     </p>
   </div>
 
-  <div class="d-flex align-items-center gap-2">
+  <div class="d-flex align-items-center flex-wrap gap-2">
+    {# حالة القيد #}
     {% if entry.posted %}
       <span class="badge bg-success">{% trans "مُرحّل" %}</span>
     {% else %}
       <span class="badge bg-secondary">{% trans "مسودة" %}</span>
     {% endif %}
 
+    {# رجوع لليست القيود #}
     <a href="{% url 'ledger:journalentry_list' %}" class="btn btn-light btn-sm">
       {% trans "رجوع إلى القيود" %}
     </a>
 
+    {# تعديل متاح فقط لو مسودة #}
     {% if not entry.posted %}
       <a href="{% url 'ledger:journalentry_edit' pk=entry.pk %}"
          class="btn btn-outline-primary btn-sm">
@@ -45,6 +61,7 @@
       </a>
     {% endif %}
 
+    {# ترحيل / إلغاء الترحيل #}
     {% if entry.posted %}
       <form method="post"
             action="{% url 'ledger:journalentry_unpost' pk=entry.pk %}"
@@ -67,7 +84,7 @@
   </div>
 </div>
 
-{# ===== General info ===== #}
+{# ===== المعلومات العامة عن القيد ===== #}
 <div class="card mb-3 shadow-sm border-0">
   <div class="card-body">
     <div class="row g-3 align-items-start">
@@ -75,59 +92,75 @@
         <p class="mb-1">
           <strong>{% trans "الوصف" %}</strong>
         </p>
-        <p class="text-muted small mb-2">
+        <p class="text-muted small mb-0">
           {{ entry.description|default:_("لا يوجد وصف.") }}
         </p>
       </div>
+
       <div class="col-md-4">
-          <ul class="list-unstyled small mb-0">
-  <li class="mb-1">
-    <strong>{% trans "السنة المالية" %}:</strong>
-    {{ entry.fiscal_year|default:"-" }}
-  </li>
+        <ul class="list-unstyled small mb-0">
           <li class="mb-1">
-  <strong>{% trans "دفتر اليومية" %}:</strong>
-  {{ entry.journal|default:"-" }}
-</li>
-  <li class="mb-1">
-    <strong>{% trans "أنشئ بواسطة" %}:</strong>
-    {{ entry.created_by|default:"-" }}
-  </li>
-  <li class="mb-1">
-    <strong>{% trans "تاريخ الإنشاء" %}:</strong>
-    {{ entry.created_at|date:"Y-m-d H:i" }}
-  </li>
+            <strong>{% trans "السنة المالية" %}:</strong>
+            {{ entry.fiscal_year|default:"-" }}
+          </li>
 
-  {% if entry.posted %}
-    <li class="mb-1">
-      <strong>{% trans "تاريخ الترحيل" %}:</strong>
-      {{ entry.posted_at|date:"Y-m-d H:i" }}
-    </li>
-    <li class="mb-1">
-      <strong>{% trans "مُرحّل بواسطة" %}:</strong>
-      {{ entry.posted_by|default:"-" }}
-    </li>
-  {% endif %}
+          <li class="mb-1">
+            <strong>{% trans "دفتر اليومية" %}:</strong>
+            {{ entry.journal|default:"-" }}
+          </li>
 
-  <li class="mb-1">
-    <strong>{% trans "الحالة" %}:</strong>
-    {% if entry.posted %}
-      <span class="badge bg-success">{% trans "مُرحّل" %}</span>
-    {% else %}
-      <span class="badge bg-secondary">{% trans "مسودة" %}</span>
-    {% endif %}
-  </li>
-</ul>
+          <li class="mb-1">
+            <strong>{% trans "أنشئ بواسطة" %}:</strong>
+            {{ entry.created_by|default:"-" }}
+          </li>
 
+          <li class="mb-1">
+            <strong>{% trans "تاريخ الإنشاء" %}:</strong>
+            {{ entry.created_at|date:"SHORT_DATETIME_FORMAT" }}
+          </li>
+
+          {% if entry.posted %}
+            <li class="mb-1">
+              <strong>{% trans "تاريخ الترحيل" %}:</strong>
+              {{ entry.posted_at|date:"SHORT_DATETIME_FORMAT" }}
+            </li>
+            <li class="mb-1">
+              <strong>{% trans "مُرحّل بواسطة" %}:</strong>
+              {{ entry.posted_by|default:"-" }}
+            </li>
+          {% endif %}
+
+          <li class="mb-1">
+            <strong>{% trans "الحالة" %}:</strong>
+            {% if entry.posted %}
+              <span class="badge bg-success">{% trans "مُرحّل" %}</span>
+            {% else %}
+              <span class="badge bg-secondary">{% trans "مسودة" %}</span>
+            {% endif %}
+          </li>
+        </ul>
       </div>
     </div>
   </div>
 </div>
 
-{# ===== Journal lines ===== #}
+{# ===== أسطر القيد ===== #}
 <div class="card shadow-sm border-0">
   <div class="card-body">
-    <h6 class="mb-3">{% trans "أسطر القيد" %}</h6>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="mb-0">{% trans "أسطر القيد" %}</h6>
+      <span class="small text-muted">
+        {% if entry.is_balanced %}
+          <span class="text-success">
+            {% trans "القيد متوازن: مجموع المدين يساوي مجموع الدائن." %}
+          </span>
+        {% else %}
+          <span class="text-danger">
+            {% trans "تحذير: القيد غير متوازن! يرجى مراجعة الأسطر." %}
+          </span>
+        {% endif %}
+      </span>
+    </div>
 
     <div class="table-responsive">
       <table class="table table-sm table-striped align-middle mb-0">
@@ -151,7 +184,7 @@
                     {{ line.account }}
                   </a>
                 {% else %}
-                  -
+                  <span class="text-muted">-</span>
                 {% endif %}
               </td>
               <td class="small">{{ line.description|default:"-" }}</td>
@@ -175,18 +208,6 @@
         </tfoot>
       </table>
     </div>
-
-    <p class="mt-2 mb-0 small">
-      {% if entry.is_balanced %}
-        <span class="text-success">
-          {% trans "القيد متوازن: مجموع المدين يساوي مجموع الدائن." %}
-        </span>
-      {% else %}
-        <span class="text-danger">
-          {% trans "تحذير: القيد غير متوازن! يرجى مراجعة الأسطر." %}
-        </span>
-      {% endif %}
-    </p>
   </div>
 </div>
 

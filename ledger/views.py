@@ -26,9 +26,16 @@ from .forms import (
     JournalLineFormSet,
     TrialBalanceFilterForm,
     AccountLedgerFilterForm,
-    FiscalYearForm, JournalEntryFilterForm,
+    FiscalYearForm,
+    JournalEntryFilterForm,
 )
-from .models import Account, JournalEntry, JournalLine, FiscalYear, get_default_journal_for_manual_entry
+from .models import (
+    Account,
+    JournalEntry,
+    JournalLine,
+    FiscalYear,
+    get_default_journal_for_manual_entry,
+)
 
 
 # ========= Staff / Fiscal Year helpers =========
@@ -180,24 +187,13 @@ class JournalEntryListView(FiscalYearRequiredMixin, StaffRequiredMixin, ListView
     def get_queryset(self):
         """
         Base queryset:
-        - Annotate totals to avoid N+1 queries.
+        - Use manager helper to annotate totals.
         - Apply filters from the filter form if valid.
         """
         qs = (
             JournalEntry.objects
-            .prefetch_related("lines", "journal")
-            .annotate(
-                total_debit_value=Coalesce(
-                    Sum("lines__debit"),
-                    Value(0),
-                    output_field=DecimalField(max_digits=12, decimal_places=3),
-                ),
-                total_credit_value=Coalesce(
-                    Sum("lines__credit"),
-                    Value(0),
-                    output_field=DecimalField(max_digits=12, decimal_places=3),
-                ),
-            )
+            .with_totals()       # من الـ Manager: يضيف total_debit_value و total_credit_value
+            .select_related("journal")
             .order_by("-date", "-id")
         )
 
@@ -226,9 +222,9 @@ class JournalEntryListView(FiscalYearRequiredMixin, StaffRequiredMixin, ListView
 
         # Posted / draft filter
         if posted == "posted":
-            qs = qs.filter(posted=True)
+            qs = qs.posted()
         elif posted == "draft":
-            qs = qs.filter(posted=False)
+            qs = qs.unposted()
 
         # Journal filter
         if journal:
@@ -252,7 +248,6 @@ class JournalEntryListView(FiscalYearRequiredMixin, StaffRequiredMixin, ListView
         ctx["current_query"] = query_dict.urlencode()
 
         return ctx
-
 
 
 class JournalEntryDetailView(FiscalYearRequiredMixin, StaffRequiredMixin, DetailView):
@@ -423,7 +418,10 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
         messages.success(request, _("تم إنشاء قيد اليومية بنجاح."))
         return redirect("ledger:journalentry_detail", pk=entry.pk)
 
+
 # ========= Edit unposted Journal =========
+
+
 class JournalEntryUpdateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
     """
     Edit an existing (unposted) journal entry using the same form as creation.
@@ -567,6 +565,7 @@ class JournalEntryUpdateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
         messages.success(request, _("تم تحديث قيد اليومية بنجاح."))
         return redirect("ledger:journalentry_detail", pk=entry.pk)
 
+
 # ========= Trial balance report =========
 
 
@@ -577,11 +576,11 @@ def trial_balance_view(request):
     rows = None
     totals = None
 
-    # Start from all posted lines
+    # Start from all posted lines (نستخدم helper من المانجر)
     qs = (
         JournalLine.objects
+        .posted()  # == filter(entry__posted=True)
         .select_related("account", "entry")
-        .filter(entry__posted=True)
     )
 
     if form.is_valid():
@@ -654,11 +653,9 @@ def account_ledger_view(request):
             # 1) Base queryset for this account (posted entries only)
             lines_qs = (
                 JournalLine.objects
+                .posted()     # helper من المانجر
                 .select_related("entry")
-                .filter(
-                    account=account,
-                    entry__posted=True,
-                )
+                .filter(account=account)
             )
 
             # Filter by fiscal year or date range
@@ -687,9 +684,8 @@ def account_ledger_view(request):
             opening_balance = Decimal("0")
 
             if fiscal_year or date_from:
-                opening_qs = JournalLine.objects.filter(
+                opening_qs = JournalLine.objects.posted().filter(
                     account=account,
-                    entry__posted=True,
                 )
 
                 if fiscal_year:
@@ -740,6 +736,7 @@ def account_ledger_view(request):
                     {
                         "date": line.entry.date,
                         "entry_id": line.entry.id,
+                        "entry_number": line.entry.display_number,  # ← هنا
                         "reference": line.entry.reference or "-",
                         "description": line.description or line.entry.description,
                         "debit": line.debit or Decimal("0"),
@@ -747,6 +744,7 @@ def account_ledger_view(request):
                         "balance": balance,
                     }
                 )
+
 
     context = {
         "form": form,
@@ -773,7 +771,7 @@ class LedgerDashboardView(FiscalYearRequiredMixin, StaffRequiredMixin, TemplateV
         accounts_count = Account.objects.count()
 
         # Only posted journal entries are considered in stats
-        entries_qs = JournalEntry.objects.filter(posted=True)
+        entries_qs = JournalEntry.objects.posted()
         entries_count = entries_qs.count()
 
         # Posted entries for the current month
@@ -785,7 +783,8 @@ class LedgerDashboardView(FiscalYearRequiredMixin, StaffRequiredMixin, TemplateV
 
         # Monthly totals (debit / credit) for posted entries
         month_totals = (
-            JournalLine.objects.filter(entry__in=month_entries)
+            JournalLine.objects.posted()
+            .filter(entry__in=month_entries)
             .aggregate(
                 debit=Coalesce(
                     Sum("debit"),
@@ -804,7 +803,7 @@ class LedgerDashboardView(FiscalYearRequiredMixin, StaffRequiredMixin, TemplateV
 
         # Recent posted entries
         recent_entries = (
-            JournalEntry.objects.filter(posted=True)
+            JournalEntry.objects.posted()
             .order_by("-date", "-id")[:10]
         )
 
@@ -833,18 +832,27 @@ def journalentry_post_view(request, pk):
     Post a journal entry:
     - Only allowed via POST
     - Entry must be balanced
+    - يحاول الرجوع إلى next لو مُرسل من الفورم (مثلاً صفحة الليست)
     """
     entry = get_object_or_404(JournalEntry, pk=pk)
+    next_url = request.POST.get("next") or request.GET.get("next")
 
     if request.method != "POST":
+        # لو جاي بغير POST وبرضه فيه next → رجعنا له
+        if next_url:
+            return redirect(next_url)
         return redirect("ledger:journalentry_detail", pk=entry.pk)
 
     if entry.posted:
         messages.info(request, _("القيد مُرحّل بالفعل."))
+        if next_url:
+            return redirect(next_url)
         return redirect("ledger:journalentry_detail", pk=entry.pk)
 
     if not entry.is_balanced:
         messages.error(request, _("لا يمكن ترحيل قيد غير متوازن."))
+        if next_url:
+            return redirect(next_url)
         return redirect("ledger:journalentry_detail", pk=entry.pk)
 
     # Set posting info
@@ -854,6 +862,9 @@ def journalentry_post_view(request, pk):
     entry.save(update_fields=["posted", "posted_at", "posted_by"])
 
     messages.success(request, _("تم ترحيل القيد بنجاح."))
+
+    if next_url:
+        return redirect(next_url)
     return redirect("ledger:journalentry_detail", pk=entry.pk)
 
 
@@ -863,14 +874,20 @@ def journalentry_unpost_view(request, pk):
     """
     Unpost a journal entry:
     - Only allowed via POST
+    - يحاول الرجوع إلى next لو مُرسل من الفورم (مثلاً صفحة الليست)
     """
     entry = get_object_or_404(JournalEntry, pk=pk)
+    next_url = request.POST.get("next") or request.GET.get("next")
 
     if request.method != "POST":
+        if next_url:
+            return redirect(next_url)
         return redirect("ledger:journalentry_detail", pk=entry.pk)
 
     if not entry.posted:
         messages.info(request, _("القيد غير مُرحّل."))
+        if next_url:
+            return redirect(next_url)
         return redirect("ledger:journalentry_detail", pk=entry.pk)
 
     # Clear posting info
@@ -880,4 +897,8 @@ def journalentry_unpost_view(request, pk):
     entry.save(update_fields=["posted", "posted_at", "posted_by"])
 
     messages.success(request, _("تم إلغاء ترحيل القيد بنجاح."))
+
+    if next_url:
+        return redirect(next_url)
     return redirect("ledger:journalentry_detail", pk=entry.pk)
+

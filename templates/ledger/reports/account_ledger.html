@@ -2,6 +2,7 @@
 {% load i18n %}
 
 {% block ledger_content %}
+{# ===== العنوان ===== #}
 <div class="mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
   <div>
     <h2 class="h5 mb-1">{% trans "كشف حساب" %}</h2>
@@ -16,29 +17,33 @@
   <div class="card-body">
     <form method="get" class="row g-2 align-items-end">
       <div class="col-md-3 col-sm-6">
-        <label class="form-label mb-1">
+        <label class="form-label form-label-sm">
           {% trans "الحساب" %}
         </label>
         {{ form.account }}
       </div>
+
       <div class="col-md-2 col-sm-6">
-        <label class="form-label mb-1">
+        <label class="form-label form-label-sm">
           {% trans "السنة المالية" %}
         </label>
         {{ form.fiscal_year }}
       </div>
+
       <div class="col-md-2 col-sm-6">
-        <label class="form-label mb-1">
+        <label class="form-label form-label-sm">
           {% trans "من تاريخ" %}
         </label>
         {{ form.date_from }}
       </div>
+
       <div class="col-md-2 col-sm-6">
-        <label class="form-label mb-1">
+        <label class="form-label form-label-sm">
           {% trans "إلى تاريخ" %}
         </label>
         {{ form.date_to }}
       </div>
+
       <div class="col-md-3 col-sm-6 d-flex gap-2">
         <button type="submit" class="btn btn-primary btn-sm mt-auto">
           {% trans "تصفية" %}
@@ -76,8 +81,23 @@
   {% if lines or opening_balance %}
     <div class="card shadow-sm border-0">
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
           <h4 class="h6 mb-0">{% trans "تفاصيل الحركة" %}</h4>
+          <div class="small text-muted">
+            <span class="me-2">
+              <strong>{% trans "الرصيد الافتتاحي" %}:</strong>
+              {{ opening_balance }}
+            </span>
+            {% with last_line=lines|last %}
+              {% if last_line %}
+                <span class="mx-1 text-muted">·</span>
+                <span>
+                  <strong>{% trans "الرصيد الحالي" %}:</strong>
+                  {{ last_line.balance }}
+                </span>
+              {% endif %}
+            {% endwith %}
+          </div>
         </div>
 
         <div class="table-responsive">
@@ -95,20 +115,24 @@
             </thead>
             <tbody>
               <tr class="table-secondary">
-                <td colspan="6" class="text-end">
+                <td colspan="6" class="text-end small">
                   {% trans "رصيد افتتاحي" %}
                 </td>
-                <td class="text-end">{{ opening_balance }}</td>
+                <td class="text-end text-nowrap small">
+                  {{ opening_balance }}
+                </td>
               </tr>
 
               {% for item in lines %}
                 <tr>
                   <td class="text-nowrap">{{ item.date }}</td>
                   <td class="text-nowrap">
-                    <a href="{% url 'ledger:journalentry_detail' item.entry_id %}">
-                      JE-{{ item.entry_id }}
-                    </a>
-                  </td>
+  <a href="{% url 'ledger:journalentry_detail' item.entry_id %}"
+     class="text-decoration-none">
+    JE-{{ item.entry_id }}
+  </a>
+</td>
+
                   <td class="text-nowrap">
                     {{ item.reference|default:"-" }}
                   </td>
@@ -129,6 +153,10 @@
             </tbody>
           </table>
         </div>
+
+        <p class="mt-2 mb-0 small text-muted">
+          {% trans "الرصيد التراكمي يعتمد على طبيعة الحساب (مدين أو دائن) وطبيعة الحركات." %}
+        </p>
       </div>
     </div>
   {% else %}

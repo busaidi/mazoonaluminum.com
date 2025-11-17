@@ -14,12 +14,17 @@
     {% else %}
       <h2 class="h5 mb-1">{% trans "إنشاء قيد يومية" %}</h2>
       <p class="text-muted small mb-0">
-        {% trans "أدخل بيانات القيد ورصّح الأسطر بحيث يتساوى مجموع المدين مع مجموع الدائن." %}
+        {% trans "أدخل بيانات القيد ورتّب الأسطر بحيث يتساوى مجموع المدين مع مجموع الدائن." %}
       </p>
     {% endif %}
   </div>
-</div>
 
+  <div>
+    <a href="{% url 'ledger:journalentry_list' %}" class="btn btn-light btn-sm">
+      {% trans "رجوع إلى القيود" %}
+    </a>
+  </div>
+</div>
 
 <form method="post" class="card shadow-sm border-0">
   <div class="card-body">
@@ -33,50 +38,47 @@
     {% endif %}
 
     {# ===== رأس القيد ===== #}
-<div class="row g-3 mb-3">
+    <div class="row g-3 mb-3">
+      <div class="col-md-3">
+        <label class="form-label form-label-sm" for="{{ entry_form.date.id_for_label }}">
+          {% trans "التاريخ" %}
+        </label>
+        {{ entry_form.date }}
+        {% for error in entry_form.date.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
 
-  <div class="col-md-3">
-    <label class="form-label" for="{{ entry_form.date.id_for_label }}">
-      {% trans "التاريخ" %}
-    </label>
-    {{ entry_form.date }}
-    {% for error in entry_form.date.errors %}
-      <div class="text-danger small">{{ error }}</div>
-    {% endfor %}
-  </div>
+      <div class="col-md-3">
+        <label class="form-label form-label-sm" for="{{ entry_form.reference.id_for_label }}">
+          {% trans "المرجع" %}
+        </label>
+        {{ entry_form.reference }}
+        {% for error in entry_form.reference.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
 
-  <div class="col-md-3">
-    <label class="form-label" for="{{ entry_form.reference.id_for_label }}">
-      {% trans "المرجع" %}
-    </label>
-    {{ entry_form.reference }}
-    {% for error in entry_form.reference.errors %}
-      <div class="text-danger small">{{ error }}</div>
-    {% endfor %}
-  </div>
+      <div class="col-md-3">
+        <label class="form-label form-label-sm" for="{{ entry_form.journal.id_for_label }}">
+          {% trans "دفتر اليومية" %}
+        </label>
+        {{ entry_form.journal }}
+        {% for error in entry_form.journal.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
 
-  <div class="col-md-3">
-    <label class="form-label" for="{{ entry_form.journal.id_for_label }}">
-      {% trans "دفتر اليومية" %}
-    </label>
-    {{ entry_form.journal }}
-    {% for error in entry_form.journal.errors %}
-      <div class="text-danger small">{{ error }}</div>
-    {% endfor %}
-  </div>
-
-  <div class="col-md-3">
-    <label class="form-label" for="{{ entry_form.description.id_for_label }}">
-      {% trans "الوصف" %}
-    </label>
-    {{ entry_form.description }}
-    {% for error in entry_form.description.errors %}
-      <div class="text-danger small">{{ error }}</div>
-    {% endfor %}
-  </div>
-
-</div>
-
+      <div class="col-md-3">
+        <label class="form-label form-label-sm" for="{{ entry_form.description.id_for_label }}">
+          {% trans "الوصف" %}
+        </label>
+        {{ entry_form.description }}
+        {% for error in entry_form.description.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+    </div>
 
     <hr class="my-3">
 
@@ -107,11 +109,10 @@
             <th style="width: 10%"></th>
           </tr>
         </thead>
-
         <tbody id="lines-body">
           {% for form in line_formset %}
             <tr class="line-row">
-              {# لو فيه حقول مخفية (id / DELETE) نعرضها في نفس الصف #}
+              {# حقول مخفية (مثل id / DELETE) #}
               {% for hidden in form.hidden_fields %}
                 {{ hidden }}
               {% endfor %}
@@ -142,7 +143,7 @@
               </td>
               <td class="text-end">
                 {% if forloop.first %}
-                  {# لا نحذف أول صف #}
+                  {# لا نحذف أول صف افتراضي #}
                 {% else %}
                   <button type="button" class="btn btn-outline-danger btn-sm remove-row">
                     &times;
@@ -152,32 +153,33 @@
             </tr>
           {% endfor %}
         </tbody>
-
       </table>
     </div>
 
-    <div class="mt-2 mb-3">
+    <div class="mt-2 mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
       <button type="button" id="add-row" class="btn btn-outline-primary btn-sm">
         + {% trans "إضافة سطر" %}
       </button>
+      <small class="text-muted">
+        {% trans "يمكنك إضافة أكثر من سطر، وترك الأسطر الفارغة بدون حساب أو مبالغ." %}
+      </small>
     </div>
 
     <hr class="my-3">
 
     <div class="d-flex justify-content-between">
-  <a href="{% url 'ledger:journalentry_list' %}" class="btn btn-light btn-sm">
-    {% trans "رجوع" %}
-  </a>
+      <a href="{% url 'ledger:journalentry_list' %}" class="btn btn-light btn-sm">
+        {% trans "رجوع" %}
+      </a>
 
-  <button type="submit" class="btn btn-primary btn-sm">
-    {% if is_update %}
-      {% trans "تحديث القيد" %}
-    {% else %}
-      {% trans "حفظ القيد" %}
-    {% endif %}
-  </button>
-</div>
-
+      <button type="submit" class="btn btn-primary btn-sm">
+        {% if is_update %}
+          {% trans "تحديث القيد" %}
+        {% else %}
+          {% trans "حفظ القيد" %}
+        {% endif %}
+      </button>
+    </div>
   </div>
 </form>
 
@@ -194,7 +196,7 @@ document.addEventListener("DOMContentLoaded", function () {
     return;
   }
 
-  // prefix حق الفورمست (مثلاً: "journalline_set")
+  // prefix حق الفورمست (مثلاً: "form")
   const prefix = totalFormsInput.name.replace("-TOTAL_FORMS", "");
 
   addBtn.addEventListener("click", function () {

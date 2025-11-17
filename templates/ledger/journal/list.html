@@ -16,7 +16,7 @@
   </div>
 </div>
 
-{# ===== Filter form ===== #}
+{# ===== نموذج التصفية ===== #}
 <div class="card mb-3 border-0 shadow-sm">
   <div class="card-body py-2">
     <form method="get" class="row g-2 align-items-end">
@@ -70,7 +70,7 @@
       <table class="table table-sm table-striped align-middle mb-0">
         <thead class="table-light">
           <tr>
-            <th class="text-nowrap">{% trans "رقم" %}</th>
+            <th class="text-nowrap">{% trans "رقم القيد" %}</th>
             <th class="text-nowrap">{% trans "التاريخ" %}</th>
             <th class="text-nowrap">{% trans "المرجع" %}</th>
             <th class="text-nowrap">{% trans "دفتر" %}</th>
@@ -91,10 +91,16 @@
                   JE-{{ e.id }}
                 {% endif %}
               </td>
-              <td class="text-nowrap">{{ e.date }}</td>
+              <td class="text-nowrap">{{ e.date|date:"SHORT_DATE_FORMAT" }}</td>
               <td class="text-nowrap">{{ e.reference|default:"-" }}</td>
               <td class="text-nowrap">
-                {{ e.journal|default:"-" }}
+                {% if e.journal %}
+                  <span class="badge bg-light text-muted border small" title="{{ e.journal.name }}">
+                    {{ e.journal.code }}
+                  </span>
+                {% else %}
+                  <span class="text-muted small">-</span>
+                {% endif %}
               </td>
               <td class="small">
                 {{ e.description|default:"-"|truncatechars:60 }}
@@ -119,7 +125,7 @@
                 {% endif %}
               </td>
 
-              {# الإجراءات: عرض + ترحيل / إلغاء الترحيل من الليست #}
+              {# الإجراءات: عرض + ترحيل / إلغاء الترحيل من نفس الليست #}
               <td class="text-end text-nowrap">
                 <a href="{% url 'ledger:journalentry_detail' e.pk %}"
                    class="btn btn-outline-secondary btn-sm">
@@ -131,6 +137,8 @@
                         action="{% url 'ledger:journalentry_unpost' pk=e.pk %}"
                         class="d-inline">
                     {% csrf_token %}
+                    {# رجعني لنفس صفحة الليست بعد الإجراء #}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
                     <button type="submit"
                             class="btn btn-outline-danger btn-sm">
                       {% trans "إلغاء الترحيل" %}
@@ -141,6 +149,8 @@
                         action="{% url 'ledger:journalentry_post' pk=e.pk %}"
                         class="d-inline">
                     {% csrf_token %}
+                    {# رجعني لنفس صفحة الليست بعد الإجراء #}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
                     <button type="submit"
                             class="btn btn-success btn-sm">
                       {% trans "ترحيل" %}
