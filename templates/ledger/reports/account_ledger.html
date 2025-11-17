@@ -1,6 +1,9 @@
 {% extends "ledger/base_ledger.html" %}
 {% load i18n %}
 
+{# عنوان الصفحة في التبويب #}
+{% block meta_title %}Account Ledger | Mazoon Aluminum{% endblock %}
+
 {% block ledger_content %}
 {# ===== العنوان ===== #}
 <div class="mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -74,6 +77,22 @@
           </span>
         </p>
       </div>
+
+      <div class="small text-muted">
+        <span class="me-2">
+          <strong>{% trans "الرصيد الافتتاحي" %}:</strong>
+          {{ opening_balance }}
+        </span>
+        {% with last_line=lines|last %}
+          {% if last_line %}
+            <span class="mx-1 text-muted">·</span>
+            <span>
+              <strong>{% trans "الرصيد الحالي" %}:</strong>
+              {{ last_line.balance }}
+            </span>
+          {% endif %}
+        {% endwith %}
+      </div>
     </div>
   </div>
 
@@ -83,21 +102,6 @@
       <div class="card-body">
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
           <h4 class="h6 mb-0">{% trans "تفاصيل الحركة" %}</h4>
-          <div class="small text-muted">
-            <span class="me-2">
-              <strong>{% trans "الرصيد الافتتاحي" %}:</strong>
-              {{ opening_balance }}
-            </span>
-            {% with last_line=lines|last %}
-              {% if last_line %}
-                <span class="mx-1 text-muted">·</span>
-                <span>
-                  <strong>{% trans "الرصيد الحالي" %}:</strong>
-                  {{ last_line.balance }}
-                </span>
-              {% endif %}
-            {% endwith %}
-          </div>
         </div>
 
         <div class="table-responsive">
@@ -114,6 +118,7 @@
               </tr>
             </thead>
             <tbody>
+              {# صف الرصيد الافتتاحي #}
               <tr class="table-secondary">
                 <td colspan="6" class="text-end small">
                   {% trans "رصيد افتتاحي" %}
@@ -123,16 +128,15 @@
                 </td>
               </tr>
 
+              {# الحركات #}
               {% for item in lines %}
                 <tr>
                   <td class="text-nowrap">{{ item.date }}</td>
                   <td class="text-nowrap">
-  <a href="{% url 'ledger:journalentry_detail' item.entry_id %}"
-     class="text-decoration-none">
-    JE-{{ item.entry_id }}
-  </a>
-</td>
-
+                      <a href="{% url 'ledger:journalentry_detail' item.entry_id %}" class="text-decoration-none">
+                          {{ item.entry_number }}
+                      </a>
+                  </td>
                   <td class="text-nowrap">
                     {{ item.reference|default:"-" }}
                   </td>
@@ -151,6 +155,26 @@
                 </tr>
               {% endfor %}
             </tbody>
+
+            {# صف إجمالي مدين / دائن + رصيد ختامي (لو رجّعناه من الفيو) #}
+            {% if totals %}
+              <tfoot>
+                <tr class="table-light fw-semibold">
+                  <td colspan="4" class="text-end text-nowrap">
+                    {% trans "الإجمالي للفترة" %}
+                  </td>
+                  <td class="text-end text-nowrap">
+                    {{ totals.total_debit }}
+                  </td>
+                  <td class="text-end text-nowrap">
+                    {{ totals.total_credit }}
+                  </td>
+                  <td class="text-end text-nowrap">
+                    {{ totals.closing_balance }}
+                  </td>
+                </tr>
+              </tfoot>
+            {% endif %}
           </table>
         </div>
 

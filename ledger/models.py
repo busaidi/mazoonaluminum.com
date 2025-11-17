@@ -247,9 +247,11 @@ class JournalEntry(models.Model):
         - التعامل مع حالات التضارب النادرة في UNIQUE على number.
         """
         # 1) تعيين السنة المالية تلقائيًا إن لم تكن محددة
-        if self.date and self.fiscal_year is None:
-            # نحن داخل نفس الملف، نقدر نستخدم FiscalYear مباشرة
-            self.fiscal_year = FiscalYear.for_date(self.date)
+        # 1) تعيين / تحديث السنة المالية تلقائيًا من التاريخ دائمًا
+        if self.date:
+            fy = FiscalYear.for_date(self.date)
+            if fy is not None:
+                self.fiscal_year = fy
 
         # 2) توليد رقم القيد إن لم يكن موجوداً
         if not self.number:

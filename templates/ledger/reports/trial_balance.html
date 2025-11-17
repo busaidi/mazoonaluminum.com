@@ -1,11 +1,17 @@
 {% extends "ledger/base_ledger.html" %}
 {% load i18n %}
 
+{# 👈 هذا البلوك هو اللي يغيّر <title> في الهيدر ويحقق التست #}
+{% block meta_title %}Trial Balance | Mazoon Aluminum{% endblock %}
+
 {% block ledger_content %}
 {# ===== العنوان ===== #}
 <div class="mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
   <div>
-    <h2 class="h5 mb-1">{% trans "ميزان المراجعة" %}      <span class="visually-hidden">Trial Balance</span></h2>
+    <h2 class="h5 mb-1">
+      {% trans "ميزان المراجعة" %}
+      <span class="visually-hidden">Trial Balance</span>
+    </h2>
     <p class="text-muted small mb-0">
       {% trans "تجميع أرصدة الحسابات (مدين / دائن) حسب الفترة أو السنة المالية." %}
     </p>
