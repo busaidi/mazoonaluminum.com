@@ -3,6 +3,8 @@ from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Sum, Value, DecimalField, Q
 from django.db.models.functions import Coalesce
 from django.shortcuts import render, redirect, get_object_or_404
@@ -36,6 +38,7 @@ from .models import (
     FiscalYear,
     get_default_journal_for_manual_entry,
 )
+from .services import build_lines_from_formset
 
 
 # ========= Staff / Fiscal Year helpers =========
@@ -300,6 +303,7 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
         entry_form = JournalEntryForm(request.POST)
         line_formset = JournalLineFormSet(request.POST)
 
+        # تحقق أولي من الفورمات (الهيدر + الأسطر)
         if not (entry_form.is_valid() and line_formset.is_valid()):
             messages.error(request, _("الرجاء تصحيح الأخطاء في النموذج."))
             return render(
@@ -311,101 +315,34 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
                 },
             )
 
-        # Create the journal entry (without lines yet)
-        entry = entry_form.save(commit=False)
-        entry.created_by = request.user
-        # Fiscal year and number will be automatically set in save()
-        entry.save()
+        try:
+            with transaction.atomic():
+                # إنشاء رأس القيد بدون حفظ الخطوط بعد
+                entry = entry_form.save(commit=False)
+                entry.created_by = request.user
+                # Fiscal year and number will be automatically set in save()
+                entry.save()
 
-        total_debit = Decimal("0")
-        total_credit = Decimal("0")
-        has_any_line = False
-        has_line_errors = False
-
-        for order, form in enumerate(line_formset.forms):
-            if form.cleaned_data.get("DELETE"):
-                continue
-
-            account = form.cleaned_data.get("account")
-            description = form.cleaned_data.get("description") or ""
-            debit = form.cleaned_data.get("debit") or Decimal("0")
-            credit = form.cleaned_data.get("credit") or Decimal("0")
-
-            # Completely empty line → skip
-            if not account and not description and debit == 0 and credit == 0:
-                continue
-
-            # 1) Cannot have an amount without an account
-            if (debit != 0 or credit != 0) and account is None:
-                form.add_error(
-                    "account",
-                    _("يجب اختيار حساب للسطر الذي يحتوي على مبلغ مدين أو دائن."),
+                # بناء الأسطر من الفورم سِت
+                lines, total_debit, total_credit = build_lines_from_formset(
+                    line_formset
                 )
-                has_line_errors = True
-                continue
 
-            # 2) Cannot be both debit and credit at the same time
-            if debit and credit:
-                form.add_error(
-                    "debit",
-                    _("لا يمكن أن يكون السطر مدينًا ودائنًا في نفس الوقت."),
-                )
-                form.add_error(
-                    "credit",
-                    _("لا يمكن أن يكون السطر مدينًا ودائنًا في نفس الوقت."),
-                )
-                has_line_errors = True
-                continue
+                # التأكد من توازن القيد
+                if total_debit != total_credit:
+                    raise ValidationError(
+                        _(
+                            "القيد غير متوازن: مجموع المدين لا يساوي مجموع الدائن."
+                        )
+                    )
 
-            has_any_line = True
+                # إنشاء الأسطر
+                for line_data in lines:
+                    JournalLine.objects.create(entry=entry, **line_data)
 
-            JournalLine.objects.create(
-                entry=entry,
-                account=account,
-                description=description,
-                debit=debit,
-                credit=credit,
-                order=order,
-            )
-
-            total_debit += debit
-            total_credit += credit
-
-        # If there are errors in lines, rollback and return the form
-        if has_line_errors:
-            entry.lines.all().delete()
-            entry.delete()
-            messages.error(request, _("الرجاء تصحيح الأخطاء في أسطر القيد."))
-            return render(
-                request,
-                self.template_name,
-                {
-                    "entry_form": entry_form,
-                    "line_formset": line_formset,
-                },
-            )
-
-        # If no valid lines at all, rollback and return the form
-        if not has_any_line:
-            entry.delete()
-            messages.error(request, _("لا يوجد أي سطر صالح في القيد."))
-            return render(
-                request,
-                self.template_name,
-                {
-                    "entry_form": entry_form,
-                    "line_formset": line_formset,
-                },
-            )
-
-        # Ensure the entry is balanced (total debit == total credit)
-        if total_debit != total_credit:
-            entry.lines.all().delete()
-            entry.delete()
-            messages.error(
-                request,
-                _("القيد غير متوازن: مجموع المدين لا يساوي مجموع الدائن."),
-            )
+        except ValidationError as e:
+            # لو فيه مشكلة في الأسطر أو التوازن يرجع نفس الصفحة
+            messages.error(request, e.messages[0])
             return render(
                 request,
                 self.template_name,
@@ -417,6 +354,7 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
 
         messages.success(request, _("تم إنشاء قيد اليومية بنجاح."))
         return redirect("ledger:journalentry_detail", pk=entry.pk)
+
 
 
 # ========= Edit unposted Journal =========
@@ -487,45 +425,31 @@ class JournalEntryUpdateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
                 },
             )
 
-        # Do not touch the database until we are sure everything is valid
-        entry = entry_form.save(commit=False)
+        try:
+            with transaction.atomic():
+                entry = entry_form.save(commit=False)
 
-        total_debit = Decimal("0")
-        total_credit = Decimal("0")
-        has_any_line = False
-        new_lines = []
+                # بناء الأسطر الجديدة
+                lines, total_debit, total_credit = build_lines_from_formset(
+                    line_formset
+                )
 
-        for order, form in enumerate(line_formset.forms):
-            if form.cleaned_data.get("DELETE"):
-                continue
+                if total_debit != total_credit:
+                    raise ValidationError(
+                        _(
+                            "القيد غير متوازن: مجموع المدين لا يساوي مجموع الدائن."
+                        )
+                    )
 
-            account = form.cleaned_data.get("account")
-            description = form.cleaned_data.get("description") or ""
-            debit = form.cleaned_data.get("debit") or Decimal("0")
-            credit = form.cleaned_data.get("credit") or Decimal("0")
+                entry.save()
 
-            # Completely empty line → skip
-            if not account and not description and debit == 0 and credit == 0:
-                continue
+                # حذف الأسطر القديمة واستبدالها بالجديدة
+                self.entry.lines.all().delete()
+                for line_data in lines:
+                    JournalLine.objects.create(entry=entry, **line_data)
 
-            has_any_line = True
-
-            new_lines.append(
-                {
-                    "account": account,
-                    "description": description,
-                    "debit": debit,
-                    "credit": credit,
-                    "order": order,
-                }
-            )
-
-            total_debit += debit
-            total_credit += credit
-
-        # No valid lines at all
-        if not has_any_line:
-            messages.error(request, _("لا يوجد أي سطر صالح في القيد."))
+        except ValidationError as e:
+            messages.error(request, e.messages[0])
             return render(
                 request,
                 self.template_name,
@@ -536,34 +460,10 @@ class JournalEntryUpdateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
                     "is_update": True,
                 },
             )
-
-        # Must be balanced
-        if total_debit != total_credit:
-            messages.error(
-                request,
-                _("القيد غير متوازن: مجموع المدين لا يساوي مجموع الدائن."),
-            )
-            return render(
-                request,
-                self.template_name,
-                {
-                    "entry_form": entry_form,
-                    "line_formset": line_formset,
-                    "entry": self.entry,
-                    "is_update": True,
-                },
-            )
-
-        # At this point everything is valid → save entry and rewrite lines
-        entry.save()
-
-        # Replace existing lines with the new set
-        self.entry.lines.all().delete()
-        for line_data in new_lines:
-            JournalLine.objects.create(entry=entry, **line_data)
 
         messages.success(request, _("تم تحديث قيد اليومية بنجاح."))
         return redirect("ledger:journalentry_detail", pk=entry.pk)
+
 
 
 # ========= Trial balance report =========
@@ -591,10 +491,10 @@ def trial_balance_view(request):
         if fiscal_year:
             qs = qs.filter(entry__fiscal_year=fiscal_year)
         else:
-            if date_from:
-                qs = qs.filter(entry__date__gte=date_from)
-            if date_to:
-                qs = qs.filter(entry__date__lte=date_to)
+            if fiscal_year:
+                qs = qs.filter(entry__fiscal_year=fiscal_year)
+            else:
+                qs = qs.within_period(date_from, date_to)
 
         rows = (
             qs.values(
@@ -662,10 +562,10 @@ def account_ledger_view(request):
             if fiscal_year:
                 lines_qs = lines_qs.filter(entry__fiscal_year=fiscal_year)
             else:
-                if date_from:
-                    lines_qs = lines_qs.filter(entry__date__gte=date_from)
-                if date_to:
-                    lines_qs = lines_qs.filter(entry__date__lte=date_to)
+                if fiscal_year:
+                    lines_qs = lines_qs.filter(entry__fiscal_year=fiscal_year)
+                else:
+                    lines_qs = lines_qs.within_period(date_from, date_to)
 
             lines_qs = lines_qs.order_by("entry__date", "entry_id", "id")
 
@@ -856,10 +756,11 @@ def journalentry_post_view(request, pk):
         return redirect("ledger:journalentry_detail", pk=entry.pk)
 
     # Set posting info
-    entry.posted = True
-    entry.posted_at = timezone.now()
-    entry.posted_by = request.user
-    entry.save(update_fields=["posted", "posted_at", "posted_by"])
+    with transaction.atomic():
+        entry.posted = True
+        entry.posted_at = timezone.now()
+        entry.posted_by = request.user
+        entry.save(update_fields=["posted", "posted_at", "posted_by"])
 
     messages.success(request, _("تم ترحيل القيد بنجاح."))
 
@@ -891,10 +792,11 @@ def journalentry_unpost_view(request, pk):
         return redirect("ledger:journalentry_detail", pk=entry.pk)
 
     # Clear posting info
-    entry.posted = False
-    entry.posted_at = None
-    entry.posted_by = None
-    entry.save(update_fields=["posted", "posted_at", "posted_by"])
+    with transaction.atomic():
+        entry.posted = False
+        entry.posted_at = None
+        entry.posted_by = None
+        entry.save(update_fields=["posted", "posted_at", "posted_by"])
 
     messages.success(request, _("تم إلغاء ترحيل القيد بنجاح."))
 

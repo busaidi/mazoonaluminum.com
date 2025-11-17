@@ -26,13 +26,20 @@
   </div>
 </div>
 
+{# تنبيه عام لو في أخطاء في الفورم أو الفورمست #}
+{% if entry_form.errors or line_formset.non_form_errors %}
+  <div class="alert alert-danger small mb-3" role="alert">
+    {% trans "هناك أخطاء في النموذج، الرجاء مراجعة الحقول بالأسفل." %}
+  </div>
+{% endif %}
+
 <form method="post" class="card shadow-sm border-0">
   <div class="card-body">
     {% csrf_token %}
 
     {# أخطاء عامة لرأس القيد #}
     {% if entry_form.non_field_errors %}
-      <div class="alert alert-danger small">
+      <div class="alert alert-danger small mb-3">
         {{ entry_form.non_field_errors }}
       </div>
     {% endif %}
@@ -45,7 +52,7 @@
         </label>
         {{ entry_form.date }}
         {% for error in entry_form.date.errors %}
-          <div class="text-danger small">{{ error }}</div>
+          <div class="text-danger small mt-1">{{ error }}</div>
         {% endfor %}
       </div>
 
@@ -55,7 +62,7 @@
         </label>
         {{ entry_form.reference }}
         {% for error in entry_form.reference.errors %}
-          <div class="text-danger small">{{ error }}</div>
+          <div class="text-danger small mt-1">{{ error }}</div>
         {% endfor %}
       </div>
 
@@ -65,7 +72,7 @@
         </label>
         {{ entry_form.journal }}
         {% for error in entry_form.journal.errors %}
-          <div class="text-danger small">{{ error }}</div>
+          <div class="text-danger small mt-1">{{ error }}</div>
         {% endfor %}
       </div>
 
@@ -75,7 +82,7 @@
         </label>
         {{ entry_form.description }}
         {% for error in entry_form.description.errors %}
-          <div class="text-danger small">{{ error }}</div>
+          <div class="text-danger small mt-1">{{ error }}</div>
         {% endfor %}
       </div>
     </div>
@@ -112,7 +119,6 @@
         <tbody id="lines-body">
           {% for form in line_formset %}
             <tr class="line-row">
-              {# حقول مخفية (مثل id / DELETE) #}
               {% for hidden in form.hidden_fields %}
                 {{ hidden }}
               {% endfor %}
@@ -120,25 +126,25 @@
               <td>
                 {{ form.account }}
                 {% for error in form.account.errors %}
-                  <div class="text-danger small">{{ error }}</div>
+                  <div class="text-danger small mt-1">{{ error }}</div>
                 {% endfor %}
               </td>
               <td>
                 {{ form.description }}
                 {% for error in form.description.errors %}
-                  <div class="text-danger small">{{ error }}</div>
+                  <div class="text-danger small mt-1">{{ error }}</div>
                 {% endfor %}
               </td>
               <td>
                 {{ form.debit }}
                 {% for error in form.debit.errors %}
-                  <div class="text-danger small">{{ error }}</div>
+                  <div class="text-danger small mt-1">{{ error }}</div>
                 {% endfor %}
               </td>
               <td>
                 {{ form.credit }}
                 {% for error in form.credit.errors %}
-                  <div class="text-danger small">{{ error }}</div>
+                  <div class="text-danger small mt-1">{{ error }}</div>
                 {% endfor %}
               </td>
               <td class="text-end">
@@ -183,40 +189,32 @@
   </div>
 </form>
 
-{# ===== JavaScript لإضافة/حذف الصفوف ===== #}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   const addBtn = document.getElementById("add-row");
   const linesBody = document.getElementById("lines-body");
-
-  // نلقط حقل TOTAL_FORMS للفورمست
   const totalFormsInput = document.querySelector("input[name$='-TOTAL_FORMS']");
 
   if (!addBtn || !linesBody || !totalFormsInput) {
     return;
   }
 
-  // prefix حق الفورمست (مثلاً: "form")
   const prefix = totalFormsInput.name.replace("-TOTAL_FORMS", "");
 
   addBtn.addEventListener("click", function () {
     const currentCount = parseInt(totalFormsInput.value, 10);
-
     const firstRow = linesBody.querySelector(".line-row");
     if (!firstRow) return;
 
     const newRow = firstRow.cloneNode(true);
 
-    // نفرغ القيم + نحدّث name/id بالتسلسل الجديد
     newRow.querySelectorAll("input, select, textarea").forEach((el) => {
-      // تفريغ القيمة
       if (el.type === "checkbox" || el.type === "radio") {
         el.checked = false;
       } else {
         el.value = "";
       }
 
-      // تحديث name
       if (el.name) {
         el.name = el.name.replace(
           new RegExp(prefix + "-\\d+"),
@@ -224,7 +222,6 @@ document.addEventListener("DOMContentLoaded", function () {
         );
       }
 
-      // تحديث id
       if (el.id) {
         el.id = el.id.replace(
           new RegExp(prefix + "-\\d+"),
@@ -233,7 +230,6 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
 
-    // آخر عمود: زر إزالة
     const lastTd = newRow.querySelector("td:last-child");
     if (lastTd) {
       lastTd.innerHTML = `
@@ -244,12 +240,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     linesBody.appendChild(newRow);
-
-    // زيادة عدد الفورمات
     totalFormsInput.value = currentCount + 1;
   });
 
-  // حذف صف (فقط في الواجهة، نمنع حذف آخر صف)
   linesBody.addEventListener("click", function (e) {
     if (e.target.classList.contains("remove-row")) {
       const row = e.target.closest("tr");

@@ -147,12 +147,13 @@ class JournalEntryManager(models.Manager.from_queryset(JournalEntryQuerySet)):
         Generate a unique number of form: <PREFIX>-<YEAR>-<SEQ>
         e.g. GEN-2025-0001, CASH-2025-0002, etc.
 
-        الترقيم هنا مرتبط بالـ prefix فقط:
+        الترقيم هنا مرتبط بالدفتر والسنة:
         - prefix = journal.code.upper() أو "JE"
         - year من السنة المالية أو من التاريخ
-        ثم نبحث عن آخر رقم يبدأ بهذا الـ prefix بغضّ النظر عن حقل journal،
-        لأن حقل number عليه UNIQUE على مستوى الجدول كله.
+        ثم نبحث عن آخر رقم يبدأ بهذه المقدمة لنفس الدفتر، مع العلم أن حقل number
+        عليه UNIQUE على مستوى الجدول كله.
         """
+
         # 1) تحديد السنة
         if fiscal_year is not None:
             year = fiscal_year.year

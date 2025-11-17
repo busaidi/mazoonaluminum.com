@@ -92,6 +92,7 @@ class JournalLineForm(forms.Form):
         max_digits=12,
         decimal_places=3,
         required=False,
+        min_value=0,
         label=_("مدين"),
         widget=forms.NumberInput(
             attrs={"class": "form-control form-control-sm"}
@@ -101,11 +102,13 @@ class JournalLineForm(forms.Form):
         max_digits=12,
         decimal_places=3,
         required=False,
+        min_value=0,
         label=_("دائن"),
         widget=forms.NumberInput(
             attrs={"class": "form-control form-control-sm"}
         ),
     )
+
     DELETE = forms.BooleanField(
         required=False,
         label=_("حذف؟"),
