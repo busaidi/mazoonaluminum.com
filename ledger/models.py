@@ -28,12 +28,20 @@ class FiscalYear(models.Model):
     - start_date
     - end_date
     - is_closed
+    - is_default (optional default year for reports)
     """
 
     year = models.PositiveIntegerField(unique=True, verbose_name=_("السنة"))
     start_date = models.DateField(verbose_name=_("تاريخ البداية"))
     end_date = models.DateField(verbose_name=_("تاريخ النهاية"))
     is_closed = models.BooleanField(default=False, verbose_name=_("مقفلة؟"))
+    is_default = models.BooleanField(
+        default=False,
+        verbose_name=_("سنة افتراضية للتقارير؟"),
+        help_text=_(
+            "تُستخدم هذه السنة كافتراضي في التقارير عند عدم اختيار سنة أخرى."
+        ),
+    )
 
     objects = FiscalYearManager()
 
@@ -52,6 +60,14 @@ class FiscalYear(models.Model):
         التفويض للـ Manager عشان يظل المنطق في طبقة واحدة.
         """
         return cls.objects.for_date(date)
+
+    def save(self, *args, **kwargs):
+        """
+        Ensure only one fiscal year is marked as default.
+        """
+        super().save(*args, **kwargs)
+        if self.is_default:
+            FiscalYear.objects.exclude(pk=self.pk).update(is_default=False)
 
 
 # ==============================================================================

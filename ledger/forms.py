@@ -216,12 +216,13 @@ class AccountLedgerFilterForm(forms.Form):
 class FiscalYearForm(forms.ModelForm):
     class Meta:
         model = FiscalYear
-        fields = ["year", "start_date", "end_date", "is_closed"]
+        fields = ["year", "start_date", "end_date", "is_closed", "is_default"]
         labels = {
             "year": _("السنة"),
             "start_date": _("تاريخ البداية"),
             "end_date": _("تاريخ النهاية"),
             "is_closed": _("مقفلة؟"),
+            "is_default": _("سنة افتراضية للتقارير؟"),
         }
         widgets = {
             "start_date": forms.DateInput(
@@ -229,6 +230,9 @@ class FiscalYearForm(forms.ModelForm):
             ),
             "end_date": forms.DateInput(
                 attrs={"type": "date", "class": "form-control form-control-sm"}
+            ),
+            "is_default": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
             ),
         }
 
@@ -241,7 +245,9 @@ class FiscalYearForm(forms.ModelForm):
             raise forms.ValidationError(
                 _("تاريخ البداية لا يمكن أن يكون بعد تاريخ النهاية.")
             )
-
+        # TODO
+        # لو حاب مستقبلاً تمنع جعل سنة مقفلة افتراضية، تقدر تضيف هنا تحقق
+        # لكن حالياً الإقفال يتم من View مستقل، فمش ضروري
         return cleaned_data
 
 

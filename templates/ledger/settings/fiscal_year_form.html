@@ -60,6 +60,19 @@
             {{ form.end_date.errors }}
           </div>
 
+            <div class="col-12 mt-3">
+                <div class="form-check">
+                    {{ form.is_default }}
+                    <label class="form-check-label ms-1" for="{{ form.is_default.id_for_label }}">
+                        {% trans "اعتبار هذه السنة هي الافتراضية للتقارير" %}
+                    </label>
+                    <div class="form-text text-muted">
+                        {% trans "سيتم استخدام هذه السنة تلقائيًا في التقارير عند عدم اختيار سنة معينة." %}
+                    </div>
+                    {{ form.is_default.errors }}
+                </div>
+            </div>
+
         </div>
       </div>
 

@@ -609,6 +609,7 @@ def trial_balance_view(request):
     form = TrialBalanceFilterForm(request.GET or None)
     rows = None
     totals = None
+    effective_fiscal_year = None
 
     qs = (
         JournalLine.objects
@@ -624,8 +625,17 @@ def trial_balance_view(request):
         # نحدد سنة مالية فعّالة لو ما تم اختيار شيء وما فيه تواريخ
         effective_fiscal_year = fiscal_year
         if not effective_fiscal_year and not date_from and not date_to:
-            today = timezone.now().date()
-            effective_fiscal_year = FiscalYear.for_date(today)
+            # 1) default year (إن وجدت)
+            effective_fiscal_year = FiscalYear.objects.filter(
+                is_default=True,
+                is_closed=False,
+            ).first()
+
+            # 2) fallback للسنة التي تحتوي تاريخ اليوم
+            if not effective_fiscal_year:
+                today = timezone.now().date()
+                effective_fiscal_year = FiscalYear.for_date(today)
+
 
         if effective_fiscal_year:
             qs = qs.filter(entry__fiscal_year=effective_fiscal_year)
@@ -670,6 +680,7 @@ def trial_balance_view(request):
         "form": form,
         "rows": rows,
         "totals": totals,
+        "effective_fiscal_year": effective_fiscal_year,
     }
     return render(request, "ledger/reports/trial_balance.html", context)
 
@@ -703,9 +714,27 @@ def account_ledger_view(request):
 
             # تحديد السنة المالية الفعّالة
             effective_fiscal_year = fiscal_year
-            if not effective_fiscal_year and not date_from and not date_to:
-                today = timezone.now().date()
-                effective_fiscal_year = FiscalYear.for_date(today)
+            if account:
+                lines_qs = (
+                    JournalLine.objects
+                    .posted()
+                    .select_related("entry")
+                    .filter(account=account)
+                )
+
+                # Determine effective fiscal year:
+                effective_fiscal_year = fiscal_year
+                if not effective_fiscal_year and not date_from and not date_to:
+                    # 1) حاول تستخدم السنة الافتراضية المفتوحة
+                    effective_fiscal_year = FiscalYear.objects.filter(
+                        is_default=True,
+                        is_closed=False,
+                    ).first()
+
+                    # 2) إن ما فيه سنة افتراضية → استخدم السنة التي تغطي تاريخ اليوم
+                    if not effective_fiscal_year:
+                        today = timezone.now().date()
+                        effective_fiscal_year = FiscalYear.for_date(today)
 
             # Filter by fiscal year or date range
             if effective_fiscal_year:

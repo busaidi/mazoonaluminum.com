@@ -31,7 +31,12 @@
           {% for y in years %}
           <tr>
             <td class="fw-semibold">
-              {{ y.year }}
+                {{ y.year }}
+                {% if y.is_default %}
+                    <span class="badge bg-primary-subtle text-primary ms-1">
+                        {% trans "افتراضية" %}
+                    </span>
+                {% endif %}
             </td>
             <td>
               <div class="small">
