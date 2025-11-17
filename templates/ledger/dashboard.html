@@ -80,6 +80,20 @@
 
 {# ===== صف ثنائي: إجراءات سريعة + أحدث القيود ===== #}
 <div class="row g-3 mb-4">
+{% comment %}{% if effective_fiscal_year %}
+<div class="alert alert-info d-flex justify-content-between align-items-center py-2 px-3 mb-3">
+  <div>
+    <strong>{% trans "السنة الافتراضية للتقارير:" %}</strong>
+    {{ effective_fiscal_year.year }}
+    <span class="text-muted small">
+      ({{ effective_fiscal_year.start_date }} — {{ effective_fiscal_year.end_date }})
+    </span>
+  </div>
+  <a href="{% url 'ledger:fiscal_year_list' %}" class="btn btn-sm btn-outline-primary">
+    {% trans "تغيير السنة" %}
+  </a>
+</div>
+{% endif %}{% endcomment %}
 
   {# إجراءات سريعة #}
   <div class="col-md-4">
@@ -87,6 +101,11 @@
       <div class="card-body">
         <h2 class="h6 mb-3">{% trans "إجراءات سريعة" %}</h2>
         <ul class="list-unstyled mb-0 small">
+            <li class="mb-2">
+              <a href="{% url 'ledger:fiscal_year_list' %}" class="link-dark text-decoration-none">
+                   ▸ {% trans "إدارة السنوات المالية" %}
+              </a>
+          </li>
           <li class="mb-2">
             <a href="{% url 'ledger:account_create' %}"
                class="link-dark text-decoration-none">
