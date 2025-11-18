@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Sum, Value, DecimalField, Q
 from django.db.models.functions import Coalesce
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -19,6 +20,7 @@ from django.views.generic import (
     DetailView,
     TemplateView,
 )
+from openpyxl import Workbook
 
 from accounting.views import is_accounting_staff, accounting_staff_required
 
@@ -29,7 +31,7 @@ from .forms import (
     TrialBalanceFilterForm,
     AccountLedgerFilterForm,
     FiscalYearForm,
-    JournalEntryFilterForm,
+    JournalEntryFilterForm, ChartOfAccountsImportForm,
 )
 from .models import (
     Account,
@@ -38,7 +40,7 @@ from .models import (
     FiscalYear,
     get_default_journal_for_manual_entry,
 )
-from .services import build_lines_from_formset
+from .services import build_lines_from_formset, ensure_default_chart_of_accounts, import_chart_of_accounts_from_excel
 
 
 # ========= Staff / Fiscal Year helpers =========
@@ -288,7 +290,134 @@ class AccountUpdateView(FiscalYearRequiredMixin, StaffRequiredMixin, UpdateView)
         return reverse("ledger:account_list")
 
 
+
+# ========= Setup account tree =========
+@ledger_staff_required
+def chart_of_accounts_bootstrap_view(request):
+    """
+    إنشاء شجرة حسابات افتراضية مرة واحدة.
+    - لو ما فيه أي حساب → ينشئ مجموعة افتراضية.
+    - لو فيه حسابات → يظهر رسالة بأنه لا يوجد شيء جديد.
+    """
+    created = ensure_default_chart_of_accounts()
+
+    if created > 0:
+        messages.success(
+            request,
+            _("تم إنشاء شجرة الحسابات الافتراضية (%(count)d حسابًا).")
+            % {"count": created},
+        )
+    else:
+        messages.info(
+            request,
+            _("لم يتم إنشاء أي حسابات جديدة، يبدو أن شجرة الحسابات موجودة مسبقًا."),
+        )
+
+    return redirect("ledger:account_list")
+
+
+
+
+@ledger_staff_required
+def chart_of_accounts_import_view(request):
+    if request.method == "POST":
+        form = ChartOfAccountsImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            file_obj = form.cleaned_data["file"]
+            replace_existing = form.cleaned_data["replace_existing"]
+            fiscal_year = form.cleaned_data.get("fiscal_year")
+
+            try:
+                result = import_chart_of_accounts_from_excel(
+                    file_obj,
+                    replace_existing=replace_existing,
+                    fiscal_year=fiscal_year,
+                )
+            except ValidationError as e:
+                messages.error(
+                    request,
+                    e.message if hasattr(e, "message") else str(e),
+                )
+                # نرجع لنفس صفحة الاستيراد ونخلي الفورم معبّي
+                return render(
+                    request,
+                    "ledger/settings/import.html",
+                    {"form": form},
+                )
+
+            messages.success(
+                request,
+                _(
+                    "تم استيراد شجرة الحسابات. "
+                    "حسابات جديدة: %(created)d، محدثة: %(updated)d، "
+                    "تم تعطيلها: %(deactivated)d."
+                )
+                % {
+                    "created": result["created"],
+                    "updated": result["updated"],
+                    "deactivated": result["deactivated"],
+                },
+            )
+
+            if result["errors"]:
+                messages.warning(
+                    request,
+                    _("انتهى الاستيراد مع بعض الملاحظات (راجع الكونسول)."),
+                )
+                for err in result["errors"]:
+                    print(f"[CoA Import] {err}")
+
+            return redirect("ledger:account_list")
+    else:
+        form = ChartOfAccountsImportForm()
+
+    return render(
+        request,
+        "ledger/settings/import.html",
+        {"form": form},
+    )
+
+
+
+
+
+
+
+@ledger_staff_required
+def chart_of_accounts_export_view(request):
+    """
+    Export current chart of accounts to an Excel file.
+    """
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Chart of Accounts"
+
+    # نفس الأعمدة المستخدمة في الاستيراد
+    headers = ["code", "name", "type", "parent_code", "allow_settlement", "is_active"]
+    ws.append(headers)
+
+    for acc in Account.objects.order_by("code"):
+        ws.append([
+            acc.code,
+            acc.name,
+            acc.type,                          # asset / liability / equity / revenue / expense
+            acc.parent.code if acc.parent else "",
+            1 if getattr(acc, "allow_settlement", False) else 0,
+            1 if getattr(acc, "is_active", True) else 0,
+        ])
+
+    response = HttpResponse(
+        content_type=(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    )
+    response["Content-Disposition"] = 'attachment; filename="chart_of_accounts.xlsx"'
+    wb.save(response)
+    return response
+
 # ========= Journal entries =========
+
 
 
 class JournalEntryListView(FiscalYearRequiredMixin, StaffRequiredMixin, ListView):

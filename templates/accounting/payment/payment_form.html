@@ -11,7 +11,8 @@
 
 {% block content %}
 <div class="py-4">
-
+  {# شريط تنقّل المحاسبة #}
+  {% include "accounting/_nav.html" %}
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <h1 class="h4 mb-0">
       {% if form.instance.pk %}

@@ -34,5 +34,12 @@ urlpatterns = [
     path("settings/fiscal-years/new/", views.FiscalYearCreateView.as_view(), name="fiscal_year_create"),
     path("settings/fiscal-years/<int:pk>/edit/", views.FiscalYearUpdateView.as_view(), name="fiscal_year_edit"),
     path("settings/fiscal-years/<int:pk>/close/", views.FiscalYearCloseView.as_view(), name="fiscal_year_close"),
+    path("settings/chart-of-accounts/bootstrap/",views.chart_of_accounts_bootstrap_view,name="chart_of_accounts_bootstrap",),
+    path("settings/chart-of-accounts/import/",views.chart_of_accounts_import_view,name="chart_of_accounts_import",),
+    path(
+        "settings/chart-of-accounts/export/",
+        views.chart_of_accounts_export_view,
+        name="chart_of_accounts_export",
+    ),
 
 ]

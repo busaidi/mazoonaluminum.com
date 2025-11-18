@@ -306,3 +306,39 @@ class JournalEntryFilterForm(forms.Form):
             attrs={"class": "form-select form-select-sm"},
         ),
     )
+
+
+
+class ChartOfAccountsImportForm(forms.Form):
+    file = forms.FileField(
+        label=_("ملف إكسل لشجرة الحسابات"),
+        help_text=_(
+            "ملف بصيغة .xlsx يحتوي في الصف الأول على الأعمدة: "
+            "code, name, type, parent_code, allow_settlement, is_active, "
+            "opening_debit, opening_credit."
+        ),
+        widget=forms.ClearableFileInput(
+            attrs={"class": "form-control"}
+        ),
+    )
+    replace_existing = forms.BooleanField(
+        required=False,
+        label=_("تعطيل الحسابات غير الموجودة في الملف"),
+        help_text=_(
+            "سيتم تعيين is_active=False لأي حساب ليس موجودًا في الملف المستورد."
+        ),
+        widget=forms.CheckboxInput(
+            attrs={"class": "form-check-input"}
+        ),
+    )
+    fiscal_year = forms.ModelChoiceField(
+        queryset=FiscalYear.objects.order_by("-year"),
+        required=False,
+        label=_("السنة المالية للرصد الافتتاحي"),
+        help_text=_(
+            "اختياري: إذا اخترت سنة مالية، سيتم إنشاء قيد رصيد افتتاحي بهذه الأرصدة."
+        ),
+        widget=forms.Select(
+            attrs={"class": "form-select"}
+        ),
+    )

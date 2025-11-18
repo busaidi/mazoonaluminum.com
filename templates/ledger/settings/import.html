@@ -1,0 +1,66 @@
+{% extends "ledger/base_ledger.html" %}
+{% load i18n %}
+
+{% block ledger_content %}
+<h2 class="h5 mb-3">{% trans "استيراد شجرة الحسابات من إكسل" %}</h2>
+
+<form method="post" enctype="multipart/form-data" class="card card-body shadow-sm">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+
+  {# ملف الإكسل #}
+  <div class="mb-3">
+    <label class="form-label" for="{{ form.file.id_for_label }}">
+      {% trans "ملف إكسل" %}
+    </label>
+    {{ form.file }}
+    {% if form.file.help_text %}
+      <div class="form-text">{{ form.file.help_text }}</div>
+    {% endif %}
+    {{ form.file.errors }}
+  </div>
+
+  {# تعطيل الحسابات غير الموجودة في الملف #}
+  <div class="form-check mb-3">
+    {{ form.replace_existing }}
+    <label class="form-check-label" for="{{ form.replace_existing.id_for_label }}">
+      {{ form.replace_existing.label }}
+    </label>
+    {% if form.replace_existing.help_text %}
+      <div class="form-text">{{ form.replace_existing.help_text }}</div>
+    {% endif %}
+    {{ form.replace_existing.errors }}
+  </div>
+
+  {# اختيار السنة المالية للرصد الافتتاحي #}
+  <div class="mb-3">
+    <label class="form-label" for="{{ form.fiscal_year.id_for_label }}">
+      {% trans "السنة المالية للرصد الافتتاحي" %}
+    </label>
+    {{ form.fiscal_year }}
+    {% if form.fiscal_year.help_text %}
+      <div class="form-text">{{ form.fiscal_year.help_text }}</div>
+    {% endif %}
+    {{ form.fiscal_year.errors }}
+  </div>
+
+  <button type="submit" class="btn btn-primary">
+    {% trans "استيراد" %}
+  </button>
+  <a href="{% url 'ledger:account_list' %}" class="btn btn-link">
+    {% trans "إلغاء" %}
+  </a>
+</form>
+
+<div class="alert alert-secondary mt-4">
+  <p class="mb-1"><strong>{% trans "تعليمات ملف الإكسل:" %}</strong></p>
+  <ul class="mb-0 small">
+    <li>{% trans "الصف الأول يحتوي على أسماء الأعمدة." %}</li>
+    <li>{% trans "type يجب أن تكون إحدى القيم التالية: asset, liability, equity, revenue, expense." %}</li>
+    <li>{% trans "parent_code هو كود الحساب الأب (اختياري)." %}</li>
+    <li>{% trans "allow_settlement و is_active يمكن أن تكون: 1 / 0 أو true / false." %}</li>
+    <li>{% trans "opening_debit و opening_credit تستخدم للأرصدة الافتتاحية (يجب أن يتوازن المجموع)." %}</li>
+  </ul>
+</div>
+{% endblock %}
+

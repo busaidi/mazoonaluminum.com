@@ -29,11 +29,17 @@ python manage.py migrate
 ```bash
 python manage.py createsuperuser
 ```
-
-
+# admin hamed and agent users and accounting_staff_group
 ```bash
 python manage.py seed_accounting_staff_group
 ```
+```bash
+
+python manage.py seed_users
+```
+
+
+
 ```bash
 python manage.py seed_hamed_user
 ```

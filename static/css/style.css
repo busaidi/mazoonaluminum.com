@@ -310,3 +310,27 @@ main .container > *:last-child {
   background-color: #ccbdad; /* رمادي فاتح */
   color: #0450f8;
 }
+/* ====== Mazoon Accounting Nav ====== */
+
+.bg-mazoon-card {
+  background-color: var(--mazoon-card-bg);
+}
+
+.mazoon-nav .nav-link {
+  border-radius: 999px;                 /* شكل pill */
+  color: var(--mazoon-text-muted);
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.mazoon-nav .nav-link:hover {
+  background-color: var(--mazoon-border-soft);
+  color: var(--mazoon-text-main);
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.mazoon-nav .nav-link.active {
+  background-color: var(--mazoon-primary);
+  color: #ffffff;
+}

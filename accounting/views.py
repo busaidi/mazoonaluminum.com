@@ -30,7 +30,8 @@ from .forms import (
     InvoiceItemFormSet,
     ApplyPaymentForm,
     OrderItemFormSet,
-    OrderForm, PaymentForm,
+    OrderForm,
+    PaymentForm,
 )
 from .models import Invoice, Payment, Customer, Order, InvoiceItem
 
@@ -68,14 +69,64 @@ accounting_staff_required = user_passes_test(is_accounting_staff)
 
 
 # ============================================================
+# Mixins
+# ============================================================
+
+class AccountingSectionMixin:
+    """
+    Injects 'accounting_section' into context so templates can
+    highlight the current section in the accounting navigation.
+    """
+    section = None  # override in subclasses: 'dashboard', 'invoices', 'customers', 'orders', 'payments'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["accounting_section"] = self.section
+        return ctx
+
+
+class TodayInitialDateMixin:
+    """
+    Adds today's date as default 'date' initial value if not provided.
+    Used for payment forms, etc.
+    """
+    def get_initial(self):
+        initial = super().get_initial()
+        initial.setdefault("date", timezone.now().date())
+        return initial
+
+
+class ProductJsonMixin:
+    """
+    Provides products_json (id → description, price) for JS autocomplete.
+    Used in invoice and order forms.
+    """
+    def get_products_json(self):
+        products = Product.objects.filter(is_active=True)
+        data = {
+            str(p.id): {
+                "description": p.description or "",
+                "price": str(p.price),
+            }
+            for p in products
+        }
+        return mark_safe(json.dumps(data))
+
+    def inject_products_json(self, ctx):
+        ctx["products_json"] = self.get_products_json()
+        return ctx
+
+
+# ============================================================
 # Invoices
 # ============================================================
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class InvoiceListView(ListView):
+class InvoiceListView(AccountingSectionMixin, ListView):
     """
     Staff list of invoices with optional status filter.
     """
+    section = "invoices"
     model = Invoice
     template_name = "accounting/invoices/invoice_list.html"
     context_object_name = "invoices"
@@ -101,10 +152,11 @@ class InvoiceListView(ListView):
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class InvoiceCreateView(CreateView):
+class InvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
     """
     Create a new invoice with inline items formset.
     """
+    section = "invoices"
     model = Invoice
     form_class = InvoiceForm
     template_name = "accounting/invoices/invoice_form.html"
@@ -132,17 +184,8 @@ class InvoiceCreateView(CreateView):
         else:
             ctx["item_formset"] = InvoiceItemFormSet()
 
-        # Products JSON for JS auto-fill (description + price)
-        products = Product.objects.filter(is_active=True)
-        ctx["products_json"] = mark_safe(json.dumps(
-            {
-                str(p.id): {
-                    "description": p.description or "",
-                    "price": str(p.price),
-                }
-                for p in products
-            }
-        ))
+        # Products JSON for JS auto-fill
+        ctx = self.inject_products_json(ctx)
 
         return ctx
 
@@ -177,10 +220,11 @@ class InvoiceCreateView(CreateView):
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class InvoiceUpdateView(UpdateView):
+class InvoiceUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
     """
     Update existing invoice + related items.
     """
+    section = "invoices"
     model = Invoice
     form_class = InvoiceForm
     template_name = "accounting/invoices/invoice_form.html"
@@ -198,16 +242,7 @@ class InvoiceUpdateView(UpdateView):
             ctx["item_formset"] = InvoiceItemFormSet(instance=invoice)
 
         # Same products JSON used in create
-        products = Product.objects.filter(is_active=True)
-        ctx["products_json"] = mark_safe(json.dumps(
-            {
-                str(p.id): {
-                    "description": p.description or "",
-                    "price": str(p.price),
-                }
-                for p in products
-            }
-        ))
+        ctx = self.inject_products_json(ctx)
 
         return ctx
 
@@ -240,10 +275,11 @@ class InvoiceUpdateView(UpdateView):
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class InvoiceDetailView(DetailView):
+class InvoiceDetailView(AccountingSectionMixin, DetailView):
     """
     Staff invoice detail page (with items, payments, etc).
     """
+    section = "invoices"
     model = Invoice
     template_name = "accounting/invoices/invoice_detail.html"
     context_object_name = "invoice"
@@ -252,11 +288,12 @@ class InvoiceDetailView(DetailView):
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class InvoicePaymentCreateView(FormView):
+class InvoicePaymentCreateView(AccountingSectionMixin, TodayInitialDateMixin, FormView):
     """
     Create a payment for a specific invoice.
     URL: /accounting/invoices/<number>/payments/new/
     """
+    section = "payments"
     template_name = "accounting/invoices/invoice_payment_form.html"
     form_class = PaymentForInvoiceForm
 
@@ -273,10 +310,7 @@ class InvoicePaymentCreateView(FormView):
         ctx["invoice"] = self.invoice
         return ctx
 
-    def get_initial(self):
-        initial = super().get_initial()
-        initial.setdefault("date", timezone.now().date())
-        return initial
+    # get_initial comes from TodayInitialDateMixin
 
     def form_valid(self, form):
         # Create payment bound to same customer & invoice
@@ -294,10 +328,11 @@ class InvoicePaymentCreateView(FormView):
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class InvoicePrintView(DetailView):
+class InvoicePrintView(AccountingSectionMixin, DetailView):
     """
     Print page for invoice (staff side).
     """
+    section = "invoices"
     model = Invoice
     template_name = "accounting/invoices/invoice_print.html"
     context_object_name = "invoice"
@@ -310,7 +345,7 @@ class InvoicePrintView(DetailView):
 # ============================================================
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class AccountingDashboardView(TemplateView):
+class AccountingDashboardView(AccountingSectionMixin, TemplateView):
     """
     Main accounting dashboard:
     - Counters
@@ -318,6 +353,7 @@ class AccountingDashboardView(TemplateView):
     - Pending orders (no invoice)
     - Unpaid invoices
     """
+    section = "dashboard"
     template_name = "accounting/dashboard.html"
 
     def get_context_data(self, **kwargs):
@@ -368,10 +404,11 @@ class AccountingDashboardView(TemplateView):
 # ============================================================
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class CustomerListView(ListView):
+class CustomerListView(AccountingSectionMixin, ListView):
     """
     Staff list of customers, with simple search by name/company.
     """
+    section = "customers"
     model = Customer
     template_name = "accounting/customers/customer_list.html"
     context_object_name = "customers"
@@ -388,10 +425,11 @@ class CustomerListView(ListView):
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class CustomerCreateView(CreateView):
+class CustomerCreateView(AccountingSectionMixin, CreateView):
     """
     Create a new customer.
     """
+    section = "customers"
     model = Customer
     form_class = CustomerForm
     template_name = "accounting/customers/customer_form.html"
@@ -401,10 +439,11 @@ class CustomerCreateView(CreateView):
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class CustomerUpdateView(UpdateView):
+class CustomerUpdateView(AccountingSectionMixin, UpdateView):
     """
     Update an existing customer.
     """
+    section = "customers"
     model = Customer
     form_class = CustomerForm
     template_name = "accounting/customers/customer_form.html"
@@ -414,11 +453,12 @@ class CustomerUpdateView(UpdateView):
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class CustomerDeleteView(DeleteView):
+class CustomerDeleteView(AccountingSectionMixin, DeleteView):
     """
     Delete a customer if no protected relations exist.
     If ProtectedError is raised, show a friendly message instead of 500.
     """
+    section = "customers"
     model = Customer
     template_name = "accounting/customers/customer_confirm_delete.html"
     success_url = reverse_lazy("accounting:customer_list")
@@ -443,7 +483,7 @@ class CustomerDeleteView(DeleteView):
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class CustomerDetailView(DetailView):
+class CustomerDetailView(AccountingSectionMixin, DetailView):
     """
     Customer full profile:
     - Invoices
@@ -451,6 +491,7 @@ class CustomerDetailView(DetailView):
     - Payments
     - Balance summary
     """
+    section = "customers"
     model = Customer
     template_name = "accounting/customers/customer_detail.html"
     context_object_name = "customer"
@@ -494,11 +535,12 @@ class CustomerDetailView(DetailView):
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class CustomerPaymentCreateView(FormView):
+class CustomerPaymentCreateView(AccountingSectionMixin, TodayInitialDateMixin, FormView):
     """
     Create a general payment for a customer (not bound to a specific invoice).
     URL: /accounting/customers/<pk>/payments/new/
     """
+    section = "payments"
     template_name = "accounting/customers/customer_payment_form.html"
     form_class = PaymentForInvoiceForm
 
@@ -506,15 +548,12 @@ class CustomerPaymentCreateView(FormView):
         self.customer = get_object_or_404(Customer, pk=kwargs.get("pk"))
         return super().dispatch(request, *args, **kwargs)
 
-    def get_initial(self):
-        initial = super().get_initial()
-        initial.setdefault("date", timezone.now().date())
-        return initial
-
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["customer"] = self.customer
         return ctx
+
+    # get_initial from TodayInitialDateMixin
 
     def form_valid(self, form):
         payment = form.save(commit=False)
@@ -604,10 +643,11 @@ def apply_general_payment(request, pk):
 # ============================================================
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class OrderListView(ListView):
+class OrderListView(AccountingSectionMixin, ListView):
     """
     Staff list of orders.
     """
+    section = "orders"
     model = Order
     template_name = "accounting/orders/order_list.html"
     context_object_name = "orders"
@@ -623,20 +663,22 @@ class OrderListView(ListView):
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class OrderDetailView(DetailView):
+class OrderDetailView(AccountingSectionMixin, DetailView):
     """
     Staff order detail page.
     """
+    section = "orders"
     model = Order
     template_name = "accounting/orders/order_detail.html"
     context_object_name = "order"
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class OrderCreateView(CreateView):
+class OrderCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
     """
     Create staff order with inline items formset.
     """
+    section = "orders"
     model = Order
     form_class = OrderForm
     template_name = "accounting/orders/order_form.html"
@@ -650,16 +692,7 @@ class OrderCreateView(CreateView):
             ctx["item_formset"] = OrderItemFormSet()
 
         # Products JSON for JS
-        products = Product.objects.filter(is_active=True)
-        ctx["products_json"] = mark_safe(json.dumps(
-            {
-                str(p.id): {
-                    "description": p.description or "",
-                    "price": str(p.price),
-                }
-                for p in products
-            }
-        ))
+        ctx = self.inject_products_json(ctx)
         return ctx
 
     def form_valid(self, form):
@@ -687,10 +720,11 @@ class OrderCreateView(CreateView):
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class OrderUpdateView(UpdateView):
+class OrderUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
     """
     Update an existing staff order with items formset.
     """
+    section = "orders"
     model = Order
     form_class = OrderForm
     template_name = "accounting/orders/order_form.html"
@@ -704,16 +738,7 @@ class OrderUpdateView(UpdateView):
         else:
             ctx["item_formset"] = OrderItemFormSet(instance=order)
 
-        products = Product.objects.filter(is_active=True)
-        ctx["products_json"] = mark_safe(json.dumps(
-            {
-                str(p.id): {
-                    "description": p.description or "",
-                    "price": str(p.price),
-                }
-                for p in products
-            }
-        ))
+        ctx = self.inject_products_json(ctx)
         return ctx
 
     def form_valid(self, form):
@@ -828,10 +853,11 @@ def staff_order_confirm(request, pk):
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class OrderPrintView(DetailView):
+class OrderPrintView(AccountingSectionMixin, DetailView):
     """
     Print page for order (staff side).
     """
+    section = "orders"
     model = Order
     template_name = "accounting/orders/order_print.html"
     context_object_name = "order"
@@ -850,19 +876,23 @@ class OrderPrintView(DetailView):
 # ============================================================
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class PaymentPrintView(DetailView):
+class PaymentPrintView(AccountingSectionMixin, DetailView):
     """
     Print page for payment receipt.
     """
+    section = "payments"
     model = Payment
     template_name = "accounting/payment/payment_print.html"
     context_object_name = "payment"
 
+
 # ============================================================
 # Payment List
 # ============================================================
+
 @method_decorator(accounting_staff_required, name="dispatch")
-class PaymentListView(ListView):
+class PaymentListView(AccountingSectionMixin, ListView):
+    section = "payments"
     model = Payment
     template_name = "accounting/payment/payment_list.html"
     context_object_name = "payments"
@@ -893,38 +923,38 @@ class PaymentListView(ListView):
         ctx["customer_filter"] = self.request.GET.get("customer", "")
         return ctx
 
+
 # ============================================================
 # Payment Create
 # ============================================================
+
 @method_decorator(accounting_staff_required, name="dispatch")
-class PaymentCreateView(CreateView):
+class PaymentCreateView(AccountingSectionMixin, TodayInitialDateMixin, CreateView):
     """
     إضافة دفعة جديدة من شاشة عامة.
     يمكن ربطها بفاتورة أو تركها دفعة عامة (بدون فاتورة).
     """
+    section = "payments"
     model = Payment
     form_class = PaymentForm
     template_name = "accounting/payment/payment_form.html"
 
-    def get_initial(self):
-        initial = super().get_initial()
-        # تاريخ اليوم كقيمة افتراضية
-        initial.setdefault("date", timezone.now().date())
-        return initial
-
     def get_success_url(self):
         return reverse("accounting:payment_list")
+
 
 # ============================================================
 # Payment Update and reconciliation
 # ============================================================
+
 @method_decorator(accounting_staff_required, name="dispatch")
-class PaymentUpdateView(UpdateView):
+class PaymentUpdateView(AccountingSectionMixin, UpdateView):
     """
     تعديل دفعة موجودة:
     - نسمح بتعديل التاريخ، المبلغ، طريقة الدفع، الملاحظات، وربط/فك الفاتورة.
     - نثبّت العميل (لا يتغير من شاشة التعديل).
     """
+    section = "payments"
     model = Payment
     form_class = PaymentForm
     template_name = "accounting/payment/payment_form.html"
@@ -948,4 +978,3 @@ class PaymentUpdateView(UpdateView):
 
     def get_success_url(self):
         return reverse("accounting:payment_list")
-
