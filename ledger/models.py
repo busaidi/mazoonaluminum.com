@@ -47,6 +47,12 @@ class FiscalYear(models.Model):
 
     class Meta:
         ordering = ["-year"]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(start_date__lte=models.F("end_date")),
+                name="fiscalyear_start_before_end",
+            )
+        ]
 
     def __str__(self) -> str:
         return str(self.year)
@@ -69,14 +75,7 @@ class FiscalYear(models.Model):
         if self.is_default:
             FiscalYear.objects.exclude(pk=self.pk).update(is_default=False)
 
-        class Meta:
-            ordering = ["-year"]
-            constraints = [
-                models.CheckConstraint(
-                    check=models.Q(start_date__lte=models.F("end_date")),
-                    name="fiscalyear_start_before_end",
-                )
-            ]
+
 
 
 # ==============================================================================
@@ -415,15 +414,24 @@ def generate_journal_entry_number(journal, fiscal_year, date):
         date=date,
     )
 
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+
+# من نفس ملف ledger.models لأنه فيه Account
+# لو Account في نفس الملف يكفي نستخدم "Account" كسلسلة
+# من غير import لتفادي الدوّارة
+
+
 class LedgerSettings(models.Model):
     """
     إعدادات دفتر الأستاذ:
-    ربط دفاتر اليومية بوظائف النظام (مبيعات، مشتريات، بنك، كاش، قيود يدوية، رصيد افتتاحي).
-    هذه الإعدادات يفترض أن تكون صف واحد فقط (singleton).
+    - ربط دفاتر اليومية بوظائف النظام (مبيعات، مشتريات، بنك، كاش، ...).
+    - ربط الحسابات الافتراضية لعمليات المبيعات (عملاء، مبيعات، ضريبة، دفعات مقدمة).
     """
 
+    # 👇 موجودة عندك من قبل
     default_manual_journal = models.ForeignKey(
-        Journal,
+        "Journal",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
@@ -434,7 +442,7 @@ class LedgerSettings(models.Model):
     )
 
     sales_journal = models.ForeignKey(
-        Journal,
+        "Journal",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
@@ -445,7 +453,7 @@ class LedgerSettings(models.Model):
     )
 
     purchase_journal = models.ForeignKey(
-        Journal,
+        "Journal",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
@@ -456,7 +464,7 @@ class LedgerSettings(models.Model):
     )
 
     cash_journal = models.ForeignKey(
-        Journal,
+        "Journal",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
@@ -467,7 +475,7 @@ class LedgerSettings(models.Model):
     )
 
     bank_journal = models.ForeignKey(
-        Journal,
+        "Journal",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
@@ -478,7 +486,7 @@ class LedgerSettings(models.Model):
     )
 
     opening_balance_journal = models.ForeignKey(
-        Journal,
+        "Journal",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
@@ -489,7 +497,7 @@ class LedgerSettings(models.Model):
     )
 
     closing_journal = models.ForeignKey(
-        Journal,
+        "Journal",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
@@ -497,6 +505,54 @@ class LedgerSettings(models.Model):
         limit_choices_to={"is_active": True},
         verbose_name=_("دفتر إقفال السنة"),
         help_text=_("يستخدم لقيود إقفال السنة المالية."),
+    )
+
+    # 🔹 حسابات افتراضية للمبيعات
+
+    sales_receivable_account = models.ForeignKey(
+        "Account",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_sales_receivable_account",
+        verbose_name=_("حساب العملاء (ذمم مدينة)"),
+        help_text=_("يُستخدم كطرف مدين عند ترحيل فواتير المبيعات."),
+        limit_choices_to={"is_active": True},
+    )
+
+    sales_revenue_0_account = models.ForeignKey(
+        "Account",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_sales_revenue_0_account",
+        verbose_name=_("حساب المبيعات 0٪"),
+        help_text=_("إيرادات مبيعات خاضعة للضريبة 0٪ / صادرات."),
+        limit_choices_to={"is_active": True},
+    )
+
+    sales_vat_output_account = models.ForeignKey(
+        "Account",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_sales_vat_output_account",
+        verbose_name=_("حساب ضريبة القيمة المضافة المستحقة (مخرجات)"),
+        help_text=_("يُستخدم لجزء ضريبة القيمة المضافة على فواتير المبيعات."),
+        limit_choices_to={"is_active": True},
+    )
+
+    # 🔹 حساب الدفعات المقدمة من العملاء (Advance Payments)
+
+    sales_advance_account = models.ForeignKey(
+        "Account",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_sales_advance_account",
+        verbose_name=_("حساب دفعات مقدّمة من العملاء"),
+        help_text=_("يُستخدم عند استلام دفعة من العميل قبل إصدار الفاتورة."),
+        limit_choices_to={"is_active": True},
     )
 
     updated_at = models.DateTimeField(
@@ -507,16 +563,12 @@ class LedgerSettings(models.Model):
     def __str__(self) -> str:
         return _("إعدادات دفتر الأستاذ")
 
-
     class Meta:
         verbose_name = _("إعدادات دفتر الأستاذ")
         verbose_name_plural = _("إعدادات دفتر الأستاذ")
 
     @classmethod
     def get_solo(cls) -> "LedgerSettings":
-        """
-        يعيد صف الإعدادات الوحيد، وينشئ واحد إذا غير موجود.
-        """
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
 

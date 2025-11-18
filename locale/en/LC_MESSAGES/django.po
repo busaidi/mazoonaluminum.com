@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-11-18 17:46+0400\n"
+"POT-Creation-Date: 2025-11-18 18:52+0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,6 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
 #: accounting/forms.py:76
 msgid "Due date cannot be before issue date."
 msgstr "Due date cannot be before issue date."
@@ -104,27 +105,27 @@ msgid "تم إنشاء الفاتورة %(number)s من هذا الطلب."
 msgstr "Invoice %(number)s has been created from this order."
 
 #: ledger/forms.py:22 templates/ledger/accounts/form.html:33
-#: templates/ledger/accounts/list.html:31
+#: templates/ledger/accounts/list.html:30
 #: templates/ledger/reports/trial_balance.html:123
 #: templates/ledger/settings/journal/list.html:24
 msgid "الكود"
 msgstr "Code"
 
 #: ledger/forms.py:23 templates/ledger/accounts/form.html:43
-#: templates/ledger/accounts/list.html:32
+#: templates/ledger/accounts/list.html:31
 #: templates/ledger/reports/trial_balance.html:124
 msgid "اسم الحساب"
 msgstr "Account name"
 
 #: ledger/forms.py:24 templates/accounting/customers/customer_detail.html:163
 #: templates/ledger/accounts/form.html:53
-#: templates/ledger/accounts/list.html:33
+#: templates/ledger/accounts/list.html:32
 #: templates/ledger/reports/trial_balance.html:125
 #: templates/ledger/settings/journal/list.html:26
 msgid "النوع"
 msgstr "Type"
 
-#: ledger/forms.py:25 templates/ledger/accounts/list.html:34
+#: ledger/forms.py:25 templates/ledger/accounts/list.html:33
 msgid "الحساب الأب"
 msgstr "Parent account"
 
@@ -136,7 +137,7 @@ msgstr "Active?"
 msgid "يُستخدم في التسويات؟"
 msgstr "Used for settlements?"
 
-#: ledger/forms.py:40 ledger/models.py:192
+#: ledger/forms.py:40 ledger/models.py:201
 #: templates/accounting/customers/customer_detail.html:102
 #: templates/accounting/customers/customer_detail.html:162
 #: templates/accounting/customers/customer_detail.html:232
@@ -148,28 +149,28 @@ msgstr "Used for settlements?"
 #: templates/accounting/orders/order_detail.html:71
 #: templates/accounting/orders/order_list.html:46
 #: templates/accounting/payment/payment_list.html:61
-#: templates/ledger/dashboard.html:207 templates/ledger/journal/detail.html:23
+#: templates/ledger/dashboard.html:203 templates/ledger/journal/detail.html:23
 #: templates/ledger/journal/form.html:51 templates/ledger/journal/list.html:74
 #: templates/ledger/reports/account_ledger.html:118
 #: templates/portal/dashboard.html:82 templates/portal/dashboard.html:135
 msgid "التاريخ"
 msgstr "Date"
 
-#: ledger/forms.py:41 ledger/models.py:193 templates/ledger/dashboard.html:209
+#: ledger/forms.py:41 ledger/models.py:202 templates/ledger/dashboard.html:205
 #: templates/ledger/journal/detail.html:28
 #: templates/ledger/journal/form.html:61 templates/ledger/journal/list.html:75
 #: templates/ledger/reports/account_ledger.html:120
 msgid "المرجع"
 msgstr "Reference"
 
-#: ledger/forms.py:42 ledger/forms.py:88 ledger/models.py:194
-#: ledger/models.py:324 templates/accounting/invoices/invoice_detail.html:148
+#: ledger/forms.py:42 ledger/forms.py:88 ledger/models.py:203
+#: ledger/models.py:333 templates/accounting/invoices/invoice_detail.html:148
 #: templates/accounting/invoices/invoice_detail.html:201
 #: templates/accounting/invoices/invoice_form.html:164
 #: templates/accounting/invoices/invoice_print.html:338
 #: templates/accounting/orders/order_detail.html:120
 #: templates/accounting/orders/order_print.html:370
-#: templates/ledger/dashboard.html:210 templates/ledger/journal/detail.html:93
+#: templates/ledger/dashboard.html:206 templates/ledger/journal/detail.html:93
 #: templates/ledger/journal/detail.html:171
 #: templates/ledger/journal/form.html:81 templates/ledger/journal/form.html:113
 #: templates/ledger/journal/list.html:77
@@ -177,8 +178,8 @@ msgstr "Reference"
 msgid "الوصف"
 msgstr "Description"
 
-#: ledger/forms.py:43 ledger/forms.py:74 ledger/forms.py:303
-#: ledger/models.py:159 ledger/models.py:190
+#: ledger/forms.py:43 ledger/forms.py:74 ledger/forms.py:311
+#: ledger/models.py:168 ledger/models.py:199
 #: templates/ledger/journal/detail.html:108
 #: templates/ledger/journal/form.html:71
 #: templates/ledger/settings/journal/form.html:6
@@ -189,14 +190,14 @@ msgstr "Journal"
 msgid "اختر دفتر اليومية"
 msgstr "Select a journal"
 
-#: ledger/forms.py:82 ledger/forms.py:190 ledger/models.py:319
+#: ledger/forms.py:82 ledger/forms.py:194 ledger/models.py:328
 #: templates/ledger/journal/detail.html:170
 #: templates/ledger/journal/form.html:112
 #: templates/ledger/reports/account_ledger.html:31
 msgid "الحساب"
 msgstr "Account"
 
-#: ledger/forms.py:96 ledger/models.py:330 templates/ledger/dashboard.html:85
+#: ledger/forms.py:96 ledger/models.py:339 templates/ledger/dashboard.html:82
 #: templates/ledger/journal/detail.html:172
 #: templates/ledger/journal/form.html:114
 #: templates/ledger/reports/account_ledger.html:122
@@ -204,7 +205,7 @@ msgstr "Account"
 msgid "مدين"
 msgstr "Debit"
 
-#: ledger/forms.py:106 ledger/models.py:336 templates/ledger/dashboard.html:89
+#: ledger/forms.py:106 ledger/models.py:345 templates/ledger/dashboard.html:86
 #: templates/ledger/journal/detail.html:173
 #: templates/ledger/journal/form.html:115
 #: templates/ledger/reports/account_ledger.html:123
@@ -216,90 +217,91 @@ msgstr "Credit"
 msgid "حذف؟"
 msgstr "Delete?"
 
-#: ledger/forms.py:132
+#: ledger/forms.py:136
 msgid "قيمة المدين لا يمكن أن تكون سالبة."
 msgstr "Debit value cannot be negative."
 
-#: ledger/forms.py:135
+#: ledger/forms.py:139
 msgid "قيمة الدائن لا يمكن أن تكون سالبة."
 msgstr "Credit value cannot be negative."
 
-#: ledger/forms.py:140
+#: ledger/forms.py:144
 msgid "لا يمكن أن يكون السطر مدينًا ودائنًا في نفس الوقت."
 msgstr "A line cannot be both debit and credit."
 
-#: ledger/forms.py:146
+#: ledger/forms.py:150
 msgid "يجب اختيار حساب للسطر الذي يحتوي على مبلغ مدين أو دائن."
-msgstr "An account must be selected for any line with a debit or credit amount."
+msgstr ""
+"An account must be selected for any line with a debit or credit amount."
 
-#: ledger/forms.py:166 ledger/forms.py:196 ledger/models.py:182
+#: ledger/forms.py:170 ledger/forms.py:200 ledger/models.py:191
 #: templates/ledger/journal/detail.html:103
 #: templates/ledger/reports/account_ledger.html:38
 #: templates/ledger/reports/trial_balance.html:48
 msgid "السنة المالية"
 msgstr "Fiscal year"
 
-#: ledger/forms.py:167 ledger/forms.py:197
+#: ledger/forms.py:171 ledger/forms.py:201
 msgid "كل السنوات"
 msgstr "All years"
 
-#: ledger/forms.py:172 ledger/forms.py:202 ledger/forms.py:281
+#: ledger/forms.py:176 ledger/forms.py:206 ledger/forms.py:289
 #: templates/ledger/journal/list.html:32
 #: templates/ledger/reports/account_ledger.html:45
 #: templates/ledger/reports/trial_balance.html:55
 msgid "من تاريخ"
 msgstr "From date"
 
-#: ledger/forms.py:179 ledger/forms.py:209 ledger/forms.py:288
+#: ledger/forms.py:183 ledger/forms.py:213 ledger/forms.py:296
 #: templates/ledger/journal/list.html:39
 #: templates/ledger/reports/account_ledger.html:52
 #: templates/ledger/reports/trial_balance.html:62
 msgid "إلى تاريخ"
 msgstr "To date"
 
-#: ledger/forms.py:221 ledger/models.py:34
+#: ledger/forms.py:229 ledger/models.py:34
 #: templates/ledger/settings/fiscal_year_form.html:32
 #: templates/ledger/settings/fiscal_year_list.html:24
 #: templates/ledger/setup/fiscal_year_setup.html:24
 msgid "السنة"
 msgstr "Year"
 
-#: ledger/forms.py:222 ledger/models.py:35
+#: ledger/forms.py:230 ledger/models.py:35
 #: templates/ledger/settings/fiscal_year_form.html:43
 #: templates/ledger/setup/fiscal_year_setup.html:32
 msgid "تاريخ البداية"
 msgstr "Start date"
 
-#: ledger/forms.py:223 ledger/models.py:36
+#: ledger/forms.py:231 ledger/models.py:36
 #: templates/ledger/settings/fiscal_year_form.html:54
 #: templates/ledger/setup/fiscal_year_setup.html:40
 msgid "تاريخ النهاية"
 msgstr "End date"
 
-#: ledger/forms.py:224 ledger/models.py:37
+#: ledger/forms.py:232 ledger/models.py:37
 #: templates/ledger/setup/fiscal_year_setup.html:50
 msgid "مقفلة؟"
 msgstr "Closed?"
 
-#: ledger/forms.py:225 ledger/models.py:40
+#: ledger/forms.py:233 ledger/models.py:40
 msgid "سنة افتراضية للتقارير؟"
 msgstr "Default year for reports?"
 
-#: ledger/forms.py:246
+#: ledger/forms.py:254
 msgid "تاريخ البداية لا يمكن أن يكون بعد تاريخ النهاية."
 msgstr "Start date cannot be after end date."
 
-#: ledger/forms.py:264
+#: ledger/forms.py:272
 msgid "الكل"
 msgstr "All"
 
-#: ledger/forms.py:265 templates/ledger/journal/detail.html:46
+#: ledger/forms.py:273 templates/ledger/journal/detail.html:46
 #: templates/ledger/journal/detail.html:136
 #: templates/ledger/journal/list.html:119
 msgid "مُرحّل"
 msgstr "Posted"
 
-#: ledger/forms.py:266 templates/accounting/orders/order_print.html:295
+#: ledger/forms.py:274 templates/accounting/orders/order_print.html:295
 #: templates/accounting/orders/order_print.html:296
 #: templates/ledger/journal/detail.html:48
 #: templates/ledger/journal/detail.html:138
@@ -307,17 +309,17 @@ msgstr "Posted"
 msgid "مسودة"
 msgstr "Draft"
 
-#: ledger/forms.py:271 templates/accounting/customers/customer_list.html:36
+#: ledger/forms.py:279 templates/accounting/customers/customer_list.html:36
 #: templates/accounting/payment/payment_list.html:50
 #: templates/ledger/journal/list.html:25 templates/website/blog_list.html:307
 msgid "بحث"
 msgstr "Search"
 
-#: ledger/forms.py:275
+#: ledger/forms.py:283
 msgid "بحث بالمرجع أو الوصف"
 msgstr "Search by reference or description"
 
-#: ledger/forms.py:295 templates/accounting/customers/customer_detail.html:106
+#: ledger/forms.py:303 templates/accounting/customers/customer_detail.html:106
 #: templates/accounting/customers/customer_detail.html:164
 #: templates/accounting/dashboard.html:261
 #: templates/accounting/orders/order_detail.html:82
@@ -330,11 +332,11 @@ msgstr "Search by reference or description"
 msgid "الحالة"
 msgstr "Status"
 
-#: ledger/forms.py:314
+#: ledger/forms.py:322
 msgid "ملف إكسل لشجرة الحسابات"
 msgstr "Excel file for the chart of accounts"
 
-#: ledger/forms.py:316
+#: ledger/forms.py:324
 msgid ""
 "ملف بصيغة .xlsx يحتوي في الصف الأول على الأعمدة: code, name, type, "
 "parent_code, allow_settlement, is_active, opening_debit, opening_credit."
@@ -342,72 +344,72 @@ msgstr ""
 "An .xlsx file whose first row contains the columns: code, name, type, "
 "parent_code, allow_settlement, is_active, opening_debit, opening_credit."
 
-#: ledger/forms.py:326
+#: ledger/forms.py:334
 msgid "تعطيل الحسابات غير الموجودة في الملف"
 msgstr "Disable accounts that are not in the file"
 
-#: ledger/forms.py:328
+#: ledger/forms.py:336
 msgid "سيتم تعيين is_active=False لأي حساب ليس موجودًا في الملف المستورد."
 msgstr ""
 "is_active=False will be set for any account that is not present in the "
 "imported file."
 
-#: ledger/forms.py:337 templates/ledger/settings/import.html:38
+#: ledger/forms.py:345 templates/ledger/settings/import.html:38
 msgid "السنة المالية للرصد الافتتاحي"
 msgstr "Fiscal year for opening balance"
 
-#: ledger/forms.py:339
+#: ledger/forms.py:347
 msgid "اختياري: إذا اخترت سنة مالية، سيتم إنشاء قيد رصيد افتتاحي بهذه الأرصدة."
 msgstr ""
 "Optional: if you select a fiscal year, an opening balance entry will be "
 "created with these balances."
 
-#: ledger/forms.py:370 ledger/models.py:423
+#: ledger/forms.py:378 ledger/models.py:432
 msgid "دفتر القيود اليدوية"
 msgstr "Manual entries journal"
 
-#: ledger/forms.py:371 ledger/models.py:128 ledger/models.py:434
+#: ledger/forms.py:379 ledger/models.py:137 ledger/models.py:443
 msgid "دفتر المبيعات"
 msgstr "Sales journal"
 
-#: ledger/forms.py:372 ledger/models.py:129 ledger/models.py:445
+#: ledger/forms.py:380 ledger/models.py:138 ledger/models.py:454
 msgid "دفتر المشتريات"
 msgstr "Purchases journal"
 
-#: ledger/forms.py:373 ledger/models.py:126 ledger/models.py:456
+#: ledger/forms.py:381 ledger/models.py:135 ledger/models.py:465
 msgid "دفتر الكاش"
 msgstr "Cash journal"
 
-#: ledger/forms.py:374 ledger/models.py:127 ledger/models.py:467
+#: ledger/forms.py:382 ledger/models.py:136 ledger/models.py:476
 msgid "دفتر البنك"
 msgstr "Bank journal"
 
-#: ledger/forms.py:375 ledger/models.py:478
+#: ledger/forms.py:383 ledger/models.py:487
 msgid "دفتر الرصيد الافتتاحي"
 msgstr "Opening balance journal"
 
-#: ledger/forms.py:376 ledger/models.py:489
+#: ledger/forms.py:384 ledger/models.py:498
 msgid "دفتر إقفال السنة"
 msgstr "Year-end closing journal"
 
-#: ledger/forms.py:393 ledger/models.py:134
+#: ledger/forms.py:401 ledger/models.py:143
 msgid "كود الدفتر"
 msgstr "Journal code"
 
-#: ledger/forms.py:394 ledger/models.py:138
+#: ledger/forms.py:402 ledger/models.py:147
 #: templates/ledger/settings/journal/list.html:25
 msgid "اسم الدفتر"
 msgstr "Journal name"
 
-#: ledger/forms.py:395 ledger/models.py:144
+#: ledger/forms.py:403 ledger/models.py:153
 msgid "نوع الدفتر"
 msgstr "Journal type"
 
-#: ledger/forms.py:396 ledger/models.py:148
+#: ledger/forms.py:404 ledger/models.py:157
 msgid "دفتر افتراضي"
 msgstr "Default journal"
 
-#: ledger/forms.py:397 ledger/models.py:152
+#: ledger/forms.py:405 ledger/models.py:161
 #: templates/ledger/accounts/form.html:75
 #: templates/ledger/settings/journal/list.html:54
 msgid "نشط"
@@ -415,7 +417,8 @@ msgstr "Active"
 
 #: ledger/management/commands/seed_fiscal_year.py:13
 msgid "إنشاء سنة مالية افتراضية للسنة الحالية في نظام دفتر الأستاذ."
-msgstr "Create a default fiscal year for the current year in the ledger system."
+msgstr ""
+"Create a default fiscal year for the current year in the ledger system."
 
 #: ledger/management/commands/seed_fiscal_year.py:30
 #, python-format
@@ -432,99 +435,98 @@ msgid "تُستخدم هذه السنة كافتراضي في التقارير �
 msgstr ""
 "This year is used as the default in reports when no other year is selected."
 
-#: ledger/models.py:80 templates/ledger/reports/trial_balance.html:137
+#: ledger/models.py:89 templates/ledger/reports/trial_balance.html:137
 msgid "أصل"
 msgstr "Asset"
 
-#: ledger/models.py:81 templates/ledger/reports/trial_balance.html:139
+#: ledger/models.py:90 templates/ledger/reports/trial_balance.html:139
 msgid "التزامات"
 msgstr "Liability"
 
-#: ledger/models.py:82 templates/ledger/reports/trial_balance.html:141
+#: ledger/models.py:91 templates/ledger/reports/trial_balance.html:141
 msgid "حقوق ملكية"
 msgstr "Equity"
 
-#: ledger/models.py:83 templates/ledger/reports/trial_balance.html:143
+#: ledger/models.py:92 templates/ledger/reports/trial_balance.html:143
 msgid "إيرادات"
 msgstr "Revenue"
 
-#: ledger/models.py:84 templates/ledger/reports/trial_balance.html:145
+#: ledger/models.py:93 templates/ledger/reports/trial_balance.html:145
 msgid "مصروفات"
 msgstr "Expense"
 
-#: ledger/models.py:101
+#: ledger/models.py:110
 msgid "Allow this account to be used in settlements."
 msgstr "Allow this account to be used in settlements."
 
-#: ledger/models.py:125
+#: ledger/models.py:134
 msgid "دفتر عام"
 msgstr "General journal"
 
-#: ledger/models.py:160 templates/ledger/settings/journal/list.html:7
+#: ledger/models.py:169 templates/ledger/settings/journal/list.html:7
 msgid "دفاتر اليومية"
 msgstr "Journals"
 
-#: ledger/models.py:200 templates/ledger/dashboard.html:206
+#: ledger/models.py:209 templates/ledger/dashboard.html:202
 #: templates/ledger/journal/list.html:73
 #: templates/ledger/reports/account_ledger.html:119
 msgid "رقم القيد"
 msgstr "Entry number"
 
-#: ledger/models.py:202
+#: ledger/models.py:211
 msgid "مرحّل"
 msgstr "Posted"
 
-#: ledger/models.py:207 templates/ledger/journal/detail.html:124
+#: ledger/models.py:216 templates/ledger/journal/detail.html:124
 msgid "تاريخ الترحيل"
 msgstr "Posting date"
 
-#: ledger/models.py:215 templates/ledger/journal/detail.html:128
+#: ledger/models.py:224 templates/ledger/journal/detail.html:128
 msgid "مُرحّل بواسطة"
 msgstr "Posted by"
 
-#: ledger/models.py:224 templates/ledger/journal/detail.html:113
+#: ledger/models.py:233 templates/ledger/journal/detail.html:113
 msgid "أنشئ بواسطة"
 msgstr "Created by"
 
-#: ledger/models.py:314
+#: ledger/models.py:323
 msgid "قيد اليومية"
 msgstr "Journal entry"
 
-#: ledger/models.py:424
+#: ledger/models.py:433
 msgid "يستخدم لأي قيد يُنشأ يدويًا من داخل دفتر الأستاذ."
 msgstr "Used for any entry created manually from within the ledger."
 
-#: ledger/models.py:435
+#: ledger/models.py:444
 msgid "يستخدم لقيود فواتير المبيعات."
 msgstr "Used for sales invoice entries."
 
-#: ledger/models.py:446
+#: ledger/models.py:455
 msgid "يستخدم لقيود فواتير الموردين."
 msgstr "Used for supplier invoice entries."
 
-#: ledger/models.py:457
+#: ledger/models.py:466
 msgid "يستخدم لحركات الصندوق النقدي."
 msgstr "Used for cashbox transactions."
 
-#: ledger/models.py:468
+#: ledger/models.py:477
 msgid "يستخدم لحركات حسابات البنك."
 msgstr "Used for bank account transactions."
 
-#: ledger/models.py:479
+#: ledger/models.py:488
 msgid "يستخدم لقيود الأرصدة الافتتاحية عند إنشاء أو استيراد رصيد افتتاحي."
 msgstr ""
-"Used for opening balance entries when creating or importing opening "
-"balances."
+"Used for opening balance entries when creating or importing opening balances."
 
-#: ledger/models.py:490
+#: ledger/models.py:499
 msgid "يستخدم لقيود إقفال السنة المالية."
 msgstr "Used for fiscal year closing entries."
 
-#: ledger/models.py:495
+#: ledger/models.py:504
 msgid "تاريخ آخر تعديل"
 msgstr "Last modified date"
 
-#: ledger/models.py:499 ledger/models.py:503 ledger/models.py:504
+#: ledger/models.py:508 ledger/models.py:512 ledger/models.py:513
 msgid "إعدادات دفتر الأستاذ"
 msgstr "Ledger settings"
 
@@ -590,11 +592,11 @@ msgstr ""
 "Opening balance is not balanced: total debit (%(debit)s) does not equal "
 "total credit (%(credit)s)."
 
-#: ledger/services.py:387
+#: ledger/services.py:397
 msgid "رصيد افتتاحي مستورد من إكسل"
 msgstr "Opening balance imported from Excel"
 
-#: ledger/services.py:397 templates/ledger/reports/account_ledger.html:131
+#: ledger/services.py:407 templates/ledger/reports/account_ledger.html:131
 msgid "رصيد افتتاحي"
 msgstr "Opening balance"
 
@@ -644,27 +646,25 @@ msgstr ""
 "The first fiscal year has been created successfully. You can now use the "
 "ledger."
 
-#: ledger/views.py:279
+#: ledger/views.py:284
 msgid "تم إنشاء الحساب بنجاح."
 msgstr "Account created successfully."
 
-#: ledger/views.py:289
+#: ledger/views.py:294
 msgid "تم تحديث الحساب بنجاح."
 msgstr "Account updated successfully."
 
-#: ledger/views.py:307
+#: ledger/views.py:312
 #, python-format
-msgid ""
-"تم إنشاء شجرة الحسابات الافتراضية (%(count)d حسابًا)."
-msgstr ""
-"The default chart of accounts has been created (%(count)d accounts)."
+msgid "تم إنشاء شجرة الحسابات الافتراضية (%(count)d حسابًا)."
+msgstr "The default chart of accounts has been created (%(count)d accounts)."
 
-#: ledger/views.py:313
+#: ledger/views.py:318
 msgid "لم يتم إنشاء أي حسابات جديدة، يبدو أن شجرة الحسابات موجودة مسبقًا."
 msgstr ""
 "No new accounts were created; it seems the chart of accounts already exists."
 
-#: ledger/views.py:351
+#: ledger/views.py:356
 #, python-format
 msgid ""
 "تم استيراد شجرة الحسابات. حسابات جديدة: %(created)d، محدثة: %(updated)d، تم "
@@ -673,102 +673,101 @@ msgstr ""
 "The chart of accounts has been imported. New accounts: %(created)d, updated: "
 "%(updated)d, deactivated: %(deactivated)d."
 
-#: ledger/views.py:365
+#: ledger/views.py:370
 msgid "انتهى الاستيراد مع بعض الملاحظات (راجع الكونسول)."
 msgstr "Import finished with some notes (check the console)."
 
-#: ledger/views.py:563 ledger/views.py:676
+#: ledger/views.py:569 ledger/views.py:682
 msgid "الرجاء تصحيح الأخطاء في النموذج."
 msgstr "Please correct the errors in the form."
 
-#: ledger/views.py:595 ledger/views.py:703
+#: ledger/views.py:601 ledger/views.py:709
 msgid "القيد غير متوازن: مجموع المدين لا يساوي مجموع الدائن."
 msgstr "The entry is not balanced: total debit does not equal total credit."
 
-#: ledger/views.py:615
+#: ledger/views.py:621
 msgid "تم إنشاء قيد اليومية بنجاح."
 msgstr "Journal entry created successfully."
 
-#: ledger/views.py:638
+#: ledger/views.py:644
 msgid "لا يمكن تعديل قيد مُرحّل."
 msgstr "A posted entry cannot be edited."
 
-#: ledger/views.py:727
+#: ledger/views.py:733
 msgid "تم تحديث قيد اليومية بنجاح."
 msgstr "Journal entry updated successfully."
 
-#: ledger/views.py:1041
+#: ledger/views.py:1030
 msgid "القيد مُرحّل بالفعل."
 msgstr "The entry is already posted."
 
-#: ledger/views.py:1047
+#: ledger/views.py:1036
 msgid "لا يمكن ترحيل قيد غير متوازن."
 msgstr "An unbalanced entry cannot be posted."
 
-#: ledger/views.py:1057
+#: ledger/views.py:1046
 msgid "لا توجد سنة مالية تغطي تاريخ هذا القيد، لا يمكن ترحيله."
 msgstr ""
 "There is no fiscal year covering the date of this entry; it cannot be posted."
 
-#: ledger/views.py:1066
+#: ledger/views.py:1055
 msgid "لا يمكن ترحيل قيد ضمن سنة مالية مقفلة."
 msgstr "An entry cannot be posted within a closed fiscal year."
 
-#: ledger/views.py:1079
+#: ledger/views.py:1068
 msgid "تم ترحيل القيد بنجاح."
 msgstr "Entry posted successfully."
 
-#: ledger/views.py:1103
+#: ledger/views.py:1092
 msgid "القيد غير مُرحّل."
 msgstr "The entry is not posted."
 
-#: ledger/views.py:1114
+#: ledger/views.py:1103
 msgid "لا يمكن إلغاء ترحيل قيد ضمن سنة مالية مقفلة."
 msgstr "Posting cannot be reversed for an entry within a closed fiscal year."
 
-#: ledger/views.py:1127
+#: ledger/views.py:1116
 msgid "تم إلغاء ترحيل القيد بنجاح."
 msgstr "Entry unposted successfully."
 
-#: ledger/views.py:1153
+#: ledger/views.py:1142
 msgid "تم إنشاء السنة المالية بنجاح"
 msgstr "Fiscal year created successfully."
 
-#: ledger/views.py:1165
+#: ledger/views.py:1154
 msgid "لا يمكن تعديل سنة مالية مقفلة"
 msgstr "A closed fiscal year cannot be modified."
 
-#: ledger/views.py:1167
+#: ledger/views.py:1156
 msgid "تم تحديث بيانات السنة المالية"
 msgstr "Fiscal year data updated."
 
-#: ledger/views.py:1175
+#: ledger/views.py:1164
 msgid "تم إقفال السنة المالية"
 msgstr "Fiscal year has been closed."
 
-#: ledger/views.py:1194
+#: ledger/views.py:1183
 msgid "تم حفظ إعدادات دفاتر اليومية بنجاح."
 msgstr "Journal settings saved successfully."
 
-#: ledger/views.py:1230
+#: ledger/views.py:1220
 msgid "تم إنشاء دفتر اليومية بنجاح."
 msgstr "Journal created successfully."
 
-#: ledger/views.py:1240 templates/ledger/settings/journal/list.html:13
+#: ledger/views.py:1230 templates/ledger/settings/journal/list.html:13
 msgid "دفتر جديد"
 msgstr "New journal"
 
-#: ledger/views.py:1256
+#: ledger/views.py:1246
 msgid "تم تحديث دفتر اليومية بنجاح."
 msgstr "Journal updated successfully."
 
-#: ledger/views.py:1266
+#: ledger/views.py:1256
 msgid "تعديل دفتر"
 msgstr "Edit journal"
 
 #: templates/accounting/_nav.html:9 templates/accounting/dashboard.html:5
-#: templates/accounting/dashboard.html:20 templates/base.html:156
-#: templates/base.html:163
+#: templates/accounting/dashboard.html:20 templates/base.html:154
 msgid "لوحة المحاسبة"
 msgstr "Accounting dashboard"
 
@@ -870,7 +869,7 @@ msgstr "Invoice number"
 #: templates/accounting/orders/order_form.html:90
 #: templates/accounting/orders/order_list.html:49
 #: templates/accounting/orders/order_print.html:373
-#: templates/cart/detail.html:20 templates/ledger/dashboard.html:211
+#: templates/cart/detail.html:20 templates/ledger/dashboard.html:207
 #: templates/ledger/journal/detail.html:204
 #: templates/ledger/reports/trial_balance.html:164
 #: templates/portal/dashboard.html:83
@@ -895,13 +894,13 @@ msgstr "Remaining"
 #: templates/accounting/customers/customer_detail.html:237
 #: templates/accounting/invoices/invoice_detail.html:229
 #: templates/accounting/payment/payment_list.html:67
-#: templates/ledger/dashboard.html:212 templates/ledger/journal/list.html:81
+#: templates/ledger/dashboard.html:208 templates/ledger/journal/list.html:81
 msgid "إجراءات"
 msgstr "Actions"
 
 #: templates/accounting/customers/customer_detail.html:127
 #: templates/accounting/customers/customer_detail.html:198
-#: templates/ledger/dashboard.html:245 templates/ledger/journal/list.html:132
+#: templates/ledger/dashboard.html:241 templates/ledger/journal/list.html:132
 msgid "عرض"
 msgstr "View"
 
@@ -1009,7 +1008,7 @@ msgstr "Email"
 #: templates/accounting/customers/customer_list.html:69
 #: templates/accounting/orders/order_detail.html:50
 #: templates/accounting/payment/payment_list.html:114
-#: templates/ledger/accounts/list.html:56
+#: templates/ledger/accounts/list.html:55
 #: templates/ledger/journal/detail.html:60
 #: templates/ledger/settings/fiscal_year_list.html:61
 #: templates/ledger/settings/journal/list.html:65
@@ -1062,7 +1061,8 @@ msgid ""
 "لوحة تحكم لمتابعة الفواتير، الدفعات والطلبات في نظام المحاسبة الخاص بمزون "
 "ألمنيوم."
 msgstr ""
-"A dashboard to monitor invoices, payments, and orders in Mazoon Aluminum's accounting system."
+"A dashboard to monitor invoices, payments, and orders in Mazoon Aluminum's "
+"accounting system."
 
 #: templates/accounting/dashboard.html:23
 msgid "نظرة سريعة على الفواتير، العملاء، الطلبات والدفعات."
@@ -1111,7 +1111,8 @@ msgstr "Total invoices minus recorded payments."
 
 #: templates/accounting/dashboard.html:117
 msgid "عرض وإدارة فواتير العملاء، ومتابعة المبالغ المتبقية والمدفوعة."
-msgstr "View and manage customer invoices, and track outstanding and paid amounts."
+msgstr ""
+"View and manage customer invoices, and track outstanding and paid amounts."
 
 #: templates/accounting/dashboard.html:121
 msgid "عرض كل الفواتير"
@@ -1132,7 +1133,8 @@ msgstr "View all customers"
 
 #: templates/accounting/dashboard.html:155
 msgid "متابعة طلبات العملاء قبل وبعد تحويلها إلى فواتير."
-msgstr "Track customer orders before and after they are converted into invoices."
+msgstr ""
+"Track customer orders before and after they are converted into invoices."
 
 #: templates/accounting/dashboard.html:159
 msgid "عرض كل الطلبات"
@@ -1144,7 +1146,9 @@ msgstr "Create order"
 
 #: templates/accounting/dashboard.html:174
 msgid "تسجيل دفعات العملاء وتسويتها على الفواتير أو كدفعات عامة."
-msgstr "Record customer payments and apply them to invoices or keep them as general payments."
+msgstr ""
+"Record customer payments and apply them to invoices or keep them as general "
+"payments."
 
 #: templates/accounting/dashboard.html:178
 msgid "عرض كل الدفعات"
@@ -1257,7 +1261,8 @@ msgid ""
 "    "
 msgstr ""
 "\n"
-"        Details of invoice no. %(number)s for customer %(customer)s, showing line items, related payments, and the remaining amount.\n"
+"        Details of invoice no. %(number)s for customer %(customer)s, showing "
+"line items, related payments, and the remaining amount.\n"
 "    "
 
 #: templates/accounting/invoices/invoice_detail.html:21
@@ -1338,7 +1343,7 @@ msgid "لا توجد بنود في هذه الفاتورة."
 msgstr "There are no items in this invoice."
 
 #: templates/accounting/invoices/invoice_detail.html:211
-#: templates/accounting/invoices/invoice_print.html:397 templates/base.html:284
+#: templates/accounting/invoices/invoice_print.html:397 templates/base.html:267
 msgid "الشروط والأحكام"
 msgstr "Terms and conditions"
 
@@ -1371,7 +1376,8 @@ msgstr "Edit the data of invoice no. %(number)s in the accounting system."
 
 #: templates/accounting/invoices/invoice_form.html:16
 msgid "إنشاء فاتورة جديدة لعميل في نظام المحاسبة الخاص بمزون ألمنيوم."
-msgstr "Create a new invoice for a customer in Mazoon Aluminum's accounting system."
+msgstr ""
+"Create a new invoice for a customer in Mazoon Aluminum's accounting system."
 
 #: templates/accounting/invoices/invoice_form.html:30
 #, python-format
@@ -1386,7 +1392,8 @@ msgstr "Edit mode"
 msgid ""
 "قم بتحديث بيانات الفاتورة بدقة، وسيتم حفظ التغييرات في السجلات المحاسبية."
 msgstr ""
-"Carefully update the invoice data; changes will be saved in the accounting records."
+"Carefully update the invoice data; changes will be saved in the accounting "
+"records."
 
 #: templates/accounting/invoices/invoice_form.html:43
 msgid "فاتورة يدوية"
@@ -1396,7 +1403,8 @@ msgstr "Manual invoice"
 msgid ""
 "املأ بيانات الفاتورة، خصوصًا العميل، تاريخ الإصدار، بنود الفاتورة، والشروط."
 msgstr ""
-"Fill in the invoice details, especially the customer, issue date, invoice items, and terms."
+"Fill in the invoice details, especially the customer, issue date, invoice "
+"items, and terms."
 
 #: templates/accounting/invoices/invoice_form.html:54
 msgid "رجوع إلى قائمة الفواتير"
@@ -1415,7 +1423,8 @@ msgid ""
 "يمكنك اختيار منتج من القائمة أو تركه فارغًا وكتابة وصف حر للبند، مع تحديد "
 "الكمية والسعر."
 msgstr ""
-"You can select a product from the list or leave it blank and write a free description for the item, specifying the quantity and price."
+"You can select a product from the list or leave it blank and write a free "
+"description for the item, specifying the quantity and price."
 
 #: templates/accounting/invoices/invoice_form.html:163
 msgid "المنتج (اختياري)"
@@ -1427,7 +1436,9 @@ msgstr "Add new item"
 
 #: templates/accounting/invoices/invoice_form.html:256
 msgid "اكتب هنا الشروط والأحكام أو ملاحظات الدفع التي ستظهر في الفاتورة."
-msgstr "Write here the terms and conditions or payment notes that will appear on the invoice."
+msgstr ""
+"Write here the terms and conditions or payment notes that will appear on the "
+"invoice."
 
 #: templates/accounting/invoices/invoice_form.html:266
 #: templates/accounting/payment/payment_form.html:86
@@ -1634,7 +1645,9 @@ msgstr "Edit order #%(id)s"
 
 #: templates/accounting/orders/order_form.html:22
 msgid "إدارة طلبات الزبائن مع إمكانية إضافة بنود من المنتجات أو كبنود حرة."
-msgstr "Manage customer orders with the ability to add items from products or as free items."
+msgstr ""
+"Manage customer orders with the ability to add items from products or as "
+"free items."
 
 #: templates/accounting/orders/order_form.html:26
 msgid "رجوع إلى الطلبات"
@@ -1642,7 +1655,9 @@ msgstr "Back to orders"
 
 #: templates/accounting/orders/order_form.html:64
 msgid "هذه الملاحظات لا تظهر للزبون، وتستخدم فقط لأغراض داخلية."
-msgstr "These notes are not visible to the customer and are used for internal purposes only."
+msgstr ""
+"These notes are not visible to the customer and are used for internal "
+"purposes only."
 
 #: templates/accounting/orders/order_form.html:75
 #: templates/accounting/orders/order_print.html:364
@@ -1659,7 +1674,9 @@ msgstr "Free description"
 
 #: templates/accounting/orders/order_form.html:148
 msgid "يمكنك ترك حقل المنتج فارغًا وكتابة وصف حر للبند."
-msgstr "You can leave the product field empty and write a free description for the item."
+msgstr ""
+"You can leave the product field empty and write a free description for the "
+"item."
 
 #: templates/accounting/orders/order_form.html:161
 msgid "حفظ الطلب"
@@ -1671,7 +1688,9 @@ msgstr "List of customer orders with status and total."
 
 #: templates/accounting/orders/order_list.html:18
 msgid "عرض جميع الطلبات المسجّلة في نظام المحاسبة، مع حالة الطلب والإجمالي."
-msgstr "View all orders recorded in the accounting system, with order status and total."
+msgstr ""
+"View all orders recorded in the accounting system, with order status and "
+"total."
 
 #: templates/accounting/orders/order_list.html:31
 #, python-format
@@ -1810,11 +1829,14 @@ msgid ""
 "قائمة الدفعات مع إمكانية البحث والتصفية والتسوية على الفواتير في نظام "
 "المحاسبة."
 msgstr ""
-"List of payments with search, filter, and settlement on invoices in the accounting system."
+"List of payments with search, filter, and settlement on invoices in the "
+"accounting system."
 
 #: templates/accounting/payment/payment_list.html:18
 msgid "إدارة دفعات العملاء وتسويتها على الفواتير أو كدفعات عامة."
-msgstr "Manage customer payments and apply them to invoices or keep them as general payments."
+msgstr ""
+"Manage customer payments and apply them to invoices or keep them as general "
+"payments."
 
 #: templates/accounting/payment/payment_list.html:34
 msgid "بحث باسم العميل"
@@ -1897,20 +1919,20 @@ msgstr "from the print screen."
 msgid "إيصال دفع آلي من نظام مزون ألمنيوم"
 msgstr "Automatic payment receipt from Mazoon Aluminum system"
 
-#: templates/base.html:114 templates/base.html:282
+#: templates/base.html:111 templates/base.html:265
 msgid "الرئيسية"
 msgstr "Home"
 
-#: templates/base.html:118 templates/website/about.html:64
+#: templates/base.html:115 templates/website/about.html:64
 #: templates/website/about.html:78
 msgid "من نحن"
 msgstr "About us"
 
-#: templates/base.html:122 templates/website/lab.html:62
+#: templates/base.html:119 templates/website/lab.html:62
 msgid "المختبر"
 msgstr "Lab"
 
-#: templates/base.html:126 templates/website/blog_list.html:10
+#: templates/base.html:123 templates/website/blog_list.html:10
 #: templates/website/blog_list.html:12 templates/website/blog_list.html:14
 #: templates/website/blog_list.html:62 templates/website/blog_list.html:64
 #: templates/website/blog_list.html:66 templates/website/blog_list.html:117
@@ -1919,41 +1941,41 @@ msgstr "Lab"
 msgid "المدونة"
 msgstr "Blog"
 
-#: templates/base.html:130 templates/website/product_list.html:62
+#: templates/base.html:127 templates/website/product_list.html:62
 msgid "المنتجات"
 msgstr "Products"
 
-#: templates/base.html:134 templates/website/contact.html:64
+#: templates/base.html:131 templates/website/contact.html:64
 #: templates/website/contact.html:79
 msgid "اتصل بنا"
 msgstr "Contact us"
 
-#: templates/base.html:146
+#: templates/base.html:143
 msgid "بوابة الزبون"
 msgstr "Customer portal"
 
-#: templates/base.html:171
+#: templates/base.html:166 templates/ledger/_nav.html:9
 msgid "دفتر الأستاذ"
 msgstr "Ledger"
 
-#: templates/base.html:204
+#: templates/base.html:194
 msgid "الملف الشخصي"
 msgstr "Profile"
 
-#: templates/base.html:215
+#: templates/base.html:202
 msgid "تسجيل الخروج"
 msgstr "Log out"
 
-#: templates/base.html:225 templates/registration/login.html:4
+#: templates/base.html:212 templates/registration/login.html:4
 #: templates/registration/login.html:15
 msgid "تسجيل الدخول"
 msgstr "Log in"
 
-#: templates/base.html:279
+#: templates/base.html:262
 msgid "جميع الحقوق محفوظة"
 msgstr "All rights reserved"
 
-#: templates/base.html:283
+#: templates/base.html:266
 msgid "الخصوصية"
 msgstr "Privacy"
 
@@ -1981,11 +2003,50 @@ msgstr "Total amount"
 msgid "إتمام الطلب"
 msgstr "Checkout"
 
+#: templates/ledger/_nav.html:12
+#| msgid "لوحة المحاسبة"
+msgid "لوحة الملخص"
+msgstr "Accounting dashboard"
+
+#: templates/ledger/_nav.html:13 templates/ledger/_nav.html:34
+#: templates/ledger/accounts/list.html:6
+msgid "دليل الحسابات"
+msgstr "Chart of accounts"
+
+#: templates/ledger/_nav.html:14 templates/ledger/_nav.html:41
+#| msgid "قيد اليومية"
+msgid "قيود اليومية"
+msgstr "Journal entry"
+
+#: templates/ledger/_nav.html:15
+#| msgid "السنوات المالية"
+msgid "التقارير المالية"
+msgstr "Fiscal years"
+
+#: templates/ledger/_nav.html:16 templates/ledger/_nav.html:55
+#| msgid "عدد الدفعات"
+msgid "إعدادات الدفتر"
+msgstr "Journals settings"
+
+#: templates/ledger/_nav.html:17
+msgid "التنقّل بين شاشات الدفتر"
+msgstr "Navigation between journal screens"
+
+#: templates/ledger/_nav.html:27 templates/ledger/dashboard.html:4
+#| msgid "دفتر الأستاذ"
+msgid "لوحة دفتر الأستاذ"
+msgstr "Ledger"
+
+#: templates/ledger/_nav.html:48
+#| msgid "نتائج ميزان المراجعة"
+msgid "التقارير (ميزان / دفتر حساب)"
+msgstr "Trial balance results"
+
 #: templates/ledger/accounts/form.html:8
 msgid "تعديل حساب"
 msgstr "Edit account"
 
-#: templates/ledger/accounts/form.html:10 templates/ledger/dashboard.html:138
+#: templates/ledger/accounts/form.html:10 templates/ledger/dashboard.html:135
 msgid "إنشاء حساب جديد"
 msgstr "Create new account"
 
@@ -2003,10 +2064,6 @@ msgstr "Allow settlement"
 msgid "حفظ"
 msgstr "Save"
 
-#: templates/ledger/accounts/list.html:6
-msgid "دليل الحسابات"
-msgstr "Chart of accounts"
-
 #: templates/ledger/accounts/list.html:11
 msgid "تصدير لإكسل"
 msgstr "Export to Excel"
@@ -2019,13 +2076,12 @@ msgstr "Import from Excel"
 msgid "حساب جديد"
 msgstr "New account"
 
-#: templates/ledger/accounts/list.html:61 templates/ledger/base_ledger.html:34
+#: templates/ledger/accounts/list.html:60
 #: templates/ledger/reports/account_ledger.html:11
 msgid "كشف حساب"
 msgstr "Account statement"
 
-#: templates/ledger/accounts/list.html:68
-#: templates/ledger/accounts/list.html:77
+#: templates/ledger/accounts/list.html:67
 msgid "لا توجد حسابات حتى الآن."
 msgstr "There are no accounts yet."
 
@@ -2034,147 +2090,137 @@ msgid "دفتر الأستاذ | Mazoon Aluminum"
 msgstr "Ledger | Mazoon Aluminum"
 
 #: templates/ledger/base_ledger.html:6
-msgid "ملخص نظام دفتر الأستاذ (Ledger) للحسابات العامة والتقارير الأساسية."
+#, fuzzy
+#| msgid "ملخص نظام دفتر الأستاذ (Ledger) للحسابات العامة والتقارير الأساسية."
+msgid ""
+"نظام دفتر الأستاذ للحسابات العامة والتقارير الأساسية في Mazoon Aluminum."
 msgstr "Summary of the ledger system for general accounts and basic reports."
 
-#: templates/ledger/base_ledger.html:14
+#: templates/ledger/base_ledger.html:18
 msgid "دفتر الأستاذ (Ledger)"
 msgstr "Ledger"
 
-#: templates/ledger/base_ledger.html:16
-msgid "عرض الحسابات، القيود اليومية، وميزان المراجعة وكشف حساب كل حساب."
-msgstr "View accounts, journal entries, trial balance, and account statements for each account."
-
 #: templates/ledger/base_ledger.html:22
-msgid "الملخص"
-msgstr "Summary"
+#| msgid "عرض الحسابات، القيود اليومية، وميزان المراجعة وكشف حساب كل حساب."
+msgid "عرض الحسابات، القيود اليومية، وميزان المراجعة وكشف حساب لكل حساب."
+msgstr ""
+"View accounts, journal entries, trial balance, and account statements for "
+"each account."
 
-#: templates/ledger/base_ledger.html:25
-msgid "الحسابات"
-msgstr "Accounts"
-
-#: templates/ledger/base_ledger.html:28
-msgid "القيود"
-msgstr "Entries"
-
-#: templates/ledger/base_ledger.html:31
-#: templates/ledger/reports/trial_balance.html:12
-msgid "ميزان المراجعة"
-msgstr "Trial balance"
-
-#: templates/ledger/dashboard.html:7
-msgid "الملخص العام"
-msgstr "Overall summary"
-
-#: templates/ledger/dashboard.html:9
-#, python-format
+#: templates/ledger/dashboard.html:6
+#| msgid ""
+#| "\n"
+#| "        نظرة سريعة على الحسابات والقيود من %(start)s إلى %(end)s.\n"
+#| "      "
 msgid ""
 "\n"
-"        نظرة سريعة على الحسابات والقيود من %(start)s إلى %(end)s.\n"
-"      "
+"    نظرة سريعة على الحسابات والقيود من %(start)s إلى %(end)s.\n"
+"  "
 msgstr ""
 "\n"
 "        Quick overview of accounts and entries from %(start)s to %(end)s.\n"
 "      "
 
-#: templates/ledger/dashboard.html:21
+#: templates/ledger/dashboard.html:18
 msgid "لم يتم إعداد دليل الحسابات بعد."
 msgstr "The chart of accounts has not been set up yet."
 
-#: templates/ledger/dashboard.html:24
+#: templates/ledger/dashboard.html:21
 msgid ""
 "لن تتمكن من استخدام دفتر الأستاذ بشكل كامل قبل إنشاء الحسابات أو استيرادها "
 "من إكسل."
 msgstr ""
-"You will not be able to fully use the ledger until you create the accounts or import them from Excel."
+"You will not be able to fully use the ledger until you create the accounts "
+"or import them from Excel."
 
-#: templates/ledger/dashboard.html:30 templates/ledger/dashboard.html:150
+#: templates/ledger/dashboard.html:27 templates/ledger/dashboard.html:147
 #: templates/ledger/settings/import.html:5
 msgid "استيراد شجرة الحسابات من إكسل"
 msgstr "Import chart of accounts from Excel"
 
-#: templates/ledger/dashboard.html:34
+#: templates/ledger/dashboard.html:31
 msgid "إنشاء حساب يدويًا"
 msgstr "Create an account manually"
 
-#: templates/ledger/dashboard.html:38 templates/ledger/dashboard.html:144
+#: templates/ledger/dashboard.html:35 templates/ledger/dashboard.html:141
 msgid "عرض دليل الحسابات"
 msgstr "View chart of accounts"
 
-#: templates/ledger/dashboard.html:50
+#: templates/ledger/dashboard.html:47
 msgid "عدد الحسابات"
 msgstr "Number of accounts"
 
-#: templates/ledger/dashboard.html:59
+#: templates/ledger/dashboard.html:56
 msgid "إجمالي القيود المُرحّلة"
 msgstr "Total posted entries"
 
-#: templates/ledger/dashboard.html:68
+#: templates/ledger/dashboard.html:65
 msgid "قيود هذا الشهر"
 msgstr "Entries this month"
 
-#: templates/ledger/dashboard.html:82
+#: templates/ledger/dashboard.html:79
 msgid "إجمالي حركة الشهر"
 msgstr "Total activity this month"
 
-#: templates/ledger/dashboard.html:95
+#: templates/ledger/dashboard.html:92
 msgid "تنبيه: إجمالي المدين لا يساوي إجمالي الدائن خلال الفترة المحددة."
-msgstr "Alert: total debit does not equal total credit for the selected period."
+msgstr ""
+"Alert: total debit does not equal total credit for the selected period."
 
-#: templates/ledger/dashboard.html:99
+#: templates/ledger/dashboard.html:96
 msgid "الحركة الشهرية متوازنة (مدين = دائن)."
 msgstr "Monthly activity is balanced (debit = credit)."
 
-#: templates/ledger/dashboard.html:115
+#: templates/ledger/dashboard.html:112
 msgid "إجراءات سريعة"
 msgstr "Quick actions"
 
-#: templates/ledger/dashboard.html:120
+#: templates/ledger/dashboard.html:117
 #: templates/ledger/settings/ledger_settings_form.html:7
 msgid "إعدادات دفاتر اليومية"
 msgstr "Journal settings"
 
-#: templates/ledger/dashboard.html:126
+#: templates/ledger/dashboard.html:123
 msgid "إدارة دفاتر اليومية"
 msgstr "Manage journals"
 
-#: templates/ledger/dashboard.html:131
+#: templates/ledger/dashboard.html:129
 msgid "إدارة السنوات المالية"
 msgstr "Manage fiscal years"
 
-#: templates/ledger/dashboard.html:156
+#: templates/ledger/dashboard.html:153
 msgid "تصدير شجرة الحسابات إلى إكسل"
 msgstr "Export chart of accounts to Excel"
 
-#: templates/ledger/dashboard.html:163
+#: templates/ledger/dashboard.html:159
 msgid "إنشاء قيد جديد"
 msgstr "Create new entry"
 
-#: templates/ledger/dashboard.html:169
+#: templates/ledger/dashboard.html:165
 msgid "عرض ميزان المراجعة"
 msgstr "View trial balance"
 
-#: templates/ledger/dashboard.html:175
+#: templates/ledger/dashboard.html:171
 msgid "عرض دفتر حساب"
 msgstr "View account ledger"
 
-#: templates/ledger/dashboard.html:181
+#: templates/ledger/dashboard.html:177
 msgid "عرض جميع القيود"
 msgstr "View all entries"
 
-#: templates/ledger/dashboard.html:194
+#: templates/ledger/dashboard.html:190
 msgid "أحدث القيود المُرحّلة"
 msgstr "Latest posted entries"
 
-#: templates/ledger/dashboard.html:197
+#: templates/ledger/dashboard.html:193
 msgid "عرض كل القيود"
 msgstr "View all entries"
 
-#: templates/ledger/dashboard.html:208
+#: templates/ledger/dashboard.html:204
 msgid "الدفتر"
 msgstr "Journal"
 
-#: templates/ledger/dashboard.html:255 templates/ledger/journal/list.html:165
+#: templates/ledger/dashboard.html:251 templates/ledger/journal/list.html:165
 msgid "لا توجد قيود حتى الآن."
 msgstr "No entries yet."
 
@@ -2256,7 +2302,9 @@ msgstr "Edit journal entry JE-%(entry_id)s"
 
 #: templates/ledger/journal/form.html:12
 msgid "يمكنك تعديل بيانات القيد غير المُرحّل وتصحيح الأسطر ثم إعادة ترحيله."
-msgstr "You can edit the data of an unposted entry, correct its lines, and then post it again."
+msgstr ""
+"You can edit the data of an unposted entry, correct its lines, and then post "
+"it again."
 
 #: templates/ledger/journal/form.html:15
 msgid "إنشاء قيد يومية"
@@ -2264,7 +2312,9 @@ msgstr "Create journal entry"
 
 #: templates/ledger/journal/form.html:17
 msgid "أدخل بيانات القيد ورتّب الأسطر بحيث يتساوى مجموع المدين مع مجموع الدائن."
-msgstr "Enter the entry data and arrange the lines so that total debit equals total credit."
+msgstr ""
+"Enter the entry data and arrange the lines so that total debit equals total "
+"credit."
 
 #: templates/ledger/journal/form.html:32
 msgid "هناك أخطاء في النموذج، الرجاء مراجعة الحقول بالأسفل."
@@ -2280,7 +2330,8 @@ msgstr "Add line"
 
 #: templates/ledger/journal/form.html:170
 msgid "يمكنك إضافة أكثر من سطر، وترك الأسطر الفارغة بدون حساب أو مبالغ."
-msgstr "You can add multiple lines and leave empty lines without account or amounts."
+msgstr ""
+"You can add multiple lines and leave empty lines without account or amounts."
 
 #: templates/ledger/journal/form.html:183
 msgid "تحديث القيد"
@@ -2296,7 +2347,8 @@ msgstr "Journal entries"
 
 #: templates/ledger/journal/list.html:9
 msgid "قائمة قيود اليومية المسجلة في النظام مرتّبة من الأحدث إلى الأقدم."
-msgstr "List of journal entries recorded in the system, sorted from newest to oldest."
+msgstr ""
+"List of journal entries recorded in the system, sorted from newest to oldest."
 
 #: templates/ledger/journal/list.html:14
 msgid "قيد جديد"
@@ -2331,7 +2383,8 @@ msgstr ""
 
 #: templates/ledger/reports/account_ledger.html:13
 msgid "عرض حركة الحساب ورصيده التراكمي حسب الفترة أو السنة المالية."
-msgstr "View account movements and cumulative balance by period or fiscal year."
+msgstr ""
+"View account movements and cumulative balance by period or fiscal year."
 
 #: templates/ledger/reports/account_ledger.html:17
 msgid "السنة المالية:"
@@ -2379,7 +2432,9 @@ msgstr "Total for the period"
 
 #: templates/ledger/reports/account_ledger.html:189
 msgid "الرصيد التراكمي يعتمد على طبيعة الحساب (مدين أو دائن) وطبيعة الحركات."
-msgstr "The cumulative balance depends on the nature of the account (debit or credit) and the nature of the transactions."
+msgstr ""
+"The cumulative balance depends on the nature of the account (debit or "
+"credit) and the nature of the transactions."
 
 #: templates/ledger/reports/account_ledger.html:195
 msgid "لا توجد حركات لهذا الحساب في الفترة المحددة."
@@ -2390,7 +2445,12 @@ msgid ""
 "الرجاء اختيار حساب وتحديد الفترة (اختياري) ثم الضغط على زر التصفية لعرض كشف "
 "الحساب."
 msgstr ""
-"Please select an account and optionally specify a period, then click the filter button to display the account statement."
+"Please select an account and optionally specify a period, then click the "
+"filter button to display the account statement."
+
+#: templates/ledger/reports/trial_balance.html:12
+msgid "ميزان المراجعة"
+msgstr "Trial balance"
 
 #: templates/ledger/reports/trial_balance.html:16
 msgid "تجميع أرصدة الحسابات (مدين / دائن) حسب الفترة أو السنة المالية."
@@ -2425,13 +2485,15 @@ msgstr "Trial balance is balanced: total debit equals total credit."
 
 #: templates/ledger/reports/trial_balance.html:186
 msgid "تنبيه: ميزان المراجعة غير متوازن، يُفضّل مراجعة القيود."
-msgstr "Alert: the trial balance is not balanced; you should review the entries."
+msgstr ""
+"Alert: the trial balance is not balanced; you should review the entries."
 
 #: templates/ledger/reports/trial_balance.html:195
 msgid ""
 "لا توجد بيانات للفترة المحددة. جرّب تغيير الفترة أو اختيار سنة مالية مختلفة."
 msgstr ""
-"There is no data for the selected period. Try changing the period or selecting a different fiscal year."
+"There is no data for the selected period. Try changing the period or "
+"selecting a different fiscal year."
 
 #: templates/ledger/settings/fiscal_year_form.html:9
 msgid "تعديل السنة المالية"
@@ -2445,7 +2507,9 @@ msgstr "Create new fiscal year"
 #: templates/ledger/settings/fiscal_year_form.html:15
 msgid ""
 "تحدد السنة المالية الفترة الزمنية التي تُسجَّل فيها القيود المحاسبية والتقارير."
-msgstr "The fiscal year defines the time period in which accounting entries and reports are recorded."
+msgstr ""
+"The fiscal year defines the time period in which accounting entries and "
+"reports are recorded."
 
 #: templates/ledger/settings/fiscal_year_form.html:36
 msgid "مثال: 2025"
@@ -2453,11 +2517,14 @@ msgstr "Example: 2025"
 
 #: templates/ledger/settings/fiscal_year_form.html:47
 msgid "عادةً يكون أول يوم في السنة أو بداية نشاطك."
-msgstr "Usually this is the first day of the year or the start of your activity."
+msgstr ""
+"Usually this is the first day of the year or the start of your activity."
 
 #: templates/ledger/settings/fiscal_year_form.html:58
 msgid "تأكد أن تاريخ النهاية بعد تاريخ البداية ولا يتداخل مع سنوات أخرى."
-msgstr "Make sure the end date is after the start date and does not overlap with other years."
+msgstr ""
+"Make sure the end date is after the start date and does not overlap with "
+"other years."
 
 #: templates/ledger/settings/fiscal_year_form.html:67
 msgid "اعتبار هذه السنة هي الافتراضية للتقارير"
@@ -2465,7 +2532,9 @@ msgstr "Set this year as the default for reports"
 
 #: templates/ledger/settings/fiscal_year_form.html:70
 msgid "سيتم استخدام هذه السنة تلقائيًا في التقارير عند عدم اختيار سنة معينة."
-msgstr "This year will be used automatically in reports when no specific year is selected."
+msgstr ""
+"This year will be used automatically in reports when no specific year is "
+"selected."
 
 #: templates/ledger/settings/fiscal_year_form.html:83
 msgid "ملاحظات مهمة"
@@ -2473,36 +2542,44 @@ msgstr "Important notes"
 
 #: templates/ledger/settings/fiscal_year_form.html:87
 msgid "لا يُنصح بتعديل تواريخ سنة مالية بعد بدء تسجيل القيود إلا عند الضرورة."
-msgstr "It is not recommended to change fiscal year dates after entries have been recorded, except when necessary."
+msgstr ""
+"It is not recommended to change fiscal year dates after entries have been "
+"recorded, except when necessary."
 
 #: templates/ledger/settings/fiscal_year_form.html:90
 msgid "إقفال السنة المالية يعني منع تعديل أو ترحيل القيود داخلها."
-msgstr "Closing a fiscal year means preventing modification or posting of entries within it."
+msgstr ""
+"Closing a fiscal year means preventing modification or posting of entries "
+"within it."
 
 #: templates/ledger/settings/fiscal_year_form.html:93
 msgid "تجنّب تداخل التواريخ بين سنة مالية وأخرى لضمان دقة التقارير."
-msgstr "Avoid overlapping dates between fiscal years to ensure accurate reports."
+msgstr ""
+"Avoid overlapping dates between fiscal years to ensure accurate reports."
 
 #: templates/ledger/settings/fiscal_year_form.html:100
 msgid ""
 "هذه السنة مقفلة حاليًا. لا يمكن تعديل القيود داخلها، ويمكن فقط استعراض "
 "التقارير."
 msgstr ""
-"This year is currently closed. Entries cannot be modified, and only reports can be viewed."
+"This year is currently closed. Entries cannot be modified, and only reports "
+"can be viewed."
 
 #: templates/ledger/settings/fiscal_year_form.html:104
 msgid ""
 "يمكن تعديل هذه السنة لأنها مفتوحة، ولكن أي تغيير في التواريخ سيؤثر على ترحيل "
 "القيود."
 msgstr ""
-"This year can be edited because it is open, but any change to the dates will affect entry posting."
+"This year can be edited because it is open, but any change to the dates will "
+"affect entry posting."
 
 #: templates/ledger/settings/fiscal_year_form.html:109
 msgid ""
 "عند إنشاء سنة جديدة، تأكد من أن الفترة لا تتداخل مع سنة أخرى، خاصة لو عندك "
 "بيانات سابقة."
 msgstr ""
-"When creating a new year, make sure the period does not overlap with another year, especially if you already have data."
+"When creating a new year, make sure the period does not overlap with another "
+"year, especially if you already have data."
 
 #: templates/ledger/settings/fiscal_year_form.html:120
 msgid "رجوع إلى قائمة السنوات"
@@ -2517,7 +2594,8 @@ msgid ""
 "من هنا يمكنك إدارة فترات عمل النظام (البداية والنهاية) وإقفال السنوات "
 "المالية بعد الانتهاء منها."
 msgstr ""
-"From here you can manage system operating periods (start and end) and close fiscal years after they are finished."
+"From here you can manage system operating periods (start and end) and close "
+"fiscal years after they are finished."
 
 #: templates/ledger/settings/fiscal_year_list.html:25
 msgid "الفترة"
@@ -2572,7 +2650,8 @@ msgid ""
 "type يجب أن تكون إحدى القيم التالية: asset, liability, equity, revenue, "
 "expense."
 msgstr ""
-"type must be one of the following values: asset, liability, equity, revenue, expense."
+"type must be one of the following values: asset, liability, equity, revenue, "
+"expense."
 
 #: templates/ledger/settings/import.html:60
 msgid "parent_code هو كود الحساب الأب (اختياري)."
@@ -2587,7 +2666,8 @@ msgid ""
 "opening_debit و opening_credit تستخدم للأرصدة الافتتاحية (يجب أن يتوازن "
 "المجموع)."
 msgstr ""
-"opening_debit and opening_credit are used for opening balances (the total must balance)."
+"opening_debit and opening_credit are used for opening balances (the total "
+"must balance)."
 
 #: templates/ledger/settings/journal/list.html:9
 msgid "قم بإدارة دفاتر اليومية المستخدمة في القيود المحاسبية."
@@ -2612,7 +2692,8 @@ msgid ""
 "قم بربط دفاتر اليومية المختلفة بوظائف النظام (مبيعات، مشتريات، بنك، كاش، "
 "إلخ)."
 msgstr ""
-"Link different journals to system functions (sales, purchases, bank, cash, etc.)."
+"Link different journals to system functions (sales, purchases, bank, cash, "
+"etc.)."
 
 #: templates/ledger/settings/ledger_settings_form.html:99
 msgid "حفظ الإعدادات"
@@ -2774,7 +2855,8 @@ msgid ""
 "يمكنك استخدام هذه المنطقة لإضافة وصف مختصر، ملاحظات تقنية، أو روابط لتدوينات "
 "مرتبطة."
 msgstr ""
-"You can use this area to add a short description, technical notes, or links to related posts."
+"You can use this area to add a short description, technical notes, or links "
+"to related posts."
 
 #: templates/website/blog_detail.html:150 templates/website/blog_list.html:336
 #: templates/website/product_detail.html:117
@@ -2786,7 +2868,8 @@ msgid ""
 "نموذج التعليقات هنا بسيط، ويمكن لاحقاً ربطه بنظام إشعارات أو موافقة يدوية من "
 "لوحة التحكم."
 msgstr ""
-"The comment form here is simple, and it can later be linked to a notification system or manual approval from the dashboard."
+"The comment form here is simple, and it can later be linked to a "
+"notification system or manual approval from the dashboard."
 
 #: templates/website/blog_list.html:18 templates/website/blog_list.html:20
 #: templates/website/blog_list.html:22 templates/website/blog_list.html:70
@@ -2850,7 +2933,8 @@ msgstr ""
 msgid ""
 "اكتشف مقالات وأنشطة مزون ألمنيوم عن الأنظمة، المنتجات، والأخبار التقنية."
 msgstr ""
-"Discover Mazoon Aluminum articles and activities about systems, products, and technical news."
+"Discover Mazoon Aluminum articles and activities about systems, products, "
+"and technical news."
 
 #: templates/website/blog_list.html:53 templates/website/blog_list.html:104
 #: templates/website/blog_list.html:159
@@ -2858,7 +2942,8 @@ msgid ""
 "Discover Mazoon Aluminum articles about systems, products, and technical "
 "news."
 msgstr ""
-"Discover Mazoon Aluminum articles about systems, products, and technical news."
+"Discover Mazoon Aluminum articles about systems, products, and technical "
+"news."
 
 #: templates/website/blog_list.html:186
 msgid "الوسم"
@@ -2904,7 +2989,8 @@ msgid ""
 "هذه صفحة قائمة التدوينات، ويمكن تطويرها لاحقاً لإضافة وسوم، مقالات مميزة، أو "
 "آخر الأخبار."
 msgstr ""
-"This is the blog list page, and it can be enhanced later to include tags, featured articles, or the latest news."
+"This is the blog list page, and it can be enhanced later to include tags, "
+"featured articles, or the latest news."
 
 #: templates/website/contact.html:66 templates/website/contact.html:81
 msgid "Contact us"
@@ -2912,14 +2998,17 @@ msgstr "Contact us"
 
 #: templates/website/contact.html:86
 msgid "يسعدنا تواصلك معنا بخصوص الأنظمة، التسعير، أو التعاون في المشاريع."
-msgstr "We are happy to hear from you regarding systems, pricing, or project collaboration."
+msgstr ""
+"We are happy to hear from you regarding systems, pricing, or project "
+"collaboration."
 
 #: templates/website/contact.html:88
 msgid ""
 "We are happy to hear from you regarding systems, pricing, or project "
 "collaboration."
 msgstr ""
-"We are happy to hear from you regarding systems, pricing, or project collaboration."
+"We are happy to hear from you regarding systems, pricing, or project "
+"collaboration."
 
 #: templates/website/contact.html:103
 msgid "الموضوع"
@@ -2943,7 +3032,9 @@ msgstr "Sultanate of Oman"
 
 #: templates/website/contact.html:131
 msgid "يمكنك تعديل هذه المعلومات لاحقاً لتطابق بيانات التواصل الحقيقية لشركتك."
-msgstr "You can edit this information later to match your company’s actual contact details."
+msgstr ""
+"You can edit this information later to match your company’s actual contact "
+"details."
 
 #: templates/website/home.html:7 templates/website/home.html:15
 #: templates/website/home.html:25 templates/website/sample.html:6
@@ -2957,19 +3048,24 @@ msgid ""
 "الألمنيوم والألمنيوم العازل للحرارة، مع تركيز على الجودة والابتكار والشراكات "
 "المحلية."
 msgstr ""
-"Mazoon Aluminum is an Omani brand specializing in developing aluminum and thermal-break window and door systems, focusing on quality, innovation, and local partnerships."
+"Mazoon Aluminum is an Omani brand specializing in developing aluminum and "
+"thermal-break window and door systems, focusing on quality, innovation, and "
+"local partnerships."
 
 #: templates/website/home.html:17
 msgid ""
 "أنظمة ألمنيوم مبتكرة للنوافذ والأبواب مع أداء معتمد وشراكات محلية موثوقة."
-msgstr "Innovative aluminum systems for windows and doors with certified performance and trusted local partnerships."
+msgstr ""
+"Innovative aluminum systems for windows and doors with certified performance "
+"and trusted local partnerships."
 
 #: templates/website/home.html:27
 msgid ""
 "مزون المنيوم – حلول متكاملة لأنظمة النوافذ والأبواب من الألمنيوم والألمنيوم "
 "العازل للحرارة."
 msgstr ""
-"Mazoon Aluminum – Integrated solutions for aluminum and thermal-break window and door systems."
+"Mazoon Aluminum – Integrated solutions for aluminum and thermal-break window "
+"and door systems."
 
 #: templates/website/home.html:41
 msgid "عشر سنوات من التميّز والريادة"
@@ -2985,7 +3081,10 @@ msgid ""
 "والأبواب من الألمنيوم والألمنيوم العازل للحرارة، بتركيز على الأداء المعتمد، "
 "والابتكار المستمر، والشراكات المحلية الموثوقة."
 msgstr ""
-"Mazoon Aluminum is a leading Omani brand specialized in developing and manufacturing aluminum and thermal-break window and door systems, focusing on certified performance, continuous innovation, and trusted local partnerships."
+"Mazoon Aluminum is a leading Omani brand specialized in developing and "
+"manufacturing aluminum and thermal-break window and door systems, focusing "
+"on certified performance, continuous innovation, and trusted local "
+"partnerships."
 
 #: templates/website/home.html:52
 msgid "استكشف الأنظمة"
@@ -3005,7 +3104,9 @@ msgstr "Mazoon Aluminum Excellence Pillars"
 
 #: templates/website/home.html:78
 msgid "أنظمة متطورة · أداء مُعتمد · ابتكار مستمر · شراكات ومشاريع"
-msgstr "Advanced Systems · Certified Performance · Continuous Innovation · Partnerships & Projects"
+msgstr ""
+"Advanced Systems · Certified Performance · Continuous Innovation · "
+"Partnerships & Projects"
 
 #: templates/website/home.html:86
 msgid "أنظمة مزون"
@@ -3016,7 +3117,8 @@ msgid ""
 "مزون 45 · مزون 46 · مزون 56 العازل حرارياً، أنظمة مصممة لتوازن بين الجمال "
 "والمتانة وسهولة التصنيع."
 msgstr ""
-"Mazoon 45 · Mazoon 46 · Mazoon 56 Thermal Break — systems designed to balance aesthetics, durability, and ease of fabrication."
+"Mazoon 45 · Mazoon 46 · Mazoon 56 Thermal Break — systems designed to "
+"balance aesthetics, durability, and ease of fabrication."
 
 #: templates/website/home.html:97
 msgid "أداء مُعتمد"
@@ -3027,7 +3129,8 @@ msgid ""
 "اختبارات معتمدة لأداء الهواء، الماء، الرياح، العزل الحراري، والعزل الصوتي "
 "لضمان أداء ثابت على المدى الطويل."
 msgstr ""
-"Certified tests for air, water, wind performance, thermal insulation, and acoustic insulation to ensure long-term consistent performance."
+"Certified tests for air, water, wind performance, thermal insulation, and "
+"acoustic insulation to ensure long-term consistent performance."
 
 #: templates/website/home.html:108
 msgid "البحث والتطوير"
@@ -3038,7 +3141,8 @@ msgid ""
 "من التصميم الرقمي إلى النماذج الأولية والاختبارات الميدانية، نطوّر الأنظمة "
 "وفق احتياجات السوق المحلية."
 msgstr ""
-"From digital design to prototypes and field testing, we develop systems according to local market needs."
+"From digital design to prototypes and field testing, we develop systems "
+"according to local market needs."
 
 #: templates/website/home.html:119
 msgid "المشاريع والشركاء"
@@ -3049,11 +3153,15 @@ msgid ""
 "حلول متكاملة للمعماريين، الورش، وأصحاب المنازل، مع دعم فني وشركاء تصنيع "
 "وزجاج واكسسوارات موثوقين."
 msgstr ""
-"Integrated solutions for architects, workshops, and homeowners, with technical support and reliable manufacturing, glass, and accessories partners."
+"Integrated solutions for architects, workshops, and homeowners, with "
+"technical support and reliable manufacturing, glass, and accessories "
+"partners."
 
 #: templates/website/home.html:134
 msgid "جيل متطور من الأنظمة المفصلية، مع خيارات للعزل الحراري وتعدد غرف العزل."
-msgstr "An advanced generation of hinged systems, with options for thermal insulation and multiple insulation chambers."
+msgstr ""
+"An advanced generation of hinged systems, with options for thermal "
+"insulation and multiple insulation chambers."
 
 #: templates/website/home.html:142
 msgid "مزون 45 – نظام مفصلي"
@@ -3064,7 +3172,8 @@ msgid ""
 "نظام مفصلي يجمع بين سهولة التصنيع وجودة الإنتاج مع تصميم أنيق يناسب الواجهات "
 "الحديثة."
 msgstr ""
-"A hinged system that combines ease of fabrication and production quality with an elegant design suitable for modern facades."
+"A hinged system that combines ease of fabrication and production quality "
+"with an elegant design suitable for modern facades."
 
 #: templates/website/home.html:147 templates/website/home.html:161
 #: templates/website/home.html:175
@@ -3080,7 +3189,8 @@ msgid ""
 "يضيف غرف عزل إضافية لتحسين الأداء الصوتي والهوائي مع الحفاظ على سهولة "
 "التصنيع والمتانة العالية."
 msgstr ""
-"Adds additional insulation chambers to improve acoustic and air performance while maintaining ease of fabrication and high durability."
+"Adds additional insulation chambers to improve acoustic and air performance "
+"while maintaining ease of fabrication and high durability."
 
 #: templates/website/home.html:170
 msgid "مزون 56 – نظام مفصلي عازل للحرارة"
@@ -3091,7 +3201,8 @@ msgid ""
 "نظام ثيرمال بريك يوفر عزلًا حراريًا متقدمًا وترشيدًا في استهلاك الطاقة مع الحفاظ "
 "على جماليات التصميم."
 msgstr ""
-"A thermal break system offering advanced thermal insulation and energy efficiency while maintaining design aesthetics."
+"A thermal break system offering advanced thermal insulation and energy "
+"efficiency while maintaining design aesthetics."
 
 #: templates/website/home.html:186
 msgid "منتجات مختارة"
@@ -3218,13 +3329,15 @@ msgid ""
 "يمكنك استخدام هذه المساحة لإضافة مواصفات فنية، ملفات تحميل (كتالوج PDF)، أو "
 "روابط لأنظمة مرتبطة."
 msgstr ""
-"You can use this space to add technical specifications, downloadable files (PDF catalog), or links to related systems."
+"You can use this space to add technical specifications, downloadable files "
+"(PDF catalog), or links to related systems."
 
 #: templates/website/product_detail.html:119
 msgid ""
 "يمكنك طلب هذا المنتج مباشرة أو إضافته أولاً إلى السلة ثم إتمام الطلب لاحقًا."
 msgstr ""
-"You can order this product directly or add it to the cart first and complete the order later."
+"You can order this product directly or add it to the cart first and complete "
+"the order later."
 
 #: templates/website/product_list.html:64
 msgid "Products"
@@ -3257,11 +3370,15 @@ msgstr "No products available at the moment."
 #: templates/website/sample.html:9
 msgid ""
 "مزون المنيوم علامة تجارية عمانية متخصصة في أنظمة الألمنيوم للنوافذ والأبواب."
-msgstr "Mazoon Aluminum is an Omani brand specialized in aluminum systems for windows and doors."
+msgstr ""
+"Mazoon Aluminum is an Omani brand specialized in aluminum systems for "
+"windows and doors."
 
 #: templates/website/sample.html:14
 msgid "أنظمة ألمنيوم مبتكرة للنوافذ والأبواب مع أداء معتمد وجودة عالية."
-msgstr "Innovative aluminum systems for windows and doors with certified performance and high quality."
+msgstr ""
+"Innovative aluminum systems for windows and doors with certified performance "
+"and high quality."
 
 #: templates/website/sample.html:23
 msgid "حلول متطورة لأنظمة الألمنيوم في عمان."
@@ -3278,3 +3395,15 @@ msgstr "Name and content are required."
 #: website/views.py:236
 msgid "تم إرسال رسالتك، سنعاود التواصل معك قريباً."
 msgstr "Your message has been sent; we will contact you shortly."
+
+#~ msgid "الملخص"
+#~ msgstr "Summary"
+
+#~ msgid "الحسابات"
+#~ msgstr "Accounts"
+
+#~ msgid "القيود"
+#~ msgstr "Entries"
+
+#~ msgid "الملخص العام"
+#~ msgstr "Overall summary"

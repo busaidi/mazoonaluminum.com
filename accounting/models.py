@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
@@ -153,6 +154,14 @@ class Invoice(models.Model):
         choices=Status.choices,
         default=Status.DRAFT,
     )
+    ledger_entry = models.OneToOneField(
+        "ledger.JournalEntry",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="invoice",
+        help_text="Linked ledger journal entry for this invoice, if posted.",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -170,12 +179,75 @@ class Invoice(models.Model):
 
     # ---------- Core logic ----------
 
+    @classmethod
+    def generate_number(cls, issue_date=None):
+        """
+        توليد رقم فاتورة بناءً على إعدادات SalesSettings:
+        - بادئة (prefix)
+        - السنة
+        - عدد الخانات (padding)
+        - خيار إعادة الترقيم سنوياً
+        مثال: INV-2025-0001
+        """
+        from django.utils import timezone
+        from .models import SalesSettings  # نفس الملف
+
+        if issue_date is None:
+            issue_date = timezone.now().date()
+
+        settings = SalesSettings.get_solo()
+        prefix = settings.invoice_prefix or "INV"
+        padding = settings.invoice_padding or 4
+
+        year_str = str(issue_date.year)
+        base_prefix = f"{prefix}-{year_str}-"
+
+        # نجيب آخر رقم لنفس السنة/البادئة
+        qs = cls.objects.filter(number__startswith=base_prefix)
+        if settings.invoice_reset_yearly:
+            qs = qs.filter(issued_at__year=issue_date.year)
+
+        last = qs.order_by("-number").first()
+
+        if last:
+            try:
+                last_seq = int(last.number.split("-")[-1])
+            except (ValueError, IndexError):
+                last_seq = 0
+        else:
+            last_seq = 0
+
+        new_seq = last_seq + 1
+        seq_str = str(new_seq).zfill(padding)
+
+        return f"{prefix}-{year_str}-{seq_str}"
+
     def save(self, *args, **kwargs):
         """
-        On first save, if no number provided, auto-generate one.
+        On first save:
+        - Generate invoice number from SalesSettings if not provided.
+        - Fill due_date using default_due_days if not set.
+        - Fill terms from default_terms if empty.
         """
-        if not self.number:
-            self.number = generate_invoice_number()
+        from .models import SalesSettings  # نفس الملف
+
+        is_new = self.pk is None
+
+        if is_new:
+            settings = SalesSettings.get_solo()
+
+            # رقم الفاتورة من الإعدادات
+            if not self.number:
+                self.number = Invoice.generate_number(issue_date=self.issued_at)
+
+            # تاريخ الاستحقاق الافتراضي
+            if not self.due_date and settings.default_due_days:
+                self.due_date = self.issued_at + timedelta(days=settings.default_due_days)
+
+            # الشروط الافتراضية
+            if not self.terms and settings.default_terms:
+                self.terms = settings.default_terms
+
         super().save(*args, **kwargs)
 
     @property
@@ -206,6 +278,28 @@ class Invoice(models.Model):
             self.status = Invoice.Status.SENT
 
         self.save(update_fields=["paid_amount", "status"])
+
+    # ---------- Posting helpers ----------
+
+    def post_to_ledger(self):
+        """
+        Helper wrapper to post this invoice to the ledger.
+        Keeps accounting logic inside accounting app.
+        """
+        from accounting.services import post_sales_invoice_to_ledger
+        return post_sales_invoice_to_ledger(self)
+
+    def unpost_from_ledger(self, *, reversal_date=None, user=None):
+        """
+        Helper wrapper to unpost this invoice from the ledger
+        by creating a reversing entry.
+        """
+        from accounting.services import unpost_sales_invoice_from_ledger
+        return unpost_sales_invoice_from_ledger(
+            self,
+            reversal_date=reversal_date,
+            user=user,
+        )
 
     # ---------- UI helpers (Mazoon badges) ----------
 
@@ -508,3 +602,96 @@ class OrderItem(models.Model):
     @property
     def subtotal(self) -> Decimal:
         return self.quantity * self.unit_price
+
+
+
+class SalesSettings(models.Model):
+    """
+    Global sales/invoice settings:
+    - Invoice numbering
+    - Default due days
+    - Default VAT behavior
+    - Default terms
+    هذا موديل "singleton" (صف واحد فقط) مثل LedgerSettings.
+    """
+
+    # ---------- Invoice numbering ----------
+    invoice_prefix = models.CharField(
+        max_length=20,
+        default="INV",
+        verbose_name=_("بادئة أرقام الفواتير"),
+        help_text=_("تظهر في بداية رقم الفاتورة مثل INV-2025-0001."),
+    )
+    invoice_padding = models.PositiveSmallIntegerField(
+        default=4,
+        verbose_name=_("عدد الخانات الرقمية"),
+        help_text=_("مثلاً 4 تعني 0001، 0002، ..."),
+    )
+    invoice_reset_yearly = models.BooleanField(
+        default=True,
+        verbose_name=_("إعادة ترقيم الفواتير سنويًا؟"),
+        help_text=_("إذا كان مفعلًا، يبدأ الترقيم من 1 في كل سنة جديدة."),
+    )
+
+    # ---------- Default invoice behavior ----------
+    default_due_days = models.PositiveSmallIntegerField(
+        default=30,
+        verbose_name=_("عدد أيام الاستحقاق الافتراضي"),
+        help_text=_("يُستخدم لحساب تاريخ الاستحقاق من تاريخ الفاتورة."),
+    )
+    auto_confirm_invoice = models.BooleanField(
+        default=False,
+        verbose_name=_("اعتماد الفاتورة تلقائيًا بعد الحفظ؟"),
+        help_text=_("إذا كان مفعلًا، تنتقل الفاتورة من Draft إلى Sent تلقائيًا."),
+    )
+    auto_post_to_ledger = models.BooleanField(
+        default=False,
+        verbose_name=_("ترحيل تلقائي إلى دفتر الأستاذ بعد الاعتماد؟"),
+        help_text=_("إذا كان مفعلًا، يتم إنشاء قيد تلقائي في دفتر الأستاذ عند اعتماد الفاتورة."),
+    )
+
+    # ---------- VAT behavior ----------
+    default_vat_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("5.00"),
+        verbose_name=_("نسبة ضريبة القيمة المضافة الافتراضية (%)"),
+        help_text=_("تُستخدم للفواتير التي تحتوي على ضريبة (يمكن تجاهلها إذا لم تُفعّل VAT)."),
+    )
+    prices_include_vat = models.BooleanField(
+        default=False,
+        verbose_name=_("الأسعار شاملة للضريبة؟"),
+        help_text=_("إذا كان مفعلًا، تعتبر أسعار البنود شاملة للضريبة."),
+    )
+
+    # ---------- Text templates ----------
+    default_terms = models.TextField(
+        blank=True,
+        verbose_name=_("الشروط والأحكام الافتراضية"),
+        help_text=_("يتم نسخها تلقائيًا في حقل الشروط داخل الفاتورة الجديدة."),
+    )
+    footer_notes = models.TextField(
+        blank=True,
+        verbose_name=_("ملاحظات أسفل الفاتورة"),
+        help_text=_("نص يظهر في أسفل الفاتورة المطبوعة (اختياري)."),
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("تاريخ آخر تعديل"),
+    )
+
+    class Meta:
+        verbose_name = _("إعدادات المبيعات")
+        verbose_name_plural = _("إعدادات المبيعات")
+
+    def __str__(self) -> str:
+        return _("إعدادات المبيعات")
+
+    @classmethod
+    def get_solo(cls) -> "SalesSettings":
+        """
+        يعيد صف الإعدادات الوحيد، وينشئ واحد إذا غير موجود.
+        """
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

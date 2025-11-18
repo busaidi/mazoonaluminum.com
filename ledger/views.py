@@ -1194,7 +1194,6 @@ def ledger_settings_view(request):
         },
     )
 
-
 @ledger_staff_required
 def journal_list_view(request):
     """

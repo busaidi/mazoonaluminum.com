@@ -33,6 +33,12 @@
           {% trans "الدفعات" %}
         </a>
       </li>
+    <li class="nav-item">
+        <a class="nav-link px-3 py-1 {% if accounting_section == 'sales_settings' %}active{% endif %}"
+           href="{% url 'accounting:sales_settings' %}">
+          {% trans "الضبط" %}
+        </a>
+      </li>
     </ul>
   </div>
 </div>

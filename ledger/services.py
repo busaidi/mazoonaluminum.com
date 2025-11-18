@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from openpyxl import load_workbook
 
-from ledger.models import Account, JournalLine, JournalEntry, Journal, FiscalYear
+from ledger.models import Account, JournalLine, JournalEntry, Journal, FiscalYear, LedgerSettings
 
 
 def build_lines_from_formset(line_formset):

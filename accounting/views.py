@@ -3,7 +3,8 @@ import json
 from decimal import Decimal
 
 from django.contrib import messages
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import user_passes_test, login_required, permission_required
 from django.db.models import Sum, Q, ProtectedError, F
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, redirect
@@ -31,10 +32,9 @@ from .forms import (
     ApplyPaymentForm,
     OrderItemFormSet,
     OrderForm,
-    PaymentForm,
+    PaymentForm, SalesSettingsForm,
 )
-from .models import Invoice, Payment, Customer, Order, InvoiceItem
-
+from .models import Invoice, Payment, Customer, Order, InvoiceItem, SalesSettings
 
 # ============================================================
 # Default invoice terms template
@@ -169,9 +169,12 @@ class InvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
         if customer_id:
             initial["customer"] = customer_id
 
-        # Pre-fill default terms template for new invoices
-        if "terms" not in initial or not initial.get("terms"):
-            initial["terms"] = DEFAULT_INVOICE_TERMS
+        # Pre-fill default terms from SalesSettings فقط (إن وُجدت)
+        if not initial.get("terms"):
+            settings = SalesSettings.get_solo()
+            if settings.default_terms:
+                initial["terms"] = settings.default_terms
+            # لو ما فيه default_terms نخليها فاضية بدون أي قيمة افتراضية
 
         return initial
 
@@ -200,7 +203,7 @@ class InvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
         # 1) Save invoice without total
         invoice = form.save(commit=False)
         invoice.total_amount = Decimal("0")
-        invoice.save()  # number is generated in model's save()
+        invoice.save()  # number, due_date, terms معالجة في model.save()
         self.object = invoice
 
         # 2) Save items
@@ -978,3 +981,92 @@ class PaymentUpdateView(AccountingSectionMixin, UpdateView):
 
     def get_success_url(self):
         return reverse("accounting:payment_list")
+
+
+@login_required
+@permission_required("accounting.change_invoice", raise_exception=True)
+def invoice_confirm_view(request, pk):
+    invoice = get_object_or_404(Invoice, pk=pk)
+
+    if invoice.status != Invoice.Status.DRAFT:
+        messages.error(request, "لا يمكن اعتماد إلا الفواتير في حالة مسودة.")
+        # ⬅️ استخدم number بدل pk
+        return redirect("accounting:invoice_detail", number=invoice.number)
+
+    # غيّر الحالة إلى SENT
+    invoice.status = Invoice.Status.SENT
+    invoice.save(update_fields=["status"])
+
+    try:
+        entry = invoice.post_to_ledger()
+    except Exception as e:
+        # لو فشل الترحيل، نرجّعها مسودة
+        invoice.status = Invoice.Status.DRAFT
+        invoice.save(update_fields=["status"])
+        messages.error(request, f"تعذّر ترحيل الفاتورة إلى دفتر الأستاذ: {e}")
+        # ⬅️ هنا أيضًا نستخدم number
+        return redirect("accounting:invoice_detail", number=invoice.number)
+
+    messages.success(
+        request,
+        f"تم اعتماد الفاتورة وترحيلها بنجاح (قيد: {entry.number})."
+    )
+    # ⬅️ وهنا كذلك
+    return redirect("accounting:invoice_detail", number=invoice.number)
+
+
+@login_required
+@permission_required("accounting.change_invoice", raise_exception=True)
+def invoice_unpost_view(request, pk):
+    """
+    إلغاء ترحيل الفاتورة:
+    - إنشاء قيد عكسي في دفتر الأستاذ
+    - فك الربط مع الفاتورة
+    - إعادة حالة الفاتورة إلى DRAFT
+    """
+    invoice = get_object_or_404(Invoice, pk=pk)
+
+    if invoice.ledger_entry is None:
+        messages.error(request, "لا يوجد قيد مرحّل مرتبط بهذه الفاتورة.")
+        return redirect("accounting:invoice_detail", number=invoice.number)
+
+    if invoice.paid_amount and invoice.paid_amount > 0:
+        messages.error(request, "لا يمكن إلغاء الترحيل لفاتورة عليها دفعات.")
+        return redirect("accounting:invoice_detail", number=invoice.number)
+
+    try:
+        reversal_entry = invoice.unpost_from_ledger(user=request.user)
+    except Exception as e:
+        messages.error(request, f"تعذّر إلغاء الترحيل: {e}")
+        return redirect("accounting:invoice_detail", number=invoice.number)
+
+    messages.success(
+        request,
+        f"تم إنشاء قيد عكسي ({reversal_entry.number}) وإعادة الفاتورة إلى حالة مسودة."
+    )
+    return redirect("accounting:invoice_detail", number=invoice.number)
+
+
+
+
+@staff_member_required
+def sales_settings_view(request):
+    """
+    Simple view to edit global sales/invoice settings.
+    """
+    settings_obj = SalesSettings.get_solo()
+
+    if request.method == "POST":
+        form = SalesSettingsForm(request.POST, instance=settings_obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("تم تحديث إعدادات المبيعات بنجاح."))
+            return redirect("accounting:sales_settings")
+    else:
+        form = SalesSettingsForm(instance=settings_obj)
+
+    context = {
+        "form": form,
+        "accounting_section": "settings",  # لو حاب تميّز التبويب في الـ nav
+    }
+    return render(request, "accounting/settings/sales_settings.html", context)

@@ -6,7 +6,7 @@ from django.forms import inlineformset_factory
 from django.utils.translation import gettext_lazy as _
 
 from website.models import Product
-from .models import Invoice, Payment, Customer, InvoiceItem, Order, OrderItem
+from .models import Invoice, Payment, Customer, InvoiceItem, Order, OrderItem, SalesSettings
 
 
 # ============================================================
@@ -365,3 +365,58 @@ class ApplyPaymentForm(forms.Form):
         if amount > self.max_amount:
             raise forms.ValidationError(_("المبلغ أكبر من المبلغ المتاح في الدفعة."))
         return amount
+
+
+
+class SalesSettingsForm(forms.ModelForm):
+    class Meta:
+        model = SalesSettings
+        fields = [
+            # Invoice numbering
+            "invoice_prefix",
+            "invoice_padding",
+            "invoice_reset_yearly",
+
+            # Invoice behavior
+            "default_due_days",
+            "auto_confirm_invoice",
+            "auto_post_to_ledger",
+
+            # VAT behavior
+            "default_vat_rate",
+            "prices_include_vat",
+
+            # Text templates
+            "default_terms",
+            "footer_notes",
+        ]
+        widgets = {
+            "invoice_prefix": forms.TextInput(attrs={"class": "form-control"}),
+            "invoice_padding": forms.NumberInput(attrs={"class": "form-control", "min": 1, "max": 10}),
+            "invoice_reset_yearly": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+
+            "default_due_days": forms.NumberInput(attrs={"class": "form-control", "min": 0, "max": 365}),
+            "auto_confirm_invoice": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "auto_post_to_ledger": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+
+            "default_vat_rate": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+            "prices_include_vat": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+
+            "default_terms": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
+            "footer_notes": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+        }
+        labels = {
+            "invoice_prefix": _("بادئة أرقام الفواتير"),
+            "invoice_padding": _("عدد الخانات الرقمية"),
+            "invoice_reset_yearly": _("إعادة الترقيم سنويًا"),
+
+            "default_due_days": _("أيام الاستحقاق الافتراضية"),
+            "auto_confirm_invoice": _("اعتماد الفاتورة تلقائيًا بعد الحفظ"),
+            "auto_post_to_ledger": _("ترحيل تلقائي إلى دفتر الأستاذ بعد الاعتماد"),
+
+            "default_vat_rate": _("نسبة ضريبة القيمة المضافة الافتراضية (%)"),
+            "prices_include_vat": _("الأسعار شاملة للضريبة"),
+
+            "default_terms": _("الشروط والأحكام الافتراضية"),
+            "footer_notes": _("ملاحظات أسفل الفاتورة"),
+        }

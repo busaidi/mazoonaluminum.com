@@ -33,6 +33,25 @@ urlpatterns = [
         views.InvoicePrintView.as_view(),
         name="invoice_print",
     ),
+    path(
+    "invoices/<int:pk>/confirm/",
+        views.invoice_confirm_view,
+        name="invoice_confirm",
+    ),
+    path(
+    "invoices/<int:pk>/unpost/",
+        views.invoice_unpost_view,
+        name="invoice_unpost",
+    ),
+
+
+    #setting
+    path(
+        "settings/sales/",
+        views.sales_settings_view,
+        name="sales_settings",
+    ),
+
 
     # Customers
     path("customers/", views.CustomerListView.as_view(), name="customer_list"),

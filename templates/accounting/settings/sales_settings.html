@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="py-4">
+
+  {# شريط تنقل المحاسبة #}
+  {% include "accounting/_nav.html" %}
+
+  <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="h5 mb-1">{% trans "إعدادات المبيعات والفواتير" %}</h1>
+      <p class="text-muted small mb-0">
+        {% trans "قم بضبط سلوك الفواتير، أرقامها، وضريبة القيمة المضافة، والشروط الافتراضية." %}
+      </p>
+    </div>
+  </div>
+
+  <form method="post" class="card card-body shadow-sm">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    {# ------------- قسم ترقيم الفواتير ------------- #}
+    <div class="mb-4">
+      <h5 class="h6 mb-2">{% trans "ترقيم الفواتير" %}</h5>
+      <p class="text-muted small mb-3">
+        {% trans "تحكم في شكل أرقام الفواتير، البادئة، وعدد الخانات، وإعادة الترقيم السنوية." %}
+      </p>
+
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label" for="{{ form.invoice_prefix.id_for_label }}">
+            {{ form.invoice_prefix.label }}
+          </label>
+          {{ form.invoice_prefix }}
+          {{ form.invoice_prefix.errors }}
+          {% if form.invoice_prefix.help_text %}
+            <div class="form-text">{{ form.invoice_prefix.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label" for="{{ form.invoice_padding.id_for_label }}">
+            {{ form.invoice_padding.label }}
+          </label>
+          {{ form.invoice_padding }}
+          {{ form.invoice_padding.errors }}
+          {% if form.invoice_padding.help_text %}
+            <div class="form-text">{{ form.invoice_padding.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-4">
+          <div class="form-check mt-4 pt-1">
+            {{ form.invoice_reset_yearly }}
+            <label class="form-check-label" for="{{ form.invoice_reset_yearly.id_for_label }}">
+              {{ form.invoice_reset_yearly.label }}
+            </label>
+          </div>
+          {{ form.invoice_reset_yearly.errors }}
+          {% if form.invoice_reset_yearly.help_text %}
+            <div class="form-text">{{ form.invoice_reset_yearly.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <hr class="my-3">
+
+    {# ------------- قسم سلوك الفاتورة ------------- #}
+    <div class="mb-4">
+      <h5 class="h6 mb-2">{% trans "سلوك الفاتورة" %}</h5>
+      <p class="text-muted small mb-3">
+        {% trans "الاستحقاق الافتراضي، واعتماد الفاتورة تلقائيًا، والترحيل التلقائي إلى دفتر الأستاذ." %}
+      </p>
+
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label" for="{{ form.default_due_days.id_for_label }}">
+            {{ form.default_due_days.label }}
+          </label>
+          {{ form.default_due_days }}
+          {{ form.default_due_days.errors }}
+          {% if form.default_due_days.help_text %}
+            <div class="form-text">{{ form.default_due_days.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-4">
+          <div class="form-check mt-4 pt-1">
+            {{ form.auto_confirm_invoice }}
+            <label class="form-check-label" for="{{ form.auto_confirm_invoice.id_for_label }}">
+              {{ form.auto_confirm_invoice.label }}
+            </label>
+          </div>
+          {{ form.auto_confirm_invoice.errors }}
+          {% if form.auto_confirm_invoice.help_text %}
+            <div class="form-text">{{ form.auto_confirm_invoice.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-4">
+          <div class="form-check mt-4 pt-1">
+            {{ form.auto_post_to_ledger }}
+            <label class="form-check-label" for="{{ form.auto_post_to_ledger.id_for_label }}">
+              {{ form.auto_post_to_ledger.label }}
+            </label>
+          </div>
+          {{ form.auto_post_to_ledger.errors }}
+          {% if form.auto_post_to_ledger.help_text %}
+            <div class="form-text">{{ form.auto_post_to_ledger.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <hr class="my-3">
+
+    {# ------------- قسم ضريبة القيمة المضافة ------------- #}
+    <div class="mb-4">
+      <h5 class="h6 mb-2">{% trans "ضريبة القيمة المضافة (VAT)" %}</h5>
+      <p class="text-muted small mb-3">
+        {% trans "يمكنك ضبط النسبة الافتراضية، وهل الأسعار شاملة للضريبة أم لا." %}
+      </p>
+
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label" for="{{ form.default_vat_rate.id_for_label }}">
+            {{ form.default_vat_rate.label }}
+          </label>
+          {{ form.default_vat_rate }}
+          {{ form.default_vat_rate.errors }}
+          {% if form.default_vat_rate.help_text %}
+            <div class="form-text">{{ form.default_vat_rate.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-4">
+          <div class="form-check mt-4 pt-1">
+            {{ form.prices_include_vat }}
+            <label class="form-check-label" for="{{ form.prices_include_vat.id_for_label }}">
+              {{ form.prices_include_vat.label }}
+            </label>
+          </div>
+          {{ form.prices_include_vat.errors }}
+          {% if form.prices_include_vat.help_text %}
+            <div class="form-text">{{ form.prices_include_vat.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <hr class="my-3">
+
+    {# ------------- قسم النصوص الافتراضية ------------- #}
+    <div class="mb-3">
+      <h5 class="h6 mb-2">{% trans "النصوص الافتراضية" %}</h5>
+      <p class="text-muted small mb-3">
+        {% trans "تُنسخ هذه النصوص تلقائيًا إلى الفاتورة الجديدة، ويمكنك تعديلها يدويًا في كل فاتورة." %}
+      </p>
+
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.default_terms.id_for_label }}">
+          {{ form.default_terms.label }}
+        </label>
+        {{ form.default_terms }}
+        {{ form.default_terms.errors }}
+        {% if form.default_terms.help_text %}
+          <div class="form-text">{{ form.default_terms.help_text }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-0">
+        <label class="form-label" for="{{ form.footer_notes.id_for_label }}">
+          {{ form.footer_notes.label }}
+        </label>
+        {{ form.footer_notes }}
+        {{ form.footer_notes.errors }}
+        {% if form.footer_notes.help_text %}
+          <div class="form-text">{{ form.footer_notes.help_text }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+      <button type="submit" class="btn btn-primary">
+        {% trans "حفظ الإعدادات" %}
+      </button>
+      <a href="{% url 'accounting:dashboard' %}" class="btn btn-outline-secondary">
+        {% trans "رجوع إلى لوحة المحاسبة" %}
+      </a>
+    </div>
+  </form>
+
+</div>
+{% endblock %}

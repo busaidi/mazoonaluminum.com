@@ -357,6 +357,7 @@ class LedgerSettingsForm(forms.ModelForm):
     class Meta:
         model = LedgerSettings
         fields = [
+            # دفاتر اليومية
             "default_manual_journal",
             "sales_journal",
             "purchase_journal",
@@ -364,25 +365,38 @@ class LedgerSettingsForm(forms.ModelForm):
             "bank_journal",
             "opening_balance_journal",
             "closing_journal",
+
+            # الحسابات الافتراضية للمبيعات
+            "sales_receivable_account",
+            "sales_revenue_0_account",
+            "sales_vat_output_account",
+            "sales_advance_account",
         ]
+
+        # ويدجت موحّد للجميع
         widgets = {
-            "default_manual_journal": forms.Select(attrs={"class": "form-select"}),
-            "sales_journal": forms.Select(attrs={"class": "form-select"}),
-            "purchase_journal": forms.Select(attrs={"class": "form-select"}),
-            "cash_journal": forms.Select(attrs={"class": "form-select"}),
-            "bank_journal": forms.Select(attrs={"class": "form-select"}),
-            "opening_balance_journal": forms.Select(attrs={"class": "form-select"}),
-            "closing_journal": forms.Select(attrs={"class": "form-select"}),
+            field: forms.Select(attrs={"class": "form-select"})
+            for field in fields
         }
+
+        # التسميات العربية
         labels = {
+            # دفاتر اليومية
             "default_manual_journal": _("دفتر القيود اليدوية"),
             "sales_journal": _("دفتر المبيعات"),
             "purchase_journal": _("دفتر المشتريات"),
             "cash_journal": _("دفتر الكاش"),
             "bank_journal": _("دفتر البنك"),
             "opening_balance_journal": _("دفتر الرصيد الافتتاحي"),
-            "closing_journal": _("دفتر إقفال السنة"),
-            }
+            "closing_journal": _("دفتر إقفال السنة المالية"),
+
+            # الحسابات (من LedgerSettings الجديدة)
+            "sales_receivable_account": _("حساب العملاء (ذمم مدينة)"),
+            "sales_revenue_0_account": _("حساب المبيعات 0٪ / صادرات"),
+            "sales_vat_output_account": _("حساب ضريبة القيمة المضافة (مخرجات)"),
+            "sales_advance_account": _("حساب الدفعات المقدّمة من العملاء"),
+        }
+
 
 
 
