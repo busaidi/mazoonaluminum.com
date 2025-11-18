@@ -39,4 +39,21 @@ urlpatterns = [
     path("settings/chart-of-accounts/export/",views.chart_of_accounts_export_view,name="chart_of_accounts_export",),
     path("settings/journals/",views.ledger_settings_view,name="ledger_settings",),
 
+
+# دفاتر اليومية
+    path(
+        "journals/",
+        views.journal_list_view,
+        name="journal_list",
+    ),
+    path(
+        "journals/new/",
+        views.journal_create_view,
+        name="journal_create",
+    ),
+    path(
+        "journals/<int:pk>/edit/",
+        views.journal_update_view,
+        name="journal_edit",
+    ),
 ]

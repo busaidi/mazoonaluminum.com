@@ -377,3 +377,40 @@ class LedgerSettingsForm(forms.ModelForm):
             }
 
 
+
+class JournalForm(forms.ModelForm):
+    class Meta:
+        model = Journal
+        fields = ["code", "name", "type", "is_default", "is_active"]
+        widgets = {
+            "code": forms.TextInput(attrs={"class": "form-control"}),
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "type": forms.Select(attrs={"class": "form-select"}),
+            "is_default": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+        labels = {
+            "code": _("كود الدفتر"),
+            "name": _("اسم الدفتر"),
+            "type": _("نوع الدفتر"),
+            "is_default": _("دفتر افتراضي"),
+            "is_active": _("نشط"),
+        }
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        # لو هذا الدفتر الافتراضي، عطّل الافتراضية عن غيره
+        if self.cleaned_data.get("is_default"):
+            Journal.objects.exclude(pk=instance.pk).update(is_default=False)
+
+            # لو ما عندنا LedgerSettings، ننشئه تلقائيًا
+            settings_obj = LedgerSettings.get_solo()
+            # إذا ما معيّن دفتر القيود اليدوية، نخليه هذا
+            if settings_obj.default_manual_journal is None:
+                settings_obj.default_manual_journal = instance
+                settings_obj.save()
+
+        if commit:
+            instance.save()
+        return instance

@@ -120,7 +120,12 @@
     ▸ {% trans "إعدادات دفاتر اليومية" %}
   </a>
 </li>
-
+<li class="mb-2">
+  <a href="{% url 'ledger:journal_list' %}"
+     class="link-dark text-decoration-none">
+    ▸ {% trans "إدارة دفاتر اليومية" %}
+  </a>
+</li>
           <li class="mb-2">
             <a href="{% url 'ledger:fiscal_year_list' %}" class="link-dark text-decoration-none">
               ▸ {% trans "إدارة السنوات المالية" %}

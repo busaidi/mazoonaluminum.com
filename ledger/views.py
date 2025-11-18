@@ -31,14 +31,14 @@ from .forms import (
     TrialBalanceFilterForm,
     AccountLedgerFilterForm,
     FiscalYearForm,
-    JournalEntryFilterForm, ChartOfAccountsImportForm, LedgerSettingsForm
+    JournalEntryFilterForm, ChartOfAccountsImportForm, LedgerSettingsForm, JournalForm
 )
 from .models import (
     Account,
     JournalEntry,
     JournalLine,
     FiscalYear,
-    get_default_journal_for_manual_entry, LedgerSettings,
+    get_default_journal_for_manual_entry, LedgerSettings, Journal,
 )
 from .services import build_lines_from_formset, ensure_default_chart_of_accounts, import_chart_of_accounts_from_excel
 
@@ -1201,5 +1201,69 @@ def ledger_settings_view(request):
         "ledger/settings/ledger_settings_form.html",
         {
             "form": form,
+        },
+    )
+
+
+@ledger_staff_required
+def journal_list_view(request):
+    """
+    عرض قائمة دفاتر اليومية.
+    """
+    journals = Journal.objects.all().order_by("code")
+    return render(
+        request,
+        "ledger/settings/journal/list.html",
+        {"journals": journals},
+    )
+
+
+@ledger_staff_required
+def journal_create_view(request):
+    """
+    إنشاء دفتر جديد.
+    """
+    if request.method == "POST":
+        form = JournalForm(request.POST)
+        if form.is_valid():
+            journal = form.save()
+            messages.success(request, _("تم إنشاء دفتر اليومية بنجاح."))
+            return redirect("ledger:journal_list")
+    else:
+        form = JournalForm()
+
+    return render(
+        request,
+        "ledger/settings/journal/form.html",
+        {
+            "form": form,
+            "title": _("دفتر جديد"),
+        },
+    )
+
+
+@ledger_staff_required
+def journal_update_view(request, pk):
+    """
+    تعديل دفتر قائم.
+    """
+    journal = get_object_or_404(Journal, pk=pk)
+
+    if request.method == "POST":
+        form = JournalForm(request.POST, instance=journal)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("تم تحديث دفتر اليومية بنجاح."))
+            return redirect("ledger:journal_list")
+    else:
+        form = JournalForm(instance=journal)
+
+    return render(
+        request,
+        "ledger/settings/journal/form.html",
+        {
+            "form": form,
+            "title": _("تعديل دفتر"),
+            "journal": journal,
         },
     )
