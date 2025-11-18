@@ -317,7 +317,7 @@ main .container > *:last-child {
 }
 
 .mazoon-nav .nav-link {
-  border-radius: 999px;                 /* شكل pill */
+  border-radius: 5px;                 /* شكل pill */
   color: var(--mazoon-text-muted);
   font-weight: 500;
   transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;

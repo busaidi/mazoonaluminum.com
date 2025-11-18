@@ -1,4 +1,5 @@
 # ledger/services.py
+from datetime import timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -356,21 +357,32 @@ def import_chart_of_accounts_from_excel(
                 )
 
             # دفتر افتراضي للقيود اليدوية
+            # اختر دفتر افتراضي (General) لقيد الرصيد الافتتاحي
             journal = Journal.objects.get_default_for_manual_entry()
 
-            # امسح أي قيد افتتاحي سابق بنفس المرجع لهذه السنة
+            # المرجع يبقى مرتبط بالسنة الجديدة (سنة الهدف)
             ref = f"OPENING-{fiscal_year.year}"
+
+            # حاول نربط القيد بالسنة السابقة إن وجدت
+            prev_fy = FiscalYear.objects.filter(year=fiscal_year.year - 1).order_by("-id").first()
+            if prev_fy:
+                entry_fiscal_year = prev_fy
+                opening_date = prev_fy.end_date
+            else:
+                # لو ما فيه سنة سابقة، نخليها قبل بداية السنة بيوم وبدون سنة مالية
+                entry_fiscal_year = None
+                opening_date = fiscal_year.start_date - timedelta(days=1)
+
+            # امسح أي قيد افتتاحي سابق بنفس المرجع (بغض النظر عن السنة المالية)
             JournalEntry.objects.filter(
-                fiscal_year=fiscal_year,
                 journal=journal,
                 reference=ref,
             ).delete()
 
-            # أنشئ قيد جديد
             entry = JournalEntry.objects.create(
-                fiscal_year=fiscal_year,
+                fiscal_year=entry_fiscal_year,
                 journal=journal,
-                date=fiscal_year.start_date,
+                date=opening_date,
                 reference=ref,
                 description=_("رصيد افتتاحي مستورد من إكسل"),
                 posted=True,
