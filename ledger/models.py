@@ -405,3 +405,108 @@ def generate_journal_entry_number(journal, fiscal_year, date):
         fiscal_year=fiscal_year,
         date=date,
     )
+
+class LedgerSettings(models.Model):
+    """
+    إعدادات دفتر الأستاذ:
+    ربط دفاتر اليومية بوظائف النظام (مبيعات، مشتريات، بنك، كاش، قيود يدوية، رصيد افتتاحي).
+    هذه الإعدادات يفترض أن تكون صف واحد فقط (singleton).
+    """
+
+    default_manual_journal = models.ForeignKey(
+        Journal,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_default_manual_journal",
+        limit_choices_to={"is_active": True},
+        verbose_name=_("دفتر القيود اليدوية"),
+        help_text=_("يستخدم لأي قيد يُنشأ يدويًا من داخل دفتر الأستاذ."),
+    )
+
+    sales_journal = models.ForeignKey(
+        Journal,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_sales_journal",
+        limit_choices_to={"is_active": True},
+        verbose_name=_("دفتر المبيعات"),
+        help_text=_("يستخدم لقيود فواتير المبيعات."),
+    )
+
+    purchase_journal = models.ForeignKey(
+        Journal,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_purchase_journal",
+        limit_choices_to={"is_active": True},
+        verbose_name=_("دفتر المشتريات"),
+        help_text=_("يستخدم لقيود فواتير الموردين."),
+    )
+
+    cash_journal = models.ForeignKey(
+        Journal,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_cash_journal",
+        limit_choices_to={"is_active": True},
+        verbose_name=_("دفتر الكاش"),
+        help_text=_("يستخدم لحركات الصندوق النقدي."),
+    )
+
+    bank_journal = models.ForeignKey(
+        Journal,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_bank_journal",
+        limit_choices_to={"is_active": True},
+        verbose_name=_("دفتر البنك"),
+        help_text=_("يستخدم لحركات حسابات البنك."),
+    )
+
+    opening_balance_journal = models.ForeignKey(
+        Journal,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_opening_balance_journal",
+        limit_choices_to={"is_active": True},
+        verbose_name=_("دفتر الرصيد الافتتاحي"),
+        help_text=_("يستخدم لقيود الأرصدة الافتتاحية عند إنشاء أو استيراد رصيد افتتاحي."),
+    )
+
+    closing_journal = models.ForeignKey(
+        Journal,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_closing_journal",
+        limit_choices_to={"is_active": True},
+        verbose_name=_("دفتر إقفال السنة"),
+        help_text=_("يستخدم لقيود إقفال السنة المالية."),
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("تاريخ آخر تعديل"),
+    )
+
+    def __str__(self) -> str:
+        return _("إعدادات دفتر الأستاذ")
+
+
+    class Meta:
+        verbose_name = _("إعدادات دفتر الأستاذ")
+        verbose_name_plural = _("إعدادات دفتر الأستاذ")
+
+    @classmethod
+    def get_solo(cls) -> "LedgerSettings":
+        """
+        يعيد صف الإعدادات الوحيد، وينشئ واحد إذا غير موجود.
+        """
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

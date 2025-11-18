@@ -31,14 +31,14 @@ from .forms import (
     TrialBalanceFilterForm,
     AccountLedgerFilterForm,
     FiscalYearForm,
-    JournalEntryFilterForm, ChartOfAccountsImportForm,
+    JournalEntryFilterForm, ChartOfAccountsImportForm, LedgerSettingsForm
 )
 from .models import (
     Account,
     JournalEntry,
     JournalLine,
     FiscalYear,
-    get_default_journal_for_manual_entry,
+    get_default_journal_for_manual_entry, LedgerSettings,
 )
 from .services import build_lines_from_formset, ensure_default_chart_of_accounts, import_chart_of_accounts_from_excel
 
@@ -1176,3 +1176,30 @@ class FiscalYearCloseView(StaffRequiredMixin, View):
         return redirect("ledger:fiscal_year_list")
 
 
+
+
+
+@ledger_staff_required
+def ledger_settings_view(request):
+    """
+    شاشة إعدادات دفتر الأستاذ:
+    ربط دفاتر اليومية بوظائف النظام (مبيعات، مشتريات، بنك، كاش، رصيد افتتاحي، إقفال).
+    """
+    settings_obj = LedgerSettings.get_solo()
+
+    if request.method == "POST":
+        form = LedgerSettingsForm(request.POST, instance=settings_obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("تم حفظ إعدادات دفاتر اليومية بنجاح."))
+            return redirect("ledger:ledger_settings")
+    else:
+        form = LedgerSettingsForm(instance=settings_obj)
+
+    return render(
+        request,
+        "ledger/settings/ledger_settings_form.html",
+        {
+            "form": form,
+        },
+    )

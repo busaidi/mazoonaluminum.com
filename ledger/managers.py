@@ -89,17 +89,28 @@ class JournalManager(models.Manager.from_queryset(JournalQuerySet)):
 
     def get_default_for_manual_entry(self):
         """
-        دفتر افتراضي للقيود اليدوية (غالبًا General).
+        دفتر افتراضي للقيود اليدوية:
+        - أولاً: من LedgerSettings.default_manual_journal (إن وجد وكان نشطًا)
+        - ثانيًا: fallback على أي دفتر من النوع GENERAL.
         """
         from .models import Journal
-        return self._get_default_by_types([Journal.Type.GENERAL])
+        return self._get_default_from_settings(
+            "default_manual_journal",
+            [Journal.Type.GENERAL],
+        )
 
     def get_default_for_sales_invoice(self):
         """
-        دفتر افتراضي لفواتير المبيعات.
+        دفتر افتراضي لفواتير المبيعات:
+        - أولاً: من LedgerSettings.sales_journal (إن وجد وكان نشطًا)
+        - ثانيًا: fallback على أي دفتر من النوع SALES.
         """
         from .models import Journal
-        return self._get_default_by_types([Journal.Type.SALES])
+        return self._get_default_from_settings(
+            "sales_journal",
+            [Journal.Type.SALES],
+        )
+
 
     def get_default_for_customer_payment(self):
         """
@@ -107,6 +118,26 @@ class JournalManager(models.Manager.from_queryset(JournalQuerySet)):
         """
         from .models import Journal
         return self._get_default_by_types([Journal.Type.CASH, Journal.Type.BANK])
+
+    def _get_default_from_settings(self, field_name, fallback_types):
+        """
+        يحاول جلب الدفتر من إعدادات LedgerSettings أولاً،
+        وإذا لم يوجد أو كان غير نشط، يرجع للسلوك القديم (fallback_types).
+        """
+        from .models import LedgerSettings, Journal  # import محلي لتجنب الدوران
+
+        try:
+            settings_obj = LedgerSettings.get_solo()
+        except Exception:
+            settings_obj = None
+
+        if settings_obj is not None:
+            journal = getattr(settings_obj, field_name, None)
+            if journal is not None and journal.is_active:
+                return journal
+
+        # fallback للسلوك السابق (حسب النوع)
+        return self._get_default_by_types(fallback_types)
 
 
 # ------------------------------------------------------------------------------

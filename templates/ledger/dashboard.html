@@ -114,6 +114,13 @@
       <div class="card-body">
         <h2 class="h6 mb-3">{% trans "إجراءات سريعة" %}</h2>
         <ul class="list-unstyled mb-0 small">
+            <li class="mb-2">
+  <a href="{% url 'ledger:ledger_settings' %}"
+     class="link-dark text-decoration-none">
+    ▸ {% trans "إعدادات دفاتر اليومية" %}
+  </a>
+</li>
+
           <li class="mb-2">
             <a href="{% url 'ledger:fiscal_year_list' %}" class="link-dark text-decoration-none">
               ▸ {% trans "إدارة السنوات المالية" %}

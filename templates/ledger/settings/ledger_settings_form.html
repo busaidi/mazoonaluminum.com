@@ -1,0 +1,106 @@
+{% extends "ledger/base_ledger.html" %}
+{% load i18n %}
+
+{% block ledger_content %}
+<div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <div>
+    <h2 class="h5 mb-1">{% trans "إعدادات دفاتر اليومية" %}</h2>
+    <p class="text-muted small mb-0">
+      {% trans "قم بربط دفاتر اليومية المختلفة بوظائف النظام (مبيعات، مشتريات، بنك، كاش، إلخ)." %}
+    </p>
+  </div>
+</div>
+
+<form method="post" class="card card-body shadow-sm">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label" for="{{ form.default_manual_journal.id_for_label }}">
+        {{ form.default_manual_journal.label }}
+      </label>
+      {{ form.default_manual_journal }}
+      {% if form.default_manual_journal.help_text %}
+        <div class="form-text">{{ form.default_manual_journal.help_text }}</div>
+      {% endif %}
+      {{ form.default_manual_journal.errors }}
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label" for="{{ form.sales_journal.id_for_label }}">
+        {{ form.sales_journal.label }}
+      </label>
+      {{ form.sales_journal }}
+      {% if form.sales_journal.help_text %}
+        <div class="form-text">{{ form.sales_journal.help_text }}</div>
+      {% endif %}
+      {{ form.sales_journal.errors }}
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label" for="{{ form.purchase_journal.id_for_label }}">
+        {{ form.purchase_journal.label }}
+      </label>
+      {{ form.purchase_journal }}
+      {% if form.purchase_journal.help_text %}
+        <div class="form-text">{{ form.purchase_journal.help_text }}</div>
+      {% endif %}
+      {{ form.purchase_journal.errors }}
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label" for="{{ form.cash_journal.id_for_label }}">
+        {{ form.cash_journal.label }}
+      </label>
+      {{ form.cash_journal }}
+      {% if form.cash_journal.help_text %}
+        <div class="form-text">{{ form.cash_journal.help_text }}</div>
+      {% endif %}
+      {{ form.cash_journal.errors }}
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label" for="{{ form.bank_journal.id_for_label }}">
+        {{ form.bank_journal.label }}
+      </label>
+      {{ form.bank_journal }}
+      {% if form.bank_journal.help_text %}
+        <div class="form-text">{{ form.bank_journal.help_text }}</div>
+      {% endif %}
+      {{ form.bank_journal.errors }}
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label" for="{{ form.opening_balance_journal.id_for_label }}">
+        {{ form.opening_balance_journal.label }}
+      </label>
+      {{ form.opening_balance_journal }}
+      {% if form.opening_balance_journal.help_text %}
+        <div class="form-text">{{ form.opening_balance_journal.help_text }}</div>
+      {% endif %}
+      {{ form.opening_balance_journal.errors }}
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label" for="{{ form.closing_journal.id_for_label }}">
+        {{ form.closing_journal.label }}
+      </label>
+      {{ form.closing_journal }}
+      {% if form.closing_journal.help_text %}
+        <div class="form-text">{{ form.closing_journal.help_text }}</div>
+      {% endif %}
+      {{ form.closing_journal.errors }}
+    </div>
+  </div>
+
+  <div class="mt-4 d-flex gap-2">
+    <button type="submit" class="btn btn-primary">
+      {% trans "حفظ الإعدادات" %}
+    </button>
+    <a href="{% url 'ledger:dashboard' %}" class="btn btn-outline-secondary">
+      {% trans "رجوع للوحة التحكم" %}
+    </a>
+  </div>
+</form>
+{% endblock %}

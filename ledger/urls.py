@@ -36,10 +36,7 @@ urlpatterns = [
     path("settings/fiscal-years/<int:pk>/close/", views.FiscalYearCloseView.as_view(), name="fiscal_year_close"),
     path("settings/chart-of-accounts/bootstrap/",views.chart_of_accounts_bootstrap_view,name="chart_of_accounts_bootstrap",),
     path("settings/chart-of-accounts/import/",views.chart_of_accounts_import_view,name="chart_of_accounts_import",),
-    path(
-        "settings/chart-of-accounts/export/",
-        views.chart_of_accounts_export_view,
-        name="chart_of_accounts_export",
-    ),
+    path("settings/chart-of-accounts/export/",views.chart_of_accounts_export_view,name="chart_of_accounts_export",),
+    path("settings/journals/",views.ledger_settings_view,name="ledger_settings",),
 
 ]

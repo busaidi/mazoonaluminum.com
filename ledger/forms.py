@@ -4,7 +4,7 @@ from decimal import Decimal
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from .models import Account, JournalEntry, FiscalYear, Journal
+from .models import Account, JournalEntry, FiscalYear, Journal, LedgerSettings
 
 
 class AccountForm(forms.ModelForm):
@@ -342,3 +342,38 @@ class ChartOfAccountsImportForm(forms.Form):
             attrs={"class": "form-select"}
         ),
     )
+
+
+
+class LedgerSettingsForm(forms.ModelForm):
+    class Meta:
+        model = LedgerSettings
+        fields = [
+            "default_manual_journal",
+            "sales_journal",
+            "purchase_journal",
+            "cash_journal",
+            "bank_journal",
+            "opening_balance_journal",
+            "closing_journal",
+        ]
+        widgets = {
+            "default_manual_journal": forms.Select(attrs={"class": "form-select"}),
+            "sales_journal": forms.Select(attrs={"class": "form-select"}),
+            "purchase_journal": forms.Select(attrs={"class": "form-select"}),
+            "cash_journal": forms.Select(attrs={"class": "form-select"}),
+            "bank_journal": forms.Select(attrs={"class": "form-select"}),
+            "opening_balance_journal": forms.Select(attrs={"class": "form-select"}),
+            "closing_journal": forms.Select(attrs={"class": "form-select"}),
+        }
+        labels = {
+            "default_manual_journal": _("دفتر القيود اليدوية"),
+            "sales_journal": _("دفتر المبيعات"),
+            "purchase_journal": _("دفتر المشتريات"),
+            "cash_journal": _("دفتر الكاش"),
+            "bank_journal": _("دفتر البنك"),
+            "opening_balance_journal": _("دفتر الرصيد الافتتاحي"),
+            "closing_journal": _("دفتر إقفال السنة"),
+            }
+
+
