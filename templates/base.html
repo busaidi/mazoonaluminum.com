@@ -174,29 +174,58 @@
                 {% endif %}
 
 
-                {# المستخدم + تسجيل الدخول / الخروج #}
-                {% if user.is_authenticated %}
-                    <li class="nav-item d-none d-lg-block">
-                        <span class="nav-link small text-muted">
-                            {{ user.username }}
-                        </span>
-                    </li>
-                    <li class="nav-item">
-                        <form action="{% url 'logout' %}" method="post" class="d-inline">
-                            {% csrf_token %}
-                            <button type="submit" class="nav-link btn btn-link p-0 nav-link-btn">
-                                {% trans "تسجيل الخروج" %}
-                            </button>
-                        </form>
-                    </li>
-                {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link nav-link-btn"
-                           href="{% url 'login' %}?next={{ request.path }}">
-                            {% trans "تسجيل الدخول" %}
-                        </a>
-                    </li>
-                {% endif %}
+{# المستخدم + تسجيل الدخول / الخروج #}
+{% if user.is_authenticated %}
+    {# أيقونة البروفايل مع قائمة منسدلة #}
+    <li class="nav-item dropdown">
+        <a class="nav-link d-flex align-items-center gap-2"
+           href="#"
+           id="userMenuDropdown"
+           role="button"
+           data-bs-toggle="dropdown"
+           aria-expanded="false">
+            {# دائرة بسيطة فيها الحرف الأول من اسم المستخدم #}
+            <span class="rounded-circle d-inline-flex justify-content-center align-items-center"
+                  style="width: 32px; height: 32px; background-color: #111827; color: #fff; font-size: 0.8rem;">
+                {{ user.username|first|upper }}
+            </span>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end shadow-sm small" aria-labelledby="userMenuDropdown">
+            <li class="dropdown-header">
+                <div class="fw-semibold">{{ user.get_full_name|default:user.username }}</div>
+                <div class="text-muted small">{{ user.email|default:"" }}</div>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+
+            {# رابط الملف الشخصي - عدّل اسم الـ URL حسب مشروعك #}
+            <li>
+                <a class="dropdown-item" href="{% comment %}{% url 'account_profile' %}{% endcomment %}">
+                    {% trans "الملف الشخصي" %}
+                </a>
+            </li>
+
+            <li><hr class="dropdown-divider"></li>
+
+            {# تسجيل الخروج داخل القائمة #}
+            <li>
+                <form action="{% url 'logout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="dropdown-item text-danger">
+                        {% trans "تسجيل الخروج" %}
+                    </button>
+                </form>
+            </li>
+        </ul>
+    </li>
+{% else %}
+    <li class="nav-item">
+        <a class="nav-link nav-link-btn"
+           href="{% url 'login' %}?next={{ request.path }}">
+            {% trans "تسجيل الدخول" %}
+        </a>
+    </li>
+{% endif %}
+
 
                 {# Language switcher #}
                 <li class="nav-item ms-2">
