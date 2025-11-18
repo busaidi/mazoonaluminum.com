@@ -22,7 +22,7 @@ from django.views.generic import (
 )
 from openpyxl import Workbook
 
-from accounting.views import is_accounting_staff, accounting_staff_required
+from accounting.views import is_accounting_staff
 
 from .forms import (
     AccountForm,
@@ -269,6 +269,11 @@ class AccountListView(FiscalYearRequiredMixin, StaffRequiredMixin, ListView):
     template_name = "ledger/accounts/list.html"
     context_object_name = "accounts"
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["ledger_section"] = "accounts"
+        return ctx
+
 
 class AccountCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, CreateView):
     model = Account
@@ -504,6 +509,7 @@ class JournalEntryListView(FiscalYearRequiredMixin, StaffRequiredMixin, ListView
         query_dict = self.request.GET.copy()
         query_dict.pop("page", None)
         ctx["current_query"] = query_dict.urlencode()
+        ctx["ledger_section"] = "entries"
 
         return ctx
 
@@ -810,6 +816,7 @@ def trial_balance_view(request):
         "rows": rows,
         "totals": totals,
         "effective_fiscal_year": effective_fiscal_year,
+        "ledger_section": "reports",
     }
     return render(request, "ledger/reports/trial_balance.html", context)
 
@@ -824,7 +831,7 @@ def account_ledger_view(request):
     account = None
     opening_balance = Decimal("0")
     running_lines = []
-    effective_fiscal_year = None   # ← نضيفه هنا
+    effective_fiscal_year = None
 
     if form.is_valid():
         account = form.cleaned_data.get("account")
@@ -833,7 +840,7 @@ def account_ledger_view(request):
         date_to = form.cleaned_data.get("date_to")
 
         if account:
-            # 1) Base queryset for this account (posted entries only)
+            # Base queryset
             lines_qs = (
                 JournalLine.objects
                 .posted()
@@ -841,29 +848,17 @@ def account_ledger_view(request):
                 .filter(account=account)
             )
 
-            # تحديد السنة المالية الفعّالة
+            # Determine effective fiscal year (نفس منطقك الحالي لكن بدون تكرار)
             effective_fiscal_year = fiscal_year
-            if account:
-                lines_qs = (
-                    JournalLine.objects
-                    .posted()
-                    .select_related("entry")
-                    .filter(account=account)
-                )
+            if not effective_fiscal_year and not date_from and not date_to:
+                effective_fiscal_year = FiscalYear.objects.filter(
+                    is_default=True,
+                    is_closed=False,
+                ).first()
 
-                # Determine effective fiscal year:
-                effective_fiscal_year = fiscal_year
-                if not effective_fiscal_year and not date_from and not date_to:
-                    # 1) حاول تستخدم السنة الافتراضية المفتوحة
-                    effective_fiscal_year = FiscalYear.objects.filter(
-                        is_default=True,
-                        is_closed=False,
-                    ).first()
-
-                    # 2) إن ما فيه سنة افتراضية → استخدم السنة التي تغطي تاريخ اليوم
-                    if not effective_fiscal_year:
-                        today = timezone.now().date()
-                        effective_fiscal_year = FiscalYear.for_date(today)
+                if not effective_fiscal_year:
+                    today = timezone.now().date()
+                    effective_fiscal_year = FiscalYear.for_date(today)
 
             # Filter by fiscal year or date range
             if effective_fiscal_year:
@@ -873,29 +868,22 @@ def account_ledger_view(request):
 
             lines_qs = lines_qs.order_by("entry__date", "entry_id", "id")
 
-            # Helper to compute balance delta based on account type
             def calculate_balance(account_type, debit, credit):
                 debit = debit or Decimal("0")
                 credit = credit or Decimal("0")
                 if account_type in [Account.Type.ASSET, Account.Type.EXPENSE]:
                     return debit - credit
-                else:
-                    return credit - debit
+                return credit - debit
 
-            # 2) Opening balance (before the selected period)
-            opening_balance = Decimal("0")
-
+            # Opening balance
             if effective_fiscal_year or date_from:
-                opening_qs = JournalLine.objects.posted().filter(
-                    account=account,
-                )
+                opening_qs = JournalLine.objects.posted().filter(account=account)
 
                 if effective_fiscal_year:
-                    # قبل بداية السنة المالية
                     opening_qs = opening_qs.filter(
                         entry__date__lt=effective_fiscal_year.start_date
                     )
-                elif date_from:
+                else:
                     opening_qs = opening_qs.filter(entry__date__lt=date_from)
 
                 opening_totals = opening_qs.aggregate(
@@ -910,16 +898,14 @@ def account_ledger_view(request):
                         output_field=DecimalField(max_digits=12, decimal_places=3),
                     ),
                 )
-
                 opening_balance = calculate_balance(
                     account.type,
                     opening_totals["debit"],
                     opening_totals["credit"],
                 )
 
-            # 3) Build running lines with cumulative balance
+            # Running lines
             balance = opening_balance
-
             for line in lines_qs:
                 delta = calculate_balance(
                     account.type,
@@ -927,24 +913,26 @@ def account_ledger_view(request):
                     line.credit,
                 )
                 balance += delta
-
-                running_lines.append({
-                    "date": line.entry.date,
-                    "entry_id": line.entry.id,
-                    "entry_number": line.entry.display_number,
-                    "reference": line.entry.reference or "-",
-                    "description": line.description or line.entry.description,
-                    "debit": line.debit or Decimal("0"),
-                    "credit": line.credit or Decimal("0"),
-                    "balance": balance,
-                })
+                running_lines.append(
+                    {
+                        "date": line.entry.date,
+                        "entry_id": line.entry.id,
+                        "entry_number": line.entry.display_number,
+                        "reference": line.entry.reference or "-",
+                        "description": line.description or line.entry.description,
+                        "debit": line.debit or Decimal("0"),
+                        "credit": line.credit or Decimal("0"),
+                        "balance": balance,
+                    }
+                )
 
     context = {
         "form": form,
         "account": account,
         "opening_balance": opening_balance,
         "lines": running_lines,
-        "effective_fiscal_year": effective_fiscal_year,  # ← هنا نمرّره للواجهة
+        "effective_fiscal_year": effective_fiscal_year,
+        "ledger_section": "reports",
     }
     return render(request, "ledger/reports/account_ledger.html", context)
 
@@ -1011,6 +999,7 @@ class LedgerDashboardView(FiscalYearRequiredMixin, StaffRequiredMixin, TemplateV
                 "recent_entries": recent_entries,
                 "today": today,
                 "month_start": month_start,
+                "ledger_section": "dashboard",
             }
         )
         return ctx
@@ -1201,6 +1190,7 @@ def ledger_settings_view(request):
         "ledger/settings/ledger_settings_form.html",
         {
             "form": form,
+            "ledger_section": "settings",
         },
     )
 

@@ -356,15 +356,25 @@ def import_chart_of_accounts_from_excel(
                     % {"debit": total_debit, "credit": total_credit}
                 )
 
-            # دفتر افتراضي للقيود اليدوية
-            # اختر دفتر افتراضي (General) لقيد الرصيد الافتتاحي
-            journal = Journal.objects.get_default_for_manual_entry()
+            # اختر دفتر الرصيد الافتتاحي من إعدادات الليدجر إن وجد،
+            # وإذا مش مضبوط → استخدم الدفتر اليدوي الافتراضي،
+            # وإذا حتى هذا مش مضبوط → ارجع للسلوك القديم get_default_for_manual_entry()
+            settings_obj = LedgerSettings.get_solo()
+            journal = (
+                settings_obj.opening_balance_journal
+                or settings_obj.default_manual_journal
+                or Journal.objects.get_default_for_manual_entry()
+            )
 
             # المرجع يبقى مرتبط بالسنة الجديدة (سنة الهدف)
             ref = f"OPENING-{fiscal_year.year}"
 
             # حاول نربط القيد بالسنة السابقة إن وجدت
-            prev_fy = FiscalYear.objects.filter(year=fiscal_year.year - 1).order_by("-id").first()
+            prev_fy = (
+                FiscalYear.objects.filter(year=fiscal_year.year - 1)
+                .order_by("-id")
+                .first()
+            )
             if prev_fy:
                 entry_fiscal_year = prev_fy
                 opening_date = prev_fy.end_date

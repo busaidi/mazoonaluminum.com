@@ -69,6 +69,15 @@ class FiscalYear(models.Model):
         if self.is_default:
             FiscalYear.objects.exclude(pk=self.pk).update(is_default=False)
 
+        class Meta:
+            ordering = ["-year"]
+            constraints = [
+                models.CheckConstraint(
+                    check=models.Q(start_date__lte=models.F("end_date")),
+                    name="fiscalyear_start_before_end",
+                )
+            ]
+
 
 # ==============================================================================
 # Account
@@ -222,6 +231,7 @@ class JournalEntry(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
         verbose_name=_("أنشئ بواسطة"),
+        related_name="created_journal_entries",
     )
 
     objects = JournalEntryManager()
@@ -262,7 +272,6 @@ class JournalEntry(models.Model):
         - توليد رقم القيد (مرة واحدة) بناءً على الدفتر + السنة.
         - التعامل مع حالات التضارب النادرة في UNIQUE على number.
         """
-        # 1) تعيين السنة المالية تلقائيًا إن لم تكن محددة
         # 1) تعيين / تحديث السنة المالية تلقائيًا من التاريخ دائمًا
         if self.date:
             fy = FiscalYear.for_date(self.date)
@@ -510,3 +519,15 @@ class LedgerSettings(models.Model):
         """
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+    @property
+    def as_mapping(self):
+        return {
+            "default_manual": self.default_manual_journal,
+            "sales": self.sales_journal,
+            "purchase": self.purchase_journal,
+            "cash": self.cash_journal,
+            "bank": self.bank_journal,
+            "opening": self.opening_balance_journal,
+            "closing": self.closing_journal,
+        }

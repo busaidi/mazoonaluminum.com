@@ -77,7 +77,7 @@ class JournalEntryForm(forms.ModelForm):
 
 class JournalLineForm(forms.Form):
     account = forms.ModelChoiceField(
-        queryset=Account.objects.active(),
+        queryset=Account.objects.none(),
         required=False,
         label=_("الحساب"),
         widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
@@ -114,6 +114,10 @@ class JournalLineForm(forms.Form):
         label=_("حذف؟"),
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["account"].queryset = Account.objects.active()
 
     def clean(self):
         """
@@ -185,7 +189,7 @@ class TrialBalanceFilterForm(forms.Form):
 
 class AccountLedgerFilterForm(forms.Form):
     account = forms.ModelChoiceField(
-        queryset=Account.objects.active(),
+        queryset=Account.objects.none(),
         required=False,
         label=_("الحساب"),
         widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
@@ -211,6 +215,10 @@ class AccountLedgerFilterForm(forms.Form):
             attrs={"type": "date", "class": "form-control form-control-sm"}
         ),
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["account"].queryset = Account.objects.active()
 
 
 class FiscalYearForm(forms.ModelForm):
@@ -400,17 +408,19 @@ class JournalForm(forms.ModelForm):
     def save(self, commit=True):
         instance = super().save(commit=False)
 
-        # لو هذا الدفتر الافتراضي، عطّل الافتراضية عن غيره
-        if self.cleaned_data.get("is_default"):
+        is_default = self.cleaned_data.get("is_default")
+
+        if commit:
+            instance.save()
+
+        if is_default:
+            # عطّل الافتراضية عن غيره
             Journal.objects.exclude(pk=instance.pk).update(is_default=False)
 
             # لو ما عندنا LedgerSettings، ننشئه تلقائيًا
             settings_obj = LedgerSettings.get_solo()
-            # إذا ما معيّن دفتر القيود اليدوية، نخليه هذا
             if settings_obj.default_manual_journal is None:
                 settings_obj.default_manual_journal = instance
                 settings_obj.save()
 
-        if commit:
-            instance.save()
         return instance
