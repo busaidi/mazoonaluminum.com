@@ -27,6 +27,8 @@ from django.views.generic import (
     DeleteView,
 )
 
+from core.models import AuditLog
+from core.services.audit import log_event
 from core.services.notifications import create_notification
 from website.models import Product
 from .forms import (
@@ -762,11 +764,6 @@ class OrderUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
 def order_to_invoice(request, pk):
     """
     Convert an order into an invoice using the service layer.
-
-    Steps:
-    - Delegate the business logic to `convert_order_to_invoice`.
-    - Show a success message.
-    - Redirect to the new invoice detail page.
     """
     order = get_object_or_404(
         Order.objects.select_related("customer").prefetch_related("items__product"),
@@ -788,6 +785,22 @@ def order_to_invoice(request, pk):
     # Use service to perform the conversion logic
     invoice = convert_order_to_invoice(order)
 
+    # Audit log
+    log_event(
+        action=AuditLog.Action.CREATE,
+        message=_("تم إنشاء فاتورة من الطلب رقم %(pk)s برقم فاتورة %(number)s.") % {
+            "pk": order.pk,
+            "number": invoice.number,
+        },
+        actor=request.user,
+        target=invoice,
+        extra={
+            "order_id": order.pk,
+            "invoice_number": invoice.number,
+            "source": "order_to_invoice",
+        },
+    )
+
     # Send notification to the customer if linked to a user
     customer_user = getattr(order.customer, "user", None)
     if customer_user is not None:
@@ -808,6 +821,7 @@ def order_to_invoice(request, pk):
 
 
 
+
 @accounting_staff_required
 def staff_order_confirm(request, pk):
     """
@@ -817,10 +831,25 @@ def staff_order_confirm(request, pk):
 
     if request.method == "POST":
         if order.status != Order.STATUS_CONFIRMED:
+            old_status = order.status
+
             order.status = Order.STATUS_CONFIRMED
             order.confirmed_by = request.user
             order.confirmed_at = timezone.now()
             order.save(update_fields=["status", "confirmed_by", "confirmed_at"])
+
+            # Audit log: order status change
+            log_event(
+                action=AuditLog.Action.STATUS_CHANGE,
+                message=f"تأكيد الطلب رقم {order.pk} (من {old_status} إلى {order.status}).",
+                actor=request.user,
+                target=order,
+                extra={
+                    "old_status": old_status,
+                    "new_status": order.status,
+                    "source": "staff_order_confirm",
+                },
+            )
 
             # Send notification to the customer if linked to a user
             customer_user = getattr(order.customer, "user", None)
@@ -835,6 +864,7 @@ def staff_order_confirm(request, pk):
 
     # If GET, just redirect back
     return redirect("accounting:order_detail", pk=order.pk)
+
 
 
 
@@ -975,6 +1005,8 @@ def invoice_confirm_view(request, pk):
         messages.error(request, "لا يمكن اعتماد إلا الفواتير في حالة مسودة.")
         return redirect("accounting:invoice_detail", number=invoice.number)
 
+    old_status = invoice.status
+
     # Change status to SENT
     invoice.status = Invoice.Status.SENT
     invoice.save(update_fields=["status"])
@@ -986,7 +1018,30 @@ def invoice_confirm_view(request, pk):
         invoice.status = Invoice.Status.DRAFT
         invoice.save(update_fields=["status"])
         messages.error(request, f"تعذّر ترحيل الفاتورة إلى دفتر الأستاذ: {e}")
+
+        log_event(
+            action=AuditLog.Action.OTHER,
+            message=f"فشل ترحيل الفاتورة {invoice.number} إلى دفتر الأستاذ: {e}",
+            actor=request.user,
+            target=invoice,
+            extra={"error": str(e), "source": "invoice_confirm_view"},
+        )
+
         return redirect("accounting:invoice_detail", number=invoice.number)
+
+    # Audit log - success
+    log_event(
+        action=AuditLog.Action.STATUS_CHANGE,
+        message=f"اعتماد الفاتورة {invoice.number} وترحيلها إلى دفتر الأستاذ (قيد: {entry.number}).",
+        actor=request.user,
+        target=invoice,
+        extra={
+            "old_status": old_status,
+            "new_status": invoice.status,
+            "journal_entry_number": entry.number,
+            "source": "invoice_confirm_view",
+        },
+    )
 
     # Send notification to the customer if linked to a user
     customer_user = getattr(invoice.customer, "user", None)
@@ -1004,6 +1059,7 @@ def invoice_confirm_view(request, pk):
         f"تم اعتماد الفاتورة وترحيلها بنجاح (قيد: {entry.number})."
     )
     return redirect("accounting:invoice_detail", number=invoice.number)
+
 
 
 
@@ -1026,17 +1082,43 @@ def invoice_unpost_view(request, pk):
         messages.error(request, "لا يمكن إلغاء الترحيل لفاتورة عليها دفعات.")
         return redirect("accounting:invoice_detail", number=invoice.number)
 
+    old_status = invoice.status
+
     try:
         reversal_entry = invoice.unpost_from_ledger(user=request.user)
     except Exception as e:
         messages.error(request, f"تعذّر إلغاء الترحيل: {e}")
+
+        log_event(
+            action=AuditLog.Action.OTHER,
+            message=f"فشل إلغاء ترحيل الفاتورة {invoice.number}: {e}",
+            actor=request.user,
+            target=invoice,
+            extra={"error": str(e), "source": "invoice_unpost_view"},
+        )
+
         return redirect("accounting:invoice_detail", number=invoice.number)
+
+    # Audit log success
+    log_event(
+        action=AuditLog.Action.STATUS_CHANGE,
+        message=f"إلغاء ترحيل الفاتورة {invoice.number} وإنشاء قيد عكسي {reversal_entry.number}.",
+        actor=request.user,
+        target=invoice,
+        extra={
+            "old_status": old_status,
+            "new_status": invoice.status,
+            "reversal_entry_number": reversal_entry.number,
+            "source": "invoice_unpost_view",
+        },
+    )
 
     messages.success(
         request,
         f"تم إنشاء قيد عكسي ({reversal_entry.number}) وإعادة الفاتورة إلى حالة مسودة."
     )
     return redirect("accounting:invoice_detail", number=invoice.number)
+
 
 
 

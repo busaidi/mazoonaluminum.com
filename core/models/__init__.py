@@ -6,6 +6,8 @@ __all__ = [
     "UserStampedModel",
     "SoftDeleteModel",
     "Notification",
+    "AuditLog",
 ]
 
+from .audit import AuditLog
 from .notifications import Notification

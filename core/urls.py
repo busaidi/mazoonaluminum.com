@@ -2,7 +2,7 @@
 from django.urls import path
 
 from core.views import NotificationListView, NotificationReadRedirectView, notification_mark_all_read, \
-    notification_delete
+    notification_delete, AuditLogListView
 
 app_name = "core"
 
@@ -27,4 +27,10 @@ urlpatterns = [
         notification_delete,
         name="notification_delete",
     ),
+    path(
+        "audit-log/",
+        AuditLogListView.as_view(),
+        name="audit_log_list",
+    ),
 ]
+
