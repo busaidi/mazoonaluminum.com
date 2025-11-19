@@ -1,6 +1,7 @@
 # portal/views.py
 
 from django.contrib import messages
+from django.contrib.auth.models import User
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
@@ -20,6 +21,7 @@ from django.utils.translation import gettext_lazy as _
 from accounting.forms import CustomerProfileForm, CustomerOrderForm
 from accounting.models import Customer, Invoice, Payment, Order, OrderItem
 from cart.cart import Cart
+from core.services.notifications import create_notification
 from website.models import Product
 
 
@@ -323,6 +325,7 @@ class PortalOrderCreateView(CustomerPortalMixin, FormView):
         On valid form:
         - Create the Order and its single OrderItem inside an atomic transaction.
         - Show a success message in Arabic (translatable).
+        - Send a notification to all staff users about the new online order.
         """
         customer = self.customer
         quantity = form.cleaned_data["quantity"]
@@ -342,6 +345,15 @@ class PortalOrderCreateView(CustomerPortalMixin, FormView):
                 quantity=quantity,
                 unit_price=self.product.price,
             )
+
+            # 🔔 إرسال تنبيه لكل الموظفين (staff + active)
+            staff_users = User.objects.filter(is_staff=True, is_active=True)
+            for staff in staff_users:
+                create_notification(
+                    recipient=staff,
+                    verb=_("تم إنشاء طلب جديد من بوابة الزبون."),
+                    target=order,
+                )
 
         messages.success(
             self.request,
@@ -409,6 +421,16 @@ class CartCheckoutView(CustomerPortalMixin, View):
                     unit_price=item["price"],
                 )
 
+            # 🔔 إرسال تنبيه لكل الموظفين عن طلب جديد من السلة
+            staff_users = User.objects.filter(is_staff=True, is_active=True)
+            for staff in staff_users:
+                create_notification(
+                    recipient=staff,
+                    verb=_("تم إنشاء طلب جديد من سلة المشتريات في بوابة الزبون."),
+                    target=order,
+                )
+
         cart.clear()
         messages.success(request, _("تم إنشاء الطلب من السلة بنجاح."))
         return redirect("portal:order_detail", pk=order.pk)
+

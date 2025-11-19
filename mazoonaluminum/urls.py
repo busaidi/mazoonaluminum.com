@@ -32,6 +32,7 @@ urlpatterns += i18n_patterns(
     path("admin/", admin.site.urls),
     path("", include("website.urls")),
     path("accounting/", include("accounting.urls")),
+    path("", include("core.urls", namespace="core")),
     path("ledger/", include("ledger.urls", namespace="ledger")),
     path("portal/", include("portal.urls")),
     path("cart/", include("cart.urls", namespace="cart")),

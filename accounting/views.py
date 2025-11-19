@@ -27,6 +27,7 @@ from django.views.generic import (
     DeleteView,
 )
 
+from core.services.notifications import create_notification
 from website.models import Product
 from .forms import (
     InvoiceForm,
@@ -787,12 +788,24 @@ def order_to_invoice(request, pk):
     # Use service to perform the conversion logic
     invoice = convert_order_to_invoice(order)
 
+    # Send notification to the customer if linked to a user
+    customer_user = getattr(order.customer, "user", None)
+    if customer_user is not None:
+        create_notification(
+            recipient=customer_user,
+            verb=_("تم إنشاء فاتورة جديدة برقم %(number)s من طلبك.") % {
+                "number": invoice.number
+            },
+            target=invoice,
+        )
+
     messages.success(
         request,
         _("تم إنشاء الفاتورة %(number)s من هذا الطلب.") % {"number": invoice.number}
     )
 
     return redirect("accounting:invoice_detail", number=invoice.number)
+
 
 
 @accounting_staff_required
@@ -808,10 +821,21 @@ def staff_order_confirm(request, pk):
             order.confirmed_by = request.user
             order.confirmed_at = timezone.now()
             order.save(update_fields=["status", "confirmed_by", "confirmed_at"])
+
+            # Send notification to the customer if linked to a user
+            customer_user = getattr(order.customer, "user", None)
+            if customer_user is not None:
+                create_notification(
+                    recipient=customer_user,
+                    verb=_("تم تأكيد طلبك رقم %(number)s.") % {"number": order.pk},
+                    target=order,
+                )
+
         return redirect("accounting:order_detail", pk=order.pk)
 
     # If GET, just redirect back
     return redirect("accounting:order_detail", pk=order.pk)
+
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
@@ -949,29 +973,38 @@ def invoice_confirm_view(request, pk):
 
     if invoice.status != Invoice.Status.DRAFT:
         messages.error(request, "لا يمكن اعتماد إلا الفواتير في حالة مسودة.")
-        # ⬅️ استخدم number بدل pk
         return redirect("accounting:invoice_detail", number=invoice.number)
 
-    # غيّر الحالة إلى SENT
+    # Change status to SENT
     invoice.status = Invoice.Status.SENT
     invoice.save(update_fields=["status"])
 
     try:
         entry = invoice.post_to_ledger()
     except Exception as e:
-        # لو فشل الترحيل، نرجّعها مسودة
+        # Roll back to DRAFT if posting fails
         invoice.status = Invoice.Status.DRAFT
         invoice.save(update_fields=["status"])
         messages.error(request, f"تعذّر ترحيل الفاتورة إلى دفتر الأستاذ: {e}")
-        # ⬅️ هنا أيضًا نستخدم number
         return redirect("accounting:invoice_detail", number=invoice.number)
+
+    # Send notification to the customer if linked to a user
+    customer_user = getattr(invoice.customer, "user", None)
+    if customer_user is not None:
+        create_notification(
+            recipient=customer_user,
+            verb=_(
+                "تم اعتماد فاتورتك رقم %(number)s وترحيلها في النظام."
+            ) % {"number": invoice.number},
+            target=invoice,
+        )
 
     messages.success(
         request,
         f"تم اعتماد الفاتورة وترحيلها بنجاح (قيد: {entry.number})."
     )
-    # ⬅️ وهنا كذلك
     return redirect("accounting:invoice_detail", number=invoice.number)
+
 
 
 @login_required
