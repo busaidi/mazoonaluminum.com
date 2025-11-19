@@ -95,3 +95,27 @@ class BaseModel(TimeStampedModel, UserStampedModel, SoftDeleteModel):
 
     class Meta:
         abstract = True
+
+
+class NumberedModel(models.Model):
+    """
+    Abstract base class that automatically generates a number
+    using core.services.numbering.generate_number_for_instance.
+    """
+
+    number = models.CharField(
+        max_length=64,
+        unique=True,
+        blank=True,
+        verbose_name="رقم",
+    )
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        # Import here to avoid circular imports
+        if not self.number:
+            from core.services.numbering import generate_number_for_instance
+            self.number = generate_number_for_instance(self)
+        super().save(*args, **kwargs)

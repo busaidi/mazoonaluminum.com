@@ -27,7 +27,7 @@ from django.views.generic import (
     DeleteView,
 )
 
-from core.models import AuditLog
+from core.models import AuditLog, NumberingScheme
 from core.services.audit import log_event
 from core.services.notifications import create_notification
 from website.models import Product
@@ -40,9 +40,9 @@ from .forms import (
     OrderItemFormSet,
     OrderForm,
     PaymentForm,
-    SalesSettingsForm,
+    SettingsForm,
 )
-from .models import Invoice, Payment, Customer, Order, InvoiceItem, SalesSettings
+from .models import Invoice, Payment, Customer, Order, InvoiceItem, Settings
 from .services import convert_order_to_invoice, allocate_general_payment
 
 # ============================================================
@@ -168,7 +168,7 @@ class InvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
 
         # Pre-fill default terms from SalesSettings فقط (إن وُجدت)
         if not initial.get("terms"):
-            settings = SalesSettings.get_solo()
+            settings = Settings.get_solo()
             if settings.default_terms:
                 initial["terms"] = settings.default_terms
             # لو ما فيه default_terms نخليها فاضية بدون أي قيمة افتراضية
@@ -1122,25 +1122,28 @@ def invoice_unpost_view(request, pk):
 
 
 
-
 @staff_member_required
 def accounting_settings_view(request):
     """
     Simple view to edit global sales/invoice settings.
+
+    المنطق الخاص بترقيم الفواتير (NumberingScheme في core)
+    يتم تحديثه داخل Settings.save حتى يكون عندنا مصدر واحد للحقيقة.
     """
-    settings_obj = SalesSettings.get_solo()
+    settings_obj = Settings.get_solo()
 
     if request.method == "POST":
-        form = SalesSettingsForm(request.POST, instance=settings_obj)
+        form = SettingsForm(request.POST, instance=settings_obj)
         if form.is_valid():
-            form.save()
-            messages.success(request, _("تم تحديث إعدادات المبيعات بنجاح."))
+            form.save()  # Settings.save يتولى مزامنة NumberingScheme
+            messages.success(request, _("تم تحديث إعدادات المبيعات والترقيم بنجاح."))
             return redirect("accounting:sales_settings")
     else:
-        form = SalesSettingsForm(instance=settings_obj)
+        form = SettingsForm(instance=settings_obj)
 
     context = {
         "form": form,
-        "accounting_section": "settings",  # لو حاب تميّز التبويب في الـ nav
+        "accounting_section": "settings",
     }
     return render(request, "accounting/settings/settings.html", context)
+

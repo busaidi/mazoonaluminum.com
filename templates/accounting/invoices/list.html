@@ -70,11 +70,18 @@
             {% for inv in invoices %}
               <tr>
                 <td>
-                  <a href="{% url 'accounting:invoice_detail' number=inv.number %}"
-                     class="text-decoration-none text-mazoon fw-semibold">
-                    {{ inv.number }}
-                  </a>
-                </td>
+  {% if inv.number %}
+    <a href="{% url 'accounting:invoice_detail' number=inv.number %}"
+       class="text-decoration-none text-mazoon fw-semibold">
+      {{ inv.number }}
+    </a>
+  {% else %}
+    <span class="text-muted small">
+      {% trans "بدون رقم" %} (ID: {{ inv.id }})
+    </span>
+  {% endif %}
+</td>
+
 
                 <td>{{ inv.customer.name }}</td>
                 <td>{{ inv.issued_at|date:"d/m/Y" }}</td>

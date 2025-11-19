@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.db.models import Sum
 from django.db.models.signals import post_delete
@@ -10,34 +11,7 @@ from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
-
-# ============================================================
-# Helpers
-# ============================================================
-
-def generate_invoice_number() -> str:
-    """
-    Generate a human-readable invoice number per year, e.g. INV-2025-0001.
-    Pattern: INV-<year>-<running_number>
-    """
-    year = timezone.now().year
-
-    # آخر فاتورة في نفس السنة
-    last_invoice = (
-        Invoice.objects
-        .filter(number__startswith=f"INV-{year}")
-        .order_by("id")
-        .last()
-    )
-
-    if last_invoice:
-        # استخراج آخر رقم + 1
-        last_number = int(last_invoice.number.split("-")[-1])
-        new_number = last_number + 1
-    else:
-        new_number = 1
-
-    return f"INV-{year}-{new_number:04d}"
+from core.models import NumberedModel
 
 
 # ============================================================
@@ -107,7 +81,7 @@ class Customer(models.Model):
 # Invoice & InvoiceItem
 # ============================================================
 
-class Invoice(models.Model):
+class Invoice(NumberedModel, models.Model):
     """
     Simple invoice model.
     'number' will be used later in URLs: /accounting/invoices/<number>/
@@ -177,68 +151,27 @@ class Invoice(models.Model):
     def __str__(self) -> str:
         return f"Invoice {self.number} - {self.customer.name}"
 
-    # ---------- Core logic ----------
-
-    @classmethod
-    def generate_number(cls, issue_date=None):
-        """
-        توليد رقم فاتورة بناءً على إعدادات SalesSettings:
-        - بادئة (prefix)
-        - السنة
-        - عدد الخانات (padding)
-        - خيار إعادة الترقيم سنوياً
-        مثال: INV-2025-0001
-        """
-        from django.utils import timezone
-        from .models import SalesSettings  # نفس الملف
-
-        if issue_date is None:
-            issue_date = timezone.now().date()
-
-        settings = SalesSettings.get_solo()
-        prefix = settings.invoice_prefix or "INV"
-        padding = settings.invoice_padding or 4
-
-        year_str = str(issue_date.year)
-        base_prefix = f"{prefix}-{year_str}-"
-
-        # نجيب آخر رقم لنفس السنة/البادئة
-        qs = cls.objects.filter(number__startswith=base_prefix)
-        if settings.invoice_reset_yearly:
-            qs = qs.filter(issued_at__year=issue_date.year)
-
-        last = qs.order_by("-number").first()
-
-        if last:
-            try:
-                last_seq = int(last.number.split("-")[-1])
-            except (ValueError, IndexError):
-                last_seq = 0
-        else:
-            last_seq = 0
-
-        new_seq = last_seq + 1
-        seq_str = str(new_seq).zfill(padding)
-
-        return f"{prefix}-{year_str}-{seq_str}"
+    # ---------- Core logic ---------
 
     def save(self, *args, **kwargs):
         """
         On first save:
-        - Generate invoice number from SalesSettings if not provided.
+        - Generate invoice number using core numbering service.
         - Fill due_date using default_due_days if not set.
         - Fill terms from default_terms if empty.
         """
-        from .models import SalesSettings  # نفس الملف
+        from .models import Settings
+        from core.services.numbering import generate_number_for_instance
 
         is_new = self.pk is None
 
         if is_new:
-            settings = SalesSettings.get_solo()
-
-            # رقم الفاتورة من الإعدادات
+            # 1) رقم الفاتورة من نظام الترقيم العام في core
             if not self.number:
-                self.number = Invoice.generate_number(issue_date=self.issued_at)
+                self.number = generate_number_for_instance(self)
+
+            # 2) إعدادات المبيعات (تاريخ الاستحقاق + الشروط)
+            settings = Settings.get_solo()
 
             # تاريخ الاستحقاق الافتراضي
             if not self.due_date and settings.default_due_days:
@@ -249,6 +182,7 @@ class Invoice(models.Model):
                 self.terms = settings.default_terms
 
         super().save(*args, **kwargs)
+
 
     @property
     def balance(self) -> Decimal:
@@ -605,49 +539,89 @@ class OrderItem(models.Model):
 
 
 
-class SalesSettings(models.Model):
+class Settings(models.Model):
     """
     Global sales/invoice settings:
-    - Invoice numbering
+    - Invoice numbering (linked to core.NumberingScheme for accounting.Invoice)
     - Default due days
     - Default VAT behavior
     - Default terms
+
     هذا موديل "singleton" (صف واحد فقط) مثل LedgerSettings.
     """
 
+    class InvoiceResetPolicy(models.TextChoices):
+        NEVER = "never", _("لا يتم إعادة الترقيم")
+        YEAR = "year", _("يُعاد سنويًا")
+        MONTH = "month", _("يُعاد شهريًا")
+
     # ---------- Invoice numbering ----------
+    invoice_number_active = models.BooleanField(
+        default=True,
+        verbose_name=_("تفعيل ترقيم الفواتير؟"),
+        help_text=_("إذا تم تعطيله، لن يتم توليد أرقام تلقائية للفواتير."),
+    )
+
     invoice_prefix = models.CharField(
         max_length=20,
         default="INV",
         verbose_name=_("بادئة أرقام الفواتير"),
         help_text=_("تظهر في بداية رقم الفاتورة مثل INV-2025-0001."),
     )
+
     invoice_padding = models.PositiveSmallIntegerField(
         default=4,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
         verbose_name=_("عدد الخانات الرقمية"),
         help_text=_("مثلاً 4 تعني 0001، 0002، ..."),
     )
-    invoice_reset_yearly = models.BooleanField(
-        default=True,
-        verbose_name=_("إعادة ترقيم الفواتير سنويًا؟"),
-        help_text=_("إذا كان مفعلًا، يبدأ الترقيم من 1 في كل سنة جديدة."),
+
+    invoice_start_value = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        verbose_name=_("قيمة البداية للتسلسل"),
+        help_text=_("مثلاً 1 تعني أن أول فاتورة ستكون 0001، ويمكن البدء من رقم أكبر عند الحاجة."),
+    )
+
+    invoice_reset_policy = models.CharField(
+        max_length=10,
+        choices=InvoiceResetPolicy.choices,
+        default=InvoiceResetPolicy.YEAR,
+        verbose_name=_("سياسة إعادة الترقيم"),
+        help_text=_("تحدد متى يبدأ التسلسل من جديد: لا يعاد، أو سنويًا، أو شهريًا."),
+    )
+
+    invoice_custom_pattern = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_("نمط الترقيم المخصص (اختياري)"),
+        help_text=_(
+            "اتركه فارغًا لاستخدام البادئة وعدد الخانات. "
+            "يمكنك استخدام المتغيرات {year}، {month}، {day}، و {seq:04d}. "
+            "يجب أن يحتوي النمط على {seq}."
+        ),
     )
 
     # ---------- Default invoice behavior ----------
     default_due_days = models.PositiveSmallIntegerField(
         default=30,
+        validators=[MinValueValidator(0), MaxValueValidator(365)],
         verbose_name=_("عدد أيام الاستحقاق الافتراضي"),
         help_text=_("يُستخدم لحساب تاريخ الاستحقاق من تاريخ الفاتورة."),
     )
+
     auto_confirm_invoice = models.BooleanField(
         default=False,
         verbose_name=_("اعتماد الفاتورة تلقائيًا بعد الحفظ؟"),
         help_text=_("إذا كان مفعلًا، تنتقل الفاتورة من Draft إلى Sent تلقائيًا."),
     )
+
     auto_post_to_ledger = models.BooleanField(
         default=False,
         verbose_name=_("ترحيل تلقائي إلى دفتر الأستاذ بعد الاعتماد؟"),
-        help_text=_("إذا كان مفعلًا، يتم إنشاء قيد تلقائي في دفتر الأستاذ عند اعتماد الفاتورة."),
+        help_text=_(
+            "إذا كان مفعلًا، يتم إنشاء قيد تلقائي في دفتر الأستاذ عند اعتماد الفاتورة."
+        ),
     )
 
     # ---------- VAT behavior ----------
@@ -656,8 +630,12 @@ class SalesSettings(models.Model):
         decimal_places=2,
         default=Decimal("5.00"),
         verbose_name=_("نسبة ضريبة القيمة المضافة الافتراضية (%)"),
-        help_text=_("تُستخدم للفواتير التي تحتوي على ضريبة (يمكن تجاهلها إذا لم تُفعّل VAT)."),
+        help_text=_(
+            "تُستخدم للفواتير التي تحتوي على ضريبة "
+            "(يمكن تجاهلها إذا لم تُفعّل VAT)."
+        ),
     )
+
     prices_include_vat = models.BooleanField(
         default=False,
         verbose_name=_("الأسعار شاملة للضريبة؟"),
@@ -670,6 +648,7 @@ class SalesSettings(models.Model):
         verbose_name=_("الشروط والأحكام الافتراضية"),
         help_text=_("يتم نسخها تلقائيًا في حقل الشروط داخل الفاتورة الجديدة."),
     )
+
     footer_notes = models.TextField(
         blank=True,
         verbose_name=_("ملاحظات أسفل الفاتورة"),
@@ -688,10 +667,46 @@ class SalesSettings(models.Model):
     def __str__(self) -> str:
         return _("إعدادات المبيعات")
 
+    # ---------- Singleton helper ----------
     @classmethod
-    def get_solo(cls) -> "SalesSettings":
+    def get_solo(cls) -> "Settings":
         """
         يعيد صف الإعدادات الوحيد، وينشئ واحد إذا غير موجود.
         """
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+    # ---------- NumberingScheme sync ----------
+    def save(self, *args, **kwargs):
+        """
+        نحفظ إعدادات المبيعات + نزامن سكيم الترقيم في core.NumberingScheme
+        لموديل accounting.Invoice.
+        """
+        super().save(*args, **kwargs)
+
+        # استيراد داخل الدالة لتفادي دوّار import
+        from core.models.numbering import NumberingScheme
+
+        # إذا المستخدم كتب نمط مخصص → نستخدمه كما هو
+        # وإلا نبني نمط افتراضي من البادئة + السنة + رقم متسلسل padded
+        if self.invoice_custom_pattern:
+            pattern = self.invoice_custom_pattern
+        else:
+            seq_format = f"0{self.invoice_padding}d"
+            pattern = (
+                f"{self.invoice_prefix}-"
+                "{year}-"
+                "{seq:" + seq_format + "}"
+            )
+
+        NumberingScheme.objects.update_or_create(
+            model_label="accounting.Invoice",
+            defaults={
+                # field_name في الكور = "number" (حقل رقم الفاتورة)
+                "field_name": "number",
+                "pattern": pattern,
+                "start": self.invoice_start_value,
+                "reset": self.invoice_reset_policy,
+                "is_active": self.invoice_number_active,
+            },
+        )

@@ -6,7 +6,7 @@ from django.forms import inlineformset_factory
 from django.utils.translation import gettext_lazy as _
 
 from website.models import Product
-from .models import Invoice, Payment, Customer, InvoiceItem, Order, OrderItem, SalesSettings
+from .models import Invoice, Payment, Customer, InvoiceItem, Order, OrderItem, Settings
 
 
 # ============================================================
@@ -368,14 +368,17 @@ class ApplyPaymentForm(forms.Form):
 
 
 
-class SalesSettingsForm(forms.ModelForm):
+class SettingsForm(forms.ModelForm):
     class Meta:
-        model = SalesSettings
+        model = Settings
         fields = [
             # Invoice numbering
+            "invoice_number_active",
             "invoice_prefix",
             "invoice_padding",
-            "invoice_reset_yearly",
+            "invoice_start_value",
+            "invoice_reset_policy",
+            "invoice_custom_pattern",
 
             # Invoice behavior
             "default_due_days",
@@ -391,32 +394,93 @@ class SalesSettingsForm(forms.ModelForm):
             "footer_notes",
         ]
         widgets = {
-            "invoice_prefix": forms.TextInput(attrs={"class": "form-control"}),
-            "invoice_padding": forms.NumberInput(attrs={"class": "form-control", "min": 1, "max": 10}),
-            "invoice_reset_yearly": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            # Invoice numbering
+            "invoice_number_active": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+            "invoice_prefix": forms.TextInput(
+                attrs={"class": "form-control"}
+            ),
+            "invoice_padding": forms.NumberInput(
+                attrs={"class": "form-control", "min": 1, "max": 10}
+            ),
+            "invoice_start_value": forms.NumberInput(
+                attrs={"class": "form-control", "min": 1}
+            ),
+            "invoice_reset_policy": forms.Select(
+                attrs={"class": "form-select"}
+            ),
+            "invoice_custom_pattern": forms.TextInput(
+                attrs={"class": "form-control"}
+            ),
 
-            "default_due_days": forms.NumberInput(attrs={"class": "form-control", "min": 0, "max": 365}),
-            "auto_confirm_invoice": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "auto_post_to_ledger": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            # Invoice behavior
+            "default_due_days": forms.NumberInput(
+                attrs={"class": "form-control", "min": 0, "max": 365}
+            ),
+            "auto_confirm_invoice": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+            "auto_post_to_ledger": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
 
-            "default_vat_rate": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
-            "prices_include_vat": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            # VAT behavior
+            "default_vat_rate": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.01"}
+            ),
+            "prices_include_vat": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
 
-            "default_terms": forms.Textarea(attrs={"class": "form-control", "rows": 4}),
-            "footer_notes": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            # Text templates
+            "default_terms": forms.Textarea(
+                attrs={"class": "form-control", "rows": 4}
+            ),
+            "footer_notes": forms.Textarea(
+                attrs={"class": "form-control", "rows": 3}
+            ),
         }
         labels = {
+            # Invoice numbering
+            "invoice_number_active": _("تفعيل ترقيم الفواتير"),
             "invoice_prefix": _("بادئة أرقام الفواتير"),
             "invoice_padding": _("عدد الخانات الرقمية"),
-            "invoice_reset_yearly": _("إعادة الترقيم سنويًا"),
+            "invoice_start_value": _("قيمة البداية للتسلسل"),
+            "invoice_reset_policy": _("سياسة إعادة الترقيم"),
+            "invoice_custom_pattern": _("نمط الترقيم المخصص (اختياري)"),
 
+            # Invoice behavior
             "default_due_days": _("أيام الاستحقاق الافتراضية"),
             "auto_confirm_invoice": _("اعتماد الفاتورة تلقائيًا بعد الحفظ"),
             "auto_post_to_ledger": _("ترحيل تلقائي إلى دفتر الأستاذ بعد الاعتماد"),
 
+            # VAT behavior
             "default_vat_rate": _("نسبة ضريبة القيمة المضافة الافتراضية (%)"),
             "prices_include_vat": _("الأسعار شاملة للضريبة"),
 
+            # Text templates
             "default_terms": _("الشروط والأحكام الافتراضية"),
             "footer_notes": _("ملاحظات أسفل الفاتورة"),
         }
+
+    def clean_invoice_prefix(self):
+        prefix = self.cleaned_data.get("invoice_prefix", "") or ""
+        return prefix.strip().upper()  # نخليها بشكل موحد مثل "INV" / "MAZ"
+
+    def clean_default_vat_rate(self):
+        rate = self.cleaned_data.get("default_vat_rate")
+        if rate is None:
+            return rate
+        if rate < 0 or rate > 100:
+            raise forms.ValidationError(_("نسبة الضريبة يجب أن تكون بين 0 و 100%."))
+        return rate
+
+    def clean_invoice_custom_pattern(self):
+        pattern = self.cleaned_data.get("invoice_custom_pattern", "") or ""
+        # Only validate if user actually entered a pattern
+        if pattern and "{seq" not in pattern:
+            raise forms.ValidationError(
+                _("نمط الترقيم المخصص يجب أن يحتوي على المتغير {seq}.")
+            )
+        return pattern

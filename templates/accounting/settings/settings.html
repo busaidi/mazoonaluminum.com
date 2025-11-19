@@ -11,7 +11,7 @@
     <div>
       <h1 class="h5 mb-1">{% trans "إعدادات المبيعات والفواتير" %}</h1>
       <p class="text-muted small mb-0">
-        {% trans "قم بضبط سلوك الفواتير، أرقامها، وضريبة القيمة المضافة، والشروط الافتراضية." %}
+        {% trans "قم بضبط سلوك الفواتير، أرقامها، ضريبة القيمة المضافة، والنصوص الافتراضية." %}
       </p>
     </div>
   </div>
@@ -24,11 +24,25 @@
     <div class="mb-4">
       <h5 class="h6 mb-2">{% trans "ترقيم الفواتير" %}</h5>
       <p class="text-muted small mb-3">
-        {% trans "تحكم في شكل أرقام الفواتير، البادئة، وعدد الخانات، وإعادة الترقيم السنوية." %}
+        {% trans "تحكم في تفعيل الترقيم، شكل أرقام الفواتير، البادئة، عدد الخانات، وإعادة الترقيم." %}
       </p>
 
       <div class="row g-3">
-        <div class="col-md-4">
+
+        <div class="col-md-3">
+          <div class="form-check mt-4 pt-1">
+            {{ form.invoice_number_active }}
+            <label class="form-check-label" for="{{ form.invoice_number_active.id_for_label }}">
+              {{ form.invoice_number_active.label }}
+            </label>
+          </div>
+          {{ form.invoice_number_active.errors }}
+          {% if form.invoice_number_active.help_text %}
+            <div class="form-text">{{ form.invoice_number_active.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
           <label class="form-label" for="{{ form.invoice_prefix.id_for_label }}">
             {{ form.invoice_prefix.label }}
           </label>
@@ -39,7 +53,7 @@
           {% endif %}
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label class="form-label" for="{{ form.invoice_padding.id_for_label }}">
             {{ form.invoice_padding.label }}
           </label>
@@ -50,16 +64,45 @@
           {% endif %}
         </div>
 
+        <div class="col-md-3">
+          <label class="form-label" for="{{ form.invoice_start_value.id_for_label }}">
+            {{ form.invoice_start_value.label }}
+          </label>
+          {{ form.invoice_start_value }}
+          {{ form.invoice_start_value.errors }}
+          {% if form.invoice_start_value.help_text %}
+            <div class="form-text">{{ form.invoice_start_value.help_text }}</div>
+          {% endif %}
+        </div>
+
+      </div>
+
+      <div class="row g-3 mt-3">
         <div class="col-md-4">
-          <div class="form-check mt-4 pt-1">
-            {{ form.invoice_reset_yearly }}
-            <label class="form-check-label" for="{{ form.invoice_reset_yearly.id_for_label }}">
-              {{ form.invoice_reset_yearly.label }}
-            </label>
-          </div>
-          {{ form.invoice_reset_yearly.errors }}
-          {% if form.invoice_reset_yearly.help_text %}
-            <div class="form-text">{{ form.invoice_reset_yearly.help_text }}</div>
+          <label class="form-label" for="{{ form.invoice_reset_policy.id_for_label }}">
+            {{ form.invoice_reset_policy.label }}
+          </label>
+          {{ form.invoice_reset_policy }}
+          {{ form.invoice_reset_policy.errors }}
+          {% if form.invoice_reset_policy.help_text %}
+            <div class="form-text">{{ form.invoice_reset_policy.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-8">
+          <label class="form-label" for="{{ form.invoice_custom_pattern.id_for_label }}">
+            {{ form.invoice_custom_pattern.label }}
+          </label>
+          {{ form.invoice_custom_pattern }}
+          {{ form.invoice_custom_pattern.errors }}
+          {% if form.invoice_custom_pattern.help_text %}
+            <div class="form-text">
+              {{ form.invoice_custom_pattern.help_text }}<br>
+              <span class="small text-muted">
+                {% trans "أمثلة:" %} <code>INV-{year}-{seq:04d}</code>،
+                <code>SO-{year}-{month:02d}-{seq:03d}</code>
+              </span>
+            </div>
           {% endif %}
         </div>
       </div>
