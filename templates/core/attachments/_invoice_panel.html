@@ -1,0 +1,132 @@
+{% load i18n %}
+
+{# يتوقع المتغيرات:- invoice- attachments- attachments_count- attachment_form- invoice_add_attachment_url#}
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h5 class="card-title mb-1">
+          {% trans "المرفقات" %}
+          {% if attachments_count %}
+            <span class="badge bg-light text-secondary">
+              📎 {{ attachments_count }}
+            </span>
+          {% endif %}
+        </h5>
+        <p class="text-muted small mb-0">
+          {% trans "ملفات مرتبطة بهذه الفاتورة مثل عروض الأسعار، العقود، أو الصور." %}
+        </p>
+      </div>
+    </div>
+
+    {# قائمة المرفقات #}
+    {% if attachments %}
+      <div class="table-responsive mb-3">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>{% trans "الملف" %}</th>
+              <th>{% trans "العنوان" %}</th>
+              <th>{% trans "الوصف" %}</th>
+              <th>{% trans "تم الرفع بواسطة" %}</th>
+              <th>{% trans "تاريخ الرفع" %}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for att in attachments %}
+            <tr>
+              <td>
+                {% with name=att.file.name|lower %}
+  {% if name|slice:"-4:" == ".pdf" %}
+    📄
+  {% elif name|slice:"-4:" == ".jpg" or name|slice:"-5:" == ".jpeg" or name|slice:"-4:" == ".png" %}
+    🖼️
+  {% else %}
+    📎
+  {% endif %}
+{% endwith %}
+
+                <a href="{{ att.file.url }}" target="_blank">
+                  {{ att.title|default:att.file.name }}
+                </a>
+                <div class="small text-muted">
+                  {{ att.file.size|filesizeformat }}
+                </div>
+              </td>
+              <td>{{ att.title|default:"-" }}</td>
+              <td class="small text-muted">{{ att.description|default:"-" }}</td>
+              <td class="small">
+                {% if att.uploaded_by %}
+                  {{ att.uploaded_by.get_full_name|default:att.uploaded_by.username }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td class="small text-muted">
+                {{ att.uploaded_at|date:"Y-m-d H:i" }}
+              </td>
+              <td class="text-end">
+                <form method="post"
+                      action="{% url 'accounting:invoice_delete_attachment' invoice.number att.pk %}">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="btn btn-sm btn-outline-danger"
+                          onclick="return confirm('{% trans "هل أنت متأكد من حذف هذا المرفق؟" %}');">
+                    🗑️
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted small mb-3">
+        {% trans "لا توجد مرفقات لهذه الفاتورة حتى الآن." %}
+      </p>
+    {% endif %}
+
+    {# فورم رفع مرفق جديد #}
+    <form method="post"
+          action="{{ invoice_add_attachment_url }}"
+          enctype="multipart/form-data"
+          class="border-top pt-3 mt-3">
+      {% csrf_token %}
+
+      <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label" for="{{ attachment_form.file.id_for_label }}">
+            {{ attachment_form.file.label }}
+          </label>
+          {{ attachment_form.file }}
+          {{ attachment_form.file.errors }}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label" for="{{ attachment_form.title.id_for_label }}">
+            {{ attachment_form.title.label }}
+          </label>
+          {{ attachment_form.title }}
+          {{ attachment_form.title.errors }}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label" for="{{ attachment_form.description.id_for_label }}">
+            {{ attachment_form.description.label }}
+          </label>
+          {{ attachment_form.description }}
+          {{ attachment_form.description.errors }}
+        </div>
+
+        <div class="col-md-2 d-grid">
+          <button type="submit" class="btn btn-outline-primary">
+            {% trans "رفع مرفق" %}
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

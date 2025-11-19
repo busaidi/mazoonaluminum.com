@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import (
     permission_required,
     user_passes_test,
 )
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Sum, Q, ProtectedError, F
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, redirect
@@ -17,6 +18,7 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _
+from django.views import View
 from django.views.generic import (
     ListView,
     DetailView,
@@ -27,9 +29,11 @@ from django.views.generic import (
     DeleteView,
 )
 
-from core.models import AuditLog, NumberingScheme
+from core.forms import AttachmentForm
+from core.models import AuditLog, NumberingScheme, Attachment
 from core.services.audit import log_event
 from core.services.notifications import create_notification
+from core.views.attachments import BaseAttachmentCreateView, BaseAttachmentDeleteView
 from website.models import Product
 from .forms import (
     InvoiceForm,
@@ -277,7 +281,7 @@ class InvoiceUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
 @method_decorator(accounting_staff_required, name="dispatch")
 class InvoiceDetailView(AccountingSectionMixin, DetailView):
     """
-    Staff invoice detail page (with items, payments, etc).
+    Staff invoice detail page (with items, payments, attachments, etc).
     """
     section = "invoices"
     model = Invoice
@@ -285,6 +289,31 @@ class InvoiceDetailView(AccountingSectionMixin, DetailView):
     context_object_name = "invoice"
     slug_field = "number"
     slug_url_kwarg = "number"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        invoice = ctx["invoice"]
+
+        # جلب المرفقات النشطة المرتبطة بهذه الفاتورة
+        ct = ContentType.objects.get_for_model(invoice)
+        attachments = Attachment.objects.filter(
+            content_type=ct,
+            object_id=invoice.pk,
+            is_active=True,
+        )
+
+        ctx["attachments"] = attachments
+        ctx["attachments_count"] = attachments.count()
+        ctx["attachment_form"] = AttachmentForm()
+        # URL لإضافة مرفق، نمرره للـ partial
+        from django.urls import reverse
+        ctx["invoice_add_attachment_url"] = reverse(
+            "accounting:invoice_add_attachment",
+            args=[invoice.number],
+        )
+        return ctx
+
+
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
@@ -1146,4 +1175,31 @@ def accounting_settings_view(request):
         "accounting_section": "settings",
     }
     return render(request, "accounting/settings/settings.html", context)
+
+
+
+@method_decorator(accounting_staff_required, name="dispatch")
+class InvoiceAttachmentCreateView(AccountingSectionMixin, BaseAttachmentCreateView):
+    """
+    رفع مرفق لفاتورة محددة.
+    """
+    section = "invoices"
+    attachment_parent_model = Invoice
+    attachment_parent_lookup_url_kwarg = "number"   # من الـ URL
+    attachment_parent_lookup_field = "number"       # من الموديل
+    attachment_success_url_name = "accounting:invoice_detail"
+
+
+@method_decorator(accounting_staff_required, name="dispatch")
+class InvoiceAttachmentDeleteView(AccountingSectionMixin, BaseAttachmentDeleteView):
+    """
+    حذف (تعطيل) مرفق تابع لفاتورة.
+    """
+    section = "invoices"
+    attachment_parent_model = Invoice
+    attachment_parent_lookup_url_kwarg = "number"
+    attachment_parent_lookup_field = "number"
+    attachment_success_url_name = "accounting:invoice_detail"
+
+
 

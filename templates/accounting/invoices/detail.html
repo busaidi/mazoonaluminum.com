@@ -33,30 +33,30 @@
          class="btn btn-primary btn-sm">
         {% trans "تعديل الفاتورة" %}
       </a>
-{# اعتماد وترحيل للدفتر - فقط إذا مسودة #}
-{% if invoice.status == 'draft' %}
-  <a href="{% url 'accounting:invoice_confirm' invoice.pk %}"
-     class="btn btn-outline-primary btn-sm">
-    {% trans "اعتماد وترحيل إلى دفتر الأستاذ" %}
-  </a>
-{% endif %}
 
-{# إلغاء الترحيل - إذا مقيّدة وما عليها دفعات #}
-{% if invoice.ledger_entry and invoice.paid_amount == 0 %}
-  <a href="{% url 'accounting:invoice_unpost' invoice.pk %}"
-     class="btn btn-warning btn-sm">
-    {% trans "إلغاء الترحيل" %}
-  </a>
-{% endif %}
+      {# اعتماد وترحيل للدفتر - فقط إذا مسودة #}
+      {% if invoice.status == 'draft' %}
+        <a href="{% url 'accounting:invoice_confirm' invoice.pk %}"
+           class="btn btn-outline-primary btn-sm">
+          {% trans "اعتماد وترحيل إلى دفتر الأستاذ" %}
+        </a>
+      {% endif %}
 
-{# عرض قيد اليومية في دفتر الأستاذ - إذا الفاتورة مقيّدة #}
-{% if invoice.ledger_entry %}
-  <a href="{% url 'ledger:journalentry_detail' invoice.ledger_entry.pk %}"
-     class="btn btn-outline-secondary btn-sm">
-    {% trans "عرض قيد اليومية" %}
-  </a>
-{% endif %}
+      {# إلغاء الترحيل - إذا مقيّدة وما عليها دفعات #}
+      {% if invoice.ledger_entry and invoice.paid_amount == 0 %}
+        <a href="{% url 'accounting:invoice_unpost' invoice.pk %}"
+           class="btn btn-warning btn-sm">
+          {% trans "إلغاء الترحيل" %}
+        </a>
+      {% endif %}
 
+      {# عرض قيد اليومية في دفتر الأستاذ - إذا الفاتورة مقيّدة #}
+      {% if invoice.ledger_entry %}
+        <a href="{% url 'ledger:journalentry_detail' invoice.ledger_entry.pk %}"
+           class="btn btn-outline-secondary btn-sm">
+          {% trans "عرض قيد اليومية" %}
+        </a>
+      {% endif %}
 
       {# عرض الطلب المرتبط (إن وجد) #}
       {% if invoice.order %}
@@ -244,6 +244,9 @@
       </div>
     </div>
   {% endif %}
+
+  {# ===================== المرفقات ===================== #}
+ {% include "core/attachments/_invoice_panel.html" %}
 
   <!-- الدفعات -->
   <div class="card border-0 shadow-sm">
