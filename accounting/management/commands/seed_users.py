@@ -72,7 +72,7 @@ class Command(BaseCommand):
 
         user.set_password(password)
         user.is_active = True
-        user.is_staff = False     # portal user
+        user.is_staff = False     # customer user
         user.is_superuser = False
         user.save()
 

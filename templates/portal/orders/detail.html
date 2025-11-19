@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}
+  {% blocktrans with id=order.id %}طلب #{{ id }}{% endblocktrans %}
+{% endblock %}
+
+{% block content %}
+<div class="py-4">
+
+  {# ===== Breadcrumb Navigation ===== #}
+  <nav aria-label="{% trans 'مسار التنقل' %}" class="mb-3">
+    <ol class="breadcrumb bg-transparent px-0 mb-0">
+      <li class="breadcrumb-item">
+        <a href="{% url 'portal:dashboard' %}" class="text-decoration-none text-mazoon">
+          {% trans "لوحة الزبون" %}
+        </a>
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{% url 'portal:order_list' %}" class="text-decoration-none text-mazoon">
+          {% trans "طلباتي" %}
+        </a>
+      </li>
+      <li class="breadcrumb-item active text-muted" aria-current="page">
+        {% blocktrans with id=order.id %}طلب #{{ id }}{% endblocktrans %}
+      </li>
+    </ol>
+  </nav>
+
+  {# ===== Back button to orders list ===== #}
+  <div class="mb-3">
+    <a href="{% url 'portal:order_list' %}" class="btn btn-sm btn-outline-secondary">
+      ← {% trans "رجوع إلى طلباتي" %}
+    </a>
+  </div>
+
+  {# ===== Page header ===== #}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">
+      {% blocktrans with id=order.id %}تفاصيل الطلب #{{ id }}{% endblocktrans %}
+    </h1>
+  </div>
+
+  {# ===== Top cards: order info + linked invoice ===== #}
+  <div class="row g-3 mb-3">
+    <div class="col-md-6">
+      <div class="card h-100 shadow-sm bg-mazoon-card">
+        <div class="card-body">
+          <h5 class="card-title mb-3">{% trans "معلومات الطلب" %}</h5>
+          <p class="mb-1">
+            <strong>{% trans "رقم الطلب" %}:</strong>
+            #{{ order.id }}
+          </p>
+          <p class="mb-1">
+            <strong>{% trans "التاريخ" %}:</strong>
+            {{ order.created_at|date:"Y-m-d H:i" }}
+          </p>
+          <p class="mb-1">
+            <strong>{% trans "الحالة" %}:</strong>
+            <span class="badge-mazoon badge-{{ order.status|default:'pending' }}">
+              {{ order.get_status_display }}
+            </span>
+            {% if order.is_online %}
+              <span class="badge-mazoon badge-online ms-1">
+                {% trans "طلب أونلاين" %}
+              </span>
+            {% endif %}
+          </p>
+          <p class="mb-0">
+            <strong>{% trans "إجمالي الطلب التقريبي" %}:</strong>
+            <span class="fw-semibold">
+              {{ order.total_amount|floatformat:3 }}
+            </span>
+            <span class="small text-muted">
+              {% trans "ر.ع" %}
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    {% if order.invoice %}
+      <div class="col-md-6">
+        <div class="card h-100 shadow-sm bg-mazoon-card">
+          <div class="card-body">
+            <h5 class="card-title mb-3">{% trans "الفاتورة المرتبطة" %}</h5>
+            <p class="mb-1">
+              <strong>{% trans "رقم الفاتورة" %}:</strong>
+              {{ order.invoice.number }}
+            </p>
+            <p class="mb-1">
+              <strong>{% trans "تاريخ الإصدار" %}:</strong>
+              {{ order.invoice.issued_at|date:"Y-m-d" }}
+            </p>
+            <p class="mb-0">
+              <strong>{% trans "مبلغ الفاتورة" %}:</strong>
+              <span class="fw-semibold">
+                {{ order.invoice.total_amount|floatformat:3 }}
+              </span>
+              <span class="small text-muted">
+                {% trans "ر.ع" %}
+              </span>
+            </p>
+            <div class="mt-2">
+              <a href="{% url 'portal:invoice_detail' number=order.invoice.number %}"
+                 class="btn btn-outline-primary btn-sm">
+                {% trans "عرض الفاتورة" %}
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  {# ===== Optional notes ===== #}
+  {% if order.notes %}
+    <div class="card mb-3 shadow-sm bg-mazoon-card">
+      <div class="card-body">
+        <h5 class="card-title mb-2">{% trans "ملاحظات" %}</h5>
+        <p class="mb-0">{{ order.notes|linebreaksbr }}</p>
+      </div>
+    </div>
+  {% endif %}
+
+  {# ===== Order items table ===== #}
+  <div class="card shadow-sm bg-mazoon-card">
+    <div class="card-body">
+      <h5 class="card-title mb-3">{% trans "بنود الطلب" %}</h5>
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr class="small text-muted">
+              <th scope="col">{% trans "المنتج" %}</th>
+              <th scope="col" class="text-center">{% trans "الكمية" %}</th>
+              <th scope="col" class="text-end">{% trans "سعر الوحدة" %}</th>
+              <th scope="col" class="text-end">{% trans "الإجمالي" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% get_current_language as LANGUAGE_CODE %}
+            {% for item in order.items.all %}
+              <tr>
+                <td>
+                  {# Show product name based on current language if available #}
+                  {% if LANGUAGE_CODE == "ar" and item.product.name_ar %}
+                    {{ item.product.name_ar }}
+                  {% elif LANGUAGE_CODE == "en" and item.product.name_en %}
+                    {{ item.product.name_en }}
+                  {% else %}
+                    {{ item.product }}
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  {{ item.quantity }}
+                </td>
+                <td class="text-end">
+                  {{ item.unit_price|floatformat:3 }}
+                  <span class="small text-muted d-inline-block ms-1">
+                    {% trans "ر.ع" %}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <span class="fw-semibold">
+                    {{ item.subtotal|floatformat:3 }}
+                  </span>
+                  <span class="small text-muted d-inline-block ms-1">
+                    {% trans "ر.ع" %}
+                  </span>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="text-center text-muted py-4">
+                  {% trans "لا توجد بنود في هذا الطلب." %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

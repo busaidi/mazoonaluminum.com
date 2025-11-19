@@ -62,7 +62,7 @@
         {% if user.is_authenticated %}
           <div class="d-flex flex-wrap gap-2 mb-3">
             <!-- اطلب الآن: ينقل للبوابة ويعمل Order للمنتج مباشرة -->
-            <a href="{% url 'portal:portal_order_create' product.id %}" class="btn btn-primary">
+            <a href="{% url 'portal:order_create' product.id %}" class="btn btn-primary">
               {% trans "اطلب الآن" %}
             </a>
 

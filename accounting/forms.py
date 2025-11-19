@@ -165,7 +165,7 @@ class PaymentForm(forms.ModelForm):
 
 class CustomerForm(forms.ModelForm):
     """
-    Staff form to create / update customers from accounting screens.
+    Staff form to create / update customer from accounting screens.
     """
 
     class Meta:
@@ -193,7 +193,7 @@ class CustomerForm(forms.ModelForm):
 
 class CustomerProfileForm(forms.ModelForm):
     """
-    Form used in the customer portal to edit basic profile data (without user field).
+    Form used in the customer customer to edit basic profile data (without user field).
     """
 
     class Meta:
@@ -217,12 +217,12 @@ class CustomerProfileForm(forms.ModelForm):
 
 
 # ============================================================
-# Simple order forms (portal + quick staff)
+# Simple order forms (customer + quick staff)
 # ============================================================
 
 class CustomerOrderForm(forms.Form):
     """
-    Simple one-product order form from the customer portal.
+    Simple one-product order form from the customer customer.
     """
     quantity = forms.DecimalField(
         max_digits=10,

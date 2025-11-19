@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "تحديث بياناتي" %}{% endblock %}
+
+{% block content %}
+<div class="py-4">
+
+  {# ===== Breadcrumb Navigation ===== #}
+  <nav aria-label="{% trans 'مسار التنقل' %}" class="mb-3">
+    <ol class="breadcrumb bg-transparent px-0 mb-0">
+      <li class="breadcrumb-item">
+        <a href="{% url 'portal:dashboard' %}" class="text-decoration-none text-mazoon">
+          {% trans "لوحة الزبون" %}
+        </a>
+      </li>
+      <li class="breadcrumb-item active text-muted" aria-current="page">
+        {% trans "تحديث بياناتي" %}
+      </li>
+    </ol>
+  </nav>
+
+  {# ===== Back button to dashboard ===== #}
+  <div class="mb-3">
+    <a href="{% url 'portal:dashboard' %}" class="btn btn-sm btn-outline-secondary">
+      ← {% trans "رجوع إلى لوحة الزبون" %}
+    </a>
+  </div>
+
+  {# ===== Page header ===== #}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h4 mb-1">
+        {% trans "تحديث بياناتي" %}
+      </h1>
+      <p class="text-muted small mb-0">
+        {% trans "حدّث معلومات الاتصال والفواتير الخاصة بك لضمان تواصل أفضل وفواتير صحيحة." %}
+      </p>
+    </div>
+  </div>
+
+  {# ===== Profile form card ===== #}
+  <div class="card shadow-sm bg-mazoon-card">
+    <div class="card-body">
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        {# Non-field form errors (e.g., global validation) #}
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+          </div>
+        {% endif %}
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="{{ form.name.id_for_label }}" class="form-label">
+              {% trans "الاسم" %}
+            </label>
+            {{ form.name }}
+            {% for error in form.name.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-6">
+            <label for="{{ form.company_name.id_for_label }}" class="form-label">
+              {% trans "اسم الشركة" %}
+            </label>
+            {{ form.company_name }}
+            {% for error in form.company_name.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-6">
+            <label for="{{ form.phone.id_for_label }}" class="form-label">
+              {% trans "الهاتف" %}
+            </label>
+            {{ form.phone }}
+            {% for error in form.phone.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-6">
+            <label for="{{ form.email.id_for_label }}" class="form-label">
+              {% trans "البريد الإلكتروني" %}
+            </label>
+            {{ form.email }}
+            {% for error in form.email.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-6">
+            <label for="{{ form.tax_number.id_for_label }}" class="form-label">
+              {% trans "الرقم الضريبي" %}
+            </label>
+            {{ form.tax_number }}
+            {% for error in form.tax_number.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-12">
+            <label for="{{ form.address.id_for_label }}" class="form-label">
+              {% trans "العنوان" %}
+            </label>
+            {{ form.address }}
+            {% for error in form.address.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <button type="submit" class="btn btn-primary">
+            {% trans "حفظ التغييرات" %}
+          </button>
+          <a href="{% url 'portal:dashboard' %}" class="btn btn-outline-secondary">
+            {% trans "إلغاء" %}
+          </a>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "دفعاتي" %}{% endblock %}
+
+{% block content %}
+<div class="py-4">
+
+  {# ===== Breadcrumb Navigation ===== #}
+  <nav aria-label="{% trans 'مسار التنقل' %}" class="mb-3">
+    <ol class="breadcrumb bg-transparent px-0 mb-0">
+      <li class="breadcrumb-item">
+        <a href="{% url 'portal:dashboard' %}" class="text-decoration-none text-mazoon">
+          {% trans "لوحة الزبون" %}
+        </a>
+      </li>
+      <li class="breadcrumb-item active text-muted" aria-current="page">
+        {% trans "دفعاتي" %}
+      </li>
+    </ol>
+  </nav>
+
+  {# ===== Back button to dashboard ===== #}
+  <div class="mb-3">
+    <a href="{% url 'portal:dashboard' %}" class="btn btn-sm btn-outline-secondary">
+      ← {% trans "رجوع إلى لوحة الزبون" %}
+    </a>
+  </div>
+
+  {# ===== Page header ===== #}
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+    <div class="mb-2 mb-md-0">
+      <h1 class="h4 mb-1">
+        {% trans "دفعاتي" %}
+      </h1>
+      <p class="text-muted small mb-0">
+        {% trans "استعراض جميع الدفعات المسجلة على حسابك." %}
+      </p>
+    </div>
+  </div>
+
+  {# ===== Payments table ===== #}
+  <div class="card shadow-sm bg-mazoon-card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr class="small text-muted">
+              <th scope="col">{% trans "التاريخ" %}</th>
+              <th scope="col" class="text-end">{% trans "المبلغ" %}</th>
+              <th scope="col">{% trans "طريقة الدفع" %}</th>
+              <th scope="col">{% trans "الفاتورة" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in payments %}
+              <tr>
+                <td class="small">
+                  {{ p.date|date:"Y-m-d" }}
+                </td>
+                <td class="text-end">
+                  <span class="fw-semibold text-success">
+                    {{ p.amount|floatformat:3 }}
+                  </span>
+                  <span class="small text-muted d-inline-block ms-1">
+                    {% trans "ر.ع" %}
+                  </span>
+                </td>
+                <td class="small">
+                  {{ p.get_method_display }}
+                </td>
+                <td>
+                  {% if p.invoice %}
+                    <a href="{% url 'portal:invoice_detail' number=p.invoice.number %}"
+                       class="text-decoration-none">
+                      {{ p.invoice.number }}
+                    </a>
+                  {% else %}
+                    <span class="badge-mazoon badge-staff">
+                      {% trans "دفعة عامة" %}
+                    </span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="text-center text-muted py-4">
+                  {% trans "لا توجد دفعات مسجلة حتى الآن." %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {# ===== Pagination ===== #}
+      {% if is_paginated %}
+        <div class="border-top px-3 py-2">
+          <nav aria-label="{% trans 'ترقيم الصفحات' %}">
+            <ul class="pagination justify-content-center mb-0 small">
+
+              {% if page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                    {% trans "السابق" %}
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    {% trans "السابق" %}
+                  </span>
+                </li>
+              {% endif %}
+
+              <li class="page-item disabled">
+                <span class="page-link">
+                  {% blocktrans with number=page_obj.number total=page_obj.paginator.num_pages %}
+                    صفحة {{ number }} من {{ total }}
+                  {% endblocktrans %}
+                </span>
+              </li>
+
+              {% if page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                    {% trans "التالي" %}
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">
+                    {% trans "التالي" %}
+                  </span>
+                </li>
+              {% endif %}
+
+            </ul>
+          </nav>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -4,59 +4,98 @@
 {% block title %}{% trans "سلة المشتريات" %}{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">{% trans "سلة المشتريات" %}</h2>
-
-{% if cart.is_empty %}
-  <div class="alert alert-info">
-    {% trans "سلتك فارغة حالياً." %}
+<div class="container py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="h4 mb-0">{% trans "سلة المشتريات" %}</h2>
   </div>
-{% else %}
-  <table class="table table-bordered align-middle">
-    <thead>
-      <tr>
-        <th>{% trans "المنتج" %}</th>
-        <th style="width: 120px;">{% trans "الكمية" %}</th>
-        <th style="width: 120px;">{% trans "السعر" %}</th>
-        <th style="width: 120px;">{% trans "الإجمالي" %}</th>
-        <th style="width: 80px;"></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in cart %}
-      <tr>
-        <td>{{ item.product }}</td>
-        <td>{{ item.quantity }}</td>
-        <td>{{ item.price }}</td>
-        <td>{{ item.total_price }}</td>
-        <td>
-          <a href="{% url 'cart:remove' item.product.id %}" class="btn btn-sm btn-outline-danger">
-            {% trans "حذف" %}
-          </a>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
 
-  <div class="d-flex justify-content-between align-items-center mt-3">
-    <div>
-      <a href="/" class="btn btn-outline-secondary">
-  {% trans "متابعة التسوق" %}
-</a>
+  {% if cart.is_empty %}
+    <div class="alert alert-info mb-0">
+      {% trans "سلتك فارغة حالياً." %}
     </div>
+  {% else %}
+    <div class="card shadow-sm border-0">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm table-striped align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>{% trans "المنتج" %}</th>
+                <th class="text-center" style="width: 160px;">{% trans "الكمية" %}</th>
+                <th class="text-center" style="width: 120px;">{% trans "السعر" %}</th>
+                <th class="text-center" style="width: 120px;">{% trans "الإجمالي" %}</th>
+                <th class="text-center" style="width: 80px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in cart %}
+                <tr>
+                  <td>
+                    {{ item.product }}
+                  </td>
 
-    <div class="text-end">
-      <p class="mb-2">
-        <strong>{% trans "الإجمالي الكلي" %}:</strong>
-        {{ cart.get_total_price }}
-      </p>
-      <form method="post" action="{% url 'portal:cart_checkout' %}">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-primary">
-          {% trans "إتمام الطلب" %}
-        </button>
-      </form>
+                  <td class="text-center">
+                    <form method="post"
+                          action="{% url 'cart:add' item.product.id %}"
+                          class="d-inline-block">
+                      {% csrf_token %}
+                      <div class="input-group input-group-sm">
+                        <input type="number"
+                               name="quantity"
+                               min="1"
+                               step="1"
+                               value="{{ item.quantity }}"
+                               class="form-control text-center" />
+                        <input type="hidden" name="override" value="1">
+                        <button type="submit" class="btn btn-outline-primary">
+                          {% trans "تحديث" %}
+                        </button>
+                      </div>
+                    </form>
+                  </td>
+
+                  <td class="text-center">
+                    {{ item.price }}
+                  </td>
+
+                  <td class="text-center fw-semibold">
+                    {{ item.total_price }}
+                  </td>
+
+                  <td class="text-center">
+                    <a href="{% url 'cart:remove' item.product.id %}"
+                       class="btn btn-sm btn-outline-danger">
+                      {% trans "حذف" %}
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 pt-3 border-top">
+          <div>
+            <a href="/" class="btn btn-outline-secondary">
+              {% trans "متابعة التسوق" %}
+            </a>
+          </div>
+
+          <div class="text-end">
+            <p class="mb-2">
+              <span class="fw-semibold">{% trans "الإجمالي الكلي" %}:</span>
+              <span class="fs-5 ms-1">{{ cart.get_total_price }}</span>
+            </p>
+            <form method="post" action="{% url 'portal:cart_checkout' %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-primary">
+                {% trans "إتمام الطلب" %}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-{% endif %}
+  {% endif %}
+</div>
 {% endblock %}

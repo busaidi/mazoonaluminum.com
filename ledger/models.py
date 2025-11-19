@@ -103,7 +103,7 @@ class Account(models.Model):
     )
     is_active = models.BooleanField(default=True)
 
-    # Allow this account to be used in settlements (customers, suppliers, etc.)
+    # Allow this account to be used in settlements (customer, suppliers, etc.)
     allow_settlement = models.BooleanField(
         default=True,
         help_text=_("Allow this account to be used in settlements."),

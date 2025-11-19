@@ -71,7 +71,7 @@ class AccountingSectionMixin:
     Injects 'accounting_section' into context so templates can
     highlight the current section in the accounting navigation.
     """
-    section = None  # override in subclasses: 'dashboard', 'invoices', 'customers', 'orders', 'payments'
+    section = None  # override in subclasses: 'dashboard', 'invoices', 'customer', 'orders', 'payments'
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -122,7 +122,7 @@ class InvoiceListView(AccountingSectionMixin, ListView):
     """
     section = "invoices"
     model = Invoice
-    template_name = "accounting/invoices/invoice_list.html"
+    template_name = "accounting/invoices/list.html"
     context_object_name = "invoices"
     paginate_by = 20
 
@@ -153,7 +153,7 @@ class InvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
     section = "invoices"
     model = Invoice
     form_class = InvoiceForm
-    template_name = "accounting/invoices/invoice_form.html"
+    template_name = "accounting/invoices/form.html"
 
     def get_initial(self):
         initial = super().get_initial()
@@ -224,7 +224,7 @@ class InvoiceUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
     section = "invoices"
     model = Invoice
     form_class = InvoiceForm
-    template_name = "accounting/invoices/invoice_form.html"
+    template_name = "accounting/invoices/form.html"
     slug_field = "number"
     slug_url_kwarg = "number"
 
@@ -278,7 +278,7 @@ class InvoiceDetailView(AccountingSectionMixin, DetailView):
     """
     section = "invoices"
     model = Invoice
-    template_name = "accounting/invoices/invoice_detail.html"
+    template_name = "accounting/invoices/detail.html"
     context_object_name = "invoice"
     slug_field = "number"
     slug_url_kwarg = "number"
@@ -291,7 +291,7 @@ class InvoicePaymentCreateView(AccountingSectionMixin, TodayInitialDateMixin, Fo
     URL: /accounting/invoices/<number>/payments/new/
     """
     section = "payments"
-    template_name = "accounting/invoices/invoice_payment_form.html"
+    template_name = "accounting/invoices/payment.html"
     form_class = PaymentForInvoiceForm
 
     def dispatch(self, request, *args, **kwargs):
@@ -331,7 +331,7 @@ class InvoicePrintView(AccountingSectionMixin, DetailView):
     """
     section = "invoices"
     model = Invoice
-    template_name = "accounting/invoices/invoice_print.html"
+    template_name = "accounting/invoices/print.html"
     context_object_name = "invoice"
     slug_field = "number"
     slug_url_kwarg = "number"
@@ -403,12 +403,12 @@ class AccountingDashboardView(AccountingSectionMixin, TemplateView):
 @method_decorator(accounting_staff_required, name="dispatch")
 class CustomerListView(AccountingSectionMixin, ListView):
     """
-    Staff list of customers, with simple search by name/company.
+    Staff list of customer, with simple search by name/company.
     """
-    section = "customers"
+    section = "customer"
     model = Customer
-    template_name = "accounting/customers/customer_list.html"
-    context_object_name = "customers"
+    template_name = "accounting/customer/list.html"
+    context_object_name = "customer"
     paginate_by = 20
 
     def get_queryset(self):
@@ -426,10 +426,10 @@ class CustomerCreateView(AccountingSectionMixin, CreateView):
     """
     Create a new customer.
     """
-    section = "customers"
+    section = "customer"
     model = Customer
     form_class = CustomerForm
-    template_name = "accounting/customers/customer_form.html"
+    template_name = "accounting/customer/form.html"
 
     def get_success_url(self):
         return reverse("accounting:customer_list")
@@ -440,10 +440,10 @@ class CustomerUpdateView(AccountingSectionMixin, UpdateView):
     """
     Update an existing customer.
     """
-    section = "customers"
+    section = "customer"
     model = Customer
     form_class = CustomerForm
-    template_name = "accounting/customers/customer_form.html"
+    template_name = "accounting/customer/form.html"
 
     def get_success_url(self):
         return reverse("accounting:customer_list")
@@ -455,9 +455,9 @@ class CustomerDeleteView(AccountingSectionMixin, DeleteView):
     Delete a customer if no protected relations exist.
     If ProtectedError is raised, show a friendly message instead of 500.
     """
-    section = "customers"
+    section = "customer"
     model = Customer
-    template_name = "accounting/customers/customer_confirm_delete.html"
+    template_name = "accounting/customer/delete.html"
     success_url = reverse_lazy("accounting:customer_list")
 
     def post(self, request, *args, **kwargs):
@@ -488,9 +488,9 @@ class CustomerDetailView(AccountingSectionMixin, DetailView):
     - Payments
     - Balance summary
     """
-    section = "customers"
+    section = "customer"
     model = Customer
-    template_name = "accounting/customers/customer_detail.html"
+    template_name = "accounting/customer/detail.html"
     context_object_name = "customer"
 
     def get_context_data(self, **kwargs):
@@ -535,10 +535,10 @@ class CustomerDetailView(AccountingSectionMixin, DetailView):
 class CustomerPaymentCreateView(AccountingSectionMixin, TodayInitialDateMixin, FormView):
     """
     Create a general payment for a customer (not bound to a specific invoice).
-    URL: /accounting/customers/<pk>/payments/new/
+    URL: /accounting/customer/<pk>/payments/new/
     """
     section = "payments"
-    template_name = "accounting/customers/customer_payment_form.html"
+    template_name = "accounting/customer/payment.html"
     form_class = PaymentForInvoiceForm
 
     def dispatch(self, request, *args, **kwargs):
@@ -625,7 +625,7 @@ def apply_general_payment(request, pk):
 
     return render(
         request,
-        "accounting/payment/general_payment_apply.html",
+        "accounting/payment/payment_apply.html",
         {
             "payment": payment,
             "customer": customer,
@@ -645,7 +645,7 @@ class OrderListView(AccountingSectionMixin, ListView):
     """
     section = "orders"
     model = Order
-    template_name = "accounting/orders/order_list.html"
+    template_name = "accounting/orders/list.html"
     context_object_name = "orders"
     paginate_by = 20
 
@@ -665,7 +665,7 @@ class OrderDetailView(AccountingSectionMixin, DetailView):
     """
     section = "orders"
     model = Order
-    template_name = "accounting/orders/order_detail.html"
+    template_name = "accounting/orders/detail.html"
     context_object_name = "order"
 
 
@@ -677,7 +677,7 @@ class OrderCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
     section = "orders"
     model = Order
     form_class = OrderForm
-    template_name = "accounting/orders/order_form.html"
+    template_name = "accounting/orders/form.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -723,7 +723,7 @@ class OrderUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
     section = "orders"
     model = Order
     form_class = OrderForm
-    template_name = "accounting/orders/order_form.html"
+    template_name = "accounting/orders/form.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -821,7 +821,7 @@ class OrderPrintView(AccountingSectionMixin, DetailView):
     """
     section = "orders"
     model = Order
-    template_name = "accounting/orders/order_print.html"
+    template_name = "accounting/orders/print.html"
     context_object_name = "order"
 
     def get_queryset(self):
@@ -844,7 +844,7 @@ class PaymentPrintView(AccountingSectionMixin, DetailView):
     """
     section = "payments"
     model = Payment
-    template_name = "accounting/payment/payment_print.html"
+    template_name = "accounting/payment/print.html"
     context_object_name = "payment"
 
 
@@ -856,7 +856,7 @@ class PaymentPrintView(AccountingSectionMixin, DetailView):
 class PaymentListView(AccountingSectionMixin, ListView):
     section = "payments"
     model = Payment
-    template_name = "accounting/payment/payment_list.html"
+    template_name = "accounting/payment/list.html"
     context_object_name = "payments"
     paginate_by = 20
 
@@ -899,7 +899,7 @@ class PaymentCreateView(AccountingSectionMixin, TodayInitialDateMixin, CreateVie
     section = "payments"
     model = Payment
     form_class = PaymentForm
-    template_name = "accounting/payment/payment_form.html"
+    template_name = "accounting/payment/form.html"
 
     def get_success_url(self):
         return reverse("accounting:payment_list")
@@ -919,7 +919,7 @@ class PaymentUpdateView(AccountingSectionMixin, UpdateView):
     section = "payments"
     model = Payment
     form_class = PaymentForm
-    template_name = "accounting/payment/payment_form.html"
+    template_name = "accounting/payment/form.html"
     context_object_name = "payment"
 
     def get_form(self, form_class=None):
@@ -1009,7 +1009,7 @@ def invoice_unpost_view(request, pk):
 
 
 @staff_member_required
-def sales_settings_view(request):
+def accounting_settings_view(request):
     """
     Simple view to edit global sales/invoice settings.
     """
@@ -1028,4 +1028,4 @@ def sales_settings_view(request):
         "form": form,
         "accounting_section": "settings",  # لو حاب تميّز التبويب في الـ nav
     }
-    return render(request, "accounting/settings/sales_settings.html", context)
+    return render(request, "accounting/settings/settings.html", context)

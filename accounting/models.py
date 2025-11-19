@@ -47,7 +47,7 @@ def generate_invoice_number() -> str:
 class Customer(models.Model):
     """
     Basic customer profile.
-    If 'user' is set, it links to Django auth user (for portal login).
+    If 'user' is set, it links to Django auth user (for customer login).
     """
 
     user = models.OneToOneField(
@@ -56,7 +56,7 @@ class Customer(models.Model):
         null=True,
         blank=True,
         related_name="customer_profile",
-        help_text="Optional: link to a Django user for portal access.",
+        help_text="Optional: link to a Django user for customer access.",
     )
     name = models.CharField(max_length=255)
     phone = models.CharField(max_length=50, blank=True)

@@ -1025,7 +1025,7 @@ msgstr "Delete"
 
 #: templates/accounting/customers/customer_list.html:80
 msgid "لا يوجد زبائن حاليًا."
-msgstr "There are no customers at the moment."
+msgstr "There are no customer at the moment."
 
 #: templates/accounting/customers/customer_list.html:91
 msgid "صفحات الزبائن"
@@ -1066,7 +1066,7 @@ msgstr ""
 
 #: templates/accounting/dashboard.html:23
 msgid "نظرة سريعة على الفواتير، العملاء، الطلبات والدفعات."
-msgstr "Quick overview of invoices, customers, orders, and payments."
+msgstr "Quick overview of invoices, customer, orders, and payments."
 
 #: templates/accounting/dashboard.html:28
 msgid "إنشاء فاتورة جديدة"
@@ -1091,7 +1091,7 @@ msgstr "Number of invoices"
 
 #: templates/accounting/dashboard.html:59
 msgid "عدد العملاء"
-msgstr "Number of customers"
+msgstr "Number of customer"
 
 #: templates/accounting/dashboard.html:70
 msgid "عدد الدفعات"
@@ -1103,7 +1103,7 @@ msgstr "Number of orders"
 
 #: templates/accounting/dashboard.html:96
 msgid "إجمالي المتبقي على العملاء"
-msgstr "Total outstanding balance for customers"
+msgstr "Total outstanding balance for customer"
 
 #: templates/accounting/dashboard.html:102
 msgid "إجمالي الفواتير ناقص الدفعات المسجّلة."
@@ -1129,7 +1129,7 @@ msgstr "Manage customer data and link them to invoices, payments, and orders."
 
 #: templates/accounting/dashboard.html:140
 msgid "عرض كل العملاء"
-msgstr "View all customers"
+msgstr "View all customer"
 
 #: templates/accounting/dashboard.html:155
 msgid "متابعة طلبات العملاء قبل وبعد تحويلها إلى فواتير."
@@ -1952,7 +1952,7 @@ msgstr "Contact us"
 
 #: templates/base.html:143
 msgid "بوابة الزبون"
-msgstr "Customer portal"
+msgstr "Customer customer"
 
 #: templates/base.html:166 templates/ledger/_nav.html:9
 msgid "دفتر الأستاذ"

@@ -138,7 +138,7 @@
         {# بوابة الزبون #}
         {% if user.is_authenticated and user.customer_profile %}
           <li class="nav-item">
-            <a class="nav-link {% if request.resolver_match.namespace == 'portal' %}active{% endif %}"
+            <a class="nav-link {% if request.resolver_match.namespace == 'customer' %}active{% endif %}"
                href="{% url 'portal:dashboard' %}">
               {% trans "بوابة الزبون" %}
             </a>
@@ -189,7 +189,7 @@
               </li>
               <li><hr class="dropdown-divider"></li>
               <li>
-                <a class="dropdown-item" href="{% comment %}{% url 'account_profile' %}{% endcomment %}">
+                <a class="dropdown-item" href="{% url 'portal:profile' %}">
                   {% trans "الملف الشخصي" %}
                 </a>
               </li>

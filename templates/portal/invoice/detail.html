@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}
+  {% blocktrans with number=invoice.number %}فاتورة {{ number }}{% endblocktrans %}
+{% endblock %}
+
+{% block content %}
+<div class="py-4">
+
+  {# ===== Breadcrumb Navigation (Improved UX) ===== #}
+  <nav aria-label="{% trans 'مسار التنقل' %}" class="mb-3">
+    <ol class="breadcrumb bg-transparent px-0 mb-0">
+      <li class="breadcrumb-item">
+        <a href="{% url 'portal:invoice_list' %}" class="text-decoration-none text-mazoon">
+          {% trans "فواتيري" %}
+        </a>
+      </li>
+      <li class="breadcrumb-item active text-muted" aria-current="page">
+        {% blocktrans with number=invoice.number %}فاتورة {{ number }}{% endblocktrans %}
+      </li>
+    </ol>
+  </nav>
+
+  {# ===== Back Button (Right aligned) ===== #}
+  <div class="mb-3">
+    <a href="{% url 'portal:invoice_list' %}" class="btn btn-sm btn-outline-secondary">
+      ← {% trans "رجوع إلى الفواتير" %}
+    </a>
+  </div>
+
+  {# ===== Page header: title + actions ===== #}
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-2 mb-md-0">
+      {% blocktrans with number=invoice.number %}فاتورة {{ number }}{% endblocktrans %}
+    </h1>
+
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'portal:invoice_print' number=invoice.number %}"
+         class="btn btn-outline-secondary btn-sm"
+         target="_blank">
+        {% trans "طباعة / PDF" %}
+      </a>
+
+      {# If this invoice is linked to an order, show quick link to that order #}
+      {% if invoice.order %}
+        <a href="{% url 'portal:order_detail' pk=invoice.order.pk %}"
+           class="btn btn-outline-primary btn-sm">
+          {% trans "عرض الطلب" %}
+        </a>
+      {% endif %}
+
+      <a href="{% url 'portal:invoice_list' %}" class="btn btn-secondary btn-sm">
+        {% trans "رجوع إلى الفواتير" %}
+      </a>
+    </div>
+  </div>
+
+  {# ===== Two-column cards: invoice info + amounts ===== #}
+  <div class="row g-3 mb-3">
+
+    {# Invoice meta information #}
+    <div class="col-md-6">
+      <div class="card h-100 shadow-sm bg-mazoon-card">
+        <div class="card-body">
+          <h5 class="card-title mb-3">
+            {% trans "تفاصيل الفاتورة" %}
+          </h5>
+
+          <p class="mb-1">
+            <strong>{% trans "التاريخ" %}:</strong>
+            {{ invoice.issued_at|date:"Y-m-d" }}
+          </p>
+
+          <p class="mb-1">
+            <strong>{% trans "تاريخ الاستحقاق" %}:</strong>
+            {{ invoice.due_date|date:"Y-m-d"|default:"-" }}
+          </p>
+
+          <p class="mb-1">
+            <strong>{% trans "الحالة" %}:</strong>
+            {{ invoice.get_status_display }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    {# Invoice amounts summary #}
+    <div class="col-md-6">
+      <div class="card h-100 shadow-sm bg-mazoon-card">
+        <div class="card-body">
+          <h5 class="card-title mb-3">
+            {% trans "المبالغ" %}
+          </h5>
+
+          <p class="mb-1">
+            <strong>{% trans "الإجمالي" %}:</strong>
+            {{ invoice.total_amount|floatformat:3 }}
+            <span class="small text-muted">{% trans "ر.ع" %}</span>
+          </p>
+
+          <p class="mb-1">
+            <strong>{% trans "المدفوع" %}:</strong>
+            {{ invoice.paid_amount|floatformat:3 }}
+            <span class="small text-muted">{% trans "ر.ع" %}</span>
+          </p>
+
+          <p class="mb-1">
+            <strong>{% trans "المتبقي" %}:</strong>
+            <span class="{% if invoice.balance > 0 %}text-danger{% else %}text-muted{% endif %}">
+              {{ invoice.balance|floatformat:3 }}
+            </span>
+            <span class="small text-muted">{% trans "ر.ع" %}</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ===== Items table: products on this invoice ===== #}
+  <div class="card mb-3 shadow-sm bg-mazoon-card">
+    <div class="card-body">
+      <h5 class="card-title mb-3">
+        {% trans "بنود الفاتورة (المنتجات)" %}
+      </h5>
+
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr class="small text-muted">
+              <th scope="col">{% trans "المنتج" %}</th>
+              <th scope="col">{% trans "الوصف" %}</th>
+              <th scope="col" class="text-center">{% trans "الكمية" %}</th>
+              <th scope="col" class="text-end">{% trans "سعر الوحدة" %}</th>
+              <th scope="col" class="text-end">{% trans "الإجمالي" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {# NOTE: Adjust 'items' to your actual related_name if different, e.g. invoice.lines.all or invoice.invoice_items.all#}
+            {% for line in invoice.items.all %}
+              <tr>
+                <td class="text-nowrap">
+                  {{ line.product.name }}
+                </td>
+                <td class="small">
+                  {{ line.description|default:"-" }}
+                </td>
+                <td class="text-center">
+                  {{ line.quantity }}
+                </td>
+                <td class="text-end">
+                  {{ line.unit_price|floatformat:3 }}
+                  <span class="small text-muted d-inline-block ms-1">
+                    {% trans "ر.ع" %}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <span class="fw-semibold">
+                    {{ line.total|floatformat:3 }}
+                  </span>
+                  <span class="small text-muted d-inline-block ms-1">
+                    {% trans "ر.ع" %}
+                  </span>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">
+                  {% trans "لا توجد بنود مضافة على هذه الفاتورة." %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  {# ===== Optional description card ===== #}
+  {% if invoice.description %}
+    <div class="card mb-3 shadow-sm bg-mazoon-card">
+      <div class="card-body">
+        <h5 class="card-title mb-2">
+          {% trans "الوصف العام للفاتورة" %}
+        </h5>
+        <p class="mb-0">
+          {{ invoice.description|linebreaks }}
+        </p>
+      </div>
+    </div>
+  {% endif %}
+
+  {# ===== Payments table ===== #}
+  <div class="card shadow-sm bg-mazoon-card">
+    <div class="card-body">
+      <h5 class="card-title mb-3">
+        {% trans "الدفعات على هذه الفاتورة" %}
+      </h5>
+
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr class="small text-muted">
+              <th scope="col">{% trans "التاريخ" %}</th>
+              <th scope="col" class="text-end">{% trans "المبلغ" %}</th>
+              <th scope="col">{% trans "طريقة الدفع" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in invoice.payments.all %}
+              <tr>
+                <td class="small">
+                  {{ p.date|date:"Y-m-d" }}
+                </td>
+                <td class="text-end">
+                  <span class="fw-semibold text-success">
+                    {{ p.amount|floatformat:3 }}
+                  </span>
+                  <span class="small text-muted d-inline-block ms-1">
+                    {% trans "ر.ع" %}
+                  </span>
+                </td>
+                <td class="small">
+                  {{ p.get_method_display }}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="3" class="text-muted text-center py-4">
+                  {% trans "لا توجد دفعات على هذه الفاتورة." %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+

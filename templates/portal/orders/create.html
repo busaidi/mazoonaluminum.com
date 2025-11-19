@@ -1,0 +1,178 @@
+{# templates/portal/orders/create.html #}
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "إنشاء طلب جديد" %}{% endblock %}
+
+{% block content %}
+<div class="py-4">
+
+  {# ===== Breadcrumb Navigation ===== #}
+  <nav aria-label="{% trans 'مسار التنقل' %}" class="mb-3">
+    <ol class="breadcrumb bg-transparent px-0 mb-0">
+      <li class="breadcrumb-item">
+        <a href="{% url 'portal:dashboard' %}" class="text-decoration-none text-mazoon">
+          {% trans "لوحة الزبون" %}
+        </a>
+      </li>
+      <li class="breadcrumb-item">
+        <a href="{% url 'portal:order_list' %}" class="text-decoration-none text-mazoon">
+          {% trans "طلباتي" %}
+        </a>
+      </li>
+      <li class="breadcrumb-item active text-muted" aria-current="page">
+        {% trans "إنشاء طلب جديد" %}
+      </li>
+    </ol>
+  </nav>
+
+  {# ===== Back button to orders list ===== #}
+  <div class="mb-3">
+    <a href="{% url 'portal:order_list' %}" class="btn btn-sm btn-outline-secondary">
+      ← {% trans "رجوع إلى طلباتي" %}
+    </a>
+  </div>
+
+  {# ===== Page header ===== #}
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+    <h2 class="h4 mb-0">
+      {% trans "إنشاء طلب جديد" %}
+    </h2>
+  </div>
+
+  <div class="row g-3">
+    {# ===== Left: order form ===== #}
+    <div class="col-12 col-lg-8">
+      <div class="card shadow-sm bg-mazoon-card mb-3">
+        <div class="card-body">
+          <h3 class="h6 mb-3">{% trans "تفاصيل الطلب" %}</h3>
+
+          <form method="post">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+
+            <div class="row g-3">
+              {% for field in form %}
+                <div class="col-12">
+                  <div class="mb-2">
+                    <label class="form-label" for="{{ field.id_for_label }}">
+                      {{ field.label }}
+                      {% if field.field.required %}
+                        <span class="text-danger">*</span>
+                      {% endif %}
+                    </label>
+
+                    {{ field }}
+
+                    {% if field.help_text %}
+                      <div class="form-text">{{ field.help_text }}</div>
+                    {% endif %}
+
+                    {% for error in field.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+
+            <div class="mt-3 d-flex justify-content-end gap-2">
+              <a href="javascript:history.back();" class="btn btn-outline-secondary">
+                {% trans "إلغاء" %}
+              </a>
+              <button type="submit" class="btn btn-primary">
+                {% trans "تأكيد وإرسال الطلب" %}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    {# ===== Right: product summary (for 'Order Now' flow) ===== #}
+    {% if product %}
+      <div class="col-12 col-lg-4">
+        <div class="card shadow-sm bg-mazoon-card">
+          <div class="card-body">
+            <h3 class="h6 mb-3">
+              {% trans "مراجعة المنتج" %}
+            </h3>
+
+            <div class="mb-2">
+              <div class="fw-semibold">
+                {{ product.name }}
+              </div>
+              {% if product.sku %}
+                <div class="small text-muted">
+                  {% trans "رمز المنتج" %}: {{ product.sku }}
+                </div>
+              {% endif %}
+            </div>
+
+            {% if product.image %}
+              <div class="mb-3">
+                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded">
+              </div>
+            {% endif %}
+
+            <p class="mb-1">
+              <strong>{% trans "السعر التقريبي" %}:</strong>
+              <span class="fw-semibold">
+                {{ product.price|floatformat:3 }}
+              </span>
+              <span class="small text-muted">
+                {% trans "ر.ع" %}
+              </span>
+            </p>
+
+            {% if product.short_description %}
+              <p class="text-muted small mb-0 mt-2">
+                {{ product.short_description }}
+              </p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+    {# ===== Optional: cart review (if you still pass 'cart' in some flows) ===== #}
+    {% elif cart %}
+      <div class="col-12 col-lg-4">
+        <div class="card shadow-sm bg-mazoon-card">
+          <div class="card-body">
+            <h3 class="h6 mb-3">{% trans "مراجعة السلة" %}</h3>
+
+            {% if cart.is_empty %}
+              <p class="text-muted mb-0">
+                {% trans "لا توجد عناصر في السلة." %}
+              </p>
+            {% else %}
+              <ul class="list-group list-group-flush mb-3">
+                {% for item in cart %}
+                  <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                    <div class="small">
+                      <div class="fw-semibold">{{ item.product }}</div>
+                      <div class="text-muted">
+                        {% trans "الكمية" %}: {{ item.quantity }} ·
+                        {% trans "السعر" %}: {{ item.price }}
+                      </div>
+                    </div>
+                    <div class="fw-semibold small">
+                      {{ item.total_price }}
+                    </div>
+                  </li>
+                {% endfor %}
+              </ul>
+
+              <div class="d-flex justify-content-between">
+                <span class="fw-semibold">{% trans "الإجمالي الكلي" %}</span>
+                <span class="fw-bold">{{ cart.get_total_price }}</span>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

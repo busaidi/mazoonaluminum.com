@@ -16,7 +16,7 @@ class Command(BaseCommand):
         if created:
             user.set_password(password)
             user.is_active = True
-            user.is_staff = False   # portal users are NOT staff
+            user.is_staff = False   # customer users are NOT staff
             user.save()
             self.stdout.write(self.style.SUCCESS("User 'agent' created."))
         else:
