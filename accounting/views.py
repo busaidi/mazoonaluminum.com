@@ -4,7 +4,11 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib.auth.decorators import user_passes_test, login_required, permission_required
+from django.contrib.auth.decorators import (
+    login_required,
+    permission_required,
+    user_passes_test,
+)
 from django.db.models import Sum, Q, ProtectedError, F
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, redirect
@@ -32,21 +36,11 @@ from .forms import (
     ApplyPaymentForm,
     OrderItemFormSet,
     OrderForm,
-    PaymentForm, SalesSettingsForm,
+    PaymentForm,
+    SalesSettingsForm,
 )
 from .models import Invoice, Payment, Customer, Order, InvoiceItem, SalesSettings
-
-# ============================================================
-# Default invoice terms template
-# ============================================================
-
-DEFAULT_INVOICE_TERMS = (
-    "• تُصدر هذه الفاتورة وفقًا لشروط مزون ألمنيوم.\n"
-    "• يجب سداد المبلغ خلال 15 يومًا من تاريخ الفاتورة ما لم يُتفق على غير ذلك كتابيًا.\n"
-    "• تحتفظ مزون ألمنيوم بحقها في إيقاف التوريد أو الخدمات في حال التأخر عن السداد.\n"
-    "• في حال وجود أي ملاحظة على الفاتورة، يرجى التواصل خلال 3 أيام عمل من تاريخ الاستلام.\n"
-)
-
+from .services import convert_order_to_invoice, allocate_general_payment
 
 # ============================================================
 # Helpers / Permissions
@@ -569,18 +563,21 @@ class CustomerPaymentCreateView(AccountingSectionMixin, TodayInitialDateMixin, F
         return reverse("accounting:customer_detail", kwargs={"pk": self.customer.pk})
 
 
-# ============================================================
+# =====================================================================
 # General payment allocation
-# ============================================================
+# =====================================================================
 
 @accounting_staff_required
 def apply_general_payment(request, pk):
     """
-    Apply a general payment (invoice__isnull=True) to a specific invoice.
+    Allocate a general payment (invoice__isnull=True) to a specific invoice.
 
-    - If applied amount equals full payment → attach payment directly to invoice.
-    - If applied amount is partial          → create new payment for invoice
-                                             and reduce amount on original one.
+    Behaviour:
+    - If applied amount == full payment amount:
+        Attach the payment directly to the chosen invoice.
+    - If applied amount < full payment amount:
+        Create a new payment for the invoice and reduce
+        the amount of the original general payment.
     """
     payment = get_object_or_404(
         Payment,
@@ -599,31 +596,27 @@ def apply_general_payment(request, pk):
             invoice = form.cleaned_data["invoice"]
             amount = form.cleaned_data["amount"]
 
-            # Full allocation
-            if amount == payment.amount:
-                payment.invoice = invoice
-                payment.save(update_fields=["invoice"])
+            try:
+                is_full, remaining, _new_payment = allocate_general_payment(
+                    payment=payment,
+                    invoice=invoice,
+                    amount=amount,
+                    partial_notes=f"تسوية جزء ({amount}) من الدفعة العامة #{payment.pk}",
+                )
+            except ValueError:
+                messages.error(request, "قيمة التسوية غير صحيحة.")
+                return redirect("accounting:customer_detail", pk=customer.pk)
+
+            if is_full:
                 messages.success(
                     request,
                     f"تم تسوية الدفعة بالكامل على الفاتورة {invoice.number}.",
                 )
             else:
-                # Partial allocation
-                Payment.objects.create(
-                    customer=customer,
-                    invoice=invoice,
-                    amount=amount,
-                    date=payment.date,
-                    method=payment.method,
-                    notes=f"تسوية جزء ({amount}) من الدفعة العامة #{payment.pk}",
-                )
-                payment.amount = payment.amount - amount
-                payment.save(update_fields=["amount"])
-
                 messages.success(
                     request,
                     f"تم تسوية مبلغ {amount} على الفاتورة {invoice.number}، "
-                    f"والمتبقي في الدفعة العامة هو {payment.amount}."
+                    f"والمتبقي في الدفعة العامة هو {remaining}."
                 )
 
             return redirect("accounting:customer_detail", pk=customer.pk)
@@ -767,10 +760,12 @@ class OrderUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
 @accounting_staff_required
 def order_to_invoice(request, pk):
     """
-    Convert an order to an invoice:
-    - Create invoice from order data.
-    - Copy all order items to invoice items.
-    - Link order to invoice (order.invoice).
+    Convert an order into an invoice using the service layer.
+
+    Steps:
+    - Delegate the business logic to `convert_order_to_invoice`.
+    - Show a success message.
+    - Redirect to the new invoice detail page.
     """
     order = get_object_or_404(
         Order.objects.select_related("customer").prefetch_related("items__product"),
@@ -789,44 +784,8 @@ def order_to_invoice(request, pk):
     if request.method != "POST":
         return redirect("accounting:order_detail", pk=order.pk)
 
-    # Create invoice
-    invoice = Invoice(
-        customer=order.customer,
-        status=Invoice.Status.DRAFT,
-        description=order.notes or "",
-        terms=DEFAULT_INVOICE_TERMS,
-        issued_at=timezone.now(),
-    )
-    invoice.total_amount = Decimal("0")
-    invoice.save()  # number will be generated automatically
-
-    # Create invoice items from order items
-    total = Decimal("0")
-    invoice_items = []
-    for item in order.items.all():
-        inv_item = InvoiceItem(
-            invoice=invoice,
-            product=item.product,
-            description=item.description,
-            quantity=item.quantity,
-            unit_price=item.unit_price,
-        )
-        invoice_items.append(inv_item)
-        total += inv_item.subtotal
-
-    InvoiceItem.objects.bulk_create(invoice_items)
-
-    # Update invoice total
-    invoice.total_amount = total
-    invoice.save(update_fields=["total_amount"])
-
-    # Link order to invoice and mark as confirmed if constant exists
-    order.invoice = invoice
-    try:
-        order.status = Order.STATUS_CONFIRMED
-        order.save(update_fields=["invoice", "status"])
-    except AttributeError:
-        order.save(update_fields=["invoice"])
+    # Use service to perform the conversion logic
+    invoice = convert_order_to_invoice(order)
 
     messages.success(
         request,

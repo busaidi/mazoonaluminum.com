@@ -1,36 +1,22 @@
 {% extends "base.html" %}
 {% load i18n %}
 
+{# ================== SEO BLOCKS ================== #}
+
 {% block meta_title %}
-  {% if LANGUAGE_CODE == "ar" %}
-    مزون المنيوم – المختبر
-  {% else %}
-    Mazoon Aluminum – R&D Lab
-  {% endif %}
+  {% trans "مزون المنيوم – المختبر" %}
 {% endblock %}
 
 {% block meta_description %}
-  {% if LANGUAGE_CODE == "ar" %}
-    تعرف على مختبر مزون المنيوم للبحث والتطوير، واختبارات الأداء والاعتمادية لأنظمة النوافذ والأبواب.
-  {% else %}
-    Discover Mazoon Aluminum's R&D lab for testing performance and reliability of window and door systems.
-  {% endif %}
+  {% trans "تعرف على مختبر مزون المنيوم للبحث والتطوير، واختبارات الأداء والاعتمادية لأنظمة النوافذ والأبواب." %}
 {% endblock %}
 
 {% block og_title %}
-  {% if LANGUAGE_CODE == "ar" %}
-    مزون المنيوم – المختبر
-  {% else %}
-    Mazoon Aluminum – R&D Lab
-  {% endif %}
+  {% trans "مزون المنيوم – المختبر" %}
 {% endblock %}
 
 {% block og_description %}
-  {% if LANGUAGE_CODE == "ar" %}
-    تعرف على مختبر مزون المنيوم للبحث والتطوير، واختبارات الأداء والاعتمادية لأنظمة النوافذ والأبواب.
-  {% else %}
-    Discover Mazoon Aluminum's R&D lab for testing performance and reliability of window and door systems.
-  {% endif %}
+  {% trans "تعرف على مختبر مزون المنيوم للبحث والتطوير، واختبارات الأداء والاعتمادية لأنظمة النوافذ والأبواب." %}
 {% endblock %}
 
 {% block og_type %}website{% endblock %}
@@ -40,88 +26,146 @@
 {% block twitter_card %}summary_large_image{% endblock %}
 
 {% block twitter_title %}
-  {% if LANGUAGE_CODE == "ar" %}
-    مزون المنيوم – المختبر
-  {% else %}
-    Mazoon Aluminum – R&D Lab
-  {% endif %}
+  {% trans "مزون المنيوم – المختبر" %}
 {% endblock %}
 
 {% block twitter_description %}
-  {% if LANGUAGE_CODE == "ar" %}
-    تعرف على مختبر مزون المنيوم للبحث والتطوير، واختبارات الأداء والاعتمادية لأنظمة النوافذ والأبواب.
-  {% else %}
-    Discover Mazoon Aluminum's R&D lab for testing performance and reliability of window and door systems.
-  {% endif %}
+  {% trans "تعرف على مختبر مزون المنيوم للبحث والتطوير، واختبارات الأداء والاعتمادية لأنظمة النوافذ والأبواب." %}
 {% endblock %}
 
 {% block twitter_image %}{% endblock %}
 
 {% block title %}
-  {% if LANGUAGE_CODE == "ar" %}
-    {% trans "المختبر" %}
-  {% else %}
-    {% trans "Lab" %}
-  {% endif %}
+  {% trans "المختبر" %}
 {% endblock %}
 
+{# ================== PAGE CONTENT ================== #}
 {% block content %}
-<div class="row g-4">
-  <div class="col-lg-8">
-    <div class="card border-0 shadow-sm mb-3">
-      <div class="card-body">
-        <h1 class="h3 fw-bold mb-3">
-          {% if LANGUAGE_CODE == "ar" %}
-            {% trans "مختبر مزون المنيوم" %}
-          {% else %}
-            {% trans "Mazoon Aluminum Lab" %}
-          {% endif %}
-        </h1>
+<div class="py-4">
 
-        <div class="small text-muted" style="line-height: 1.9;">
-          {% if LANGUAGE_CODE == "ar" %}
-            <p>
-              في مختبر مزون المنيوم، نقوم باختبار أنظمة النوافذ والأبواب وفق معايير أداء دقيقة،
-              تشمل العزل الحراري، العزل الصوتي، مقاومة الهواء والماء، والمتانة الإنشائية.
-            </p>
-            <p>
-              نستخدم مزيجًا من النماذج الرقمية والنماذج الواقعية، مما يتيح تحسين التصاميم
-              قبل اعتمادها في المشاريع الفعلية.
-            </p>
-            <p>
-              يهدف المختبر إلى ضمان أن كل نظام يحمل اسم مزون يحقق مستوى ثابتًا من الجودة
-              في مختلف الظروف التشغيلية.
-            </p>
-          {% else %}
-            <p>
-              In the Mazoon Aluminum lab, we test our window and door systems against strict performance
-              criteria, including thermal insulation, acoustic insulation, air and water tightness,
-              and structural strength.
-            </p>
-            <p>
-              We combine digital prototyping with physical mock-ups and on-site testing to validate
-              and continuously improve our systems before they reach real projects.
-            </p>
-            <p>
-              The lab's mission is to ensure that every system carrying the Mazoon name delivers
-              consistent quality in real-world conditions.
-            </p>
-          {% endif %}
-        </div>
-      </div>
-    </div>
+  {# عنوان عام للصفحة خارج الكروت #}
+  <div class="mb-4">
+    <h1 class="h4 fw-bold text-mazoon mb-1">
+      {% trans "مختبر مزون المنيوم" %}
+    </h1>
+    <p class="text-muted small mb-0">
+      {% trans "منصة مزون لاختبار وتطوير أنظمة النوافذ والأبواب وفق معايير أداء واعتمادية عالية." %}
+    </p>
   </div>
 
-  <div class="col-lg-4">
-    <div class="card border-0 shadow-sm mb-3">
-      <div class="card-body small text-muted">
-        <h2 class="h6 fw-bold mb-3">{% trans "مجالات الاختبار" %}</h2>
-        <ul class="mb-0">
-          <li>{% trans "اختبارات أداء الهواء والماء والرياح." %}</li>
-          <li>{% trans "اختبارات العزل الحراري والصوتي." %}</li>
-          <li>{% trans "اختبارات جودة التشطيب والأكسسوارات." %}</li>
-        </ul>
+  <div class="row g-4">
+    <div class="col-lg-8">
+
+      {# الكرت الرئيسي (وصف المختبر) #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <h2 class="h6 fw-bold mb-3 text-mazoon">
+            {% trans "عن المختبر" %}
+          </h2>
+
+          <div class="small text-muted lh-lg">
+            <p>
+              {% trans "في مختبر مزون المنيوم نقوم باختبار أنظمة النوافذ والأبواب وفق معايير أداء دقيقة، تشمل العزل الحراري، العزل الصوتي، مقاومة الهواء والماء، والمتانة الإنشائية." %}
+            </p>
+            <p>
+              {% trans "نستخدم مزيجًا من النماذج الرقمية (Digital Prototyping) والنماذج الواقعية، مما يتيح تحسين التصاميم قبل اعتمادها في المشاريع الفعلية وتقليل الأخطاء في موقع العمل." %}
+            </p>
+            <p>
+              {% trans "يهدف المختبر إلى ضمان أن كل نظام يحمل اسم مزون يحقق مستوى ثابتًا من الجودة في مختلف الظروف التشغيلية، سواء في المشاريع السكنية أو التجارية أو الواجهات المتقدمة." %}
+            </p>
+          </div>
+
+          {# شريط صغير يلخّص مخرجات المختبر #}
+          <div class="row row-cols-1 row-cols-md-3 g-3 mt-3 small">
+            <div class="col">
+              <div class="bg-light border rounded-3 p-2 h-100">
+                <div class="fw-semibold text-mazoon mb-1">
+                  {% trans "تصاميم مُحسّنة" %}
+                </div>
+                <div class="text-muted">
+                  {% trans "معايرة مستمرة للأبعاد، الإكسسوارات، وأنظمة الإغلاق للحصول على أداء متوازن." %}
+                </div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="bg-light border rounded-3 p-2 h-100">
+                <div class="fw-semibold text-mazoon mb-1">
+                  {% trans "تقارير أداء" %}
+                </div>
+                <div class="text-muted">
+                  {% trans "توثيق نتائج الاختبارات لدعم القرارات الفنية في المشاريع." %}
+                </div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="bg-light border rounded-3 p-2 h-100">
+                <div class="fw-semibold text-mazoon mb-1">
+                  {% trans "نماذج تجريبية" %}
+                </div>
+                <div class="text-muted">
+                  {% trans "تصنيع نماذج كاملة للأنظمة قبل الانتقال إلى الإنتاج على نطاق واسع." %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
+
+      {# كرت إضافي (tuning للـ R&D) لو حاب تضيفه لاحقاً #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body small text-muted">
+          <h2 class="h6 fw-bold mb-2 text-mazoon">
+            {% trans "البحث والتطوير (R&D)" %}
+          </h2>
+          <p class="mb-1">
+            {% trans "يمثل المختبر نقطة الوصل بين فريق التصميم وفريق التنفيذ في الموقع، حيث يتم اختبار الأفكار الجديدة قبل تعميمها على الأنظمة المعتمدة." %}
+          </p>
+          <p class="mb-0">
+            {% trans "هذا يتيح لمزون تطوير حلول خاصة للمشاريع المميزة، مثل الواجهات الزجاجية الكبيرة، الأبواب المنزلقة ذات الأحمال العالية، وأنظمة العزل المتقدمة." %}
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="col-lg-4">
+
+      {# مجالات الاختبار #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body small text-muted">
+          <h2 class="h6 fw-bold mb-3 text-mazoon">
+            {% trans "مجالات الاختبار" %}
+          </h2>
+          <ul class="mb-0">
+            <li class="mb-1">
+              {% trans "اختبارات أداء الهواء والماء والرياح." %}
+            </li>
+            <li class="mb-1">
+              {% trans "اختبارات العزل الحراري والصوتي." %}
+            </li>
+            <li class="mb-1">
+              {% trans "اختبارات جودة التشطيب والأكسسوارات وملاءمتها للاستخدام اليومي." %}
+            </li>
+            <li class="mb-1">
+              {% trans "تجربة حلول خاصة للمشاريع (Customized Systems) قبل التنفيذ." %}
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {# كرت جانبي خفيف لتوضيح الهدف #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body small text-muted">
+          <h2 class="h6 fw-bold mb-2 text-mazoon">
+            {% trans "هدف المختبر" %}
+          </h2>
+          <p class="mb-0">
+            {% trans "ضمان أن كل نظام نوافذ أو أبواب من مزون لا يعتمد فقط على الرسومات، بل تم اختباره فعليًا وتحسينه قبل أن يصل إلى مشروعك." %}
+          </p>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>

@@ -1,44 +1,51 @@
 {% load i18n %}
 
 <div class="mb-3">
-  <div class="bg-mazoon-card border rounded-3 shadow-sm px-2 py-1">
+  <div class="bg-mazoon-card border rounded-3 shadow-sm px-2 py-2">
     <ul class="nav nav-pills flex-wrap small mazoon-nav gap-1">
+
       <li class="nav-item">
         <a class="nav-link px-3 py-1 {% if accounting_section == 'dashboard' %}active{% endif %}"
            href="{% url 'accounting:dashboard' %}">
           {% trans "لوحة المحاسبة" %}
         </a>
       </li>
+
       <li class="nav-item">
         <a class="nav-link px-3 py-1 {% if accounting_section == 'invoices' %}active{% endif %}"
            href="{% url 'accounting:invoice_list' %}">
           {% trans "الفواتير" %}
         </a>
       </li>
+
       <li class="nav-item">
         <a class="nav-link px-3 py-1 {% if accounting_section == 'customers' %}active{% endif %}"
            href="{% url 'accounting:customer_list' %}">
           {% trans "العملاء" %}
         </a>
       </li>
+
       <li class="nav-item">
         <a class="nav-link px-3 py-1 {% if accounting_section == 'orders' %}active{% endif %}"
            href="{% url 'accounting:order_list' %}">
           {% trans "الطلبات" %}
         </a>
       </li>
+
       <li class="nav-item">
         <a class="nav-link px-3 py-1 {% if accounting_section == 'payments' %}active{% endif %}"
            href="{% url 'accounting:payment_list' %}">
           {% trans "الدفعات" %}
         </a>
       </li>
-    <li class="nav-item">
+
+      <li class="nav-item">
         <a class="nav-link px-3 py-1 {% if accounting_section == 'sales_settings' %}active{% endif %}"
            href="{% url 'accounting:sales_settings' %}">
           {% trans "الضبط" %}
         </a>
       </li>
+
     </ul>
   </div>
 </div>

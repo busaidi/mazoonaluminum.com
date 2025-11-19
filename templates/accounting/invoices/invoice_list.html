@@ -1,89 +1,107 @@
 {% extends "base.html" %}
+{% load i18n %}
 
 {# عنوان الصفحة في التبويب + SEO #}
-{% block meta_title %}فواتير العملاء | Mazoon Aluminum{% endblock %}
+{% block meta_title %}{% trans "فواتير العملاء" %} | Mazoon Aluminum{% endblock %}
 {% block meta_description %}
-قائمة فواتير العملاء مع إمكانية التصفية حسب حالة الفاتورة وعرض الرصيد المتبقي لكل فاتورة.
+{% trans "قائمة فواتير العملاء مع إمكانية التصفية حسب حالة الفاتورة وعرض الرصيد المتبقي لكل فاتورة." %}
 {% endblock %}
 
 {% block content %}
 <div class="py-4">
-  {# شريط تنقّل المحاسبة #}
+
+  {# شريط تنقّل المحاسبة (ثيم مزون) #}
   {% include "accounting/_nav.html" %}
+
+  {# رأس الصفحة #}
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
-      <h1 class="h3 mb-1">📄 الفواتير</h1>
+      <h1 class="h4 mb-1 text-mazoon">📄 {% trans "الفواتير" %}</h1>
       <p class="text-muted small mb-0">
-        عرض وإدارة فواتير العملاء، مع متابعة المبالغ المدفوعة والمتبقية.
+        {% trans "عرض وإدارة فواتير العملاء، ومتابعة المبالغ المدفوعة والمتبقية لكل فاتورة." %}
       </p>
     </div>
-    <a href="{% url 'accounting:invoice_create' %}" class="btn btn-primary btn-sm">
-      + فاتورة جديدة
+
+    <a href="{% url 'accounting:invoice_create' %}" class="btn btn-primary btn-sm d-flex align-items-center gap-1">
+      <span class="fw-semibold">+ {% trans "فاتورة جديدة" %}</span>
     </a>
   </div>
 
-  {# فلتر الحالة #}
-  <form method="get" class="row g-2 mb-3 align-items-center">
-    <div class="col-auto">
-      <label for="id_status" class="form-label small mb-1">حالة الفاتورة</label>
-      <select id="id_status" name="status" class="form-select form-select-sm" onchange="this.form.submit()">
-        <option value="">كل الحالات</option>
-        {% for value,label in invoices.model.Status.choices %}
-          <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>
-            {{ label }}
-          </option>
-        {% endfor %}
-      </select>
+  {# فلتر الحالة داخل كرت نظيف #}
+  <form method="get" class="mb-3">
+    <div class="card bg-mazoon-card border-0 shadow-sm">
+      <div class="card-body py-2">
+        <div class="row g-2 align-items-end">
+          <div class="col-auto">
+            <label for="id_status" class="form-label small mb-1">{% trans "حالة الفاتورة" %}</label>
+            <select id="id_status"
+                    name="status"
+                    class="form-select form-select-sm"
+                    onchange="this.form.submit()">
+              <option value="">{% trans "كل الحالات" %}</option>
+              {% for value,label in invoices.model.Status.choices %}
+                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
     </div>
   </form>
 
-  <div class="card border-0 shadow-sm">
+  <div class="card border-0 shadow-sm bg-mazoon-card">
     <div class="card-body p-0">
       <div class="table-responsive">
         <table class="table table-hover table-sm mb-0 align-middle">
-          <thead class="table-light">
+          <thead class="table-light small">
             <tr>
-              <th>رقم الفاتورة</th>
-              <th>العميل</th>
-              <th>التاريخ</th>
-              <th class="text-end">الإجمالي</th>
-              <th class="text-end">المدفوع</th>
-              <th class="text-end">المتبقي</th>
-              <th>الحالة</th>
+              <th>{% trans "رقم الفاتورة" %}</th>
+              <th>{% trans "العميل" %}</th>
+              <th>{% trans "التاريخ" %}</th>
+              <th class="text-end">{% trans "الإجمالي" %}</th>
+              <th class="text-end">{% trans "المدفوع" %}</th>
+              <th class="text-end">{% trans "المتبقي" %}</th>
+              <th>{% trans "الحالة" %}</th>
             </tr>
           </thead>
           <tbody>
             {% for inv in invoices %}
               <tr>
                 <td>
-                  <a href="{% url 'accounting:invoice_detail' number=inv.number %}">
+                  <a href="{% url 'accounting:invoice_detail' number=inv.number %}"
+                     class="text-decoration-none text-mazoon fw-semibold">
                     {{ inv.number }}
                   </a>
                 </td>
+
                 <td>{{ inv.customer.name }}</td>
                 <td>{{ inv.issued_at|date:"d/m/Y" }}</td>
-                <td class="text-end">{{ inv.total_amount }}</td>
+
+                <td class="text-end fw-semibold">{{ inv.total_amount }}</td>
                 <td class="text-end">{{ inv.paid_amount }}</td>
                 <td class="text-end">{{ inv.balance }}</td>
+
                 <td>
-                  {# شارات بسيطة للحالة #}
                   {% if inv.status == inv.Status.PAID %}
-                    <span class="badge bg-success">مدفوعة</span>
+                    <span class="badge-mazoon badge-paid">{% trans "مدفوعة" %}</span>
                   {% elif inv.status == inv.Status.PARTIALLY_PAID %}
-                    <span class="badge bg-warning text-dark">مدفوعة جزئياً</span>
+                    <span class="badge-mazoon badge-partially-paid">{% trans "مدفوعة جزئياً" %}</span>
                   {% elif inv.status == inv.Status.CANCELLED %}
-                    <span class="badge bg-secondary">ملغاة</span>
+                    <span class="badge-mazoon badge-cancelled">{% trans "ملغاة" %}</span>
                   {% elif inv.status == inv.Status.SENT %}
-                    <span class="badge bg-info text-dark">مرسلة</span>
+                    <span class="badge-mazoon badge-sent">{% trans "مرسلة" %}</span>
                   {% else %}
-                    <span class="badge bg-light text-dark">{{ inv.get_status_display }}</span>
+                    <span class="badge-mazoon badge-draft">{{ inv.get_status_display }}</span>
                   {% endif %}
                 </td>
               </tr>
+
             {% empty %}
               <tr>
                 <td colspan="7" class="text-center text-muted py-4">
-                  لا توجد فواتير حتى الآن.
+                  {% trans "لا توجد فواتير حتى الآن." %}
                 </td>
               </tr>
             {% endfor %}
@@ -95,24 +113,25 @@
     {# Pagination #}
     {% if is_paginated %}
       <div class="card-footer bg-body-tertiary">
-        <nav aria-label="صفحات الفواتير">
-          <ul class="pagination justify-content-center mb-0">
+        <nav aria-label="{% trans 'صفحات الفواتير' %}">
+          <ul class="pagination justify-content-center mb-0 small">
+
             {% if page_obj.has_previous %}
               <li class="page-item">
                 <a class="page-link"
                    href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
-                  السابق
+                  {% trans "السابق" %}
                 </a>
               </li>
             {% else %}
               <li class="page-item disabled">
-                <span class="page-link">السابق</span>
+                <span class="page-link">{% trans "السابق" %}</span>
               </li>
             {% endif %}
 
             <li class="page-item disabled">
               <span class="page-link">
-                صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+                {% blocktrans %}صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}{% endblocktrans %}
               </span>
             </li>
 
@@ -120,14 +139,15 @@
               <li class="page-item">
                 <a class="page-link"
                    href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
-                  التالي
+                  {% trans "التالي" %}
                 </a>
               </li>
             {% else %}
               <li class="page-item disabled">
-                <span class="page-link">التالي</span>
+                <span class="page-link">{% trans "التالي" %}</span>
               </li>
             {% endif %}
+
           </ul>
         </nav>
       </div>

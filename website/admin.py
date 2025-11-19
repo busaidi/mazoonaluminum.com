@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import BlogPost, Comment, Product, Category, Tag
+from .models import BlogPost, Comment, Product, Category, Tag, ContactMessage
 
 
 @admin.register(Category)
@@ -78,3 +78,20 @@ class ProductAdmin(admin.ModelAdmin):
         return "-"
 
     image_tag.short_description = "Image"
+
+@admin.register(ContactMessage)
+class ContactMessageAdmin(admin.ModelAdmin):
+    list_display = ("name", "email", "subject", "created_at")
+    list_filter = ("created_at",)
+    search_fields = ("name", "email", "subject", "message")
+    readonly_fields = ("name", "email", "subject", "message", "created_at")
+
+    fieldsets = (
+        (None, {
+            "fields": ("name", "email", "subject", "message")
+        }),
+        ("معلومات النظام", {
+            "classes": ("collapse",),
+            "fields": ("created_at",),
+        }),
+    )

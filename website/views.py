@@ -7,7 +7,7 @@ from django.utils.translation import gettext as _
 
 from django.views.generic import TemplateView, ListView, DetailView, View
 
-from .models import BlogPost, Comment, Product, Category, Tag
+from .models import BlogPost, Comment, Product, Category, Tag, ContactMessage
 
 
 # ============================================================
@@ -219,7 +219,8 @@ class ProductDetailView(DetailView):
 class ContactView(View):
     """
     Simple contact form view.
-    Currently only shows a success message.
+    - Saves valid messages to the database.
+    - Uses a honeypot field to filter basic bots.
     """
     template_name = "website/contact.html"
 
@@ -227,17 +228,33 @@ class ContactView(View):
         return render(request, self.template_name)
 
     def post(self, request, *args, **kwargs):
+        # Honeypot field: if filled, treat as spam and silently ignore
+        honeypot = request.POST.get("website", "").strip()
+        if honeypot:
+            # Optional: you can log it if you want
+            return redirect("contact")
+
         name = request.POST.get("name", "").strip()
         email = request.POST.get("email", "").strip()
+        phone = request.POST.get("phone", "").strip()
         subject = request.POST.get("subject", "").strip()
         message_body = request.POST.get("message", "").strip()
 
-        if name and message_body:
-            messages.success(request, _("تم إرسال رسالتك، سنعاود التواصل معك قريباً."))
-            return redirect("contact")
+        if not name or not message_body:
+            messages.error(request, _("الرجاء تعبئة الاسم والرسالة."))
+            return render(request, self.template_name)
 
-        # If validation fails, just re-render the page
-        return render(request, self.template_name)
+        # Save message to database
+        ContactMessage.objects.create(
+            name=name,
+            email=email,
+            phone=phone,
+            subject=subject,
+            message=message_body,
+        )
+
+        messages.success(request, _("تم إرسال رسالتك، سنعاود التواصل معك قريباً."))
+        return redirect("contact")
 
 
 # ============================================================

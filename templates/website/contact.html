@@ -4,35 +4,19 @@
 {# ================== SEO BLOCKS ================== #}
 
 {% block meta_title %}
-  {% if LANGUAGE_CODE == "ar" %}
-    اتصل بنا – مزون المنيوم
-  {% else %}
-    Contact Us – Mazoon Aluminum
-  {% endif %}
+  {% trans "اتصل بنا – مزون المنيوم" %}
 {% endblock %}
 
 {% block meta_description %}
-  {% if LANGUAGE_CODE == "ar" %}
-    تواصل مع مزون المنيوم للاستفسار عن الأنظمة، الأسعار، أو التعاون في المشاريع.
-  {% else %}
-    Contact Mazoon Aluminum for inquiries about systems, pricing, or project collaboration.
-  {% endif %}
+  {% trans "تواصل مع مزون المنيوم للاستفسار عن الأنظمة، الأسعار، أو التعاون في المشاريع." %}
 {% endblock %}
 
 {% block og_title %}
-  {% if LANGUAGE_CODE == "ar" %}
-    اتصل بنا – مزون المنيوم
-  {% else %}
-    Contact Us – Mazoon Aluminum
-  {% endif %}
+  {% trans "اتصل بنا – مزون المنيوم" %}
 {% endblock %}
 
 {% block og_description %}
-  {% if LANGUAGE_CODE == "ar" %}
-    تواصل مع مزون المنيوم للاستفسار عن الأنظمة، الأسعار، أو التعاون في المشاريع.
-  {% else %}
-    Contact Mazoon Aluminum for inquiries about systems, pricing, or project collaboration.
-  {% endif %}
+  {% trans "تواصل مع مزون المنيوم للاستفسار عن الأنظمة، الأسعار، أو التعاون في المشاريع." %}
 {% endblock %}
 
 {% block og_type %}website{% endblock %}
@@ -42,96 +26,172 @@
 {% block twitter_card %}summary_large_image{% endblock %}
 
 {% block twitter_title %}
-  {% if LANGUAGE_CODE == "ar" %}
-    اتصل بنا – مزون المنيوم
-  {% else %}
-    Contact Us – Mazoon Aluminum
-  {% endif %}
+  {% trans "اتصل بنا – مزون المنيوم" %}
 {% endblock %}
 
 {% block twitter_description %}
-  {% if LANGUAGE_CODE == "ar" %}
-    تواصل مع مزون المنيوم للاستفسار عن الأنظمة، الأسعار، أو التعاون في المشاريع.
-  {% else %}
-    Contact Mazoon Aluminum for inquiries about systems, pricing, or project collaboration.
-  {% endif %}
+  {% trans "تواصل مع مزون المنيوم للاستفسار عن الأنظمة، الأسعار، أو التعاون في المشاريع." %}
 {% endblock %}
 
 {% block twitter_image %}{% endblock %}
 
 {% block title %}
-  {% if LANGUAGE_CODE == "ar" %}
-    {% trans "اتصل بنا" %}
-  {% else %}
-    {% trans "Contact us" %}
-  {% endif %}
+  {% trans "اتصل بنا" %}
 {% endblock %}
 
 {# ================== PAGE CONTENT ================== #}
 {% block content %}
-<div class="row g-4 align-items-start">
-  <!-- نموذج التواصل -->
-  <div class="col-lg-7">
-    <div class="card border-0 shadow-sm mb-3">
-      <div class="card-body">
-        <h1 class="h3 fw-bold mb-2">
-          {% if LANGUAGE_CODE == "ar" %}
-            {% trans "اتصل بنا" %}
-          {% else %}
-            {% trans "Contact us" %}
-          {% endif %}
-        </h1>
-        <p class="text-muted small mb-4">
-          {% if LANGUAGE_CODE == "ar" %}
-            {% trans "يسعدنا تواصلك معنا بخصوص الأنظمة، التسعير، أو التعاون في المشاريع." %}
-          {% else %}
-            {% trans "We are happy to hear from you regarding systems, pricing, or project collaboration." %}
-          {% endif %}
-        </p>
+<div class="py-4">
 
-        <form method="post" class="row g-3">
-          {% csrf_token %}
-          <div class="col-md-6">
-            <label class="form-label small fw-semibold">{% trans "الاسم" %}</label>
-            <input type="text" name="name" class="form-control form-control-sm" required />
-          </div>
-          <div class="col-md-6">
-            <label class="form-label small fw-semibold">{% trans "البريد الإلكتروني" %}</label>
-            <input type="email" name="email" class="form-control form-control-sm" required />
-          </div>
-          <div class="col-12">
-            <label class="form-label small fw-semibold">{% trans "الموضوع" %}</label>
-            <input type="text" name="subject" class="form-control form-control-sm" />
-          </div>
-          <div class="col-12">
-            <label class="form-label small fw-semibold">{% trans "الرسالة" %}</label>
-            <textarea name="message" rows="4" class="form-control form-control-sm" required></textarea>
-          </div>
-          <div class="col-12 d-flex justify-content-end">
-            <button type="submit" class="btn btn-primary">
-              {% trans "إرسال" %}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+  {# ===== عنوان الصفحة (خارج أي كرت، بدون بوردر) ===== #}
+  <div class="mb-4">
+    <h1 class="h4 fw-bold text-mazoon mb-1">
+      {% trans "اتصل بنا" %}
+    </h1>
+    <p class="text-muted small mb-0">
+      {% trans "يسعدنا تواصلك معنا بخصوص الأنظمة، التسعير، أو التعاون في المشاريع." %}
+    </p>
   </div>
 
-  <!-- معلومات التواصل -->
-  <div class="col-lg-5">
-    <aside class="card border-0 shadow-sm h-100">
-      <div class="card-body">
-        <h2 class="h6 fw-bold mb-3">{% trans "معلومات التواصل" %}</h2>
-        <ul class="list-unstyled small text-muted mb-3">
-          <li class="mb-1">📍 {% trans "سلطنة عُمان" %}</li>
-          <li class="mb-1">📧 info@mazoonaluminum.com</li>
-          <li class="mb-1">📞 +968-0000-0000</li>
-        </ul>
-        <p class="small text-muted mb-0">
-          {% trans "يمكنك تعديل هذه المعلومات لاحقاً لتطابق بيانات التواصل الحقيقية لشركتك." %}
-        </p>
+  <div class="row g-4 align-items-start">
+    {# ===== نموذج التواصل ===== #}
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <h2 class="h6 fw-bold mb-2 text-mazoon">
+            {% trans "نموذج التواصل" %}
+          </h2>
+
+          <p class="text-muted small mb-4">
+            {% trans "يرجى تعبئة النموذج التالي وسنعود إليك في أقرب وقت ممكن." %}
+          </p>
+
+          <form method="post" class="row g-3">
+            {% csrf_token %}
+
+            {# honeypot بسيط لمنع البوتات (إن استخدمته في الـ view) #}
+            <div style="display:none;">
+              <label>Leave this field empty</label>
+              <input type="text" name="website" autocomplete="off" />
+            </div>
+
+            <div class="col-12">
+              <label class="form-label small fw-semibold">
+                {% trans "الاسم" %}
+              </label>
+              <input type="text"
+                     name="name"
+                     class="form-control form-control-sm"
+                     placeholder="{% trans 'مثال: محمد بن عبدالله' %}"
+                     required />
+            </div>
+
+            <div class="col-12">
+              <label class="form-label small fw-semibold">
+                {% trans "البريد الإلكتروني" %}
+              </label>
+              <input type="email"
+                     name="email"
+                     class="form-control form-control-sm"
+                     placeholder="you@example.com"
+                     required />
+            </div>
+
+            <div class="col-12">
+              <label class="form-label small fw-semibold">
+                {% trans "الموضوع" %}
+              </label>
+              <input type="text"
+                     name="subject"
+                     class="form-control form-control-sm"
+                     placeholder="{% trans 'مثال: استفسار عن أنظمة النوافذ' %}"
+                     required />
+            </div>
+
+            <div class="col-12">
+              <label class="form-label small fw-semibold">
+                {% trans "الرسالة" %}
+              </label>
+              <textarea name="message"
+                        rows="4"
+                        class="form-control form-control-sm"
+                        placeholder="{% trans 'اكتب تفاصيل مشروعك أو استفسارك هنا…' %}"
+                        required></textarea>
+            </div>
+
+            <div class="col-12 d-flex justify-content-between align-items-center">
+              <p class="small text-muted mb-0">
+                {% trans "لن نستخدم بياناتك لأغراض تسويقية غير مرغوبة." %}
+              </p>
+              <button type="submit" class="btn btn-primary px-4">
+                {% trans "إرسال" %}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </aside>
+    </div>
+
+    {# ===== معلومات التواصل ===== #}
+    <div class="col-lg-5">
+      <aside class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h6 fw-bold mb-3 text-mazoon">
+            {% trans "معلومات التواصل" %}
+          </h2>
+
+          <div class="mb-3 small">
+            <h3 class="h6 fw-semibold mb-2 text-muted">
+              {% trans "مواقعنا" %}
+            </h3>
+            <ul class="list-unstyled mb-0">
+              <li class="mb-1">
+                📍 {% trans "المكتب: أبراج المهلب، الأنصب، مسقط، سلطنة عمان" %}
+              </li>
+              <li class="mb-1">
+                📍 {% trans "معرض إبرا: إبرا، محافظة شمال الشرقية، سلطنة عمان" %}
+              </li>
+              <li class="mb-1">
+                📍 {% trans "التصنيع: المنطقة الصناعية، السويق، سلطنة عمان" %}
+              </li>
+            </ul>
+          </div>
+
+          <hr class="my-3">
+
+          <div class="mb-3 small">
+            <h3 class="h6 fw-semibold mb-2 text-muted">
+              {% trans "البريد الإلكتروني" %}
+            </h3>
+            <p class="mb-0">
+              <a href="mailto:info@mazoonaluminum.com"
+                 class="text-decoration-none text-mazoon">
+                info@mazoonaluminum.com
+              </a>
+            </p>
+          </div>
+
+          <hr class="my-3">
+
+          <div class="mb-0 small">
+            <h3 class="h6 fw-semibold mb-2 text-muted">
+              {% trans "أرقام الهواتف" %}
+            </h3>
+            <ul class="list-unstyled mb-0">
+              <li class="mb-1">
+                📞 {% trans "الإدارة: 91711170" %}
+              </li>
+              <li class="mb-1">
+                📞 {% trans "المبيعات: 95777605" %}
+              </li>
+              <li class="mb-1">
+                📞 {% trans "معرض إبرا: 96767064" %}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+    </div>
   </div>
 </div>
 {% endblock %}
