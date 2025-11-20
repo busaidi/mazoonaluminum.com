@@ -1,4 +1,4 @@
-# core/context_processors.py
+# core/notifications.py
 from core.models import Notification
 
 

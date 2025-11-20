@@ -8,7 +8,7 @@ class StaticEnglishSitemap(Sitemap):
     priority = 0.7
 
     def items(self):
-        # هذه أسماء الـ URL patterns (name=...) في website/urls.py
+        # هذه أسماء الـ URL patterns (name=...) في website/notifications.py
         return ["home", "about", "lab", "blog_list", "product_list", "contact"]
 
     def location(self, item):

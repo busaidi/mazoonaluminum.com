@@ -1,4 +1,4 @@
-# accounting/urls.py
+# accounting/notifications.py
 
 from django.urls import path
 

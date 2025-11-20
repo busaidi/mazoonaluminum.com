@@ -9,7 +9,6 @@ from django.contrib.auth.decorators import (
     permission_required,
     user_passes_test,
 )
-from django.contrib.contenttypes.models import ContentType
 from django.db.models import Sum, Q, ProtectedError, F
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, redirect
@@ -18,7 +17,6 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _
-from django.views import View
 from django.views.generic import (
     ListView,
     DetailView,
@@ -29,8 +27,7 @@ from django.views.generic import (
     DeleteView,
 )
 
-from core.forms import AttachmentForm
-from core.models import AuditLog, NumberingScheme, Attachment
+from core.models import AuditLog
 from core.services.audit import log_event
 from core.services.notifications import create_notification
 from core.views.attachments import  AttachmentPanelMixin
@@ -414,12 +411,12 @@ class AccountingDashboardView(AccountingSectionMixin, TemplateView):
 @method_decorator(accounting_staff_required, name="dispatch")
 class CustomerListView(AccountingSectionMixin, ListView):
     """
-    Staff list of customer, with simple search by name/company.
+    Staff list of customers, with simple search by name/company.
     """
-    section = "customer"
+    section = "customers"  # عشان الناف بار
     model = Customer
     template_name = "accounting/customer/list.html"
-    context_object_name = "customer"
+    context_object_name = "customers"  # يتطابق مع القالب
     paginate_by = 20
 
     def get_queryset(self):
@@ -427,10 +424,10 @@ class CustomerListView(AccountingSectionMixin, ListView):
         q = self.request.GET.get("q")
         if q:
             qs = qs.filter(
-                Q(name__icontains=q) | Q(company_name__icontains=q)
+                Q(name__icontains=q) |
+                Q(company_name__icontains=q)
             )
         return qs
-
 
 @method_decorator(accounting_staff_required, name="dispatch")
 class CustomerCreateView(AccountingSectionMixin, CreateView):
