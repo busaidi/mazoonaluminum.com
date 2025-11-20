@@ -6,6 +6,7 @@ from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Sum
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import (
@@ -290,13 +291,20 @@ class PortalOrderCreateView(CustomerPortalMixin, FormView):
     - Use CustomerOrderForm to collect quantity and notes.
     - Create an Order with is_online=True.
     - Create a single OrderItem for the selected product.
+
+    ملاحظة:
+    - إرسال الإشعارات للستاف يتم عبر signals على موديل Order،
+      وليس من داخل هذا الفيو.
     """
+
     form_class = CustomerOrderForm
     template_name = "portal/orders/create.html"
     success_url = reverse_lazy("portal:order_list")
 
     def dispatch(self, request, *args, **kwargs):
-        # Load the product once and keep it on `self.product`.
+        """
+        Load the product once and keep it on `self.product`.
+        """
         self.product = get_object_or_404(
             Product,
             pk=kwargs.get("product_id"),
@@ -324,8 +332,8 @@ class PortalOrderCreateView(CustomerPortalMixin, FormView):
         """
         On valid form:
         - Create the Order and its single OrderItem inside an atomic transaction.
-        - Show a success message in Arabic (translatable).
-        - Send a notification to all staff users about the new online order.
+        - Show a success message.
+        - إشعارات الستاف تتم في signal على Order (عند الإنشاء).
         """
         customer = self.customer
         quantity = form.cleaned_data["quantity"]
@@ -345,24 +353,14 @@ class PortalOrderCreateView(CustomerPortalMixin, FormView):
                 quantity=quantity,
                 unit_price=self.product.price,
             )
-
-            # 🔔 إرسال تنبيه لكل الموظفين (staff + active)
-            staff_users = User.objects.filter(is_staff=True, is_active=True)
-            for staff in staff_users:
-                create_notification(
-                    recipient=staff,
-                    verb=_("تم إنشاء طلب جديد من بوابة الزبون."),
-                    target=order,
-                )
+            # لو احتجت تستخدمه لاحقاً (مثلاً في مكسينز)
+            self.object = order
 
         messages.success(
             self.request,
-            _(
-                "تم إرسال طلبك بنجاح، وسيقوم الموظف بمراجعته وتأكيده."
-            ),
+            _("تم إرسال طلبك بنجاح، وسيقوم الموظف بمراجعته وتأكيده."),
         )
-        # Use the default success_url (order list)
-        return super().form_valid(form)
+        return HttpResponseRedirect(self.get_success_url())
 
 
 # ------------------------------------------------------------------------------

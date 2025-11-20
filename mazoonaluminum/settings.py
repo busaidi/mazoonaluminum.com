@@ -20,8 +20,8 @@ INSTALLED_APPS = [
     #my Website Blog and product
     "core",
     "website",
-    "accounting",
-    "portal",
+    "accounting.apps.AccountingConfig",
+    "portal.apps.PortalConfig",
     "cart",
     "ledger",
 ]

@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import (
     permission_required,
     user_passes_test,
 )
+from django.db import transaction
 from django.db.models import Sum, Q, ProtectedError, F
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, redirect
@@ -152,8 +153,11 @@ class InvoiceListView(AccountingSectionMixin, ListView):
 @method_decorator(accounting_staff_required, name="dispatch")
 class InvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
     """
-    Create a new invoice with inline items formset.
+    إنشاء فاتورة جديدة مع فورمست للبنود (Invoice Items).
+    منطق إنشاء التنبيهات يتم عبر signals على موديل Invoice،
+    وليس من داخل هذا الفيو.
     """
+
     section = "invoices"
     model = Invoice
     form_class = InvoiceForm
@@ -167,7 +171,7 @@ class InvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
         if customer_id:
             initial["customer"] = customer_id
 
-        # Pre-fill default terms from SalesSettings فقط (إن وُجدت)
+        # Pre-fill default terms from Settings (إن وُجدت)
         if not initial.get("terms"):
             settings = Settings.get_solo()
             if settings.default_terms:
@@ -191,6 +195,11 @@ class InvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
         return ctx
 
     def form_valid(self, form):
+        """
+        نحفظ الفاتورة والبنود داخل transaction واحدة:
+        - إذا فشل حفظ البنود أو حساب الإجمالي → يتم التراجع عن كل شيء.
+        - أوّل save للفاتورة يطلق post_save(created=True) → السيجنال يشتغل.
+        """
         context = self.get_context_data()
         item_formset = context["item_formset"]
 
@@ -198,20 +207,24 @@ class InvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
         if not item_formset.is_valid():
             return self.form_invalid(form)
 
-        # 1) Save invoice without total
-        invoice = form.save(commit=False)
-        invoice.total_amount = Decimal("0")
-        invoice.save()  # number, due_date, terms معالجة في model.save()
-        self.object = invoice
+        with transaction.atomic():
+            # 1) Save invoice without total
+            invoice = form.save(commit=False)
+            invoice.total_amount = Decimal("0")
+            invoice.save()  # number, due_date, terms معالجة في model.save()
+            self.object = invoice
 
-        # 2) Save items
-        item_formset.instance = invoice
-        item_formset.save()
+            # 2) Save items
+            item_formset.instance = invoice
+            item_formset.save()
 
-        # 3) Compute total from items
-        total = sum((item.subtotal for item in invoice.items.all()), Decimal("0"))
-        invoice.total_amount = total
-        invoice.save(update_fields=["total_amount"])
+            # 3) Compute total from items
+            total = sum(
+                (item.subtotal for item in invoice.items.all()),
+                Decimal("0"),
+            )
+            invoice.total_amount = total
+            invoice.save(update_fields=["total_amount"])
 
         # 4) Redirect
         return HttpResponseRedirect(self.get_success_url())

@@ -176,71 +176,10 @@
     </a>
   </li>
         {% endif %}
+          {# Notifications dropdown #}
+          {% include "core/notifications/_navbar_dropdown.html" %}
 
-
-{# Notifications dropdown #}
-<li class="nav-item dropdown me-2">
-
-  <!-- زر الجرس -->
-  <a class="nav-link position-relative"
-     href="#"
-     id="navbarNotificationsDropdown"
-     role="button"
-     data-bs-toggle="dropdown"
-     aria-expanded="false">
-
-    <i class="bi bi-bell"></i>
-
-    {% if notif_unread_count %}
-      <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-        {{ notif_unread_count }}
-      </span>
-    {% endif %}
-  </a>
-
-  <!-- القائمة -->
-  <div class="dropdown-menu dropdown-menu-end dropdown-menu-notifications shadow-sm small"
-       aria-labelledby="navbarNotificationsDropdown"
-       style="min-width: 320px; max-height: 400px; overflow-y: auto;">
-
-    <!-- العنوان + زر عرض الكل -->
-    <div class="px-3 py-2 border-bottom d-flex justify-content-between align-items-center">
-      <span class="fw-semibold">{% trans "الإشعارات" %}</span>
-
-      <a href="{% url 'core:notification_list' %}"
-         class="text-decoration-none small text-muted">
-        {% trans "عرض الكل" %}
-      </a>
-    </div>
-
-    {% if notif_recent %}
-      {% for n in notif_recent %}
-  {% if n.public_id %}
-    <a class="dropdown-item d-flex flex-column gap-1 py-2 {% if not n.is_read %}fw-semibold{% endif %}"
-       href="{% url 'core:notification_read_redirect' public_id=n.public_id %}">
-  {% else %}
-    <a class="dropdown-item d-flex flex-column gap-1 py-2 {% if not n.is_read %}fw-semibold{% endif %}"
-       href="{% url 'core:notification_list' %}">
-  {% endif %}
-      <span class="small">
-        {{ n.verb }}
-      </span>
-      <span class="text-muted text-xs">
-        {{ n.created_at|date:"Y-m-d H:i" }}
-      </span>
-    </a>
-{% endfor %}
-
-    {% else %}
-      <div class="px-3 py-3 text-muted small">
-        {% trans "لا توجد إشعارات حالياً." %}
-      </div>
-    {% endif %}
-  </div>
-</li>
-
-
-        {# المستخدم / تسجيل الدخول #}
+          {# المستخدم / تسجيل الدخول #}
         {% if user.is_authenticated %}
           <li class="nav-item dropdown">
             <a class="nav-link d-flex align-items-center gap-2"

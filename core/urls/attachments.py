@@ -1,4 +1,4 @@
-# core/notifications.py
+# core/urls/notifications.py
 from django.urls import path
 from core.views.attachments import AttachmentDeleteView, AttachmentCreateView
 
