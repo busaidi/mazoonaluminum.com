@@ -58,9 +58,9 @@
             {% for inv in invoices %}
               <tr>
                 <td class="text-nowrap">
-                  <a href="{% url 'portal:invoice_detail' number=inv.number %}"
+                  <a href="{% url 'portal:invoice_detail' serial=inv.serial %}"
                      class="text-decoration-none text-mazoon">
-                    {{ inv.number }}
+                    {{ inv.serial }}
                   </a>
                 </td>
                 <td class="small">

@@ -1,24 +1,28 @@
-from collections import defaultdict
-from typing import Callable, Dict, List, TypeVar
+"""
+Compatibility wrapper around the central domain event bus in core.models.domain.
 
-E = TypeVar("E")
+- استخدم core.models.domain.register_handler / dispatch_event مستقبلاً.
+- هذا الملف فقط لأجل التوافق مع أي كود قديم كان يستورد من core.domain.dispatcher.
+"""
 
-# event_type -> [handlers...]
-_HANDLERS: Dict[type, List[Callable[[E], None]]] = defaultdict(list)
+from typing import Callable, Type
+
+from core.models.domain import (
+    DomainEvent,
+    register_handler as _register_handler,
+    dispatch_event as _dispatch_event,
+)
 
 
-def register_handler(event_type: type[E], handler: Callable[[E], None]) -> None:
+def register_handler(event_type: Type[DomainEvent], handler: Callable[[DomainEvent], None]) -> None:
     """
-    تسجّل هاندلر لحدث معيّن.
-    - event_type: كلاس الحدث (مثلاً InvoicePaidEvent)
-    - handler: دالة أو فانكشن يستقبل instance من الحدث
+    رابر بسيط حول core.models.domain.register_handler
     """
-    _HANDLERS[event_type].append(handler)
+    _register_handler(event_type, handler)
 
 
-def dispatch(event: E) -> None:
+def dispatch(event: DomainEvent) -> None:
     """
-    يرسل الحدث لكل الهاندلرات المسجّلة لهذا النوع.
+    رابر بسيط حول core.models.domain.dispatch_event
     """
-    for handler in _HANDLERS.get(type(event), []):
-        handler(event)
+    _dispatch_event(event)

@@ -1,7 +1,7 @@
 from .base import BaseModel, TimeStampedModel, UserStampedModel, SoftDeleteModel, NumberedModel
 from .audit import AuditLog
 from .attachments import Attachment, attachment_upload_to
-from .domain import StatefulDomainModel
+from .domain import StatefulDomainModel, DomainEvent
 from .numbering import NumberingScheme
 from .sequences import NumberSequence
 from .notifications import Notification
@@ -21,5 +21,6 @@ __all__ = [
     "Attachment",
     "attachment_upload_to",
     #domain
-    "StatefulDomainModel"
+    "StatefulDomainModel",
+    "DomainEvent"
 ]

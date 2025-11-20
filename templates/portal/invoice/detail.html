@@ -2,7 +2,7 @@
 {% load i18n %}
 
 {% block title %}
-  {% blocktrans with number=invoice.number %}فاتورة {{ number }}{% endblocktrans %}
+  {% blocktrans with serial=invoice.serial %}فاتورة {{ serial }}{% endblocktrans %}
 {% endblock %}
 
 {% block content %}
@@ -17,7 +17,7 @@
         </a>
       </li>
       <li class="breadcrumb-item active text-muted" aria-current="page">
-        {% blocktrans with number=invoice.number %}فاتورة {{ number }}{% endblocktrans %}
+        {% blocktrans with serial=invoice.serial %}فاتورة {{ serial }}{% endblocktrans %}
       </li>
     </ol>
   </nav>
@@ -32,11 +32,11 @@
   {# ===== Page header: title + actions ===== #}
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
     <h1 class="h4 mb-2 mb-md-0">
-      {% blocktrans with number=invoice.number %}فاتورة {{ number }}{% endblocktrans %}
+      {% blocktrans with serial=invoice.serial %}فاتورة {{ serial }}{% endblocktrans %}
     </h1>
 
     <div class="d-flex flex-wrap gap-2">
-      <a href="{% url 'portal:invoice_print' number=invoice.number %}"
+      <a href="{% url 'portal:invoice_print' serial=invoice.serial %}"
          class="btn btn-outline-secondary btn-sm"
          target="_blank">
         {% trans "طباعة / PDF" %}

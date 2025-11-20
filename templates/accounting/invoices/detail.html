@@ -2,12 +2,12 @@
 {% load i18n %}
 
 {% block meta_title %}
-    {% blocktrans with number=invoice.number %}فاتورة {{ number }} | Mazoon Aluminum{% endblocktrans %}
+    {% blocktrans with serial=invoice.serial %}فاتورة {{ serial }} | Mazoon Aluminum{% endblocktrans %}
 {% endblock %}
 
 {% block meta_description %}
-    {% blocktrans with number=invoice.number customer=invoice.customer.name %}
-        تفاصيل الفاتورة رقم {{ number }} للعميل {{ customer }}، مع عرض البنود والدفعات المرتبطة والمبلغ المتبقي.
+    {% blocktrans with serial=invoice.serial customer=invoice.customer.name %}
+        تفاصيل الفاتورة رقم {{ serial }} للعميل {{ customer }}، مع عرض البنود والدفعات المرتبطة والمبلغ المتبقي.
     {% endblocktrans %}
 {% endblock %}
 
@@ -19,7 +19,7 @@
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
       <h1 class="h3 mb-1">
-        {% blocktrans with number=invoice.number %}فاتورة {{ number }}{% endblocktrans %}
+        {% blocktrans with serial=invoice.serial %}فاتورة {{ serial }}{% endblocktrans %}
       </h1>
       <p class="text-muted small mb-0">
         {% blocktrans with name=invoice.customer.name %}عميل: {{ name }}{% endblocktrans %}
@@ -29,7 +29,7 @@
     <div class="d-flex flex-wrap gap-2">
 
       {# تعديل الفاتورة #}
-      <a href="{% url 'accounting:invoice_update' number=invoice.number %}"
+      <a href="{% url 'accounting:invoice_update' serial=invoice.serial %}"
          class="btn btn-primary btn-sm">
         {% trans "تعديل الفاتورة" %}
       </a>
@@ -67,13 +67,13 @@
       {% endif %}
 
       {# إضافة دفعة #}
-      <a href="{% url 'accounting:invoice_add_payment' number=invoice.number %}"
+      <a href="{% url 'accounting:invoice_add_payment' serial=invoice.serial %}"
          class="btn btn-success btn-sm">
         {% trans "+ إضافة دفعة" %}
       </a>
 
       {# طباعة / PDF #}
-      <a href="{% url 'accounting:invoice_print' number=invoice.number %}"
+      <a href="{% url 'accounting:invoice_print' serial=invoice.serial %}"
          class="btn btn-outline-secondary btn-sm"
          target="_blank">
         {% trans "طباعة / PDF" %}
@@ -271,7 +271,7 @@
               <td>{{ payment.get_method_display }}</td>
               <td>
                 {% if payment.invoice %}
-                  {{ payment.invoice.number }}
+                  {{ payment.invoice.serial }}
                 {% else %}
                   <span class="text-muted">{% trans "دفعة عامة" %}</span>
                 {% endif %}

@@ -1,3 +1,5 @@
+# accounting/models.py
+
 from datetime import timedelta
 from decimal import Decimal
 
@@ -6,14 +8,16 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.db.models import Sum
+from django.utils.translation import gettext as _
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
-from django.urls import reverse
-from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
-from core.domain.models import StatefulDomainModel
-from core.models import NumberedModel
+from core.models.base import BaseModel, NumberedModel  # لو تستخدمها
+from core.models.domain import (
+    StatefulDomainModel,
+)
+
 
 
 # ============================================================
@@ -86,7 +90,7 @@ class Customer(models.Model):
 class Invoice(NumberedModel, StatefulDomainModel):
     """
     Simple invoice model.
-    'serial' will be used later in URLs: /accounting/invoices/<serial>/
+    'serial' is used in URLs: /accounting/invoices/<serial>/
     """
 
     class Status(models.TextChoices):
@@ -124,6 +128,7 @@ class Invoice(NumberedModel, StatefulDomainModel):
         choices=Status.choices,
         default=Status.DRAFT,
     )
+
     ledger_entry = models.OneToOneField(
         "ledger.JournalEntry",
         null=True,
@@ -147,27 +152,21 @@ class Invoice(NumberedModel, StatefulDomainModel):
     def __str__(self) -> str:
         return f"Invoice {self.serial} - {self.customer.name}"
 
-    # ---------- Core logic ---------
+    # ---------- Core logic ----------
 
     def save(self, *args, **kwargs):
         """
         On first save:
-        - Generate invoice serial (via NumberedModel.save).
-        - Fill due_date using default_due_days if not set.
-        - Fill terms from default_terms if empty.
-
-        التنبيهات حالياً تتم عبر Django signals (post_save on Invoice)،
-        لذلك لا نستخدم Domain Events هنا مؤقتاً.
+        - يضبط due_date / terms من Settings (لو ما كانت محددة)
+        - يحفظ الفاتورة
+        - لو كانت جديدة → يطلق InvoiceCreated event (للنتفيكشن وغيرها).
         """
+        from accounting.models import Settings  # لتفادي الـ circular
+        from accounting.domain import InvoiceCreated  # نوع الإيفنت
+
         is_new = self.pk is None
 
         if is_new:
-            # NumberedModel سيتولى توليد serial في save تبعه،
-            # لكن لو حاب تتأكد أنه فاضي:
-            # if not self.serial:
-            #     from core.services.numbering import generate_number_for_instance
-            #     self.serial = generate_number_for_instance(self)
-
             settings = Settings.get_solo()
 
             if not self.due_date and settings.default_due_days:
@@ -176,9 +175,17 @@ class Invoice(NumberedModel, StatefulDomainModel):
             if not self.terms and settings.default_terms:
                 self.terms = settings.default_terms
 
-        # نحفظ الفاتورة أولاً (وهنا NumberedModel.save يشتغل ويولّد serial لو فاضي)
+        # نحفظ الفاتورة (NumberedModel يتكفل بالـ serial لو فاضي)
         super().save(*args, **kwargs)
 
+        # لو كانت جديدة → نطلق Event واحد بسيط
+        if is_new:
+            self.emit(
+                InvoiceCreated(
+                    invoice_id=self.pk,
+                    serial=self.serial,
+                )
+            )
 
 
 class InvoiceItem(models.Model):
