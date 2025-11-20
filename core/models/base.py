@@ -99,11 +99,11 @@ class BaseModel(TimeStampedModel, UserStampedModel, SoftDeleteModel):
 
 class NumberedModel(models.Model):
     """
-    Abstract base class that automatically generates a number
+    Abstract base class that automatically generates a serial
     using core.services.numbering.generate_number_for_instance.
     """
 
-    number = models.CharField(
+    serial = models.CharField(
         max_length=64,
         unique=True,
         blank=True,
@@ -115,7 +115,7 @@ class NumberedModel(models.Model):
 
     def save(self, *args, **kwargs):
         # Import here to avoid circular imports
-        if not self.number:
+        if not self.serial:
             from core.services.numbering import generate_number_for_instance
-            self.number = generate_number_for_instance(self)
+            self.serial = generate_number_for_instance(self)
         super().save(*args, **kwargs)

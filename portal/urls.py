@@ -23,8 +23,8 @@ urlpatterns = [
 
     # Invoices / Payments
     path("invoices/", PortalInvoiceListView.as_view(), name="invoice_list"),
-    path("invoices/<str:number>/", PortalInvoiceDetailView.as_view(), name="invoice_detail"),
-    path("invoices/<str:number>/print/", PortalInvoicePrintView.as_view(), name="invoice_print"),
+    path("invoices/<str:serial>/", PortalInvoiceDetailView.as_view(), name="invoice_detail"),
+    path("invoices/<str:serial>/print/", PortalInvoicePrintView.as_view(), name="invoice_print"),
     path("payments/", PortalPaymentListView.as_view(), name="payment_list"),
 
     # Orders

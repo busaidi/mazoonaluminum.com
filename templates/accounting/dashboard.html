@@ -213,8 +213,8 @@
                 {% for inv in recent_invoices %}
                   <tr>
                     <td class="text-nowrap">
-                      <a href="{% url 'accounting:invoice_detail' number=inv.number %}">
-                        {{ inv.number }}
+                      <a href="{% url 'accounting:invoice_detail' serial=inv.serial %}">
+                        {{ inv.serial }}
                       </a>
                     </td>
                     <td>
@@ -317,8 +317,8 @@
                     <td class="text-nowrap">{{ p.amount }}</td>
                     <td>
                       {% if p.invoice %}
-                        <a href="{% url 'accounting:invoice_detail' number=p.invoice.number %}">
-                          {{ p.invoice.number }}
+                        <a href="{% url 'accounting:invoice_detail' serial=p.invoice.serial %}">
+                          {{ p.invoice.serial }}
                         </a>
                       {% else %}
                         <span class="text-muted small">
@@ -411,8 +411,8 @@
                     <li class="list-group-item d-flex justify-content-between align-items-start px-0">
                       <div>
                         <div class="fw-semibold">
-                          <a href="{% url 'accounting:invoice_detail' number=inv.number %}">
-                            {{ inv.number }}
+                          <a href="{% url 'accounting:invoice_detail' serial=inv.serial %}">
+                            {{ inv.serial }}
                           </a>
                         </div>
                         <div class="text-muted">

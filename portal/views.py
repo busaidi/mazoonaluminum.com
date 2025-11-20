@@ -220,8 +220,8 @@ class PortalInvoiceDetailView(CustomerInvoiceQuerysetMixin, DetailView):
     model = Invoice
     template_name = "portal/invoice/detail.html"
     context_object_name = "invoice"
-    slug_field = "number"
-    slug_url_kwarg = "number"
+    slug_field = "serial"        # ✅ نستخدم serial
+    slug_url_kwarg = "serial"    # ✅ اسم المتغيّر في الـ URL
 
 
 
@@ -233,8 +233,8 @@ class PortalInvoicePrintView(CustomerInvoiceQuerysetMixin, DetailView):
     model = Invoice
     template_name = "accounting/invoices/print.html"
     context_object_name = "invoice"
-    slug_field = "number"
-    slug_url_kwarg = "number"
+    slug_field = "serial"        # ✅ نفس الشي
+    slug_url_kwarg = "serial"
 
 
 class PortalPaymentListView(CustomerPaymentQuerysetMixin, ListView):

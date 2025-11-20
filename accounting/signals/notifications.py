@@ -5,16 +5,18 @@ from django.dispatch import receiver
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils.translation import gettext as _, get_language
+
 from core.services.notifications import create_notification
 from core.models import Notification
 from accounting.models import Invoice
 
 User = get_user_model()
 
+
 def strip_lang_prefix(path: str) -> str:
     """
     يشيل البادئة /ar/ أو /en/ (أو أي لغة حالية) من بداية الرابط،
-    عشان نخزن في النوتفيكشن path "محايد لغة"، مثل: /accounting/invoices/1/
+    عشان نخزن في النوتفيكشن path "محايد لغة"، مثل: /accounting/invoices/INV-2025-0001/
     """
     if not path:
         return path
@@ -50,20 +52,22 @@ def invoice_created_notification(sender, instance, created, **kwargs):
     customer_user = getattr(invoice.customer, "user", None)
 
     if customer_user and customer_user.is_active:
+        # portal يجب أن يستخدم serial في الـ URL:
+        # path("invoices/<str:serial>/", ..., name="invoice_detail")
         raw_customer_url = reverse(
             "portal:invoice_detail",
-            kwargs={"number": invoice.number},
+            kwargs={"serial": invoice.serial},
         )
         customer_url = strip_lang_prefix(raw_customer_url)
 
         create_notification(
             recipient=customer_user,
-            verb=_("تم إصدار فاتورة رقم %(number)s") % {
-                "number": invoice.number,
+            verb=_("تم إصدار فاتورة رقم %(serial)s") % {
+                "serial": invoice.serial,
             },
             target=invoice,
             level=Notification.Levels.SUCCESS,
-            url=customer_url,  # 👈 الآن بدون /ar أو /en
+            url=customer_url,
         )
 
     # ====================================
@@ -72,7 +76,7 @@ def invoice_created_notification(sender, instance, created, **kwargs):
 
     raw_staff_url = reverse(
         "accounting:invoice_detail",
-        kwargs={"number": invoice.number},
+        kwargs={"serial": invoice.serial},
     )
     staff_url = strip_lang_prefix(raw_staff_url)
 
@@ -84,12 +88,11 @@ def invoice_created_notification(sender, instance, created, **kwargs):
     for staff in staff_users:
         create_notification(
             recipient=staff,
-            verb=_("من هنا 001 جديدة (%(number)s) للزبون %(customer)s") % {
-                "number": invoice.number,
+            verb=_("فاتورة جديدة (%(serial)s) للزبون %(customer)s") % {
+                "serial": invoice.serial,
                 "customer": str(invoice.customer),
             },
             target=invoice,
             level=Notification.Levels.INFO,
-            url=staff_url,  # 👈 path محايد لغة
+            url=staff_url,
         )
-

@@ -304,19 +304,18 @@ Mazoon Aluminum – Django ERP
 
 2. استخدم `log_event`، مثال: عند اعتماد فاتورة:
 
-
    ```python
    log_event(
-       action=AuditLog.Action.STATUS_CHANGE,
-       message=f"اعتماد الفاتورة {invoice.number} وترحيلها إلى دفتر الأستاذ.",
-       actor=request.user,
-       target=invoice,
-       extra={
-           "old_status": old_status,
-           "new_status": invoice.status,
-           "source": "invoice_confirm_view",
-       },
-   )
+    action=AuditLog.Action.STATUS_CHANGE,
+    message=f"اعتماد الفاتورة {invoice.serial} وترحيلها إلى دفتر الأستاذ.",
+    actor=request.user,
+    target=invoice,
+    extra={
+        "old_status": old_status,
+        "new_status": invoice.status,
+        "source": "invoice_confirm_view",
+    },
+)
    ```
 
 
@@ -424,7 +423,6 @@ def notify_and_log(
 
 مثال عند إنشاء فاتورة من طلب:
 
-
 ```python
 from core.services.events import notify_and_log
 
@@ -436,17 +434,17 @@ if customer_user is not None:
         actor=request.user,
         recipient=customer_user,
         verb=_("تم إنشاء فاتورة جديدة برقم %(number)s من طلبك.") % {
-            "number": invoice.number
+            "number": invoice.serial
         },
         target=invoice,
         action=AuditLog.Action.CREATE,
         message=_("تم إنشاء فاتورة من الطلب رقم %(pk)s برقم فاتورة %(number)s.") % {
             "pk": order.pk,
-            "number": invoice.number,
+            "number": invoice.serial,
         },
         extra={
             "order_id": order.pk,
-            "invoice_number": invoice.number,
+            "invoice_number": invoice.serial,
             "source": "order_to_invoice",
         },
     )
@@ -541,21 +539,20 @@ if customer_user is not None:
 - إشعار للزبون أن فاتورته تم اعتمادها وترحيلها.
 - سجل تدقيق مع رقم القيد المحاسبي.
 
-
 ```python
 notify_and_log(
     actor=request.user,
     recipient=customer_user,
     verb=_("تم اعتماد فاتورتك رقم %(number)s وترحيلها في النظام.") % {
-        "number": invoice.number
+        "number": invoice.serial
     },
     target=invoice,
     action=AuditLog.Action.STATUS_CHANGE,
-    message=f"اعتماد الفاتورة {invoice.number} وترحيلها (قيد: {entry.number}).",
+    message=f"اعتماد الفاتورة {invoice.serial} وترحيلها (قيد: {entry.serial}).",
     extra={
         "old_status": old_status,
         "new_status": invoice.status,
-        "journal_entry_number": entry.number,
+        "journal_entry_number": entry.serial,
         "source": "invoice_confirm_view",
     },
 )

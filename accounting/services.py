@@ -52,8 +52,8 @@ def post_sales_invoice_to_ledger(invoice, *, user=None):
             fiscal_year=fiscal_year,
             journal=sales_journal,
             date=invoice.issued_at,
-            reference=invoice.number,
-            description=f"Sales invoice {invoice.number} for {invoice.customer.name}",
+            reference=invoice.serial,
+            description=f"Sales invoice {invoice.serial} for {invoice.customer.name}",
             posted=True,
             posted_at=timezone.now(),
             posted_by=posted_by,
@@ -65,7 +65,7 @@ def post_sales_invoice_to_ledger(invoice, *, user=None):
             account=ar_account,
             debit=amount,
             credit=Decimal("0"),
-            description=f"Invoice {invoice.number} - customer receivable",
+            description=f"Invoice {invoice.serial} - customer receivable",
         )
 
         # Credit: Sales revenue
@@ -74,7 +74,7 @@ def post_sales_invoice_to_ledger(invoice, *, user=None):
             account=revenue_account,
             debit=Decimal("0"),
             credit=amount,
-            description=f"Invoice {invoice.number} - sales revenue",
+            description=f"Invoice {invoice.serial} - sales revenue",
         )
 
         invoice.ledger_entry = entry
@@ -111,7 +111,7 @@ def unpost_sales_invoice_from_ledger(invoice, reversal_date=None, user=None):
             journal=original_entry.journal,
             date=reversal_date,
             reference=original_entry.reference,
-            description=f"Reversal of {original_entry.number} for invoice {invoice.number}",
+            description=f"Reversal of {original_entry.serial} for invoice {invoice.serial}",
             posted=True,
             posted_at=timezone.now(),
             posted_by=posted_by,
@@ -124,7 +124,7 @@ def unpost_sales_invoice_from_ledger(invoice, reversal_date=None, user=None):
                 account=line.account,
                 debit=line.credit,
                 credit=line.debit,
-                description=f"Reversal of line #{line.pk} from {original_entry.number}",
+                description=f"Reversal of line #{line.pk} from {original_entry.serial}",
             )
 
         invoice.ledger_entry = None

@@ -11,9 +11,9 @@ class CustomerAdmin(admin.ModelAdmin):
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ("number", "customer", "issued_at", "due_date", "total_amount", "paid_amount", "status")
+    list_display = ("serial", "customer", "issued_at", "due_date", "total_amount", "paid_amount", "status")
     list_filter = ("status", "issued_at")
-    search_fields = ("number", "customer__name", "customer__company_name")
+    search_fields = ("serial", "customer__name", "customer__company_name")
     date_hierarchy = "issued_at"
     autocomplete_fields = ("customer",)
 

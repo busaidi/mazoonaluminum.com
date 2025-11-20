@@ -150,7 +150,6 @@ class InvoiceListView(AccountingSectionMixin, ListView):
         return ctx
 
 
-@method_decorator(accounting_staff_required, name="dispatch")
 class InvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
     """
     إنشاء فاتورة جديدة مع فورمست للبنود (Invoice Items).
@@ -173,10 +172,10 @@ class InvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
 
         # Pre-fill default terms from Settings (إن وُجدت)
         if not initial.get("terms"):
+            from .models import Settings  # لو مش مستوردة فوق
             settings = Settings.get_solo()
             if settings.default_terms:
                 initial["terms"] = settings.default_terms
-            # لو ما فيه default_terms نخليها فاضية بدون أي قيمة افتراضية
 
         return initial
 
@@ -211,7 +210,7 @@ class InvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
             # 1) Save invoice without total
             invoice = form.save(commit=False)
             invoice.total_amount = Decimal("0")
-            invoice.save()  # number, due_date, terms معالجة في model.save()
+            invoice.save()  # serial, due_date, terms معالجة في model.save()
             self.object = invoice
 
             # 2) Save items
@@ -242,8 +241,8 @@ class InvoiceUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
     model = Invoice
     form_class = InvoiceForm
     template_name = "accounting/invoices/form.html"
-    slug_field = "number"
-    slug_url_kwarg = "number"
+    slug_field = "serial"
+    slug_url_kwarg = "serial"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -285,7 +284,7 @@ class InvoiceUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
-        return reverse("accounting:invoice_detail", kwargs={"number": self.object.number})
+        return reverse("accounting:invoice_detail", kwargs={"serial": self.object.serial})
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
@@ -294,8 +293,8 @@ class InvoiceDetailView(AttachmentPanelMixin, AccountingSectionMixin, DetailView
     model = Invoice
     template_name = "accounting/invoices/detail.html"
     context_object_name = "invoice"
-    slug_field = "number"
-    slug_url_kwarg = "number"
+    slug_field = "serial"
+    slug_url_kwarg = "serial"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -319,7 +318,7 @@ class InvoicePaymentCreateView(AccountingSectionMixin, TodayInitialDateMixin, Fo
         # Load invoice once and store on self
         self.invoice = get_object_or_404(
             Invoice.objects.select_related("customer"),
-            number=kwargs.get("number"),
+            serial=kwargs.get("serial"),
         )
         return super().dispatch(request, *args, **kwargs)
 
@@ -341,7 +340,7 @@ class InvoicePaymentCreateView(AccountingSectionMixin, TodayInitialDateMixin, Fo
     def get_success_url(self):
         return reverse(
             "accounting:invoice_detail",
-            kwargs={"number": self.invoice.number},
+            kwargs={"serial": self.invoice.serial},
         )
 
 
@@ -354,8 +353,8 @@ class InvoicePrintView(AccountingSectionMixin, DetailView):
     model = Invoice
     template_name = "accounting/invoices/print.html"
     context_object_name = "invoice"
-    slug_field = "number"
-    slug_url_kwarg = "number"
+    slug_field = "serial"
+    slug_url_kwarg = "serial"
 
 
 # ============================================================
@@ -635,12 +634,12 @@ def apply_general_payment(request, pk):
             if is_full:
                 messages.success(
                     request,
-                    f"تم تسوية الدفعة بالكامل على الفاتورة {invoice.number}.",
+                    f"تم تسوية الدفعة بالكامل على الفاتورة {invoice.serial}.",
                 )
             else:
                 messages.success(
                     request,
-                    f"تم تسوية مبلغ {amount} على الفاتورة {invoice.number}، "
+                    f"تم تسوية مبلغ {amount} على الفاتورة {invoice.serial}، "
                     f"والمتبقي في الدفعة العامة هو {remaining}."
                 )
 
@@ -801,7 +800,7 @@ def order_to_invoice(request, pk):
             request,
             _("تم تحويل هذا الطلب إلى فاتورة من قبل.")
         )
-        return redirect("accounting:invoice_detail", number=order.invoice.number)
+        return redirect("accounting:invoice_detail", serial=order.invoice.serial)
 
     # Only allow POST
     if request.method != "POST":
@@ -813,15 +812,15 @@ def order_to_invoice(request, pk):
     # Audit log
     log_event(
         action=AuditLog.Action.CREATE,
-        message=_("تم إنشاء فاتورة من الطلب رقم %(pk)s برقم فاتورة %(number)s.") % {
+        message=_("تم إنشاء فاتورة من الطلب رقم %(pk)s برقم فاتورة %(serial)s.") % {
             "pk": order.pk,
-            "number": invoice.number,
+            "serial": invoice.serial,
         },
         actor=request.user,
         target=invoice,
         extra={
             "order_id": order.pk,
-            "invoice_number": invoice.number,
+            "invoice_serial": invoice.serial,
             "source": "order_to_invoice",
         },
     )
@@ -831,18 +830,18 @@ def order_to_invoice(request, pk):
     if customer_user is not None:
         create_notification(
             recipient=customer_user,
-            verb=_("تم إنشاء فاتورة جديدة برقم %(number)s من طلبك.") % {
-                "number": invoice.number
+            verb=_("تم إنشاء فاتورة جديدة برقم %(serial)s من طلبك.") % {
+                "serial": invoice.serial
             },
             target=invoice,
         )
 
     messages.success(
         request,
-        _("تم إنشاء الفاتورة %(number)s من هذا الطلب.") % {"number": invoice.number}
+        _("تم إنشاء الفاتورة %(serial)s من هذا الطلب.") % {"serial": invoice.serial}
     )
 
-    return redirect("accounting:invoice_detail", number=invoice.number)
+    return redirect("accounting:invoice_detail", serial=invoice.serial)
 
 
 
@@ -881,7 +880,7 @@ def staff_order_confirm(request, pk):
             if customer_user is not None:
                 create_notification(
                     recipient=customer_user,
-                    verb=_("تم تأكيد طلبك رقم %(number)s.") % {"number": order.pk},
+                    verb=_("تم تأكيد طلبك رقم %(serial)s.") % {"serial": order.pk},
                     target=order,
                 )
 
@@ -1028,7 +1027,7 @@ def invoice_confirm_view(request, pk):
 
     if invoice.status != Invoice.Status.DRAFT:
         messages.error(request, "لا يمكن اعتماد إلا الفواتير في حالة مسودة.")
-        return redirect("accounting:invoice_detail", number=invoice.number)
+        return redirect("accounting:invoice_detail", serial=invoice.serial)
 
     old_status = invoice.status
 
@@ -1046,24 +1045,24 @@ def invoice_confirm_view(request, pk):
 
         log_event(
             action=AuditLog.Action.OTHER,
-            message=f"فشل ترحيل الفاتورة {invoice.number} إلى دفتر الأستاذ: {e}",
+            message=f"فشل ترحيل الفاتورة {invoice.serial} إلى دفتر الأستاذ: {e}",
             actor=request.user,
             target=invoice,
             extra={"error": str(e), "source": "invoice_confirm_view"},
         )
 
-        return redirect("accounting:invoice_detail", number=invoice.number)
+        return redirect("accounting:invoice_detail", serial=invoice.serial)
 
     # Audit log - success
     log_event(
         action=AuditLog.Action.STATUS_CHANGE,
-        message=f"اعتماد الفاتورة {invoice.number} وترحيلها إلى دفتر الأستاذ (قيد: {entry.number}).",
+        message=f"اعتماد الفاتورة {invoice.serial} وترحيلها إلى دفتر الأستاذ (قيد: {entry.serial}).",
         actor=request.user,
         target=invoice,
         extra={
             "old_status": old_status,
             "new_status": invoice.status,
-            "journal_entry_number": entry.number,
+            "journal_entry_number": entry.serial,
             "source": "invoice_confirm_view",
         },
     )
@@ -1074,16 +1073,16 @@ def invoice_confirm_view(request, pk):
         create_notification(
             recipient=customer_user,
             verb=_(
-                "تم اعتماد فاتورتك رقم %(number)s وترحيلها في النظام."
-            ) % {"number": invoice.number},
+                "تم اعتماد فاتورتك رقم %(serial)s وترحيلها في النظام."
+            ) % {"serial": invoice.serial},
             target=invoice,
         )
 
     messages.success(
         request,
-        f"تم اعتماد الفاتورة وترحيلها بنجاح (قيد: {entry.number})."
+        f"تم اعتماد الفاتورة وترحيلها بنجاح (قيد: {entry.serial})."
     )
-    return redirect("accounting:invoice_detail", number=invoice.number)
+    return redirect("accounting:invoice_detail", serial=invoice.serial)
 
 
 
@@ -1101,11 +1100,11 @@ def invoice_unpost_view(request, pk):
 
     if invoice.ledger_entry is None:
         messages.error(request, "لا يوجد قيد مرحّل مرتبط بهذه الفاتورة.")
-        return redirect("accounting:invoice_detail", number=invoice.number)
+        return redirect("accounting:invoice_detail", serial=invoice.serial)
 
     if invoice.paid_amount and invoice.paid_amount > 0:
         messages.error(request, "لا يمكن إلغاء الترحيل لفاتورة عليها دفعات.")
-        return redirect("accounting:invoice_detail", number=invoice.number)
+        return redirect("accounting:invoice_detail", serial=invoice.serial)
 
     old_status = invoice.status
 
@@ -1116,33 +1115,33 @@ def invoice_unpost_view(request, pk):
 
         log_event(
             action=AuditLog.Action.OTHER,
-            message=f"فشل إلغاء ترحيل الفاتورة {invoice.number}: {e}",
+            message=f"فشل إلغاء ترحيل الفاتورة {invoice.serial}: {e}",
             actor=request.user,
             target=invoice,
             extra={"error": str(e), "source": "invoice_unpost_view"},
         )
 
-        return redirect("accounting:invoice_detail", number=invoice.number)
+        return redirect("accounting:invoice_detail", serial=invoice.serial)
 
     # Audit log success
     log_event(
         action=AuditLog.Action.STATUS_CHANGE,
-        message=f"إلغاء ترحيل الفاتورة {invoice.number} وإنشاء قيد عكسي {reversal_entry.number}.",
+        message=f"إلغاء ترحيل الفاتورة {invoice.serial} وإنشاء قيد عكسي {reversal_entry.serial}.",
         actor=request.user,
         target=invoice,
         extra={
             "old_status": old_status,
             "new_status": invoice.status,
-            "reversal_entry_number": reversal_entry.number,
+            "reversal_entry_number": reversal_entry.serial,
             "source": "invoice_unpost_view",
         },
     )
 
     messages.success(
         request,
-        f"تم إنشاء قيد عكسي ({reversal_entry.number}) وإعادة الفاتورة إلى حالة مسودة."
+        f"تم إنشاء قيد عكسي ({reversal_entry.serial}) وإعادة الفاتورة إلى حالة مسودة."
     )
-    return redirect("accounting:invoice_detail", number=invoice.number)
+    return redirect("accounting:invoice_detail", serial=invoice.serial)
 
 
 

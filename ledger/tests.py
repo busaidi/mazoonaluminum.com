@@ -194,11 +194,11 @@ class JournalEntryModelTests(LedgerBaseTestCase):
         entry1.refresh_from_db()
         entry2.refresh_from_db()
 
-        self.assertIsNotNone(entry1.number)
-        self.assertIsNotNone(entry2.number)
-        self.assertNotEqual(entry1.number, entry2.number)
-        self.assertTrue(entry1.number.startswith("GEN-"))
-        self.assertTrue(entry2.number.startswith("GEN-"))
+        self.assertIsNotNone(entry1.serial)
+        self.assertIsNotNone(entry2.serial)
+        self.assertNotEqual(entry1.serial, entry2.serial)
+        self.assertTrue(entry1.serial.startswith("GEN-"))
+        self.assertTrue(entry2.serial.startswith("GEN-"))
 
 
 class JournalEntryCreateViewTests(LedgerBaseTestCase):

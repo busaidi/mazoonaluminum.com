@@ -176,7 +176,7 @@ class AccountingViewsTests(TestCase):
         url = reverse("accounting:invoice_detail", kwargs={"number": self.invoice.number})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["invoice"].number, "INV-100")
+        self.assertEqual(response.context["invoice"].serial, "INV-100")
 
     def test_invoice_create_view_post(self):
         """

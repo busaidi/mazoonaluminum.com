@@ -3,7 +3,7 @@
 
 {% block meta_title %}
   {% if form.instance.pk %}
-    {% blocktrans with number=form.instance.number %}تعديل فاتورة {{ number }} | Mazoon Aluminum{% endblocktrans %}
+    {% blocktrans with serial=form.instance.serial %}تعديل فاتورة {{ serial }} | Mazoon Aluminum{% endblocktrans %}
   {% else %}
     {% trans "فاتورة جديدة | Mazoon Aluminum" %}
   {% endif %}
@@ -11,7 +11,7 @@
 
 {% block meta_description %}
   {% if form.instance.pk %}
-    {% blocktrans with number=form.instance.number %}تعديل بيانات الفاتورة رقم {{ number }} في نظام المحاسبة.{% endblocktrans %}
+    {% blocktrans with serial=form.instance.serial %}تعديل بيانات الفاتورة رقم {{ serial }} في نظام المحاسبة.{% endblocktrans %}
   {% else %}
     {% trans "إنشاء فاتورة جديدة لعميل في نظام المحاسبة الخاص بمزون ألمنيوم." %}
   {% endif %}
@@ -27,7 +27,7 @@
       {% if form.instance.pk %}
         <div class="d-flex align-items-center gap-2 mb-1">
           <h1 class="h3 mb-0">
-            {% blocktrans with number=form.instance.number %}تعديل فاتورة {{ number }}{% endblocktrans %}
+            {% blocktrans with serial=form.instance.serial %}تعديل فاتورة {{ serial }}{% endblocktrans %}
           </h1>
           <span class="badge bg-light text-mazoon border">
             {% trans "وضع التحرير" %}
@@ -157,75 +157,74 @@
         {{ item_formset.management_form }}
 
         <div class="table-responsive mb-3">
-  <table class="table table-sm align-middle invoice-items-table">
-    <thead class="table-light">
-      <tr>
-        <th class="product-col">{% trans "المنتج (اختياري)" %}</th>
-        <th class="desc-col">{% trans "الوصف" %}</th>
-        <th class="qty-col text-center">{% trans "الكمية" %}</th>
-        <th class="price-col text-center">{% trans "سعر الوحدة" %}</th>
-        <th class="total-col text-end">{% trans "الإجمالي" %}</th>
-        <th style="width: 6%;" class="text-center">{% trans "حذف" %}</th>
-      </tr>
-    </thead>
-    <tbody id="invoice-items-body">
-      {% for f in item_formset %}
-        {# حقول مخفية مثل id #}
-        {% for hidden in f.hidden_fields %}
-          {{ hidden }}
-        {% endfor %}
+          <table class="table table-sm align-middle invoice-items-table">
+            <thead class="table-light">
+              <tr>
+                <th class="product-col">{% trans "المنتج (اختياري)" %}</th>
+                <th class="desc-col">{% trans "الوصف" %}</th>
+                <th class="qty-col text-center">{% trans "الكمية" %}</th>
+                <th class="price-col text-center">{% trans "سعر الوحدة" %}</th>
+                <th class="total-col text-end">{% trans "الإجمالي" %}</th>
+                <th style="width: 6%;" class="text-center">{% trans "حذف" %}</th>
+              </tr>
+            </thead>
+            <tbody id="invoice-items-body">
+              {% for f in item_formset %}
+                {# حقول مخفية مثل id #}
+                {% for hidden in f.hidden_fields %}
+                  {{ hidden }}
+                {% endfor %}
 
-        <tr class="invoice-item-row">
-          <td class="product-col">
-            {{ f.product }}
-            {% for error in f.product.errors %}
-              <div class="text-danger small mt-1">{{ error }}</div>
-            {% endfor %}
-          </td>
-          <td class="desc-col">
-            {{ f.description }}
-            {% for error in f.description.errors %}
-              <div class="text-danger small mt-1">{{ error }}</div>
-            {% endfor %}
-          </td>
-          <td class="qty-col">
-            {{ f.quantity }}
-            {% for error in f.quantity.errors %}
-              <div class="text-danger small mt-1">{{ error }}</div>
-            {% endfor %}
-          </td>
-          <td class="price-col">
-            {{ f.unit_price }}
-            {% for error in f.unit_price.errors %}
-              <div class="text-danger small mt-1">{{ error }}</div>
-            {% endfor %}
-          </td>
-          <td class="total-col text-end">
-            {# نعرض قيمة مبدئية لو البند محفوظ، وإلا نخليها صفر #}
-            <span class="invoice-line-total">
-              {% if f.instance.pk %}
-                {{ f.instance.subtotal }}
-              {% else %}
-                0.000
-              {% endif %}
-            </span>
-          </td>
-          <td class="text-center">
-            {% if f.DELETE %}
-              {{ f.DELETE }}
-            {% endif %}
-            {% if f.non_field_errors %}
-              {% for error in f.non_field_errors %}
-                <div class="text-danger small mt-1">{{ error }}</div>
+                <tr class="invoice-item-row">
+                  <td class="product-col">
+                    {{ f.product }}
+                    {% for error in f.product.errors %}
+                      <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+                  <td class="desc-col">
+                    {{ f.description }}
+                    {% for error in f.description.errors %}
+                      <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+                  <td class="qty-col">
+                    {{ f.quantity }}
+                    {% for error in f.quantity.errors %}
+                      <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+                  <td class="price-col">
+                    {{ f.unit_price }}
+                    {% for error in f.unit_price.errors %}
+                      <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+                  <td class="total-col text-end">
+                    {# نعرض قيمة مبدئية لو البند محفوظ، وإلا نخليها صفر #}
+                    <span class="invoice-line-total">
+                      {% if f.instance.pk %}
+                        {{ f.instance.subtotal }}
+                      {% else %}
+                        0.000
+                      {% endif %}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    {% if f.DELETE %}
+                      {{ f.DELETE }}
+                    {% endif %}
+                    {% if f.non_field_errors %}
+                      {% for error in f.non_field_errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                      {% endfor %}
+                    {% endif %}
+                  </td>
+                </tr>
               {% endfor %}
-            {% endif %}
-          </td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
+            </tbody>
+          </table>
+        </div>
 
         <div class="mb-4">
           <button type="button" class="btn btn-outline-primary btn-sm" id="add-item-row">
@@ -404,6 +403,5 @@
     });
   })();
 </script>
-
 
 {% endblock %}

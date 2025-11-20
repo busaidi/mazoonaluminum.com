@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
+from core.domain.models import StatefulDomainModel
 from core.models import NumberedModel
 
 
@@ -82,10 +83,10 @@ class Customer(models.Model):
 # Invoice & InvoiceItem
 # ============================================================
 
-class Invoice(NumberedModel, models.Model):
+class Invoice(NumberedModel, StatefulDomainModel):
     """
     Simple invoice model.
-    'number' will be used later in URLs: /accounting/invoices/<number>/
+    'serial' will be used later in URLs: /accounting/invoices/<serial>/
     """
 
     class Status(models.TextChoices):
@@ -99,12 +100,6 @@ class Invoice(NumberedModel, models.Model):
         Customer,
         on_delete=models.PROTECT,
         related_name="invoices",
-    )
-    number = models.CharField(
-        max_length=50,
-        unique=True,
-        blank=True,
-        help_text="Human-readable invoice number, e.g. MAZ-2025-0001.",
     )
     issued_at = models.DateField(default=timezone.now)
     due_date = models.DateField(null=True, blank=True)
@@ -144,115 +139,46 @@ class Invoice(NumberedModel, models.Model):
     class Meta:
         ordering = ("-issued_at", "-id")
         indexes = [
-            models.Index(fields=["number"]),
+            models.Index(fields=["serial"]),
             models.Index(fields=["status"]),
             models.Index(fields=["issued_at"]),
         ]
 
     def __str__(self) -> str:
-        return f"Invoice {self.number} - {self.customer.name}"
+        return f"Invoice {self.serial} - {self.customer.name}"
 
     # ---------- Core logic ---------
 
     def save(self, *args, **kwargs):
         """
         On first save:
-        - Generate invoice number using core numbering service.
+        - Generate invoice serial (via NumberedModel.save).
         - Fill due_date using default_due_days if not set.
         - Fill terms from default_terms if empty.
-        """
-        from .models import Settings
-        from core.services.numbering import generate_number_for_instance
 
+        التنبيهات حالياً تتم عبر Django signals (post_save on Invoice)،
+        لذلك لا نستخدم Domain Events هنا مؤقتاً.
+        """
         is_new = self.pk is None
 
         if is_new:
-            # 1) رقم الفاتورة من نظام الترقيم العام في core
-            if not self.number:
-                self.number = generate_number_for_instance(self)
+            # NumberedModel سيتولى توليد serial في save تبعه،
+            # لكن لو حاب تتأكد أنه فاضي:
+            # if not self.serial:
+            #     from core.services.numbering import generate_number_for_instance
+            #     self.serial = generate_number_for_instance(self)
 
-            # 2) إعدادات المبيعات (تاريخ الاستحقاق + الشروط)
             settings = Settings.get_solo()
 
-            # تاريخ الاستحقاق الافتراضي
             if not self.due_date and settings.default_due_days:
                 self.due_date = self.issued_at + timedelta(days=settings.default_due_days)
 
-            # الشروط الافتراضية
             if not self.terms and settings.default_terms:
                 self.terms = settings.default_terms
 
+        # نحفظ الفاتورة أولاً (وهنا NumberedModel.save يشتغل ويولّد serial لو فاضي)
         super().save(*args, **kwargs)
 
-
-    @property
-    def balance(self) -> Decimal:
-        """
-        Invoice balance = total_amount - paid_amount.
-        """
-        return self.total_amount - self.paid_amount
-
-    def update_paid_amount(self) -> None:
-        """
-        Recalculate 'paid_amount' from related payments,
-        and auto-update status if fully/partially paid.
-        """
-        total = self.payments.aggregate(s=Sum("amount")).get("s") or Decimal("0")
-        self.paid_amount = total
-
-        # auto-update status if fully/partially paid
-        if self.total_amount and self.paid_amount >= self.total_amount > 0:
-            self.status = Invoice.Status.PAID
-        elif self.total_amount and 0 < self.paid_amount < self.total_amount:
-            self.status = Invoice.Status.PARTIALLY_PAID
-        elif self.paid_amount == 0 and self.status in {
-            Invoice.Status.PAID,
-            Invoice.Status.PARTIALLY_PAID,
-        }:
-            # رجّعها Sent (أو Draft حسب ما تحب تغيّر لاحقًا)
-            self.status = Invoice.Status.SENT
-
-        self.save(update_fields=["paid_amount", "status"])
-
-    # ---------- Posting helpers ----------
-
-    def post_to_ledger(self):
-        """
-        Helper wrapper to post this invoice to the ledger.
-        Keeps accounting logic inside accounting app.
-        """
-        from accounting.services import post_sales_invoice_to_ledger
-        return post_sales_invoice_to_ledger(self)
-
-    def unpost_from_ledger(self, *, reversal_date=None, user=None):
-        """
-        Helper wrapper to unpost this invoice from the ledger
-        by creating a reversing entry.
-        """
-        from accounting.services import unpost_sales_invoice_from_ledger
-        return unpost_sales_invoice_from_ledger(
-            self,
-            reversal_date=reversal_date,
-            user=user,
-        )
-
-    # ---------- UI helpers (Mazoon badges) ----------
-
-    @property
-    def status_badge(self) -> str:
-        """
-        CSS classes for Mazoon theme badge based on invoice status.
-        تستخدم في القالب مثل:
-        <span class="{{ invoice.status_badge }}">{{ invoice.get_status_display }}</span>
-        """
-        mapping = {
-            Invoice.Status.DRAFT: "badge-mazoon badge-draft",
-            Invoice.Status.SENT: "badge-mazoon badge-sent",
-            Invoice.Status.PARTIALLY_PAID: "badge-mazoon badge-partially-paid",
-            Invoice.Status.PAID: "badge-mazoon badge-paid",
-            Invoice.Status.CANCELLED: "badge-mazoon badge-cancelled",
-        }
-        return mapping.get(self.status, "badge-mazoon badge-draft")
 
 
 class InvoiceItem(models.Model):

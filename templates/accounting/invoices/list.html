@@ -70,10 +70,10 @@
             {% for inv in invoices %}
               <tr>
                 <td>
-  {% if inv.number %}
-    <a href="{% url 'accounting:invoice_detail' number=inv.number %}"
+  {% if inv.serial %}
+    <a href="{% url 'accounting:invoice_detail' serial=inv.serial %}"
        class="text-decoration-none text-mazoon fw-semibold">
-      {{ inv.number }}
+      {{ inv.serial }}
     </a>
   {% else %}
     <span class="text-muted small">
