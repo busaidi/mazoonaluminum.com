@@ -9,9 +9,7 @@ from .notifications import (
 )
 
 from .attachments import (
-    AttachmentParentMixin,
-    BaseAttachmentCreateView,
-    BaseAttachmentDeleteView,
+AttachmentCreateView, AttachmentDeleteView, AttachmentPanelMixin,
 )
 
 __all__ = [
@@ -22,7 +20,7 @@ __all__ = [
     "notification_delete",
     "AuditLogListView",
     # Attachments
-    "AttachmentParentMixin",
-    "BaseAttachmentCreateView",
-    "BaseAttachmentDeleteView",
+    "AttachmentCreateView",
+    "AttachmentDeleteView",
+    "AttachmentPanelMixin",
 ]

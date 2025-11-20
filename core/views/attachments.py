@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ImproperlyConfigured
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
+from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 from django.views import View
 
@@ -13,128 +14,148 @@ from core.models import Attachment
 from core.forms import AttachmentForm
 
 
-class AttachmentParentMixin:
+def _get_next_url(request):
     """
-    Mixin عام للتعامل مع الكيان الأب (فاتورة، أمر، ...).
-    يوفّر:
-      - get_attachment_parent_object()
-      - get_attachment_success_url()
+    نحاول نرجع لنفس صفحة التفاصيل:
+    - أولاً من حقل hidden اسمه "next"
+    - إذا ما فيه، نستخدم HTTP_REFERER
+    - إذا ما فيه، نرجع للـ "/"
     """
-
-    # يجب ضبطها في الكلاس الابن:
-    attachment_parent_model = None  # مثال: Invoice
-    attachment_parent_lookup_url_kwarg = "pk"     # إسم الـ kwarg في الـ URL (مثال: "number")
-    attachment_parent_lookup_field = "pk"        # الحقل في الموديل (مثال: "number")
-    attachment_success_url_name = None           # مثال: "accounting:invoice_detail"
-
-    def get_attachment_parent_model(self):
-        if self.attachment_parent_model is None:
-            raise ImproperlyConfigured("attachment_parent_model must be set.")
-        return self.attachment_parent_model
-
-    def get_attachment_parent_lookup_value(self):
-        kwarg_name = self.attachment_parent_lookup_url_kwarg
-        try:
-            return self.kwargs[kwarg_name]
-        except KeyError:
-            raise ImproperlyConfigured(
-                f"URL kwarg '{kwarg_name}' not found in view kwargs."
-            )
-
-    def get_attachment_parent_object(self):
-        model = self.get_attachment_parent_model()
-        lookup_value = self.get_attachment_parent_lookup_value()
-        field_name = self.attachment_parent_lookup_field
-        return get_object_or_404(model, **{field_name: lookup_value})
-
-    # --------- redirect بعد الإضافة/الحذف ---------
-    def get_attachment_success_url_kwargs(self, parent):
-        """
-        بشكل افتراضي نفترض أن الـ URL يستخدم نفس الـ kwarg والـ field.
-        يمكن للكلاس الابن أن يغيّر هذا إذا احتاج.
-        """
-        field_name = self.attachment_parent_lookup_field
-        url_kwarg = self.attachment_parent_lookup_url_kwarg
-        return {url_kwarg: getattr(parent, field_name)}
-
-    def get_attachment_success_url(self, parent):
-        if self.attachment_success_url_name is None:
-            raise ImproperlyConfigured("attachment_success_url_name must be set.")
-        return reverse(
-            self.attachment_success_url_name,
-            kwargs=self.get_attachment_success_url_kwargs(parent),
-        )
+    return (
+        request.POST.get("next")
+        or request.GET.get("next")
+        or request.META.get("HTTP_REFERER")
+        or "/"
+    )
 
 
-class BaseAttachmentCreateView(AttachmentParentMixin, View):
+@method_decorator(login_required, name="dispatch")
+class AttachmentCreateView(View):
     """
-    فيو عام لرفع مرفق لأي كيان (فاتورة، أمر، ...).
-    يعتمد على:
-      - AttachmentForm
-      - Attachment (GenericForeignKey)
+    فيو عام لرفع مرفق لأي كيان.
+    لا يحتاج URL مخصص لكل موديل.
+
+    يتوقع في POST:
+      - file, title, description (من AttachmentForm)
+      - content_type (id)
+      - object_id
+      - next (اختياري) → نرجع له بعد الحفظ
     """
 
     form_class = AttachmentForm
-    success_message = _("تم رفع المرفق بنجاح.")
-    error_message = _("تعذر حفظ المرفق، يرجى مراجعة البيانات.")
 
     def post(self, request, *args, **kwargs):
-        parent = self.get_attachment_parent_object()
-        form = self.form_class(request.POST, request.FILES)
+        next_url = _get_next_url(request)
 
+        content_type_id = request.POST.get("content_type")
+        object_id = request.POST.get("object_id")
+
+        if not content_type_id or not object_id:
+            messages.error(request, _("تعذر تحديد العنصر المرتبط بالمرفق."))
+            return redirect(next_url)
+
+        try:
+            ct = ContentType.objects.get(pk=content_type_id)
+        except ContentType.DoesNotExist:
+            messages.error(request, _("نوع الكيان غير معروف."))
+            return redirect(next_url)
+
+        parent = get_object_or_404(ct.model_class(), pk=object_id)
+
+        form = self.form_class(request.POST, request.FILES)
         if form.is_valid():
             attachment: Attachment = form.save(commit=False)
             attachment.content_object = parent
             if request.user.is_authenticated:
                 attachment.uploaded_by = request.user
             attachment.save()
-            messages.success(request, self.success_message)
+            messages.success(request, _("تم رفع المرفق بنجاح."))
         else:
-            messages.error(request, self.error_message)
+            messages.error(request, _("تعذر حفظ المرفق، يرجى مراجعة البيانات."))
 
-        return redirect(self.get_attachment_success_url(parent))
+        return redirect(next_url)
 
 
-class BaseAttachmentDeleteView(AttachmentParentMixin, View):
+@method_decorator(login_required, name="dispatch")
+class AttachmentDeleteView(View):
     """
-    فيو عام لتعطيل (حذف منطقي) مرفق تابع لكيان معيّن.
+    فيو عام لحذف (تعطيل) مرفق.
+    لا يحتاج معرفة نوع الموديل.
     """
 
-    attachment_model = Attachment
-    success_message = _("تم حذف المرفق.")
-    permission_denied_message = _("ليست لديك صلاحية لحذف هذا المرفق.")
+    def post(self, request, pk, *args, **kwargs):
+        next_url = _get_next_url(request)
 
-    def get_attachment_queryset(self, parent):
+        attachment = get_object_or_404(Attachment, pk=pk, is_active=True)
+
+        # صلاحيات بسيطة:
+        # - staff
+        # - أو نفس المستخدم الذي رفع المرفق
+        if not request.user.is_staff and attachment.uploaded_by != request.user:
+            messages.error(request, _("ليست لديك صلاحية لحذف هذا المرفق."))
+            return redirect(next_url)
+
+        attachment.is_active = False
+        attachment.save(update_fields=["is_active"])
+        messages.success(request, _("تم حذف المرفق."))
+
+        return redirect(next_url)
+
+
+# -------------------------------------------------------------------
+# Mixin لحقن سياق المرفقات في أي DetailView
+# -------------------------------------------------------------------
+class AttachmentPanelMixin:
+    """
+    يُستخدم مع DetailView (أو أي View فيه self.object) ليضيف إلى context:
+      - attachments
+      - attachments_count
+      - attachment_form
+      - attachment_content_type_id
+      - attachment_object_id
+      - attachment_next_url
+
+    الهدف: تضمين panel واحد فقط في القالب:
+      {% include "core/attachments/_panel.html" %}
+    """
+
+    def get_attachment_parent_for_panel(self):
         """
-        جلب المرفقات المرتبطة بالكيان الأب فقط (لأمان إضافي).
+        الافتراضي: self.object (في DetailView)
+        يمكن override إذا احتجت.
         """
+        obj = getattr(self, "object", None)
+        if obj is None and hasattr(self, "get_object"):
+            obj = self.get_object()
+        return obj
+
+    def inject_attachment_panel_context(self, context):
+        from django.contrib.contenttypes.models import ContentType
+
+        parent = self.get_attachment_parent_for_panel()
+        if parent is None:
+            return context
+
         ct = ContentType.objects.get_for_model(parent)
-        return self.attachment_model.objects.filter(
-            content_type=ct,
-            object_id=parent.pk,
-            is_active=True,
+
+        attachments = (
+            Attachment.objects
+            .filter(content_type=ct, object_id=parent.pk, is_active=True)
+            .select_related("uploaded_by")
+            .order_by("-uploaded_at")
         )
 
-    def has_delete_permission(self, request, attachment):
-        """
-        صلاحيات حذف:
-          - مستخدم staff
-          - أو نفس المستخدم الذي رفع المرفق
-        """
-        if not request.user.is_authenticated:
-            return False
-        return request.user.is_staff or attachment.uploaded_by == request.user
+        # نضيف delete_url الجاهز لكل مرفق
+        for att in attachments:
+            att.delete_url = reverse("core:attachment_delete", args=[att.pk])
 
-    def post(self, request, *args, **kwargs):
-        parent = self.get_attachment_parent_object()
-        qs = self.get_attachment_queryset(parent)
-        attachment = get_object_or_404(qs, pk=self.kwargs["pk"])
+        request = getattr(self, "request", None)
+        next_url = request.get_full_path() if request else "/"
 
-        if self.has_delete_permission(request, attachment):
-            attachment.is_active = False
-            attachment.save(update_fields=["is_active"])
-            messages.success(request, self.success_message)
-        else:
-            messages.error(request, self.permission_denied_message)
-
-        return redirect(self.get_attachment_success_url(parent))
+        context["attachments"] = attachments
+        context["attachments_count"] = attachments.count()
+        context["attachment_form"] = AttachmentForm()
+        context["attachment_content_type_id"] = ct.pk
+        context["attachment_object_id"] = parent.pk
+        context["attachment_next_url"] = next_url
+        return context

@@ -33,7 +33,7 @@ from core.forms import AttachmentForm
 from core.models import AuditLog, NumberingScheme, Attachment
 from core.services.audit import log_event
 from core.services.notifications import create_notification
-from core.views.attachments import BaseAttachmentCreateView, BaseAttachmentDeleteView
+from core.views.attachments import  AttachmentPanelMixin
 from website.models import Product
 from .forms import (
     InvoiceForm,
@@ -279,10 +279,7 @@ class InvoiceUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class InvoiceDetailView(AccountingSectionMixin, DetailView):
-    """
-    Staff invoice detail page (with items, payments, attachments, etc).
-    """
+class InvoiceDetailView(AttachmentPanelMixin, AccountingSectionMixin, DetailView):
     section = "invoices"
     model = Invoice
     template_name = "accounting/invoices/detail.html"
@@ -292,25 +289,7 @@ class InvoiceDetailView(AccountingSectionMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        invoice = ctx["invoice"]
-
-        # جلب المرفقات النشطة المرتبطة بهذه الفاتورة
-        ct = ContentType.objects.get_for_model(invoice)
-        attachments = Attachment.objects.filter(
-            content_type=ct,
-            object_id=invoice.pk,
-            is_active=True,
-        )
-
-        ctx["attachments"] = attachments
-        ctx["attachments_count"] = attachments.count()
-        ctx["attachment_form"] = AttachmentForm()
-        # URL لإضافة مرفق، نمرره للـ partial
-        from django.urls import reverse
-        ctx["invoice_add_attachment_url"] = reverse(
-            "accounting:invoice_add_attachment",
-            args=[invoice.number],
-        )
+        ctx = self.inject_attachment_panel_context(ctx)
         return ctx
 
 
@@ -512,7 +491,7 @@ class CustomerDeleteView(AccountingSectionMixin, DeleteView):
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class CustomerDetailView(AccountingSectionMixin, DetailView):
+class CustomerDetailView(AttachmentPanelMixin, AccountingSectionMixin, DetailView):
     """
     Customer full profile:
     - Invoices
@@ -520,13 +499,17 @@ class CustomerDetailView(AccountingSectionMixin, DetailView):
     - Payments
     - Balance summary
     """
-    section = "customer"
+    section = "customers"  # عشان التاب في الناف بار يشتغل صح
     model = Customer
     template_name = "accounting/customer/detail.html"
     context_object_name = "customer"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+
+        # إضافة لوحة المرفقات للزبون الحالي
+        ctx = self.inject_attachment_panel_context(ctx)
+
         customer = self.object
 
         # Invoices
@@ -691,14 +674,17 @@ class OrderListView(AccountingSectionMixin, ListView):
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
-class OrderDetailView(AccountingSectionMixin, DetailView):
-    """
-    Staff order detail page.
-    """
+class OrderDetailView(AttachmentPanelMixin, AccountingSectionMixin, DetailView):
     section = "orders"
     model = Order
     template_name = "accounting/orders/detail.html"
     context_object_name = "order"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx = self.inject_attachment_panel_context(ctx)
+        return ctx
+
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
@@ -1176,30 +1162,6 @@ def accounting_settings_view(request):
     }
     return render(request, "accounting/settings/settings.html", context)
 
-
-
-@method_decorator(accounting_staff_required, name="dispatch")
-class InvoiceAttachmentCreateView(AccountingSectionMixin, BaseAttachmentCreateView):
-    """
-    رفع مرفق لفاتورة محددة.
-    """
-    section = "invoices"
-    attachment_parent_model = Invoice
-    attachment_parent_lookup_url_kwarg = "number"   # من الـ URL
-    attachment_parent_lookup_field = "number"       # من الموديل
-    attachment_success_url_name = "accounting:invoice_detail"
-
-
-@method_decorator(accounting_staff_required, name="dispatch")
-class InvoiceAttachmentDeleteView(AccountingSectionMixin, BaseAttachmentDeleteView):
-    """
-    حذف (تعطيل) مرفق تابع لفاتورة.
-    """
-    section = "invoices"
-    attachment_parent_model = Invoice
-    attachment_parent_lookup_url_kwarg = "number"
-    attachment_parent_lookup_field = "number"
-    attachment_success_url_name = "accounting:invoice_detail"
 
 
 

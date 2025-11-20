@@ -3,6 +3,7 @@ from django.urls import path
 
 from core.views import NotificationListView, NotificationReadRedirectView, notification_mark_all_read, \
     notification_delete, AuditLogListView
+from core.views.attachments import AttachmentDeleteView, AttachmentCreateView
 
 app_name = "core"
 
@@ -32,5 +33,8 @@ urlpatterns = [
         AuditLogListView.as_view(),
         name="audit_log_list",
     ),
+
+    path("attachments/add/", AttachmentCreateView.as_view(), name="attachment_add"),
+    path("attachments/<int:pk>/delete/", AttachmentDeleteView.as_view(), name="attachment_delete"),
 ]
 

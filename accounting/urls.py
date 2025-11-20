@@ -20,9 +20,6 @@ urlpatterns = [
     path("invoices/<int:pk>/confirm/",views.invoice_confirm_view,name="invoice_confirm",),
     path("invoices/<int:pk>/unpost/",views.invoice_unpost_view,name="invoice_unpost",),
 
-    #ِِِِAttachments
-    path("invoices/<str:number>/attachments/add/",views.InvoiceAttachmentCreateView.as_view(),name="invoice_add_attachment",),
-    path("invoices/<str:number>/attachments/<int:pk>/delete/",views.InvoiceAttachmentDeleteView.as_view(),name="invoice_delete_attachment",),
     #Setting
     path("settings",views.accounting_settings_view,name="sales_settings",),
 
