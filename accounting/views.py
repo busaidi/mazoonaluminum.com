@@ -33,6 +33,7 @@ from core.services.audit import log_event
 from core.services.notifications import create_notification
 from core.views.attachments import  AttachmentPanelMixin
 from website.models import Product
+from .domain import InvoiceUpdated
 from .forms import (
     InvoiceForm,
     PaymentForInvoiceForm,
@@ -250,7 +251,10 @@ class InvoiceUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
 
         # Bind formset to existing invoice
         if self.request.POST:
-            ctx["item_formset"] = InvoiceItemFormSet(self.request.POST, instance=invoice)
+            ctx["item_formset"] = InvoiceItemFormSet(
+                self.request.POST,
+                instance=invoice,
+            )
         else:
             ctx["item_formset"] = InvoiceItemFormSet(instance=invoice)
 
@@ -281,10 +285,22 @@ class InvoiceUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
         invoice.total_amount = total
         invoice.save(update_fields=["total_amount"])
 
+        # 🔔 Emit domain event once after successful update
+        invoice.emit(
+            InvoiceUpdated(
+                invoice_id=invoice.pk,
+                serial=invoice.serial,
+            )
+        )
+
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
-        return reverse("accounting:invoice_detail", kwargs={"serial": self.object.serial})
+        return reverse(
+            "accounting:invoice_detail",
+            kwargs={"serial": self.object.serial},
+        )
+
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
