@@ -15,8 +15,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    #sitemap
+    #Library for framework only
     "django.contrib.sitemaps",
+    "modeltranslation",
     #my Website Blog and product
     "core",
     "website",
@@ -73,6 +74,17 @@ LANGUAGES = [
     ("ar", "العربية"),
     ("en", "English"),
 ]
+
+#for model translation
+# django-modeltranslation settings
+MODELTRANSLATION_DEFAULT_LANGUAGE = "ar"
+
+MODELTRANSLATION_LANGUAGES = ("ar", "en")
+
+# Optional but recommended: fallback when a value is missing in one language
+MODELTRANSLATION_FALLBACK_LANGUAGES = {
+    "default": ("ar", "en"),
+}
 
 LOCALE_PATHS = [
     BASE_DIR / "locale",

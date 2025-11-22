@@ -10,72 +10,121 @@
 <div class="py-4">
   {# شريط تنقّل المحاسبة #}
   {% include "accounting/_nav.html" %}
-  {# ================= بطاقة بيانات الزبون ================= #}
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-body">
-      <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
-        <h3 class="mb-0 text-mazoon">
-          {% blocktrans with name=customer.name %}الزبون: {{ name }}{% endblocktrans %}
-        </h3>
-        <a href="{% url 'accounting:customer_edit' customer.pk %}" class="btn btn-sm btn-outline-primary">
-          {% trans "تعديل بيانات الزبون" %}
-        </a>
-      </div>
 
-      <div class="row small">
-        <div class="col-md-6 mb-1">
-          <strong class="text-muted">{% trans "الشركة" %}:</strong>
-          <span>{{ customer.company_name|default:"-" }}</span>
-        </div>
-        <div class="col-md-6 mb-1">
-          <strong class="text-muted">{% trans "الهاتف" %}:</strong>
-          <span>{{ customer.phone|default:"-" }}</span>
-        </div>
-        <div class="col-md-6 mb-1">
-          <strong class="text-muted">{% trans "البريد الإلكتروني" %}:</strong>
-          <span>{{ customer.email|default:"-" }}</span>
-        </div>
-        <div class="col-md-6 mb-1">
-          <strong class="text-muted">{% trans "الرقم الضريبي" %}:</strong>
-          <span>{{ customer.tax_number|default:"-" }}</span>
-        </div>
-        <div class="col-12 mb-0">
-          <strong class="text-muted d-block">{% trans "العنوان" %}:</strong>
-          <span>{{ customer.address|default:"-"|linebreaksbr }}</span>
-        </div>
+  {# ================= الهيدر العام ================= #}
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+      <h1 class="h4 mb-1 text-mazoon">
+        {% blocktrans with name=customer.name %}الزبون: {{ name }}{% endblocktrans %}
+      </h1>
+      <div class="small text-muted">
+        {{ customer.company_name|default:_("عميل فردي") }}
       </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'accounting:customer_edit' customer.pk %}" class="btn btn-sm btn-outline-primary">
+        {% trans "تعديل بيانات الزبون" %}
+      </a>
     </div>
   </div>
 
-  {# ================= ملخص الحساب ================= #}
-  <div class="row mb-4 g-3">
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm text-center h-100">
+  {# ================= صف علوي: بيانات + ملخص ================= #}
+  <div class="row g-3 mb-4">
+    {# بطاقة بيانات الزبون #}
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm h-100">
         <div class="card-body">
-          <div class="text-muted small mb-1">{% trans "إجمالي الفواتير" %}</div>
-          <div class="fs-4 fw-semibold">{{ total_invoices }}</div>
+          <h6 class="text-muted mb-3">{% trans "بيانات الاتصال والعنوان" %}</h6>
+
+          <div class="row gy-2 small">
+            <div class="col-md-6">
+              <div class="mb-1">
+                <span class="text-muted d-inline-block w-50">{% trans "الشركة" %}:</span>
+                <span class="fw-semibold">{{ customer.company_name|default:"-" }}</span>
+              </div>
+              <div class="mb-1">
+                <span class="text-muted d-inline-block w-50">{% trans "الهاتف" %}:</span>
+                <span class="fw-semibold">{{ customer.phone|default:"-" }}</span>
+              </div>
+              <div class="mb-1">
+                <span class="text-muted d-inline-block w-50">{% trans "البريد الإلكتروني" %}:</span>
+                <span class="fw-semibold">{{ customer.email|default:"-" }}</span>
+              </div>
+              <div class="mb-1">
+                <span class="text-muted d-inline-block w-50">{% trans "الرقم الضريبي" %}:</span>
+                <span class="fw-semibold">{{ customer.tax_number|default:"-" }}</span>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="mb-1">
+                <span class="text-muted d-inline-block w-50">{% trans "الدولة / المحافظة / الولاية" %}:</span>
+                <span class="fw-semibold">
+                  {{ customer.country|default:"-" }}
+                  {% if customer.governorate %} - {{ customer.governorate }}{% endif %}
+                  {% if customer.wilaya %} - {{ customer.wilaya }}{% endif %}
+                </span>
+              </div>
+
+              <div class="mb-1">
+                <span class="text-muted d-inline-block w-50">{% trans "القرية" %}:</span>
+                <span class="fw-semibold">{{ customer.village|default:"-" }}</span>
+              </div>
+
+              <div class="mb-1">
+                <span class="text-muted d-inline-block w-50">{% trans "الرمز البريدي" %}:</span>
+                <span class="fw-semibold">{{ customer.postal_code|default:"-" }}</span>
+              </div>
+
+              <div class="mb-1">
+                <span class="text-muted d-inline-block w-50">{% trans "صندوق البريد" %}:</span>
+                <span class="fw-semibold">{{ customer.po_box|default:"-" }}</span>
+              </div>
+            </div>
+
+            <div class="col-12 mt-2">
+              <span class="text-muted d-block mb-1">{% trans "العنوان التفصيلي" %}:</span>
+              <div class="fw-semibold small">
+                {{ customer.address|default:"-"|linebreaksbr }}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm text-center h-100">
-        <div class="card-body">
-          <div class="text-muted small mb-1">{% trans "إجمالي الدفعات" %}</div>
-          <div class="fs-4 fw-semibold">{{ total_paid }}</div>
+    {# ملخص الحساب #}
+    <div class="col-lg-4">
+      <div class="row g-2">
+        <div class="col-12">
+          <div class="card border-0 shadow-sm text-center h-100">
+            <div class="card-body py-3">
+              <div class="text-muted small mb-1">{% trans "إجمالي الفواتير" %}</div>
+              <div class="fs-4 fw-semibold">{{ total_invoices }}</div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <div class="col-md-4">
-      <div class="card border-0 shadow-sm text-center h-100">
-        <div class="card-body">
-          <div class="text-muted small mb-1">{% trans "الرصيد" %}</div>
-          <div class="fs-4 fw-semibold
-                      {% if balance > 0 %}text-danger
-                      {% elif balance < 0 %}text-success
-                      {% endif %}">
-            {{ balance }}
+        <div class="col-12">
+          <div class="card border-0 shadow-sm text-center h-100">
+            <div class="card-body py-3">
+              <div class="text-muted small mb-1">{% trans "إجمالي الدفعات" %}</div>
+              <div class="fs-4 fw-semibold">{{ total_paid }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <div class="card border-0 shadow-sm text-center h-100">
+            <div class="card-body py-3">
+              <div class="text-muted small mb-1">{% trans "الرصيد" %}</div>
+              <div class="fs-4 fw-semibold
+                          {% if balance > 0 %}text-danger
+                          {% elif balance < 0 %}text-success
+                          {% endif %}">
+                {{ balance }}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -95,7 +144,7 @@
       </div>
 
       <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
+        <table class="table table-sm table-hover align-middle mb-0">
           <thead class="table-light">
             <tr>
               <th>{% trans "رقم الفاتورة" %}</th>
@@ -111,7 +160,7 @@
           <tbody>
             {% for invoice in invoices %}
               <tr>
-                <td class="text-nowrap">{{ invoice.number }}</td>
+                <td class="text-nowrap">{{ invoice.serial }}</td>
                 <td class="text-nowrap">{{ invoice.issued_at|date:"Y-m-d" }}</td>
                 <td class="text-nowrap">{{ invoice.total_amount }}</td>
                 <td class="text-nowrap">{{ invoice.paid_amount }}</td>
@@ -122,7 +171,7 @@
                   </span>
                 </td>
                 <td class="text-end">
-                  <a href="{% url 'accounting:invoice_detail' invoice.number %}"
+                  <a href="{% url 'accounting:invoice_detail' invoice.serial %}"
                      class="btn btn-sm btn-outline-primary">
                     {% trans "عرض" %}
                   </a>
@@ -155,7 +204,7 @@
       </div>
 
       <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
+        <table class="table table-sm table-hover align-middle mb-0">
           <thead class="table-light">
             <tr>
               <th>{% trans "رقم الطلب" %}</th>
@@ -169,7 +218,7 @@
           <tbody>
             {% for order in orders %}
               <tr>
-                <td class="text-nowrap">#{{ order.pk }}</td>
+                <td class="text-nowrap">{{ order.serial }}</td>
                 <td class="text-nowrap">
                   {{ order.created_at|date:"Y-m-d" }}
                   <div class="text-muted small">{{ order.created_at|date:"H:i" }}</div>
@@ -211,7 +260,10 @@
       </div>
     </div>
   </div>
- {% include "core/attachments/_panel.html" %}
+
+  {# لوحة المرفقات #}
+  {% include "core/attachments/_panel.html" %}
+
   {# ================= جدول الدفعات ================= #}
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
@@ -226,7 +278,7 @@
       </div>
 
       <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
+        <table class="table table-sm table-hover align-middle mb-0">
           <thead class="table-light">
             <tr>
               <th>{% trans "التاريخ" %}</th>
@@ -247,8 +299,8 @@
 
               <td>
                 {% if payment.invoice %}
-                  <a href="{% url 'accounting:invoice_detail' payment.invoice.number %}">
-                    {{ payment.invoice.number }}
+                  <a href="{% url 'accounting:invoice_detail' payment.invoice.serial %}">
+                    {{ payment.invoice.serial }}
                   </a>
                 {% else %}
                   <span class="badge bg-mazoon-accent text-dark">

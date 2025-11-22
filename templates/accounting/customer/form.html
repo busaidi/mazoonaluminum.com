@@ -1,14 +1,15 @@
 {% extends "base.html" %}
+{% load i18n %}
 
 {% block meta_title %}
-  {% if object %}تعديل زبون | Mazoon Aluminum{% else %}زبون جديد | Mazoon Aluminum{% endif %}
+  {% if object %}{% trans "تعديل زبون" %} | Mazoon Aluminum{% else %}{% trans "زبون جديد" %} | Mazoon Aluminum{% endif %}
 {% endblock %}
 
 {% block meta_description %}
   {% if object %}
-    تعديل بيانات الزبون {{ object.name }} في نظام المحاسبة.
+    {% blocktrans with name=object.name %}تعديل بيانات الزبون {{ name }} في نظام المحاسبة.{% endblocktrans %}
   {% else %}
-    إنشاء زبون جديد في نظام المحاسبة.
+    {% trans "إنشاء زبون جديد في نظام المحاسبة." %}
   {% endif %}
 {% endblock %}
 
@@ -16,13 +17,15 @@
 <div class="py-4">
   {# شريط تنقّل المحاسبة #}
   {% include "accounting/_nav.html" %}
+
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h4 mb-0">
-      {% if object %}تعديل زبون{% else %}زبون جديد{% endif %}
+      {% if object %}{% trans "تعديل زبون" %}{% else %}{% trans "زبون جديد" %}{% endif %}
     </h1>
 
-    <a href="{% url 'accounting:customer_list' %}" class="btn btn-outline-secondary btn-sm">
-      رجوع لقائمة الزبائن
+    <a href="{% url 'accounting:customer_list' %}"
+       class="btn btn-outline-secondary btn-sm">
+      {% trans "رجوع لقائمة الزبائن" %}
     </a>
   </div>
 
@@ -41,32 +44,247 @@
           </div>
         {% endif %}
 
-        {# عرض الحقول #}
-        {% for field in form %}
-          <div class="mb-3">
-            <label class="form-label" for="{{ field.id_for_label }}">
-              {{ field.label }}{% if field.field.required %} *{% endif %}
-            </label>
-            {{ field }}
+        {# ======================= قسم المعلومات الأساسية ======================= #}
+        <h5 class="text-mazoon mb-3">{% trans "المعلومات الأساسية" %}</h5>
 
-            {% if field.help_text %}
-              <div class="form-text">{{ field.help_text }}</div>
-            {% endif %}
+        {# تبويبات اللغات #}
+        <ul class="nav nav-tabs mb-3" role="tablist">
+          <li class="nav-item">
+            <button class="nav-link active"
+                    id="tab-ar"
+                    data-bs-toggle="tab"
+                    data-bs-target="#lang-ar"
+                    type="button"
+                    role="tab">
+              {% trans "العربية" %}
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link"
+                    id="tab-en"
+                    data-bs-toggle="tab"
+                    data-bs-target="#lang-en"
+                    type="button"
+                    role="tab">
+              English
+            </button>
+          </li>
+        </ul>
 
-            {% for error in field.errors %}
+        <div class="tab-content mb-4">
+          {# تبويب العربية #}
+          <div class="tab-pane fade show active" id="lang-ar" role="tabpanel" aria-labelledby="tab-ar">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                {{ form.name_ar.label_tag }}{{ form.name_ar }}
+                {% for error in form.name_ar.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-md-6 mb-3">
+                {{ form.company_name_ar.label_tag }}{{ form.company_name_ar }}
+                {% for error in form.company_name_ar.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-12 mb-3">
+                {{ form.address_ar.label_tag }}{{ form.address_ar }}
+                {% for error in form.address_ar.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          {# تبويب English #}
+          <div class="tab-pane fade" id="lang-en" role="tabpanel" aria-labelledby="tab-en">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                {{ form.name_en.label_tag }}{{ form.name_en }}
+                {% for error in form.name_en.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-md-6 mb-3">
+                {{ form.company_name_en.label_tag }}{{ form.company_name_en }}
+                {% for error in form.company_name_en.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-12 mb-3">
+                {{ form.address_en.label_tag }}{{ form.address_en }}
+                {% for error in form.address_en.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ======================= قسم بيانات الاتصال ======================= #}
+        <h5 class="text-mazoon mb-3">{% trans "بيانات الاتصال" %}</h5>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            {{ form.phone.label_tag }}{{ form.phone }}
+            {% for error in form.phone.errors %}
               <div class="text-danger small">{{ error }}</div>
             {% endfor %}
           </div>
-        {% endfor %}
 
-        <div class="d-flex gap-2">
+          <div class="col-md-6 mb-3">
+            {{ form.email.label_tag }}{{ form.email }}
+            {% for error in form.email.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-6 mb-3">
+            {{ form.tax_number.label_tag }}{{ form.tax_number }}
+            {% for error in form.tax_number.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        {# ======================= قسم العنوان ======================= #}
+        <h5 class="text-mazoon mb-3">{% trans "العنوان" %}</h5>
+
+        {# تبويبات لغوية لحقول العنوان المترجمة #}
+        <ul class="nav nav-tabs mb-3" role="tablist">
+          <li class="nav-item">
+            <button class="nav-link active"
+                    id="addr-tab-ar"
+                    data-bs-toggle="tab"
+                    data-bs-target="#addr-lang-ar"
+                    type="button"
+                    role="tab">
+              {% trans "العربية" %}
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link"
+                    id="addr-tab-en"
+                    data-bs-toggle="tab"
+                    data-bs-target="#addr-lang-en"
+                    type="button"
+                    role="tab">
+              English
+            </button>
+          </li>
+        </ul>
+
+        <div class="tab-content mb-3">
+          {# عنوان بالعربية #}
+          <div class="tab-pane fade show active" id="addr-lang-ar" role="tabpanel" aria-labelledby="addr-tab-ar">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                {{ form.country_ar.label_tag }}{{ form.country_ar }}
+                {% for error in form.country_ar.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-md-6 mb-3">
+                {{ form.governorate_ar.label_tag }}{{ form.governorate_ar }}
+                {% for error in form.governorate_ar.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-md-6 mb-3">
+                {{ form.wilaya_ar.label_tag }}{{ form.wilaya_ar }}
+                {% for error in form.wilaya_ar.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-md-6 mb-3">
+                {{ form.village_ar.label_tag }}{{ form.village_ar }}
+                {% for error in form.village_ar.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-md-6 mb-3">
+                {{ form.postal_code_ar.label_tag }}{{ form.postal_code_ar }}
+                {% for error in form.postal_code_ar.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-md-6 mb-3">
+                {{ form.po_box_ar.label_tag }}{{ form.po_box_ar }}
+                {% for error in form.po_box_ar.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          {# عنوان بالإنجليزية #}
+          <div class="tab-pane fade" id="addr-lang-en" role="tabpanel" aria-labelledby="addr-tab-en">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                {{ form.country_en.label_tag }}{{ form.country_en }}
+                {% for error in form.country_en.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-md-6 mb-3">
+                {{ form.governorate_en.label_tag }}{{ form.governorate_en }}
+                {% for error in form.governorate_en.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-md-6 mb-3">
+                {{ form.wilaya_en.label_tag }}{{ form.wilaya_en }}
+                {% for error in form.wilaya_en.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-md-6 mb-3">
+                {{ form.village_en.label_tag }}{{ form.village_en }}
+                {% for error in form.village_en.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-md-6 mb-3">
+                {{ form.postal_code_en.label_tag }}{{ form.postal_code_en }}
+                {% for error in form.postal_code_en.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              <div class="col-md-6 mb-3">
+                {{ form.po_box_en.label_tag }}{{ form.po_box_en }}
+                {% for error in form.po_box_en.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
           <button type="submit" class="btn btn-primary">
-            حفظ
+            {% trans "حفظ" %}
           </button>
-          <a href="{% url 'accounting:customer_list' %}" class="btn btn-secondary">
-            إلغاء
+          <a href="{% url 'accounting:customer_list' %}"
+             class="btn btn-secondary">
+            {% trans "إلغاء" %}
           </a>
         </div>
+
       </form>
 
     </div>

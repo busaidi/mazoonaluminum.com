@@ -24,6 +24,19 @@ pip install "Django>=5.2,<5.3"
 python manage.py makemigrations
 ```
 ```bash
+pip install -r requirements.txt
+```
+```bash
+pip install --upgrade pip
+```
+
+```bash
+python -m pip freeze > requirements.txt
+```
+```bash
+python manage.py shell
+```
+```bash
 python manage.py migrate
 ```
 ```bash

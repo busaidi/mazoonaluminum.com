@@ -30,6 +30,11 @@ urlpatterns = [
     path("customers/<int:pk>/edit/",views.CustomerUpdateView.as_view(),name="customer_edit",),
     path("customers/<int:pk>/delete/",views.CustomerDeleteView.as_view(),name="customer_delete",),
     path("customers/<int:pk>/payments/new/",views.CustomerPaymentCreateView.as_view(),name="customer_add_payment",),
+    path(
+        "customers/autocomplete/",
+        views.CustomerAutocompleteView.as_view(),
+        name="customer_autocomplete",
+    ),
 
     # --------------------------------------------------
     # Payments (staff)

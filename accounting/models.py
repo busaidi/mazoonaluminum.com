@@ -40,6 +40,8 @@ class Customer(models.Model):
         related_name="customer_profile",
         help_text="Optional: link to a Django user for customer access.",
     )
+
+    # --------- Main info ---------
     name = models.CharField(max_length=255)
     phone = models.CharField(max_length=50, blank=True)
     email = models.EmailField(blank=True)
@@ -49,6 +51,40 @@ class Customer(models.Model):
         blank=True,
         help_text="Optional: VAT / Tax ID if applicable.",
     )
+
+    # --------- Address (structured) ---------
+    country = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Country name (translatable).",
+    )
+    governorate = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Governorate / محافظة (translatable).",
+    )
+    wilaya = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Wilaya / ولاية (translatable).",
+    )
+    village = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Village / قرية (translatable).",
+    )
+    postal_code = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Postal code / الرمز البريدي (translatable if needed).",
+    )
+    po_box = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="P.O. Box / صندوق البريد (translatable if needed).",
+    )
+
+    # Optional free-text address
     address = models.TextField(blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)

@@ -13,6 +13,7 @@
 <div class="py-4">
   {# شريط تنقّل المحاسبة #}
   {% include "accounting/_nav.html" %}
+
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <h1 class="h4 mb-0 text-mazoon">
       {% trans "الزبائن" %}
@@ -22,15 +23,24 @@
     </a>
   </div>
 
-  {# البحث #}
-  <form method="get" class="row g-2 mb-3 align-items-center">
-    <div class="col-auto">
+  {# ===================== البحث مع أوتوكمبليت ===================== #}
+  <form method="get" class="row g-2 mb-3 align-items-center position-relative" autocomplete="off">
+    <div class="col-auto position-relative">
       <input type="text"
+             id="customer-search-input"
              name="q"
              class="form-control form-control-sm"
-             placeholder="{% trans 'بحث بالاسم أو الشركة' %}"
-             value="{{ request.GET.q }}">
+             placeholder="{% trans 'بحث بالاسم أو الشركة أو الهاتف أو البريد' %}"
+             value="{{ request.GET.q|default:'' }}">
+
+      {# صندوق الاقتراحات #}
+      <div id="customer-autocomplete"
+           class="list-group shadow-sm position-absolute w-100 d-none"
+           style="z-index: 1050; max-height: 260px; overflow-y: auto; top: 100%; right: 0;">
+        {# العناصر تضاف بالـ JS #}
+      </div>
     </div>
+
     <div class="col-auto">
       <button type="submit" class="btn btn-outline-secondary btn-sm">
         {% trans "بحث" %}
@@ -43,10 +53,8 @@
       <table class="table table-hover table-sm mb-0 align-middle">
         <thead class="table-light">
           <tr>
-            <th>{% trans "الاسم" %}</th>
-            <th>{% trans "الشركة" %}</th>
-            <th>{% trans "الهاتف" %}</th>
-            <th>{% trans "البريد" %}</th>
+            <th>{% trans "العميل" %}</th>
+            <th>{% trans "الموقع" %}</th>
             <th class="text-end">{% trans "الرصيد" %}</th>
             <th class="text-end"></th>
           </tr>
@@ -54,15 +62,55 @@
         <tbody>
           {% for c in customers %}
             <tr>
+              {# ===================== عمود العميل مع بيانات مكدّسة ===================== #}
               <td>
-                <a href="{% url 'accounting:customer_detail' pk=c.pk %}">
-                  {{ c.name }}
-                </a>
+                <div class="fw-semibold mb-1">
+                  <a href="{% url 'accounting:customer_detail' pk=c.pk %}">
+                    {{ c.name }}
+                  </a>
+                </div>
+
+                {# الهاتف + البريد في سطر واحد muted #}
+                <div class="small text-muted">
+                  {% if c.phone %}
+                    {{ c.phone }}
+                  {% endif %}
+                  {% if c.email %}
+                    {% if c.phone %} · {% endif %}
+                    {{ c.email }}
+                  {% endif %}
+                </div>
+
+                {# الشركة + الرقم الضريبي في سطر آخر muted #}
+                <div class="small text-muted">
+                  {% if c.company_name %}
+                    {{ c.company_name }}
+                  {% endif %}
+                  {% if c.tax_number %}
+                    {% if c.company_name %} · {% endif %}
+                    {% trans "الرقم الضريبي" %}: {{ c.tax_number }}
+                  {% endif %}
+                </div>
               </td>
-              <td>{{ c.company_name|default:"-" }}</td>
-              <td>{{ c.phone|default:"-" }}</td>
-              <td>{{ c.email|default:"-" }}</td>
-              <td class="text-end">{{ c.balance }}</td>
+
+              {# ===================== الموقع ===================== #}
+              <td class="small text-muted">
+                {% if c.country %}{{ c.country }}{% else %}-{% endif %}
+                {% if c.governorate %} · {{ c.governorate }}{% endif %}
+                {% if c.wilaya %} · {{ c.wilaya }}{% endif %}
+              </td>
+
+              {# ===================== الرصيد ===================== #}
+              <td class="text-end">
+                <span class="fw-semibold
+                             {% if c.balance > 0 %}text-danger
+                             {% elif c.balance < 0 %}text-success
+                             {% endif %}">
+                  {{ c.balance }}
+                </span>
+              </td>
+
+              {# ===================== الإجراءات ===================== #}
               <td class="text-end">
                 <a href="{% url 'accounting:customer_edit' pk=c.pk %}"
                    class="btn btn-sm btn-outline-primary">
@@ -76,7 +124,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="6" class="text-center text-muted py-3">
+              <td colspan="4" class="text-center text-muted py-3">
                 {% trans "لا يوجد زبائن حاليًا." %}
               </td>
             </tr>
@@ -137,4 +185,110 @@
   </div>
 
 </div>
+
+{# ======================== JS للأوتوكمبليت ======================== #}
+<script>
+  (function() {
+    const input = document.getElementById("customer-search-input");
+    const box = document.getElementById("customer-autocomplete");
+    if (!input || !box) return;
+
+    let debounceTimer = null;
+
+    function hideBox() {
+      box.classList.add("d-none");
+      box.innerHTML = "";
+    }
+
+    function showBox() {
+      box.classList.remove("d-none");
+    }
+
+    function renderSuggestions(items) {
+      if (!items.length) {
+        hideBox();
+        return;
+      }
+
+      box.innerHTML = "";
+      items.forEach(function(item) {
+        const a = document.createElement("button");
+        a.type = "button";
+        a.className = "list-group-item list-group-item-action small text-start";
+
+        // نص السطر: الاسم + (الشركة) + الهاتف/البريد
+        let line = item.name || "";
+        if (item.company_name) {
+          line += " — " + item.company_name;
+        }
+        if (item.phone) {
+          line += " · " + item.phone;
+        } else if (item.email) {
+          line += " · " + item.email;
+        }
+
+        a.textContent = line;
+
+        a.addEventListener("click", function() {
+          input.value = item.name || item.company_name || item.phone || item.email || "";
+          hideBox();
+          // ممكن هنا نرسل الفورم مباشرة:
+          input.form && input.form.submit();
+        });
+
+        box.appendChild(a);
+      });
+
+      showBox();
+    }
+
+    function fetchSuggestions(query) {
+      if (!query || query.length < 2) {
+        hideBox();
+        return;
+      }
+
+      const url = "{% url 'accounting:customer_autocomplete' %}" + "?q=" + encodeURIComponent(query);
+
+      fetch(url, {
+        headers: {
+          "X-Requested-With": "XMLHttpRequest"
+        }
+      })
+        .then(function(response) {
+          if (!response.ok) throw new Error("Network response was not ok");
+          return response.json();
+        })
+        .then(function(data) {
+          renderSuggestions(data.results || []);
+        })
+        .catch(function(error) {
+          console.error("Autocomplete error:", error);
+          hideBox();
+        });
+    }
+
+    input.addEventListener("input", function() {
+      const query = input.value.trim();
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(function() {
+        fetchSuggestions(query);
+      }, 250); // debounce 250ms
+    });
+
+    // إخفاء القائمة عند الضغط خارجها
+    document.addEventListener("click", function(e) {
+      if (!box.contains(e.target) && e.target !== input) {
+        hideBox();
+      }
+    });
+
+    // Esc يغلق القائمة
+    input.addEventListener("keydown", function(e) {
+      if (e.key === "Escape") {
+        hideBox();
+      }
+    });
+  })();
+</script>
 {% endblock %}

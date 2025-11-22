@@ -11,13 +11,14 @@ from django.contrib.auth.decorators import (
 )
 from django.db import transaction
 from django.db.models import Sum, Q, ProtectedError, F
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _
+from django.views import View
 from django.views.generic import (
     ListView,
     DetailView,
@@ -430,23 +431,65 @@ class AccountingDashboardView(AccountingSectionMixin, TemplateView):
 @method_decorator(accounting_staff_required, name="dispatch")
 class CustomerListView(AccountingSectionMixin, ListView):
     """
-    Staff list of customers, with simple search by name/company.
+    Staff list of customers, with simple search by name/company/phone/email
+    in both Arabic and English.
     """
-    section = "customers"  # عشان الناف بار
+    section = "customers"
     model = Customer
     template_name = "accounting/customer/list.html"
-    context_object_name = "customers"  # يتطابق مع القالب
+    context_object_name = "customers"
     paginate_by = 20
 
     def get_queryset(self):
         qs = super().get_queryset()
-        q = self.request.GET.get("q")
+        q = self.request.GET.get("q", "").strip()
+
         if q:
             qs = qs.filter(
-                Q(name__icontains=q) |
-                Q(company_name__icontains=q)
+                Q(name__icontains=q)
+                | Q(name_ar__icontains=q)
+                | Q(name_en__icontains=q)
+                | Q(company_name__icontains=q)
+                | Q(company_name_ar__icontains=q)
+                | Q(company_name_en__icontains=q)
+                | Q(phone__icontains=q)
+                | Q(email__icontains=q)
             )
+
         return qs
+
+class CustomerAutocompleteView(View):
+    def get(self, request, *args, **kwargs):
+        q = request.GET.get("q", "").strip()
+        results = []
+
+        if q:
+            qs = (
+                Customer.objects.filter(
+                    Q(name__icontains=q)
+                    | Q(name_ar__icontains=q)
+                    | Q(name_en__icontains=q)
+                    | Q(company_name__icontains=q)
+                    | Q(company_name_ar__icontains=q)
+                    | Q(company_name_en__icontains=q)
+                    | Q(phone__icontains=q)
+                    | Q(email__icontains=q)
+                )
+                .order_by("name")[:15]
+            )
+
+            for c in qs:
+                results.append(
+                    {
+                        "id": c.pk,
+                        "name": c.name,  # حسب لغة الواجهة
+                        "company_name": c.company_name or "",
+                        "phone": c.phone or "",
+                        "email": c.email or "",
+                    }
+                )
+
+        return JsonResponse({"results": results})
 
 @method_decorator(accounting_staff_required, name="dispatch")
 class CustomerCreateView(AccountingSectionMixin, CreateView):
@@ -1177,7 +1220,5 @@ def accounting_settings_view(request):
         "accounting_section": "settings",
     }
     return render(request, "accounting/settings/settings.html", context)
-
-
 
 
