@@ -46,7 +46,7 @@
         <table class="table table-sm table-hover align-middle mb-0">
           <thead class="table-light">
             <tr class="small text-muted">
-              <th scope="col">#</th>
+              <th scope="col">#{% trans "رقم الطلب" %}</th>
               <th scope="col">{% trans "التاريخ" %}</th>
               <th scope="col">{% trans "الحالة" %}</th>
               <th scope="col" class="text-end">{% trans "الإجمالي التقريبي" %}</th>
@@ -59,7 +59,7 @@
                 <td class="text-nowrap">
                   <a href="{% url 'portal:order_detail' pk=order.pk %}"
                      class="text-decoration-none text-mazoon">
-                    #{{ order.id }}
+                    {{ order.serial }}
                   </a>
                 </td>
                 <td class="small">
@@ -85,9 +85,9 @@
                 </td>
                 <td>
                   {% if order.invoice %}
-                    <a href="{% url 'portal:invoice_detail' number=order.invoice.number %}"
+                    <a href="{% url 'portal:invoice_detail' serial=order.invoice.serial %}"
                        class="text-decoration-none">
-                      {{ order.invoice.number }}
+                      {{ order.invoice.serial }}
                     </a>
                   {% else %}
                     <span class="text-muted small">

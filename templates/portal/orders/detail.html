@@ -2,7 +2,7 @@
 {% load i18n %}
 
 {% block title %}
-  {% blocktrans with id=order.id %}طلب #{{ id }}{% endblocktrans %}
+  {% blocktrans with serial=order.serial %}طلب #{{ serial}}{% endblocktrans %}
 {% endblock %}
 
 {% block content %}
@@ -22,7 +22,7 @@
         </a>
       </li>
       <li class="breadcrumb-item active text-muted" aria-current="page">
-        {% blocktrans with id=order.id %}طلب #{{ id }}{% endblocktrans %}
+        {% blocktrans with serial=order.serial %}طلب #{{ serial}}{% endblocktrans %}
       </li>
     </ol>
   </nav>
@@ -37,7 +37,7 @@
   {# ===== Page header ===== #}
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h4 mb-0">
-      {% blocktrans with id=order.id %}تفاصيل الطلب #{{ id }}{% endblocktrans %}
+      {% blocktrans with serial=order.serial %}تفاصيل الطلب {{ serial }}{% endblocktrans %}
     </h1>
   </div>
 
@@ -49,7 +49,7 @@
           <h5 class="card-title mb-3">{% trans "معلومات الطلب" %}</h5>
           <p class="mb-1">
             <strong>{% trans "رقم الطلب" %}:</strong>
-            #{{ order.id }}
+            #{{ order.serial }}
           </p>
           <p class="mb-1">
             <strong>{% trans "التاريخ" %}:</strong>
