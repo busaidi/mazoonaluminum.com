@@ -13,9 +13,11 @@ from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 
+from accounting.domain import InvoiceCreated, InvoiceSent, OrderCreated
+from core.domain.hooks import on_lifecycle, on_transition
 from core.models.base import BaseModel, NumberedModel  # لو تستخدمها
 from core.models.domain import (
-    StatefulDomainModel,
+    StatefulDomainModel, DomainEventsMixin,
 )
 
 
@@ -157,14 +159,15 @@ class Invoice(NumberedModel, StatefulDomainModel):
     def save(self, *args, **kwargs):
         """
         On first save:
-        - يضبط due_date / terms من Settings (لو ما كانت محددة)
-        - يحفظ الفاتورة
-        - لو كانت جديدة → يطلق InvoiceCreated event (للنتفيكشن وغيرها).
+        - Apply due_date / terms defaults from Settings if not set.
+        - Let NumberedModel handle serial generation if needed.
+        - Domain events (InvoiceCreated, transitions, ...) are handled
+          by StatefulDomainModel / DomainEventsMixin via lifecycle hooks.
         """
-        from accounting.models import Settings  # لتفادي الـ circular
-        from accounting.domain import InvoiceCreated  # نوع الإيفنت
+        from accounting.models import Settings  # to avoid circular imports
 
-        is_new = self.pk is None
+        # استخدم _state.adding بدل pk is None (أدق مع Django)
+        is_new = self._state.adding
 
         if is_new:
             settings = Settings.get_solo()
@@ -175,17 +178,56 @@ class Invoice(NumberedModel, StatefulDomainModel):
             if not self.terms and settings.default_terms:
                 self.terms = settings.default_terms
 
-        # نحفظ الفاتورة (NumberedModel يتكفل بالـ serial لو فاضي)
+        # NumberedModel + StatefulDomainModel will do their job in MRO
         super().save(*args, **kwargs)
 
-        # لو كانت جديدة → نطلق Event واحد بسيط
-        if is_new:
-            self.emit(
-                InvoiceCreated(
-                    invoice_id=self.pk,
-                    serial=self.serial,
-                )
+    # ---------- Domain event hooks ----------
+
+    @on_lifecycle("created")
+    def _on_created(self) -> None:
+        """
+        This hook is called automatically after the first save()
+        when the DB transaction is committed.
+
+        It emits an InvoiceCreated event for further processing
+        (notifications, integrations, etc.).
+        """
+        self.emit(
+            InvoiceCreated(
+                invoice_id=self.pk,
+                serial=self.serial,
             )
+        )
+
+    @on_transition(Status.DRAFT, Status.SENT)
+    def _on_sent(self) -> None:
+        """
+        This hook is called automatically when the invoice status
+        changes from DRAFT -> SENT (after DB commit).
+
+        It emits an InvoiceSent event so that other parts of the system
+        (e.g. notifications, emails, integrations) can react.
+        """
+        self.emit(
+            InvoiceSent(
+                invoice_id=self.pk,
+                serial=self.serial,
+            )
+        )
+
+
+    # لاحقًا لو حبيت:
+    # from core.domain.hooks import on_transition
+    # from accounting.domain import InvoiceSent
+    #
+    # @on_transition(Status.DRAFT, Status.SENT)
+    # def _on_sent(self) -> None:
+    #     self.emit(
+    #         InvoiceSent(
+    #             invoice_id=self.pk,
+    #             serial=self.serial,
+    #         )
+    #     )
 
 
 class InvoiceItem(models.Model):
@@ -334,7 +376,7 @@ def update_invoice_on_payment_delete(sender, instance: "Payment", **kwargs):
 # Orders (header + items)
 # ============================================================
 
-class Order(models.Model):
+class Order(DomainEventsMixin, models.Model):
     STATUS_DRAFT = "draft"
     STATUS_PENDING = "pending"      # طلب أونلاين ينتظر تأكيد موظف
     STATUS_CONFIRMED = "confirmed"  # تم التأكيد
@@ -442,6 +484,26 @@ class Order(models.Model):
             # نفس فكرة bg-mazoon-accent text-dark اللي كنت تستخدمها
             return "badge-mazoon badge-online"
         return "badge-mazoon badge-staff"
+
+    # ---------- Domain events ----------
+
+    @on_lifecycle("created")
+    def _on_created(self) -> None:
+        """
+        يتم استدعاؤها تلقائياً بعد إنشاء الطلب أول مرة
+        (بعد حفظه في قاعدة البيانات ونجاح الـ transaction).
+
+        نطلق هذا الإيفنت فقط للطلبات الأونلاين (is_online=True).
+        """
+        if not self.is_online:
+            return
+
+        self.emit(
+            OrderCreated(
+                order_id=self.pk,
+            )
+        )
+
 
 
 class OrderItem(models.Model):

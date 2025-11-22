@@ -33,7 +33,6 @@ from core.services.audit import log_event
 from core.services.notifications import create_notification
 from core.views.attachments import  AttachmentPanelMixin
 from website.models import Product
-from .domain import InvoiceUpdated
 from .forms import (
     InvoiceForm,
     PaymentForInvoiceForm,
@@ -284,14 +283,6 @@ class InvoiceUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
         total = sum((item.subtotal for item in invoice.items.all()), Decimal("0"))
         invoice.total_amount = total
         invoice.save(update_fields=["total_amount"])
-
-        # 🔔 Emit domain event once after successful update
-        invoice.emit(
-            InvoiceUpdated(
-                invoice_id=invoice.pk,
-                serial=invoice.serial,
-            )
-        )
 
         return HttpResponseRedirect(self.get_success_url())
 
