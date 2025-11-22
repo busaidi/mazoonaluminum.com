@@ -334,3 +334,64 @@ main .container > *:last-child {
   background-color: var(--mazoon-primary);
   color: #ffffff;
 }
+/* ========================================
+   Home page tweaks
+   ======================================== */
+
+.home-section {
+  /* فقط ترتيب بصري بين الأقسام */
+}
+
+.home-section + .home-section {
+  margin-top: 1.5rem;
+}
+
+.home-hero-title {
+  line-height: 1.2;
+}
+
+.home-hero-subtitle {
+  max-width: 40rem;
+}
+
+/* KPIs في الهيرو */
+.hero-kpis {
+  gap: 1rem;
+}
+
+.hero-kpi-card {
+  min-width: 110px;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  background-color: #f9fafb;
+  border: 1px solid var(--mazoon-border-soft);
+}
+
+.hero-kpi-number {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--mazoon-primary);
+}
+
+.hero-kpi-label {
+  font-size: 0.75rem;
+  color: var(--mazoon-text-muted);
+}
+
+/* عناوين الأقسام الفرعية */
+.section-subtitle {
+  font-size: 0.9rem;
+}
+
+/* أيقونات محاور التميز */
+.feature-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f3f4f6;
+  color: var(--mazoon-primary);
+  font-size: 1rem;
+}

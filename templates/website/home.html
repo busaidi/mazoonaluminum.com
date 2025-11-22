@@ -3,15 +3,12 @@
 
 {# =================== SEO & META =================== #}
 
-{# عنوان التبويب في المتصفح #}
 {% block title %}{% trans "مزون المنيوم - الرئيسية" %}{% endblock %}
 
-{# وصف الصفحة (SEO description) #}
 {% block meta_description %}
 {% trans "مزون المنيوم علامة تجارية عمانية متخصصة في تطوير أنظمة النوافذ والأبواب من الألمنيوم والألمنيوم العازل للحرارة، مع تركيز على الجودة والابتكار والشراكات المحلية." %}
 {% endblock %}
 
-{# OG: نكتفي بتغيير العنوان الداخلي فقط ليتوافق مع base.html #}
 {% block og_title_inner %}{% trans "مزون المنيوم - الرئيسية" %}{% endblock %}
 {% block og_description %}
 {% trans "أنظمة ألمنيوم مبتكرة للنوافذ والأبواب مع أداء معتمد وشراكات محلية موثوقة." %}
@@ -20,7 +17,6 @@
 {% block og_url %}{{ request.build_absolute_uri }}{% endblock %}
 {% block og_image %}{% endblock %}
 
-{# Twitter meta #}
 {% block twitter_card %}summary_large_image{% endblock %}
 {% block twitter_title %}{% trans "مزون المنيوم - الرئيسية" %}{% endblock %}
 {% block twitter_description %}
@@ -32,28 +28,50 @@
 {% block content %}
 
 {# ======================= HERO SECTION ======================= #}
-<section class="hero-section mb-5">
+<section class="home-section mb-5">
   <div class="hero-card p-4 p-lg-5">
     <div class="row align-items-center g-4">
       <div class="col-lg-6 order-2 order-lg-1">
-        <div class="mb-2">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
           <span class="badge rounded-pill bg-mazoon-accent text-dark fw-semibold px-3 py-2">
-            {% trans "عشر سنوات من التميّز والريادة" %}
+            {% trans "علامة تجارية عمانية متخصصة في أنظمة الألمنيوم" %}
+          </span>
+          <span class="badge-mazoon badge-staff">
+            {% trans "منذ 2015" %}
           </span>
         </div>
-        <h1 class="display-5 fw-bold mb-3">
+
+        <h1 class="display-5 fw-bold mb-3 home-hero-title">
           {% trans "أنظمة ألمنيوم مبتكرة للنوافذ والأبواب" %}
         </h1>
-        <p class="lead text-muted mb-4">
-          {% trans "مزون المنيوم علامة تجارية عمانية رائدة متخصصة في تطوير وتصنيع أنظمة النوافذ والأبواب من الألمنيوم والألمنيوم العازل للحرارة، بتركيز على الأداء المعتمد، والابتكار المستمر، والشراكات المحلية الموثوقة." %}
+
+        <p class="lead text-muted mb-4 home-hero-subtitle">
+          {% trans "Mazoon Aluminum تطوّر أنظمة نوافذ وأبواب متكاملة من الألمنيوم والألمنيوم العازل للحرارة، مع تركيز على الأداء المعتمد، سهولة التصنيع، وتجربة مستخدم مدروسة للورش والمشاريع." %}
         </p>
-        <div class="d-flex flex-wrap gap-2">
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
           <a href="{% url 'product_list' %}" class="btn btn-primary px-4">
-            {% trans "استكشف الأنظمة" %}
+            {% trans "استكشف أنظمة مزون" %}
           </a>
           <a href="{% url 'about' %}" class="btn btn-outline-secondary px-4">
             {% trans "تعرّف علينا أكثر" %}
           </a>
+        </div>
+
+        {# أرقام سريعة عن مزون #}
+        <div class="d-flex flex-wrap gap-3 hero-kpis">
+          <div class="hero-kpi-card">
+            <div class="hero-kpi-number">10+</div>
+            <div class="hero-kpi-label">{% trans "سنوات خبرة" %}</div>
+          </div>
+          <div class="hero-kpi-card">
+            <div class="hero-kpi-number">3</div>
+            <div class="hero-kpi-label">{% trans "أنظمة مفصلية رئيسية" %}</div>
+          </div>
+          <div class="hero-kpi-card">
+            <div class="hero-kpi-number">ISO</div>
+            <div class="hero-kpi-label">{% trans "أداء واختبارات معتمدة" %}</div>
+          </div>
         </div>
       </div>
 
@@ -71,10 +89,10 @@
 </section>
 
 {# ======================= محاور التميز ======================= #}
-<section class="mb-5">
-  <div class="mb-4 text-center">
-    <h2 class="h3 fw-bold mb-2">{% trans "محاور التميز في مزون ألمنيوم" %}</h2>
-    <p class="text-muted mb-0">
+<section class="home-section mb-5">
+  <div class="text-center mb-4">
+    <h2 class="h3 fw-bold mb-2">{% trans "محاور التميّز في مزون ألمنيوم" %}</h2>
+    <p class="text-muted mb-0 section-subtitle">
       {% trans "أنظمة متطورة · أداء مُعتمد · ابتكار مستمر · شراكات ومشاريع" %}
     </p>
   </div>
@@ -83,9 +101,12 @@
     <div class="col-md-6 col-lg-3">
       <div class="card h-100 border-0 feature-card">
         <div class="card-body">
+          <div class="feature-icon mb-2">
+            <i class="bi bi-grid-3x3-gap-fill"></i>
+          </div>
           <h3 class="h6 fw-bold mb-2">{% trans "أنظمة مزون" %}</h3>
           <p class="small text-muted mb-0">
-            {% trans "مزون 45 · مزون 46 · مزون 56 العازل حرارياً، أنظمة مصممة لتوازن بين الجمال والمتانة وسهولة التصنيع." %}
+            {% trans "مزون 45 · مزون 46 · مزون 56 العازل حرارياً، أنظمة مصممة لتوازن بين الجمال والمتانة وسهولة التصنيع للورش." %}
           </p>
         </div>
       </div>
@@ -94,9 +115,12 @@
     <div class="col-md-6 col-lg-3">
       <div class="card h-100 border-0 feature-card">
         <div class="card-body">
+          <div class="feature-icon mb-2">
+            <i class="bi bi-shield-check"></i>
+          </div>
           <h3 class="h6 fw-bold mb-2">{% trans "أداء مُعتمد" %}</h3>
           <p class="small text-muted mb-0">
-            {% trans "اختبارات معتمدة لأداء الهواء، الماء، الرياح، العزل الحراري، والعزل الصوتي لضمان أداء ثابت على المدى الطويل." %}
+            {% trans "اختبارات لأداء الهواء، الماء، الرياح، العزل الحراري، والعزل الصوتي لضمان أداء ثابت على المدى الطويل." %}
           </p>
         </div>
       </div>
@@ -105,9 +129,12 @@
     <div class="col-md-6 col-lg-3">
       <div class="card h-100 border-0 feature-card">
         <div class="card-body">
+          <div class="feature-icon mb-2">
+            <i class="bi bi-cpu"></i>
+          </div>
           <h3 class="h6 fw-bold mb-2">{% trans "البحث والتطوير" %}</h3>
           <p class="small text-muted mb-0">
-            {% trans "من التصميم الرقمي إلى النماذج الأولية والاختبارات الميدانية، نطوّر الأنظمة وفق احتياجات السوق المحلية." %}
+            {% trans "من التصميم الرقمي والنماذج الأولية إلى الاختبارات الميدانية، نطوّر الأنظمة من داخل الورش وواقع المشاريع." %}
           </p>
         </div>
       </div>
@@ -116,6 +143,9 @@
     <div class="col-md-6 col-lg-3">
       <div class="card h-100 border-0 feature-card">
         <div class="card-body">
+          <div class="feature-icon mb-2">
+            <i class="bi bi-people"></i>
+          </div>
           <h3 class="h6 fw-bold mb-2">{% trans "المشاريع والشركاء" %}</h3>
           <p class="small text-muted mb-0">
             {% trans "حلول متكاملة للمعماريين، الورش، وأصحاب المنازل، مع دعم فني وشركاء تصنيع وزجاج واكسسوارات موثوقين." %}
@@ -127,24 +157,34 @@
 </section>
 
 {# ======================= أنظمة مزون (ثابتة) ======================= #}
-<section class="mb-5">
-  <div class="mb-4 text-center">
-    <h2 class="h3 fw-bold mb-2">{% trans "أنظمة مزون للنوافذ والأبواب" %}</h2>
-    <p class="text-muted mb-0">
-      {% trans "جيل متطور من الأنظمة المفصلية، مع خيارات للعزل الحراري وتعدد غرف العزل." %}
-    </p>
+<section class="home-section mb-5">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+      <h2 class="h4 fw-bold mb-1">{% trans "أنظمة مزون للنوافذ والأبواب" %}</h2>
+      <p class="text-muted mb-0 section-subtitle">
+        {% trans "جيل متطور من الأنظمة المفصلية، مع خيارات للعزل الحراري وتعدد غرف العزل." %}
+      </p>
+    </div>
+    <div>
+      <a href="{% url 'product_list' %}" class="btn btn-sm btn-outline-primary">
+        {% trans "عرض جميع الأنظمة والمنتجات" %}
+      </a>
+    </div>
   </div>
 
   <div class="row g-4 align-items-stretch">
     <div class="col-lg-4">
       <div class="card h-100 system-card border-0">
-        <div class="card-body">
+        <div class="card-body d-flex flex-column">
+          <span class="badge-mazoon badge-draft mb-2">
+            {% trans "نظام مفصلي أساسي" %}
+          </span>
           <h3 class="h5 fw-bold mb-2">{% trans "مزون 45 – نظام مفصلي" %}</h3>
-          <p class="small text-muted mb-3">
-            {% trans "نظام مفصلي يجمع بين سهولة التصنيع وجودة الإنتاج مع تصميم أنيق يناسب الواجهات الحديثة." %}
+          <p class="small text-muted mb-3 flex-grow-1">
+            {% trans "نظام مفصلي يجمع بين سهولة التصنيع وجودة الإنتاج مع تصميم أنيق يناسب الواجهات الحديثة والفتحات السكنية." %}
           </p>
-          <a href="#" class="btn btn-sm btn-outline-primary">
-            {% trans "إقرأ المزيد" %}
+          <a href="#" class="btn btn-sm btn-outline-primary align-self-start">
+            {% trans "إقرأ المزيد عن مزون 45" %}
           </a>
         </div>
       </div>
@@ -152,13 +192,16 @@
 
     <div class="col-lg-4">
       <div class="card h-100 system-card border-0">
-        <div class="card-body">
+        <div class="card-body d-flex flex-column">
+          <span class="badge-mazoon badge-partially-paid mb-2">
+            {% trans "تطوير محسّن" %}
+          </span>
           <h3 class="h5 fw-bold mb-2">{% trans "مزون 46 – تطوير مزون 45" %}</h3>
-          <p class="small text-muted mb-3">
-            {% trans "يضيف غرف عزل إضافية لتحسين الأداء الصوتي والهوائي مع الحفاظ على سهولة التصنيع والمتانة العالية." %}
+          <p class="small text-muted mb-3 flex-grow-1">
+            {% trans "يضيف غرف عزل إضافية لتحسين الأداء الصوتي والهوائي مع الحفاظ على سهولة التصنيع والمتانة العالية، لورش تبحث عن مستوى أعلى من الأداء." %}
           </p>
-          <a href="#" class="btn btn-sm btn-outline-primary">
-            {% trans "إقرأ المزيد" %}
+          <a href="#" class="btn btn-sm btn-outline-primary align-self-start">
+            {% trans "إقرأ المزيد عن مزون 46" %}
           </a>
         </div>
       </div>
@@ -166,13 +209,16 @@
 
     <div class="col-lg-4">
       <div class="card h-100 system-card border-0">
-        <div class="card-body">
+        <div class="card-body d-flex flex-column">
+          <span class="badge-mazoon badge-paid mb-2">
+            {% trans "عزل حراري" %}
+          </span>
           <h3 class="h5 fw-bold mb-2">{% trans "مزون 56 – نظام مفصلي عازل للحرارة" %}</h3>
-          <p class="small text-muted mb-3">
-            {% trans "نظام ثيرمال بريك يوفر عزلًا حراريًا متقدمًا وترشيدًا في استهلاك الطاقة مع الحفاظ على جماليات التصميم." %}
+          <p class="small text-muted mb-3 flex-grow-1">
+            {% trans "نظام ثيرمال بريك يوفر عزلًا حراريًا متقدمًا وترشيدًا في استهلاك الطاقة مع الحفاظ على جماليات التصميم وراحة الاستخدام." %}
           </p>
-          <a href="#" class="btn btn-sm btn-outline-primary">
-            {% trans "إقرأ المزيد" %}
+          <a href="#" class="btn btn-sm btn-outline-primary align-self-start">
+            {% trans "إقرأ المزيد عن مزون 56" %}
           </a>
         </div>
       </div>
@@ -180,8 +226,32 @@
   </div>
 </section>
 
+{# ======================= CTA صغيرة لأصحاب الورش ======================= #}
+<section class="home-section mb-5">
+  <div class="card border-0 bg-mazoon-card">
+    <div class="card-body d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+      <div>
+        <h2 class="h5 fw-bold mb-1">
+          {% trans "هل تمتلك ورشة ألمنيوم وتبحث عن نظام ثابت وواضح؟" %}
+        </h2>
+        <p class="text-muted small mb-0">
+          {% trans "نوفّر أنظمة مفصّلة، مخططات تصنيع، وملفات دعم للورش، مع إمكانية شراء المواد عبر مورّدين معتمدين." %}
+        </p>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'contact' %}" class="btn btn-primary btn-sm px-3">
+          {% trans "تواصل معنا للمزيد" %}
+        </a>
+        <a href="{% url 'lab' %}" class="btn btn-outline-secondary btn-sm px-3">
+          {% trans "زيارة مختبر مزون" %}
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
 {# ======================= منتجات مختارة (ديناميكي) ======================= #}
-<section class="mb-5">
+<section class="home-section mb-5">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="h4 fw-bold mb-0">{% trans "منتجات مختارة" %}</h2>
     <a href="{% url 'product_list' %}" class="small text-decoration-none text-secondary">
@@ -202,9 +272,9 @@
               <span class="fw-bold text-mazoon">
                 {{ product.price }} {% trans "ر.ع" %}
               </span>
-              <span class="badge bg-success-subtle text-success border border-success-subtle">
-                {% trans "متوفر" %}
-              </span>
+              <a href="{% url 'product_list' %}" class="small text-decoration-none">
+                {% trans "تفاصيل المنتج" %} →
+              </a>
             </div>
           </div>
         </div>
@@ -216,7 +286,7 @@
 </section>
 
 {# ======================= أحدث التدوينات ======================= #}
-<section class="mb-4">
+<section class="home-section mb-5">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="h4 fw-bold mb-0">{% trans "أحدث من المدونة" %}</h2>
     <a href="{% url 'blog_list' %}" class="small text-decoration-none text-secondary">
@@ -252,10 +322,10 @@
 </section>
 
 {# ======================= شركاؤنا المحليون ======================= #}
-<section class="mb-3">
+<section class="home-section mb-3">
   <div class="mb-3 text-center">
     <h2 class="h5 fw-bold mb-1">{% trans "شركاؤنا المحليون الموثوقون" %}</h2>
-    <p class="text-muted small mb-0">
+    <p class="text-muted small mb-0 section-subtitle">
       {% trans "سحب الألمنيوم · الزجاج · الأجهزة والاكسسوارات · باودر الصبغ" %}
     </p>
   </div>
