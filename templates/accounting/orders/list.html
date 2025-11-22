@@ -41,7 +41,7 @@
         <table class="table table-sm mb-0 align-middle">
           <thead class="table-light">
             <tr>
-              <th class="text-muted small">{% trans "#" %}</th>
+              <th class="text-muted small">{% trans "التسلسل" %}</th>
               <th class="text-muted small">{% trans "الزبون" %}</th>
               <th class="text-muted small">{% trans "التاريخ" %}</th>
               <th class="text-muted small">{% trans "نوع الطلب" %}</th>
@@ -53,7 +53,7 @@
           <tbody>
           {% for order in orders %}
             <tr>
-              <td class="fw-semibold text-nowrap">#{{ order.id }}</td>
+              <td class="fw-semibold text-nowrap">{{ order.serial }}</td>
 
               <td>
                 <div class="fw-semibold">{{ order.customer.name }}</div>

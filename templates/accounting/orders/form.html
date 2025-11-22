@@ -6,14 +6,15 @@
 
 {% block content %}
 <div class="py-4">
-  {# شريط تنقّل المحاسبة #}
   {% include "accounting/_nav.html" %}
+
   <!-- عنوان الصفحة + رجوع -->
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
       <h1 class="h5 mb-1">
         {% if object %}
-          {% blocktrans with id=object.id %}تعديل طلب #{{ id }}{% endblocktrans %}
+          <!-- كان id=object.id وصار serial=object.serial -->
+          {% blocktrans with serial=object.serial %}تعديل طلب #{{ serial }}{% endblocktrans %} <!-- CHANGED -->
         {% else %}
           {% trans "طلب جديد" %}
         {% endif %}
@@ -165,7 +166,6 @@
 </div>
 
 <script>
-  // products_json من الفيو (نفس فكرة الفاتورة)
   const PRODUCTS = {{ products_json|default:"{}"|safe }};
   const itemsBody = document.getElementById("order-items-body");
   const addRowBtn = document.getElementById("add-row-btn");
@@ -196,7 +196,6 @@
     }
   }
 
-  // تحديث الإجمالي عند تغيير الكمية أو السعر
   if (itemsBody) {
     itemsBody.addEventListener("input", function (e) {
       if (
@@ -207,7 +206,6 @@
       }
     });
 
-    // لو اختار منتج، نحط الوصف والسعر تلقائيًا
     itemsBody.addEventListener("change", function (e) {
       if (e.target.tagName === "SELECT" && e.target.name.endsWith("-product")) {
         const productId = e.target.value;
@@ -229,7 +227,6 @@
     });
   }
 
-  // زر إضافة سطر جديد (نستنتج الـ prefix من حقل TOTAL_FORMS)
   if (addRowBtn && itemsBody) {
     addRowBtn.addEventListener("click", function (e) {
       e.preventDefault();
@@ -244,11 +241,9 @@
 
       let newRowHtml = templateRow.outerHTML;
 
-      // استبدال أرقام الفورم القديمة بالرقم الجديد
       const regex = new RegExp(prefix + "-(\\d+)-", "g");
       newRowHtml = newRowHtml.replace(regex, prefix + "-" + totalForms + "-");
 
-      // تفريغ القيم الافتراضية في المدخلات (quantity, unit_price, description, product)
       const tempDiv = document.createElement("tbody");
       tempDiv.innerHTML = newRowHtml;
       const newRow = tempDiv.querySelector("tr.order-item-row");
@@ -262,7 +257,6 @@
           }
         });
 
-        // إعادة تعيين الإجمالي للسطر الجديد
         const totalSpan = newRow.querySelector(".invoice-line-total");
         if (totalSpan) {
           totalSpan.textContent = "0.000";
@@ -275,7 +269,6 @@
     });
   }
 
-  // حساب مبدئي عند التحميل
   updateLineTotals();
 </script>
 {% endblock %}

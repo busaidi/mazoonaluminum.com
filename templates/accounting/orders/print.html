@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <title>
-    {% blocktrans with id=order.id %}طلب #{{ id }}{% endblocktrans %}
+    {% blocktrans with serial=order.serial %}طلب #{{ serial }}{% endblocktrans %}
   </title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -266,7 +266,7 @@
       <div class="invoice-meta">
         <div>
           <strong>{% trans "رقم الطلب:" %}</strong>
-          #{{ order.id }}
+          #{{ order.serial }}
         </div>
         <div>
           <strong>{% trans "تاريخ الإنشاء:" %}</strong>

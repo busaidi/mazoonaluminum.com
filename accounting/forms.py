@@ -372,34 +372,62 @@ class SettingsForm(forms.ModelForm):
     class Meta:
         model = Settings
         fields = [
-            # Invoice numbering
-            "invoice_number_active",
+            # ---------- Order numbering ----------
+            "order_prefix",
+            "order_padding",
+            "order_start_value",
+            "order_reset_policy",
+            "order_custom_pattern",
+
+            # ---------- Invoice numbering ----------
             "invoice_prefix",
             "invoice_padding",
             "invoice_start_value",
             "invoice_reset_policy",
             "invoice_custom_pattern",
 
-            # Invoice behavior
+            # ---------- Payment numbering ----------
+            "payment_prefix",
+            "payment_padding",
+            "payment_start_value",
+            "payment_reset_policy",
+            "payment_custom_pattern",
+
+            # ---------- Invoice behavior ----------
             "default_due_days",
             "auto_confirm_invoice",
             "auto_post_to_ledger",
 
-            # VAT behavior
+            # ---------- VAT behavior ----------
             "default_vat_rate",
             "prices_include_vat",
 
-            # Text templates
+            # ---------- Text templates ----------
             "default_terms",
             "footer_notes",
         ]
+
         widgets = {
-            # Invoice numbering
-            "invoice_number_active": forms.CheckboxInput(
-                attrs={"class": "form-check-input"}
+            # ====== Order numbering ======
+            "order_prefix": forms.TextInput(
+                attrs={"class": "form-control", "dir": "ltr"}
             ),
+            "order_padding": forms.NumberInput(
+                attrs={"class": "form-control", "min": 1, "max": 10}
+            ),
+            "order_start_value": forms.NumberInput(
+                attrs={"class": "form-control", "min": 1}
+            ),
+            "order_reset_policy": forms.Select(
+                attrs={"class": "form-select"}
+            ),
+            "order_custom_pattern": forms.TextInput(
+                attrs={"class": "form-control", "dir": "ltr"}
+            ),
+
+            # ====== Invoice numbering ======
             "invoice_prefix": forms.TextInput(
-                attrs={"class": "form-control"}
+                attrs={"class": "form-control", "dir": "ltr"}
             ),
             "invoice_padding": forms.NumberInput(
                 attrs={"class": "form-control", "min": 1, "max": 10}
@@ -411,10 +439,27 @@ class SettingsForm(forms.ModelForm):
                 attrs={"class": "form-select"}
             ),
             "invoice_custom_pattern": forms.TextInput(
-                attrs={"class": "form-control"}
+                attrs={"class": "form-control", "dir": "ltr"}
             ),
 
-            # Invoice behavior
+            # ====== Payment numbering ======
+            "payment_prefix": forms.TextInput(
+                attrs={"class": "form-control", "dir": "ltr"}
+            ),
+            "payment_padding": forms.NumberInput(
+                attrs={"class": "form-control", "min": 1, "max": 10}
+            ),
+            "payment_start_value": forms.NumberInput(
+                attrs={"class": "form-control", "min": 1}
+            ),
+            "payment_reset_policy": forms.Select(
+                attrs={"class": "form-select"}
+            ),
+            "payment_custom_pattern": forms.TextInput(
+                attrs={"class": "form-control", "dir": "ltr"}
+            ),
+
+            # ====== Invoice behavior ======
             "default_due_days": forms.NumberInput(
                 attrs={"class": "form-control", "min": 0, "max": 365}
             ),
@@ -425,7 +470,7 @@ class SettingsForm(forms.ModelForm):
                 attrs={"class": "form-check-input"}
             ),
 
-            # VAT behavior
+            # ====== VAT behavior ======
             "default_vat_rate": forms.NumberInput(
                 attrs={"class": "form-control", "step": "0.01"}
             ),
@@ -433,7 +478,7 @@ class SettingsForm(forms.ModelForm):
                 attrs={"class": "form-check-input"}
             ),
 
-            # Text templates
+            # ====== Text templates ======
             "default_terms": forms.Textarea(
                 attrs={"class": "form-control", "rows": 4}
             ),
@@ -441,46 +486,80 @@ class SettingsForm(forms.ModelForm):
                 attrs={"class": "form-control", "rows": 3}
             ),
         }
+
         labels = {
-            # Invoice numbering
-            "invoice_number_active": _("تفعيل ترقيم الفواتير"),
+            # ----- Order numbering -----
+            "order_prefix": _("بادئة أرقام الطلبات"),
+            "order_padding": _("عدد الخانات الرقمية للطلبات"),
+            "order_start_value": _("قيمة البداية لتسلسل الطلبات"),
+            "order_reset_policy": _("سياسة إعادة الترقيم للطلبات"),
+            "order_custom_pattern": _("نمط ترقيم الطلبات (اختياري)"),
+
+            # ----- Invoice numbering -----
             "invoice_prefix": _("بادئة أرقام الفواتير"),
-            "invoice_padding": _("عدد الخانات الرقمية"),
-            "invoice_start_value": _("قيمة البداية للتسلسل"),
-            "invoice_reset_policy": _("سياسة إعادة الترقيم"),
+            "invoice_padding": _("عدد الخانات الرقمية للفواتير"),
+            "invoice_start_value": _("قيمة البداية لتسلسل الفواتير"),
+            "invoice_reset_policy": _("سياسة إعادة الترقيم للفواتير"),
             "invoice_custom_pattern": _("نمط الترقيم المخصص (اختياري)"),
 
-            # Invoice behavior
+            # ----- Payment numbering -----
+            "payment_prefix": _("بادئة أرقام الدفعات"),
+            "payment_padding": _("عدد الخانات الرقمية للدفعات"),
+            "payment_start_value": _("قيمة البداية لتسلسل الدفعات"),
+            "payment_reset_policy": _("سياسة إعادة الترقيم للدفعات"),
+            "payment_custom_pattern": _("نمط ترقيم الدفعات (اختياري)"),
+
+            # ----- Invoice behavior -----
             "default_due_days": _("أيام الاستحقاق الافتراضية"),
             "auto_confirm_invoice": _("اعتماد الفاتورة تلقائيًا بعد الحفظ"),
             "auto_post_to_ledger": _("ترحيل تلقائي إلى دفتر الأستاذ بعد الاعتماد"),
 
-            # VAT behavior
+            # ----- VAT behavior -----
             "default_vat_rate": _("نسبة ضريبة القيمة المضافة الافتراضية (%)"),
             "prices_include_vat": _("الأسعار شاملة للضريبة"),
 
-            # Text templates
+            # ----- Text templates -----
             "default_terms": _("الشروط والأحكام الافتراضية"),
             "footer_notes": _("ملاحظات أسفل الفاتورة"),
         }
 
+    # ====== Prefix cleaning ======
+    def clean_order_prefix(self):
+        prefix = self.cleaned_data.get("order_prefix", "") or ""
+        return prefix.strip().upper()
+
     def clean_invoice_prefix(self):
         prefix = self.cleaned_data.get("invoice_prefix", "") or ""
-        return prefix.strip().upper()  # نخليها بشكل موحد مثل "INV" / "MAZ"
+        return prefix.strip().upper()
 
+    def clean_payment_prefix(self):
+        prefix = self.cleaned_data.get("payment_prefix", "") or ""
+        return prefix.strip().upper()
+
+    # ====== VAT ======
     def clean_default_vat_rate(self):
         rate = self.cleaned_data.get("default_vat_rate")
         if rate is None:
             return rate
         if rate < 0 or rate > 100:
-            raise forms.ValidationError(_("نسبة الضريبة يجب أن تكون بين 0 و 100%."))
+            raise forms.ValidationError(_("نسبة الضريبة يجب أن تكون بين 0 و 100٪."))
         return rate
+
+    # ====== Pattern validation ======
+    def clean_order_custom_pattern(self):
+        pattern = self.cleaned_data.get("order_custom_pattern", "") or ""
+        if pattern and "{seq" not in pattern:
+            raise forms.ValidationError(_("نمط ترقيم الطلبات يجب أن يحتوي على {seq}."))
+        return pattern
 
     def clean_invoice_custom_pattern(self):
         pattern = self.cleaned_data.get("invoice_custom_pattern", "") or ""
-        # Only validate if user actually entered a pattern
         if pattern and "{seq" not in pattern:
-            raise forms.ValidationError(
-                _("نمط الترقيم المخصص يجب أن يحتوي على المتغير {seq}.")
-            )
+            raise forms.ValidationError(_("نمط الترقيم المخصص يجب أن يحتوي على {seq}."))
+        return pattern
+
+    def clean_payment_custom_pattern(self):
+        pattern = self.cleaned_data.get("payment_custom_pattern", "") or ""
+        if pattern and "{seq" not in pattern:
+            raise forms.ValidationError(_("نمط ترقيم الدفعات يجب أن يحتوي على {seq}."))
         return pattern

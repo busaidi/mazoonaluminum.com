@@ -15,7 +15,7 @@ from django.utils import timezone
 
 from accounting.domain import InvoiceCreated, InvoiceSent, OrderCreated
 from core.domain.hooks import on_lifecycle, on_transition
-from core.models.base import BaseModel, NumberedModel  # لو تستخدمها
+from core.models.base import BaseModel, NumberedModel
 from core.models.domain import (
     StatefulDomainModel, DomainEventsMixin,
 )
@@ -275,10 +275,14 @@ class InvoiceItem(models.Model):
 # Payment + signal
 # ============================================================
 
-class Payment(models.Model):
+class Payment(NumberedModel):
     """
     Payment can be linked to a specific invoice, or just to a customer.
-    Views handle automatic linking and updating invoice totals.
+
+    - يرث من NumberedModel:
+      - حقل number (للعرض في الفواتير/التقارير)
+      - حقل serial (للاستخدام في الروابط أو البحث السريع لو حبيت لاحقًا)
+    - الترقيم يستخدم نفس محرك الترقيم في الكور (NumberingScheme/NumberSequence).
     """
 
     class Method(models.TextChoices):
@@ -319,12 +323,18 @@ class Payment(models.Model):
         indexes = [
             models.Index(fields=["date"]),
             models.Index(fields=["customer"]),
+            models.Index(fields=["serial"]),  # من NumberedModel
         ]
 
     def __str__(self) -> str:
+        """
+        نحاول نظهر رقم الدفع (number) إن وجد،
+        مع الحفاظ على فكرة الربط بالفاتورة لو موجودة.
+        """
+        label = self.number or f"#{self.pk}"
         if self.invoice:
-            return f"Payment {self.amount} for {self.invoice.number}"
-        return f"Payment {self.amount} ({self.customer.name})"
+            return f"Payment {label} {self.amount} for {self.invoice.number}"
+        return f"Payment {label} {self.amount} ({self.customer.name})"
 
     # ---------- Validation / save hooks ----------
 
@@ -339,7 +349,8 @@ class Payment(models.Model):
 
     def save(self, *args, **kwargs):
         """
-        On save, call super() then update related invoice.paid_amount if any.
+        - NumberedModel يتكفّل بتوليد number/serial إذا كانوا فاضيين.
+        - بعد الحفظ، نحدّث paid_amount في الفاتورة لو موجودة.
         """
         super().save(*args, **kwargs)
         if self.invoice_id:
@@ -363,20 +374,21 @@ class Payment(models.Model):
         return mapping.get(self.method, "badge-mazoon badge-draft")
 
 
-@receiver(post_delete, sender=Payment)
-def update_invoice_on_payment_delete(sender, instance: "Payment", **kwargs):
-    """
-    When a payment is deleted, recalc invoice.paid_amount.
-    """
-    if instance.invoice_id:
-        instance.invoice.update_paid_amount()
+
 
 
 # ============================================================
 # Orders (header + items)
 # ============================================================
 
-class Order(DomainEventsMixin, models.Model):
+class Order(NumberedModel, DomainEventsMixin):
+    """
+    Sales/online order header.
+
+    - يرث من NumberedModel → يحصل على number + serial بنفس محرك الترقيم.
+    - DomainEventsMixin ما زال مسؤول عن تجميع/إطلاق الـ Domain Events.
+    """
+
     STATUS_DRAFT = "draft"
     STATUS_PENDING = "pending"      # طلب أونلاين ينتظر تأكيد موظف
     STATUS_CONFIRMED = "confirmed"  # تم التأكيد
@@ -434,9 +446,18 @@ class Order(DomainEventsMixin, models.Model):
 
     class Meta:
         ordering = ("-created_at", "id")
+        indexes = [
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["serial"]),  # من NumberedModel
+        ]
 
     def __str__(self) -> str:
-        return f"طلب #{self.pk} - {self.customer}"
+        """
+        نعرض رقم الطلب لو موجود (number)، وإلا نرجع للـ pk مثل السابق.
+        """
+        label = self.number or f"#{self.pk}"
+        return f"طلب {label} - {self.customer}"
 
     @property
     def total_amount(self) -> Decimal:
@@ -503,6 +524,7 @@ class Order(DomainEventsMixin, models.Model):
                 order_id=self.pk,
             )
         )
+
 
 
 
@@ -598,6 +620,99 @@ class Settings(models.Model):
         ),
     )
 
+    # ---------- Payment numbering ----------
+    payment_number_active = models.BooleanField(
+        default=True,
+        verbose_name=_("تفعيل ترقيم الدفعات؟"),
+        help_text=_("إذا تم تعطيله، لن يتم توليد أرقام تلقائية للدفعات."),
+    )
+
+    payment_prefix = models.CharField(
+        max_length=20,
+        default="PAY",
+        verbose_name=_("بادئة أرقام الدفعات"),
+        help_text=_("تظهر في بداية رقم الدفع مثل PAY-2025-0001."),
+    )
+
+    payment_padding = models.PositiveSmallIntegerField(
+        default=4,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        verbose_name=_("عدد الخانات الرقمية للدفعات"),
+        help_text=_("مثلاً 4 تعني 0001، 0002، ... للدفعات."),
+    )
+
+    payment_start_value = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        verbose_name=_("قيمة البداية لتسلسل الدفعات"),
+        help_text=_("مثلاً 1 تعني أن أول دفعة ستكون 0001."),
+    )
+
+    payment_reset_policy = models.CharField(
+        max_length=10,
+        choices=InvoiceResetPolicy.choices,  # نعيد استخدام نفس الاختيارات
+        default=InvoiceResetPolicy.YEAR,
+        verbose_name=_("سياسة إعادة الترقيم للدفعات"),
+        help_text=_("تحدد متى يبدأ تسلسل الدفعات من جديد."),
+    )
+
+    payment_custom_pattern = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_("نمط الترقيم المخصص للدفعات (اختياري)"),
+        help_text=_(
+            "اتركه فارغًا لاستخدام البادئة وعدد الخانات. "
+            "يمكنك استخدام المتغيرات {year}، {month}، {day}، و {seq:04d}. "
+            "يجب أن يحتوي النمط على {seq}."
+        ),
+    )
+    # ---------- Order numbering ----------
+    order_number_active = models.BooleanField(
+        default=True,
+        verbose_name=_("تفعيل ترقيم الطلبات؟"),
+        help_text=_("إذا تم تعطيله، لن يتم توليد أرقام تلقائية للطلبات."),
+    )
+
+    order_prefix = models.CharField(
+        max_length=20,
+        default="ORD",
+        verbose_name=_("بادئة أرقام الطلبات"),
+        help_text=_("تظهر في بداية رقم الطلب مثل ORD-2025-0001."),
+    )
+
+    order_padding = models.PositiveSmallIntegerField(
+        default=4,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        verbose_name=_("عدد الخانات الرقمية للطلبات"),
+        help_text=_("مثلاً 4 تعني 0001، 0002، ... للطلبات."),
+    )
+
+    order_start_value = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        verbose_name=_("قيمة البداية لتسلسل الطلبات"),
+        help_text=_("مثلاً 1 تعني أن أول طلب سيكون 0001."),
+    )
+
+    order_reset_policy = models.CharField(
+        max_length=10,
+        choices=InvoiceResetPolicy.choices,
+        default=InvoiceResetPolicy.YEAR,
+        verbose_name=_("سياسة إعادة الترقيم للطلبات"),
+        help_text=_("تحدد متى يبدأ تسلسل الطلبات من جديد."),
+    )
+
+    order_custom_pattern = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_("نمط الترقيم المخصص للطلبات (اختياري)"),
+        help_text=_(
+            "اتركه فارغًا لاستخدام البادئة وعدد الخانات. "
+            "يمكنك استخدام المتغيرات {year}، {month}، {day}، و {seq:04d}. "
+            "يجب أن يحتوي النمط على {seq}."
+        ),
+    )
+
     # ---------- Default invoice behavior ----------
     default_due_days = models.PositiveSmallIntegerField(
         default=30,
@@ -676,33 +791,78 @@ class Settings(models.Model):
     def save(self, *args, **kwargs):
         """
         نحفظ إعدادات المبيعات + نزامن سكيم الترقيم في core.NumberingScheme
-        لموديل accounting.Invoice.
+        للموديلات:
+        - accounting.Invoice
+        - accounting.Payment
+        - accounting.Order
+        كل واحد بإعداداته الخاصة.
         """
         super().save(*args, **kwargs)
 
-        # استيراد داخل الدالة لتفادي دوّار import
         from core.models.numbering import NumberingScheme
 
-        # إذا المستخدم كتب نمط مخصص → نستخدمه كما هو
-        # وإلا نبني نمط افتراضي من البادئة + السنة + رقم متسلسل padded
+        # ----------------- invoice pattern -----------------
         if self.invoice_custom_pattern:
-            pattern = self.invoice_custom_pattern
+            invoice_pattern = self.invoice_custom_pattern
         else:
-            seq_format = f"0{self.invoice_padding}d"
-            pattern = (
+            inv_seq_format = f"0{self.invoice_padding}d"
+            invoice_pattern = (
                 f"{self.invoice_prefix}-"
                 "{year}-"
-                "{seq:" + seq_format + "}"
+                "{seq:" + inv_seq_format + "}"
             )
 
         NumberingScheme.objects.update_or_create(
             model_label="accounting.Invoice",
             defaults={
-                # field_name في الكور = "number" (حقل رقم الفاتورة)
                 "field_name": "number",
-                "pattern": pattern,
+                "pattern": invoice_pattern,
                 "start": self.invoice_start_value,
                 "reset": self.invoice_reset_policy,
                 "is_active": self.invoice_number_active,
+            },
+        )
+
+        # ----------------- payment pattern -----------------
+        if self.payment_custom_pattern:
+            payment_pattern = self.payment_custom_pattern
+        else:
+            pay_seq_format = f"0{self.payment_padding}d"
+            payment_pattern = (
+                f"{self.payment_prefix}-"
+                "{year}-"
+                "{seq:" + pay_seq_format + "}"
+            )
+
+        NumberingScheme.objects.update_or_create(
+            model_label="accounting.Payment",
+            defaults={
+                "field_name": "number",
+                "pattern": payment_pattern,
+                "start": self.payment_start_value,
+                "reset": self.payment_reset_policy,
+                "is_active": self.payment_number_active,
+            },
+        )
+
+        # ----------------- order pattern -----------------
+        if self.order_custom_pattern:
+            order_pattern = self.order_custom_pattern
+        else:
+            ord_seq_format = f"0{self.order_padding}d"
+            order_pattern = (
+                f"{self.order_prefix}-"
+                "{year}-"
+                "{seq:" + ord_seq_format + "}"
+            )
+
+        NumberingScheme.objects.update_or_create(
+            model_label="accounting.Order",
+            defaults={
+                "field_name": "number",
+                "pattern": order_pattern,
+                "start": self.order_start_value,
+                "reset": self.order_reset_policy,
+                "is_active": self.order_number_active,
             },
         )

@@ -4,7 +4,7 @@
 {# عنوان الصفحة في التبويب + SEO #}
 {% block meta_title %}{% trans "لوحة المحاسبة" %} | Mazoon Aluminum{% endblock %}
 {% block meta_description %}
-{% trans "لوحة تحكم لمتابعة الفواتير، الدفعات والطلبات في نظام المحاسبة الخاص بمزون ألمنيوم." %}
+{% trans "لوحة تحكم لمتابعة العملاء، الطلبات، الفواتير والدفعات في نظام المحاسبة الخاص بمزون ألمنيوم." %}
 {% endblock %}
 
 {% block content %}
@@ -20,38 +20,27 @@
         {% trans "لوحة المحاسبة" %}
       </h1>
       <p class="text-muted mb-0 small">
-        {% trans "نظرة سريعة على الفواتير، العملاء، الطلبات والدفعات." %}
+        {% trans "نظرة سريعة على العملاء، الطلبات، الفواتير والدفعات." %}
       </p>
     </div>
     <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'accounting:customer_create' %}" class="btn btn-sm btn-outline-secondary">
+        + {% trans "إضافة زبون" %}
+      </a>
+      <a href="{% url 'accounting:order_create' %}" class="btn btn-sm btn-outline-secondary">
+        + {% trans "إنشاء طلب" %}
+      </a>
       <a href="{% url 'accounting:invoice_create' %}" class="btn btn-sm btn-primary">
         + {% trans "إنشاء فاتورة جديدة" %}
       </a>
       <a href="{% url 'accounting:payment_create' %}" class="btn btn-sm btn-outline-primary">
         + {% trans "تسجيل دفعة جديدة" %}
       </a>
-      <a href="{% url 'accounting:customer_create' %}" class="btn btn-sm btn-outline-secondary">
-        + {% trans "إضافة زبون" %}
-      </a>
-      <a href="{% url 'accounting:order_list' %}" class="btn btn-sm btn-outline-secondary">
-        {% trans "إدارة الطلبات" %}
-      </a>
     </div>
   </div>
 
-  {# كروت الإحصائيات الأساسية #}
+  {# كروت الإحصائيات الأساسية – عملاء > طلبات > فواتير > دفعات #}
   <div class="row g-3 mb-4">
-    <div class="col-md-3 col-sm-6">
-      <div class="card h-100 border-0 shadow-sm">
-        <div class="card-body">
-          <div class="text-muted text-uppercase small mb-1">
-            {% trans "عدد الفواتير" %}
-          </div>
-          <div class="fs-4 fw-semibold">{{ invoice_count }}</div>
-        </div>
-      </div>
-    </div>
-
     <div class="col-md-3 col-sm-6">
       <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
@@ -67,9 +56,9 @@
       <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
           <div class="text-muted text-uppercase small mb-1">
-            {% trans "عدد الدفعات" %}
+            {% trans "عدد الطلبات" %}
           </div>
-          <div class="fs-4 fw-semibold">{{ payment_count }}</div>
+          <div class="fs-4 fw-semibold">{{ order_count }}</div>
         </div>
       </div>
     </div>
@@ -78,9 +67,20 @@
       <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
           <div class="text-muted text-uppercase small mb-1">
-            {% trans "عدد الطلبات" %}
+            {% trans "عدد الفواتير" %}
           </div>
-          <div class="fs-4 fw-semibold">{{ order_count }}</div>
+          <div class="fs-4 fw-semibold">{{ invoice_count }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted text-uppercase small mb-1">
+            {% trans "عدد الدفعات" %}
+          </div>
+          <div class="fs-4 fw-semibold">{{ payment_count }}</div>
         </div>
       </div>
     </div>
@@ -107,27 +107,10 @@
     </div>
   </div>
 
-  {# روابط سريعة لأقسام المحاسبة #}
+  {# روابط سريعة لأقسام المحاسبة – عملاء > طلبات > فواتير > دفعات #}
   <div class="row g-3 mb-4">
-    <div class="col-xl-3 col-md-6">
-      <div class="card h-100 border-0 shadow-sm">
-        <div class="card-body d-flex flex-column">
-          <h5 class="card-title mb-1">{% trans "الفواتير" %}</h5>
-          <p class="card-text text-muted small mb-3">
-            {% trans "عرض وإدارة فواتير العملاء، ومتابعة المبالغ المتبقية والمدفوعة." %}
-          </p>
-          <div class="mt-auto d-flex flex-wrap gap-2">
-            <a href="{% url 'accounting:invoice_list' %}" class="btn btn-outline-primary btn-sm">
-              {% trans "عرض كل الفواتير" %}
-            </a>
-            <a href="{% url 'accounting:invoice_create' %}" class="btn btn-primary btn-sm">
-              + {% trans "فاتورة جديدة" %}
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
 
+    {# العملاء #}
     <div class="col-xl-3 col-md-6">
       <div class="card h-100 border-0 shadow-sm">
         <div class="card-body d-flex flex-column">
@@ -147,6 +130,7 @@
       </div>
     </div>
 
+    {# الطلبات #}
     <div class="col-xl-3 col-md-6">
       <div class="card h-100 border-0 shadow-sm">
         <div class="card-body d-flex flex-column">
@@ -166,6 +150,27 @@
       </div>
     </div>
 
+    {# الفواتير #}
+    <div class="col-xl-3 col-md-6">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title mb-1">{% trans "الفواتير" %}</h5>
+          <p class="card-text text-muted small mb-3">
+            {% trans "عرض وإدارة فواتير العملاء، ومتابعة المبالغ المتبقية والمدفوعة." %}
+          </p>
+          <div class="mt-auto d-flex flex-wrap gap-2">
+            <a href="{% url 'accounting:invoice_list' %}" class="btn btn-outline-primary btn-sm">
+              {% trans "عرض كل الفواتير" %}
+            </a>
+            <a href="{% url 'accounting:invoice_create' %}" class="btn btn-primary btn-sm">
+              + {% trans "فاتورة جديدة" %}
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# الدفعات #}
     <div class="col-xl-3 col-md-6">
       <div class="card h-100 border-0 shadow-sm">
         <div class="card-body d-flex flex-column">
@@ -184,10 +189,59 @@
         </div>
       </div>
     </div>
+
   </div>
 
-  {# آخر الفواتير + آخر الطلبات + آخر الدفعات #}
+  {# آخر العناصر – نرتبها: الطلبات > الفواتير > الدفعات #}
   <div class="row g-3">
+
+    {# آخر الطلبات #}
+    <div class="col-md-4">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="card-title mb-0">{% trans "آخر الطلبات" %}</h5>
+            <a href="{% url 'accounting:order_list' %}" class="small text-decoration-none">
+              {% trans "عرض الكل" %}
+            </a>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="small text-muted">#</th>
+                  <th class="small text-muted">{% trans "العميل" %}</th>
+                  <th class="small text-muted">{% trans "التاريخ" %}</th>
+                  <th class="small text-muted">{% trans "الحالة" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for order in recent_orders %}
+                  <tr>
+                    <td class="text-nowrap">
+                      <a href="{% url 'accounting:order_detail' pk=order.pk %}">
+                        {{ order.serial|default:order.id }}
+                      </a>
+                    </td>
+                    <td>{{ order.customer.name }}</td>
+                    <td class="text-nowrap">{{ order.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>
+                      {{ order.get_status_display }}
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="4" class="text-muted text-center small py-3">
+                      {% trans "لا توجد طلبات حتى الآن." %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
 
     {# آخر الفواتير #}
     <div class="col-md-4">
@@ -231,54 +285,6 @@
                   <tr>
                     <td colspan="4" class="text-muted text-center small py-3">
                       {% trans "لا توجد فواتير بعد." %}
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    {# آخر الطلبات #}
-    <div class="col-md-4">
-      <div class="card h-100 border-0 shadow-sm">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="card-title mb-0">{% trans "آخر الطلبات" %}</h5>
-            <a href="{% url 'accounting:order_list' %}" class="small text-decoration-none">
-              {% trans "عرض الكل" %}
-            </a>
-          </div>
-          <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th class="small text-muted">#</th>
-                  <th class="small text-muted">{% trans "العميل" %}</th>
-                  <th class="small text-muted">{% trans "التاريخ" %}</th>
-                  <th class="small text-muted">{% trans "الحالة" %}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for order in recent_orders %}
-                  <tr>
-                    <td class="text-nowrap">
-                      <a href="{% url 'accounting:order_detail' pk=order.pk %}">
-                        {{ order.id }}
-                      </a>
-                    </td>
-                    <td>{{ order.customer.name }}</td>
-                    <td class="text-nowrap">{{ order.created_at|date:"Y-m-d H:i" }}</td>
-                    <td>
-                      {{ order.get_status_display }}
-                    </td>
-                  </tr>
-                {% empty %}
-                  <tr>
-                    <td colspan="4" class="text-muted text-center small py-3">
-                      {% trans "لا توجد طلبات حتى الآن." %}
                     </td>
                   </tr>
                 {% endfor %}
@@ -370,7 +376,7 @@
                       <div>
                         <div class="fw-semibold">
                           <a href="{% url 'accounting:order_detail' pk=order.pk %}">
-                            {% blocktrans with id=order.id %}طلب #{{ id }}{% endblocktrans %}
+                            {% blocktrans with id=order.serial|default:order.id %}طلب #{{ id }}{% endblocktrans %}
                           </a>
                         </div>
                         <div class="text-muted">
@@ -446,6 +452,7 @@
               {% endif %}
             </div>
           </div>
+
         </div>
       </div>
     </div>

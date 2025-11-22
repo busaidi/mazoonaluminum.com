@@ -11,13 +11,7 @@
         </a>
       </li>
 
-      <li class="nav-item">
-        <a class="nav-link px-3 py-1 {% if accounting_section == 'invoices' %}active{% endif %}"
-           href="{% url 'accounting:invoice_list' %}">
-          {% trans "الفواتير" %}
-        </a>
-      </li>
-
+      {# العملاء أولاً #}
       <li class="nav-item">
         <a class="nav-link px-3 py-1 {% if accounting_section == 'customers' %}active{% endif %}"
            href="{% url 'accounting:customer_list' %}">
@@ -25,6 +19,7 @@
         </a>
       </li>
 
+      {# الطلبات ثانياً #}
       <li class="nav-item">
         <a class="nav-link px-3 py-1 {% if accounting_section == 'orders' %}active{% endif %}"
            href="{% url 'accounting:order_list' %}">
@@ -32,6 +27,15 @@
         </a>
       </li>
 
+      {# الفواتير ثالثاً #}
+      <li class="nav-item">
+        <a class="nav-link px-3 py-1 {% if accounting_section == 'invoices' %}active{% endif %}"
+           href="{% url 'accounting:invoice_list' %}">
+          {% trans "الفواتير" %}
+        </a>
+      </li>
+
+      {# الدفعات رابعاً #}
       <li class="nav-item">
         <a class="nav-link px-3 py-1 {% if accounting_section == 'payments' %}active{% endif %}"
            href="{% url 'accounting:payment_list' %}">

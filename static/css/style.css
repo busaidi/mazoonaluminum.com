@@ -1,29 +1,47 @@
 /* ========================================
    Mazoon Aluminum – Global Theme
+   يعتمد على Bootstrap (آخر إصدار)
    ======================================== */
 
-/* ====== ألوان الهوية العامة ====== */
+/* ============================
+   1) ألوان الهوية العامة
+   ============================ */
+
 :root {
-  --mazoon-bg-page: #f4f4f5;       /* خلفية عامة للصفحة (خارج المحتوى) */
-  --mazoon-card-bg: #ffffff;       /* خلفية الكروت والمحتوى */
+  /* خلفيات */
+  --mazoon-bg-page: #f4f4f5;      /* خلفية عامة للصفحة */
+  --mazoon-card-bg: #ffffff;      /* خلفية الكروت والمحتوى */
 
-  --mazoon-text-main: #111827;     /* قريب من الأسود */
-  --mazoon-text-muted: #6b7280;    /* رمادي ناعم */
+  /* نصوص */
+  --mazoon-text-main: #111827;    /* قريب من الأسود */
+  --mazoon-text-muted: #6b7280;   /* رمادي ناعم */
 
-  --mazoon-primary: #111827;       /* أسود/داكن - للأزرار والعناصر الأساسية */
-  --mazoon-primary-soft: #374151;  /* رمادي داكن ناعم للهفّر */
-  --mazoon-accent: #f59e0b;        /* برتقالي/ذهبي خفيف للتأكيد */
-  --mazoon-border-soft: #e5e7eb;   /* حدود ناعمة */
+  /* ألوان أساسية */
+  --mazoon-primary: #111827;      /* أسود/داكن – رئيسي */
+  --mazoon-primary-soft: #374151; /* رمادي داكن ناعم للهفّر */
+  --mazoon-accent: #f59e0b;       /* برتقالي/ذهبي للتأكيد */
+  --mazoon-border-soft: #e5e7eb;  /* حدود ناعمة */
+
+  /* ألوان الروابط */
+  --mazoon-link: #f59e0b;         /* ذهبي واضح للرابط */
+  --mazoon-link-hover: #b45309;   /* ذهبي أغمق عند المرور */
 }
 
-/* ====== الخلفية العامة و النص ====== */
+/* ============================
+   2) الأساسيات – Body & Typography
+   ============================ */
+
 body {
   background-color: var(--mazoon-bg-page) !important;
   color: var(--mazoon-text-main) !important;
 }
 
-/* تنسيق العناوين والنصوص */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   color: var(--mazoon-text-main) !important;
 }
 
@@ -31,29 +49,32 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--mazoon-text-muted) !important;
 }
 
-/* ========================================
-   Layout – Navbar / Main / Footer
-   ======================================== */
+/* تحسين الـ alerts */
+.alert {
+  border-radius: 6px;
+}
 
-/* ملاحظة مهمّة:
-   لا نلمس .container نهائياً من ناحية العرض.
-   نخلي Bootstrap يتحكم فيه عشان يكون عرض الهيدر والمحتوى متطابق.
+/* ============================
+   3) Layout – Main / Container
+   ============================ */
+
+/*
+  ملاحظة:
+  لا نلمس .container من ناحية العرض.
+  نخلي Bootstrap يتحكم في الـ width عشان يكون الهيدر والمحتوى متطابقين.
 */
 
-/* منطقة المحتوى – شريط بلون مختلف عن body */
 main {
-  background-color: var(--mazoon-card-bg);  /* أبيض ناعم للمحتوى */
-  padding-block: 2.5rem;                    /* مسافة فوق وتحت المحتوى */
+  background-color: var(--mazoon-card-bg); /* أبيض ناعم للمحتوى */
+  padding-block: 2.5rem;                  /* مسافة فوق وتحت المحتوى */
 }
 
-/* نخفف شكل المسافات داخل الـ main container بدون تغيير العرض */
+/* تخفيف المسافات الأفقية داخل المحتوى بدون تغيير عرض الكونتينر */
 main .container {
-  /* لا background ولا max-width ولا padding أفقي إضافي،
-     نخلي Bootstrap يتحكم في العرض والمسافات الجانبية. */
-  padding-inline: 0.75rem;  /* تقريباً نفس padding الـ navbar افتراضياً */
+  padding-inline: 0.75rem;
 }
 
-/* أول وآخر عنصر داخل الكونتينر بدون فراغ زائد */
+/* إزالة الفراغ الزائد أول وآخر عنصر داخل الكونتينر */
 main .container > *:first-child {
   margin-top: 0;
 }
@@ -61,20 +82,16 @@ main .container > *:last-child {
   margin-bottom: 0;
 }
 
-/* تحسين مظهر الـ alerts */
-.alert {
-  border-radius: 6px;
-}
-
-/* ========================================
-   Navbar
-   ======================================== */
+/* ============================
+   4) Navbar – Mazoon Navbar
+   ============================ */
 
 .mazoon-navbar {
   background-color: #f9fafb !important;
   border-bottom: 1px solid var(--mazoon-border-soft) !important;
 }
 
+/* شعار Mazoon */
 .mazoon-navbar .navbar-brand .brand-mark {
   width: 28px;
   height: 28px;
@@ -90,11 +107,12 @@ main .container > *:last-child {
   color: var(--mazoon-text-main);
 }
 
+/* روابط النافبار */
 .mazoon-navbar .nav-link {
   position: relative;
   font-size: 0.95rem;
   padding-inline: 0.75rem !important;
-  color: #4b5563 !important;  /* رمادي */
+  color: #4b5563 !important; /* رمادي أنيق */
 }
 
 .mazoon-navbar .nav-link:hover {
@@ -116,20 +134,64 @@ main .container > *:last-child {
   border-radius: 999px;
 }
 
-/* زر تسجيل الدخول/الخروج كشكل لينك أنيق */
+/* زر تسجيل الدخول/الخروج على شكل لينك */
 .nav-link-btn {
   cursor: pointer;
   white-space: nowrap;
 }
 
-/* السويتشر للغة */
+/* سويتشر اللغة */
 .lang-switcher {
   min-width: 90px;
 }
 
-/* ========================================
-   Cards & Components
-   ======================================== */
+/* شعار في النافبار */
+.navbar-logo {
+  height: 36px;
+  width: auto;
+  display: block;
+}
+
+/* ============================
+   5) الروابط العامة (Links)
+   ============================ */
+
+/* الروابط في كل الموقع – ما عدا الأزرار وروابط النافبار */
+a:not(.btn):not(.nav-link) {
+  color: var(--mazoon-link);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+a:not(.btn):not(.nav-link):hover,
+a:not(.btn):not(.nav-link):focus {
+  color: var(--mazoon-link-hover);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* الروابط داخل نصوص muted */
+.text-muted a {
+  color: var(--mazoon-link);
+}
+.text-muted a:hover {
+  color: var(--mazoon-link-hover);
+}
+
+/* الروابط داخل البادجات */
+.badge a {
+  color: inherit;
+  text-decoration: none;
+}
+.badge a:hover {
+  text-decoration: underline;
+}
+
+/* ============================
+   6) Cards & Components
+   ============================ */
 
 /* كروت عامة */
 .card,
@@ -144,7 +206,7 @@ main .container > *:last-child {
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
 }
 
-/* ====== Hero ====== */
+/* Hero Card */
 .hero-card {
   background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 50%, #ffffff 100%);
   border-radius: 8px;
@@ -163,9 +225,9 @@ main .container > *:last-child {
   object-fit: cover;
 }
 
-/* ========================================
-   Buttons
-   ======================================== */
+/* ============================
+   7) Buttons – Primary / Outline
+   ============================ */
 
 .btn-primary {
   background-color: var(--mazoon-primary) !important;
@@ -198,18 +260,18 @@ main .container > *:last-child {
   background-color: var(--mazoon-accent) !important;
 }
 
-/* ========================================
-   Footer
-   ======================================== */
+/* ============================
+   8) Footer
+   ============================ */
 
 .mazoon-footer {
   background-color: #f9fafb !important;
   border-top: 1px solid var(--mazoon-border-soft) !important;
 }
 
-/* ========================================
-   Tables
-   ======================================== */
+/* ============================
+   9) Tables
+   ============================ */
 
 .table thead tr {
   background-color: #f9fafb;
@@ -219,9 +281,9 @@ main .container > *:last-child {
   border-bottom-color: var(--mazoon-border-soft);
 }
 
-/* ========================================
-   Invoice items table
-   ======================================== */
+/* ============================
+   10) Invoice / Order Items Table
+   ============================ */
 
 .invoice-items-table td,
 .invoice-items-table th {
@@ -234,7 +296,7 @@ main .container > *:last-child {
   width: 100%;
 }
 
-/* أعمدة الكمية والسعر والإجمالي بحجم متناسق */
+/* أعمدة الكمية والسعر والإجمالي */
 .invoice-items-table .qty-col,
 .invoice-items-table .price-col,
 .invoice-items-table .total-col {
@@ -242,6 +304,7 @@ main .container > *:last-child {
   white-space: nowrap;
 }
 
+/* المنتج + الوصف */
 .invoice-items-table .product-col {
   width: 26%;
 }
@@ -255,42 +318,11 @@ main .container > *:last-child {
   font-weight: 600;
   color: var(--mazoon-primary);
 }
-.navbar-logo {
-  height: 36px;   /* جرّب 32 أو 36 حسب شكل الشعار */
-  width: auto;
-  display: block;
-}
 
-.badge-mazoon {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: white !important;
-}
+/* ============================
+   11) Badges – حالات الفواتير والطلبات
+   ============================ */
 
-.badge-draft {
-    background-color: var(--mazoon-text-muted);
-}
-
-.badge-sent,
-.badge-pending {
-    background-color: var(--mazoon-accent);
-}
-
-.badge-paid,
-.badge-confirmed {
-    background-color: var(--mazoon-primary);
-}
-
-.badge-partially-paid {
-    background-color: var(--mazoon-primary-soft);
-}
-
-.badge-cancelled {
-    background-color: #b91c1c; /* أحمر */
-}
 .badge-mazoon {
   display: inline-flex;
   align-items: center;
@@ -298,29 +330,59 @@ main .container > *:last-child {
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
+  color: #ffffff !important;
+}
+
+/* حالات الفواتير */
+.badge-draft {
+  background-color: var(--mazoon-text-muted);
+}
+
+.badge-sent,
+.badge-pending {
+  background-color: var(--mazoon-accent);
+}
+
+.badge-paid,
+.badge-confirmed {
+  background-color: var(--mazoon-primary);
+}
+
+.badge-partially-paid {
+  background-color: var(--mazoon-primary-soft);
+}
+
+.badge-cancelled {
+  background-color: #b91c1c; /* أحمر */
 }
 
 /* نوع الطلب */
 .badge-online {
   background-color: var(--mazoon-accent);
-  color: #1f2933; /* غامق شوي للنص */
+  color: #1f2933;
 }
 
 .badge-staff {
-  background-color: #ccbdad; /* رمادي فاتح */
+  background-color: #ccbdad;
   color: #0450f8;
 }
-/* ====== Mazoon Accounting Nav ====== */
+
+/* ============================
+   12) Mazoon Accounting Nav
+   ============================ */
 
 .bg-mazoon-card {
   background-color: var(--mazoon-card-bg);
 }
 
 .mazoon-nav .nav-link {
-  border-radius: 5px;                 /* شكل pill */
+  border-radius: 5px;
   color: var(--mazoon-text-muted);
   font-weight: 500;
-  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease;
 }
 
 .mazoon-nav .nav-link:hover {
@@ -334,9 +396,10 @@ main .container > *:last-child {
   background-color: var(--mazoon-primary);
   color: #ffffff;
 }
-/* ========================================
-   Home page tweaks
-   ======================================== */
+
+/* ============================
+   13) Home Page Tweaks
+   ============================ */
 
 .home-section {
   /* فقط ترتيب بصري بين الأقسام */

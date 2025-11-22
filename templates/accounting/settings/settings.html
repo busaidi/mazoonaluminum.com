@@ -4,14 +4,15 @@
 {% block content %}
 <div class="py-4">
 
-  {# شريط تنقل المحاسبة #}
+  <!-- شريط تنقّل المحاسبة -->
   {% include "accounting/_nav.html" %}
 
+  <!-- عنوان الصفحة ووصفها -->
   <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
       <h1 class="h5 mb-1">{% trans "إعدادات المبيعات والفواتير" %}</h1>
       <p class="text-muted small mb-0">
-        {% trans "قم بضبط سلوك الفواتير، أرقامها، ضريبة القيمة المضافة، والنصوص الافتراضية." %}
+        {% trans "قم بضبط سلوك الفواتير، الطلبات، أرقام الدفعات، ضريبة القيمة المضافة، والنصوص الافتراضية." %}
       </p>
     </div>
   </div>
@@ -20,28 +21,93 @@
     {% csrf_token %}
     {{ form.non_field_errors }}
 
-    {# ------------- قسم ترقيم الفواتير ------------- #}
+    <!-- ============================================
+         قسم ترقيم الطلبات
+         ============================================ -->
     <div class="mb-4">
-      <h5 class="h6 mb-2">{% trans "ترقيم الفواتير" %}</h5>
+      <h5 class="h6 mb-2">{% trans "ترقيم الطلبات" %}</h5>
       <p class="text-muted small mb-3">
-        {% trans "تحكم في تفعيل الترقيم، شكل أرقام الفواتير، البادئة، عدد الخانات، وإعادة الترقيم." %}
+        {% trans "تحكم في شكل أرقام الطلبات، مثل ORD-2025-0001 أو نمط مخصص." %}
       </p>
 
       <div class="row g-3">
-
         <div class="col-md-3">
-          <div class="form-check mt-4 pt-1">
-            {{ form.invoice_number_active }}
-            <label class="form-check-label" for="{{ form.invoice_number_active.id_for_label }}">
-              {{ form.invoice_number_active.label }}
-            </label>
-          </div>
-          {{ form.invoice_number_active.errors }}
-          {% if form.invoice_number_active.help_text %}
-            <div class="form-text">{{ form.invoice_number_active.help_text }}</div>
+          <label class="form-label" for="{{ form.order_prefix.id_for_label }}">
+            {{ form.order_prefix.label }}
+          </label>
+          {{ form.order_prefix }}
+          {{ form.order_prefix.errors }}
+          {% if form.order_prefix.help_text %}
+            <div class="form-text">{{ form.order_prefix.help_text }}</div>
           {% endif %}
         </div>
 
+        <div class="col-md-3">
+          <label class="form-label" for="{{ form.order_padding.id_for_label }}">
+            {{ form.order_padding.label }}
+          </label>
+          {{ form.order_padding }}
+          {{ form.order_padding.errors }}
+          {% if form.order_padding.help_text %}
+            <div class="form-text">{{ form.order_padding.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label" for="{{ form.order_start_value.id_for_label }}">
+            {{ form.order_start_value.label }}
+          </label>
+          {{ form.order_start_value }}
+          {{ form.order_start_value.errors }}
+          {% if form.order_start_value.help_text %}
+            <div class="form-text">{{ form.order_start_value.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label" for="{{ form.order_reset_policy.id_for_label }}">
+            {{ form.order_reset_policy.label }}
+          </label>
+          {{ form.order_reset_policy }}
+          {{ form.order_reset_policy.errors }}
+          {% if form.order_reset_policy.help_text %}
+            <div class="form-text">{{ form.order_reset_policy.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="row g-3 mt-3">
+        <div class="col-md-12">
+          <label class="form-label" for="{{ form.order_custom_pattern.id_for_label }}">
+            {{ form.order_custom_pattern.label }}
+          </label>
+          {{ form.order_custom_pattern }}
+          {{ form.order_custom_pattern.errors }}
+          {% if form.order_custom_pattern.help_text %}
+            <div class="form-text">
+              {{ form.order_custom_pattern.help_text }}<br>
+              <span class="small text-muted">
+                {% trans "أمثلة:" %} <code>ORD-{year}-{seq:04d}</code>،
+                <code>SO-{year}-{month:02d}-{seq:03d}</code>
+              </span>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <hr class="my-3">
+
+    <!-- ============================================
+         قسم ترقيم الفواتير
+         ============================================ -->
+    <div class="mb-4">
+      <h5 class="h6 mb-2">{% trans "ترقيم الفواتير" %}</h5>
+      <p class="text-muted small mb-3">
+        {% trans "تحكم في شكل أرقام الفواتير، البادئة، عدد الخانات، وسياسة إعادة الترقيم." %}
+      </p>
+
+      <div class="row g-3">
         <div class="col-md-3">
           <label class="form-label" for="{{ form.invoice_prefix.id_for_label }}">
             {{ form.invoice_prefix.label }}
@@ -75,10 +141,7 @@
           {% endif %}
         </div>
 
-      </div>
-
-      <div class="row g-3 mt-3">
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label class="form-label" for="{{ form.invoice_reset_policy.id_for_label }}">
             {{ form.invoice_reset_policy.label }}
           </label>
@@ -88,8 +151,10 @@
             <div class="form-text">{{ form.invoice_reset_policy.help_text }}</div>
           {% endif %}
         </div>
+      </div>
 
-        <div class="col-md-8">
+      <div class="row g-3 mt-3">
+        <div class="col-md-12">
           <label class="form-label" for="{{ form.invoice_custom_pattern.id_for_label }}">
             {{ form.invoice_custom_pattern.label }}
           </label>
@@ -110,7 +175,86 @@
 
     <hr class="my-3">
 
-    {# ------------- قسم سلوك الفاتورة ------------- #}
+    <!-- ============================================
+         قسم ترقيم الدفعات
+         ============================================ -->
+    <div class="mb-4">
+      <h5 class="h6 mb-2">{% trans "ترقيم الدفعات" %}</h5>
+      <p class="text-muted small mb-3">
+        {% trans "تحكم في شكل أرقام الدفعات، البادئة، عدد الخانات، وسياسة إعادة الترقيم." %}
+      </p>
+
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label" for="{{ form.payment_prefix.id_for_label }}">
+            {{ form.payment_prefix.label }}
+          </label>
+          {{ form.payment_prefix }}
+          {{ form.payment_prefix.errors }}
+          {% if form.payment_prefix.help_text %}
+            <div class="form-text">{{ form.payment_prefix.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label" for="{{ form.payment_padding.id_for_label }}">
+            {{ form.payment_padding.label }}
+          </label>
+          {{ form.payment_padding }}
+          {{ form.payment_padding.errors }}
+          {% if form.payment_padding.help_text %}
+            <div class="form-text">{{ form.payment_padding.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label" for="{{ form.payment_start_value.id_for_label }}">
+            {{ form.payment_start_value.label }}
+          </label>
+          {{ form.payment_start_value }}
+          {{ form.payment_start_value.errors }}
+          {% if form.payment_start_value.help_text %}
+            <div class="form-text">{{ form.payment_start_value.help_text }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label" for="{{ form.payment_reset_policy.id_for_label }}">
+            {{ form.payment_reset_policy.label }}
+          </label>
+          {{ form.payment_reset_policy }}
+          {{ form.payment_reset_policy.errors }}
+          {% if form.payment_reset_policy.help_text %}
+            <div class="form-text">{{ form.payment_reset_policy.help_text }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="row g-3 mt-3">
+        <div class="col-md-12">
+          <label class="form-label" for="{{ form.payment_custom_pattern.id_for_label }}">
+            {{ form.payment_custom_pattern.label }}
+          </label>
+          {{ form.payment_custom_pattern }}
+          {{ form.payment_custom_pattern.errors }}
+          {% if form.payment_custom_pattern.help_text %}
+            <div class="form-text">
+              {{ form.payment_custom_pattern.help_text }}<br>
+              <span class="small text-muted">
+                {% trans "أمثلة:" %} <code>PAY-{year}-{seq:04d}</code>،
+                <code>RCPT-{year}-{month:02d}-{seq:03d}</code>
+              </span>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <hr class="my-3">
+
+    <!-- ============================================
+         قسم سلوك الفاتورة
+         ============================================ -->
     <div class="mb-4">
       <h5 class="h6 mb-2">{% trans "سلوك الفاتورة" %}</h5>
       <p class="text-muted small mb-3">
@@ -159,7 +303,9 @@
 
     <hr class="my-3">
 
-    {# ------------- قسم ضريبة القيمة المضافة ------------- #}
+    <!-- ============================================
+         قسم ضريبة القيمة المضافة
+         ============================================ -->
     <div class="mb-4">
       <h5 class="h6 mb-2">{% trans "ضريبة القيمة المضافة (VAT)" %}</h5>
       <p class="text-muted small mb-3">
@@ -195,7 +341,9 @@
 
     <hr class="my-3">
 
-    {# ------------- قسم النصوص الافتراضية ------------- #}
+    <!-- ============================================
+         قسم النصوص الافتراضية
+         ============================================ -->
     <div class="mb-3">
       <h5 class="h6 mb-2">{% trans "النصوص الافتراضية" %}</h5>
       <p class="text-muted small mb-3">
