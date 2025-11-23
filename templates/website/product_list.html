@@ -1,36 +1,22 @@
 {% extends "base.html" %}
 {% load i18n %}
 
+{# ================== SEO BLOCKS ================== #}
+
 {% block meta_title %}
-  {% if LANGUAGE_CODE == "ar" %}
-    منتجات مزون المنيوم – أنظمة النوافذ والأبواب
-  {% else %}
-    Mazoon Aluminum Products – Window & Door Systems
-  {% endif %}
+  {% trans "منتجات مزون المنيوم – أنظمة النوافذ والأبواب" %}
 {% endblock %}
 
 {% block meta_description %}
-  {% if LANGUAGE_CODE == "ar" %}
-    اكتشف أنظمة مزون المنيوم للنوافذ والأبواب، بما في ذلك الأنظمة المفصلية والعازلة للحرارة.
-  {% else %}
-    Discover Mazoon Aluminum window and door systems, including hinged and thermal break systems.
-  {% endif %}
+  {% trans "اكتشف أنظمة مزون المنيوم للنوافذ والأبواب، بما في ذلك الأنظمة المفصلية والعازلة للحرارة." %}
 {% endblock %}
 
 {% block og_title %}
-  {% if LANGUAGE_CODE == "ar" %}
-    منتجات مزون المنيوم – أنظمة النوافذ والأبواب
-  {% else %}
-    Mazoon Aluminum Products – Window & Door Systems
-  {% endif %}
+  {% trans "منتجات مزون المنيوم – أنظمة النوافذ والأبواب" %}
 {% endblock %}
 
 {% block og_description %}
-  {% if LANGUAGE_CODE == "ar" %}
-    اكتشف أنظمة مزون المنيوم للنوافذ والأبواب، بما في ذلك الأنظمة المفصلية والعازلة للحرارة.
-  {% else %}
-    Discover Mazoon Aluminum window and door systems, including hinged and thermal break systems.
-  {% endif %}
+  {% trans "اكتشف أنظمة مزون المنيوم للنوافذ والأبواب، بما في ذلك الأنظمة المفصلية والعازلة للحرارة." %}
 {% endblock %}
 
 {% block og_type %}website{% endblock %}
@@ -40,46 +26,27 @@
 {% block twitter_card %}summary_large_image{% endblock %}
 
 {% block twitter_title %}
-  {% if LANGUAGE_CODE == "ar" %}
-    منتجات مزون المنيوم – أنظمة النوافذ والأبواب
-  {% else %}
-    Mazoon Aluminum Products – Window & Door Systems
-  {% endif %}
+  {% trans "منتجات مزون المنيوم – أنظمة النوافذ والأبواب" %}
 {% endblock %}
 
 {% block twitter_description %}
-  {% if LANGUAGE_CODE == "ar" %}
-    اكتشف أنظمة مزون المنيوم للنوافذ والأبواب، بما في ذلك الأنظمة المفصلية والعازلة للحرارة.
-  {% else %}
-    Discover Mazoon Aluminum window and door systems, including hinged and thermal break systems.
-  {% endif %}
+  {% trans "اكتشف أنظمة مزون المنيوم للنوافذ والأبواب، بما في ذلك الأنظمة المفصلية والعازلة للحرارة." %}
 {% endblock %}
 
 {% block twitter_image %}{% endblock %}
 
 {% block title %}
-  {% if LANGUAGE_CODE == "ar" %}
-    {% trans "المنتجات" %}
-  {% else %}
-    {% trans "Products" %}
-  {% endif %}
+  {% trans "المنتجات" %}
 {% endblock %}
 
+{# ================== PAGE CONTENT ================== #}
 {% block content %}
 <div class="mb-4">
-  <h1 class="h3 fw-bold mb-2">
-    {% if LANGUAGE_CODE == "ar" %}
-      {% trans "منتجات مزون المنيوم" %}
-    {% else %}
-      {% trans "Mazoon Aluminum Products" %}
-    {% endif %}
+  <h1 class="h3 fw-bold mb-2 text-mazoon">
+    {% trans "منتجات مزون المنيوم" %}
   </h1>
   <p class="text-muted small mb-0">
-    {% if LANGUAGE_CODE == "ar" %}
-      {% trans "أنظمة نوافذ وأبواب تم تطويرها بعناية لتناسب المشاريع الحديثة." %}
-    {% else %}
-      {% trans "Carefully developed window and door systems for modern projects." %}
-    {% endif %}
+    {% trans "أنظمة نوافذ وأبواب تم تطويرها بعناية لتناسب المشاريع الحديثة." %}
   </p>
 </div>
 
@@ -87,24 +54,27 @@
   <div class="row row-cols-1 row-cols-md-3 g-3">
     {% for product in products %}
       <div class="col">
-        <div class="card border-0 shadow-sm h-100">
+        <div class="card border-0 shadow-sm h-100 product-card">
           <div class="card-body d-flex flex-column">
             <h2 class="h6 fw-bold card-title mb-2">
-              <a href="{{ product.get_absolute_url }}" class="text-decoration-none">
+              <a href="{{ product.get_absolute_url }}" class="text-decoration-none text-mazoon">
                 {{ product.name }}
               </a>
             </h2>
+
             <p class="card-text small text-muted flex-grow-1" style="line-height: 1.8;">
-              {{ product.description|striptags|truncatechars:160 }}
+              {{ product.description|default_if_none:""|striptags|truncatechars:160 }}
             </p>
-            <div class="d-flex justify-content-between align-items-center mt-2">
+
+            <div class="d-flex justify-content-between align-items-center mt-2 small">
               {% if product.price %}
-                <span class="fw-bold small">
+                <span class="fw-bold">
                   {{ product.price }} {% trans "ر.ع" %}
                 </span>
               {% endif %}
+
               {% if product.is_featured %}
-                <span class="badge bg-warning text-dark small">
+                <span class="badge bg-warning text-dark">
                   {% trans "مميز" %}
                 </span>
               {% endif %}

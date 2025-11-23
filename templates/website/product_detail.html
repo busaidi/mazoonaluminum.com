@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block meta_description %}
-  {{ product.meta_description|default:product.description|striptags|truncatechars:180 }}
+  {{ product.meta_description|default:product.description|default_if_none:""|striptags|truncatechars:180 }}
 {% endblock %}
 
 {% block og_title %}
@@ -16,36 +16,57 @@
 {% endblock %}
 
 {% block og_description %}
-  {{ product.meta_description|default:product.description|striptags|truncatechars:180 }}
+  {{ product.meta_description|default:product.description|default_if_none:""|striptags|truncatechars:180 }}
 {% endblock %}
 
 {% block og_type %}product{% endblock %}
 {% block og_url %}{{ request.build_absolute_uri }}{% endblock %}
-{% block og_image %}{% endblock %}
+
+{# هنا نركب الـ absolute URL يدوي بدون استدعاء دالة مع بارامترات #}
+{% block og_image %}
+  {% if product.image %}
+    {{ request.scheme }}://{{ request.get_host }}{{ product.image.url }}
+  {% endif %}
+{% endblock %}
 
 {% block twitter_card %}summary_large_image{% endblock %}
 {% block twitter_title %}
   {{ product.meta_title|default:product.name }}
 {% endblock %}
 {% block twitter_description %}
-  {{ product.meta_description|default:product.description|striptags|truncatechars:180 }}
+  {{ product.meta_description|default:product.description|default_if_none:""|striptags|truncatechars:180 }}
 {% endblock %}
-{% block twitter_image %}{% endblock %}
+{% block twitter_image %}
+  {% if product.image %}
+    {{ request.scheme }}://{{ request.get_host }}{{ product.image.url }}
+  {% endif %}
+{% endblock %}
 
-{% block title %}{{ product.name }}{% endblock %}
+{% block title %}{{ product.meta_title|default:product.name }}{% endblock %}
 
 {# ================== PAGE CONTENT ================== #}
 {% block content %}
 <div class="row g-4">
-  <!-- تفاصيل المنتج -->
+
+  {# ===== تفاصيل المنتج ===== #}
   <div class="col-lg-8">
     <div class="card border-0 shadow-sm mb-3">
+      {% if product.image %}
+        <img src="{{ product.image.url }}"
+             alt="{{ product.name }}"
+             class="card-img-top img-fluid">
+      {% endif %}
+
       <div class="card-body">
-        <h1 class="h3 fw-bold mb-2">{{ product.name }}</h1>
+        <h1 class="h3 fw-bold mb-2 text-mazoon">
+          {{ product.name }}
+        </h1>
 
         <div class="d-flex flex-wrap gap-2 align-items-center text-muted small mb-3">
           {% if product.is_featured %}
-            <span class="badge bg-warning text-dark">{% trans "منتج مميز" %}</span>
+            <span class="badge bg-warning text-dark">
+              {% trans "منتج مميز" %}
+            </span>
           {% endif %}
           <span class="badge bg-success-subtle text-success border">
             {% trans "متوفر" %}
@@ -61,12 +82,12 @@
         {# ===== أزرار الطلب والسلة ===== #}
         {% if user.is_authenticated %}
           <div class="d-flex flex-wrap gap-2 mb-3">
-            <!-- اطلب الآن: ينقل للبوابة ويعمل Order للمنتج مباشرة -->
-            <a href="{% url 'portal:order_create' product.id %}" class="btn btn-primary">
+
+            <a href="{% url 'portal:order_create' product.id %}"
+               class="btn btn-primary">
               {% trans "اطلب الآن" %}
             </a>
 
-            <!-- إضافة إلى السلة -->
             <form method="post"
                   action="{% url 'cart:add' product.id %}"
                   class="d-flex align-items-center gap-2">
@@ -88,24 +109,27 @@
             </a>
           </div>
         {% else %}
-          <div class="alert alert-info mb-3">
+          <div class="alert alert-info mb-3 small">
             {% trans "الرجاء تسجيل الدخول لتتمكن من الطلب أو إضافة المنتجات إلى السلة." %}
           </div>
         {% endif %}
 
         <div class="small text-muted" style="line-height: 1.9;">
-          {{ product.description|linebreaks }}
+          {{ product.description|default_if_none:""|linebreaks }}
         </div>
       </div>
     </div>
   </div>
 
-  <!-- شريط جانبي -->
+  {# ===== الشريط الجانبي ===== #}
   <div class="col-lg-4">
     <aside class="position-sticky" style="top: 80px;">
+
       <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
-          <h2 class="h6 fw-bold mb-2">{% trans "عن هذا المنتج" %}</h2>
+          <h2 class="h6 fw-bold mb-2 text-mazoon">
+            {% trans "عن هذا المنتج" %}
+          </h2>
           <p class="small text-muted mb-0">
             {% trans "يمكنك استخدام هذه المساحة لإضافة مواصفات فنية، ملفات تحميل (كتالوج PDF)، أو روابط لأنظمة مرتبطة." %}
           </p>
@@ -114,12 +138,15 @@
 
       <div class="card border-0 shadow-sm">
         <div class="card-body small text-muted">
-          <strong>{% trans "ملاحظة" %}:</strong>
+          <strong class="d-block mb-1 text-mazoon">
+            {% trans "ملاحظة" %}:
+          </strong>
           <p class="mb-0">
             {% trans "يمكنك طلب هذا المنتج مباشرة أو إضافته أولاً إلى السلة ثم إتمام الطلب لاحقًا." %}
           </p>
         </div>
       </div>
+
     </aside>
   </div>
 </div>

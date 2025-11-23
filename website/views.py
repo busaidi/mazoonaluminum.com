@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.db.models import Q
 from django.http import HttpResponse
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.utils.translation import gettext as _
 
@@ -28,7 +28,7 @@ class HomeView(TemplateView):
             .order_by("-published_at")[:3]
         )
         context["featured_products"] = (
-            Product.objects.filter(is_active=True)[:3]
+            Product.objects.filter(is_active=True).order_by("name")[:3]
         )
         return context
 
@@ -70,12 +70,11 @@ class BlogListView(ListView):
             if self.current_category:
                 qs = qs.filter(categories=self.current_category)
 
+        # search على الحقول المترجمة (modeltranslation يهتم بلغة الحقل الفعلية)
         if q:
             qs = qs.filter(
-                Q(title_ar__icontains=q)
-                | Q(title_en__icontains=q)
-                | Q(body_ar__icontains=q)
-                | Q(body_en__icontains=q)
+                Q(title__icontains=q) |
+                Q(body__icontains=q)
             )
 
         self.search_query = q
@@ -103,7 +102,7 @@ class BlogTagView(ListView):
         q = self.request.GET.get("q", "").strip()
         qs = BlogPost.objects.filter(is_published=True)
 
-        self.current_category = None
+        self.current_category = None  # احتياط لو استعملته في القالب
         tag_slug = self.kwargs.get("tag_slug")
         self.current_tag = Tag.objects.filter(slug=tag_slug).first()
         if self.current_tag:
@@ -111,10 +110,8 @@ class BlogTagView(ListView):
 
         if q:
             qs = qs.filter(
-                Q(title_ar__icontains=q)
-                | Q(title_en__icontains=q)
-                | Q(body_ar__icontains=q)
-                | Q(body_en__icontains=q)
+                Q(title__icontains=q) |
+                Q(body__icontains=q)
             )
 
         self.search_query = q
@@ -195,7 +192,7 @@ class ProductListView(ListView):
     context_object_name = "products"
 
     def get_queryset(self):
-        return Product.objects.filter(is_active=True).order_by("name_ar")
+        return Product.objects.filter(is_active=True).order_by("name")
 
 
 class ProductDetailView(DetailView):

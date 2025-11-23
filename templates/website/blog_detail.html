@@ -32,34 +32,48 @@
 {% endblock %}
 {% block twitter_image %}{% if og_image_url %}{{ og_image_url }}{% endif %}{% endblock %}
 
-{# (اختياري) عنوان داخلي لو تحتاجه في مكان آخر #}
-{% block title %}{{ post.title }}{% endblock %}
+{# عنوان الصفحة الداخلي #}
+{% block title %}
+  {{ post.meta_title|default:post.title }}
+{% endblock %}
 
 {# ================== PAGE CONTENT ================== #}
 {% block content %}
 <div class="row g-4">
-  <!-- ======== المقال ======== -->
+
+  {# ======== المقال ======== #}
   <div class="col-lg-8">
     <article class="mb-4">
-      <header class="mb-3">
-        <h1 class="h3 fw-bold mb-2">{{ post.title }}</h1>
+
+      <header classmb-3">
+        <h1 class="h3 fw-bold mb-2 text-mazoon">
+          {{ post.title }}
+        </h1>
 
         <div class="d-flex flex-wrap gap-2 align-items-center text-muted small">
           <span>📅 {{ post.published_at|date:"Y-m-d H:i" }}</span>
           <span>•</span>
-          <span>💬 {{ comments|length }} {% trans "تعليق" %}</span>
+          <span>
+            {% blocktrans count count=comments|length %}
+              تعليق واحد
+            {% plural %}
+              {{ count }} تعليقات
+            {% endblocktrans %}
+          </span>
         </div>
 
-        {% if post.tags.all %}
-          <div class="mt-2 small">
-            <span class="text-muted">{% trans "الوسوم" %}:</span>
-            {% for tag in post.tags.all %}
-              <span class="badge bg-light text-muted border ms-1">
-                #{{ tag.name }}
-              </span>
-            {% endfor %}
-          </div>
-        {% endif %}
+        {% with tags=post.tags.all %}
+          {% if tags %}
+            <div class="mt-2 small">
+              <span class="text-muted">{% trans "الوسوم" %}:</span>
+              {% for tag in tags %}
+                <span class="badge bg-light text-muted border ms-1">
+                  #{{ tag.name }}
+                </span>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
       </header>
 
       <div class="card border-0 shadow-sm mb-4">
@@ -69,11 +83,13 @@
       </div>
     </article>
 
-    <!-- ======== التعليقات ======== -->
+    {# ======== التعليقات ======== #}
     <section class="mb-4" id="comments">
       <h2 class="h5 fw-bold mb-3">
-        {% blocktrans with count=comments|length %}
-          {{ count }} تعليق
+        {% blocktrans count count=comments|length %}
+          تعليق واحد
+        {% plural %}
+          {{ count }} تعليقات
         {% endblocktrans %}
       </h2>
 
@@ -100,7 +116,7 @@
       {% endif %}
     </section>
 
-    <!-- ======== نموذج إضافة تعليق ======== -->
+    {# ======== نموذج إضافة تعليق ======== #}
     <section id="add-comment">
       <h2 class="h5 fw-bold mb-3">{% trans "أضف تعليقاً" %}</h2>
 
@@ -108,20 +124,36 @@
         <div class="card-body">
           <form method="post" class="row g-3">
             {% csrf_token %}
+
             <div class="col-md-6">
-              <label class="form-label small fw-semibold">{% trans "الاسم" %}</label>
-              <input type="text" name="name" class="form-control form-control-sm" required />
+              <label class="form-label small fw-semibold">
+                {% trans "الاسم" %}
+              </label>
+              <input type="text"
+                     name="name"
+                     class="form-control form-control-sm"
+                     required>
             </div>
+
             <div class="col-md-6">
               <label class="form-label small fw-semibold">
                 {% trans "البريد الإلكتروني (اختياري)" %}
               </label>
-              <input type="email" name="email" class="form-control form-control-sm" />
+              <input type="email"
+                     name="email"
+                     class="form-control form-control-sm">
             </div>
+
             <div class="col-12">
-              <label class="form-label small fw-semibold">{% trans "التعليق" %}</label>
-              <textarea name="content" rows="4" class="form-control form-control-sm" required></textarea>
+              <label class="form-label small fw-semibold">
+                {% trans "التعليق" %}
+              </label>
+              <textarea name="content"
+                        rows="4"
+                        class="form-control form-control-sm"
+                        required></textarea>
             </div>
+
             <div class="col-12 d-flex justify-content-end">
               <button type="submit" class="btn btn-primary">
                 {% trans "إرسال التعليق" %}
@@ -133,12 +165,13 @@
     </section>
   </div>
 
-  <!-- ======== الشريط الجانبي ======== -->
+  {# ======== الشريط الجانبي ======== #}
   <div class="col-lg-4">
     <aside class="position-sticky" style="top: 80px;">
+
       <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
-          <h2 class="h6 fw-bold mb-2">{% trans "عن هذه التدوينة" %}</h2>
+          <h2 class="h6 fw-bold mb-2 text-mazoon">{% trans "عن هذه التدوينة" %}</h2>
           <p class="small text-muted mb-0">
             {% trans "يمكنك استخدام هذه المنطقة لإضافة وصف مختصر، ملاحظات تقنية، أو روابط لتدوينات مرتبطة." %}
           </p>
@@ -147,12 +180,13 @@
 
       <div class="card border-0 shadow-sm">
         <div class="card-body small text-muted">
-          <strong>{% trans "ملاحظة" %}:</strong>
+          <strong class="d-block mb-1 text-mazoon">{% trans "ملاحظة" %}:</strong>
           <p class="mb-0">
             {% trans "نموذج التعليقات هنا بسيط، ويمكن لاحقاً ربطه بنظام إشعارات أو موافقة يدوية من لوحة التحكم." %}
           </p>
         </div>
       </div>
+
     </aside>
   </div>
 </div>
