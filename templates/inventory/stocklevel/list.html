@@ -14,11 +14,77 @@
       {% trans "عرض الكميات المتوفرة لكل منتج في كل مخزن أو موقع." %}
     </p>
   </div>
+
+  <a href="{% url 'inventory:stocklevel_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i>
+    {% trans "مستوى جديد" %}
+  </a>
+</div>
+
+{# ===== البحث والفلاتر ===== #}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-center">
+
+      <div class="col-md-4">
+        <input type="text"
+               name="q"
+               class="form-control form-control-sm"
+               value="{{ q }}"
+               placeholder="{% trans 'بحث بالمنتج أو الكود أو الموقع...' %}">
+      </div>
+
+      <div class="col-md-3">
+        <select name="warehouse" class="form-select form-select-sm">
+          <option value="">{% trans "كل المخازن" %}</option>
+          {% for w in warehouses %}
+            <option value="{{ w.id }}" {% if warehouse_filter == w.id|stringformat:"s" %}selected{% endif %}>
+              {{ w.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <div class="form-check form-switch d-flex align-items-center">
+          <input class="form-check-input"
+                 type="checkbox"
+                 role="switch"
+                 id="belowMinSwitch"
+                 name="below_min"
+                 value="1"
+                 {% if below_min_only %}checked{% endif %}>
+          <label class="form-check-label ms-2 small" for="belowMinSwitch">
+            {% trans "فقط تحت الحد الأدنى" %}
+          </label>
+        </div>
+      </div>
+
+      <div class="col-md-2 d-grid">
+        <button class="btn btn-outline-primary btn-sm">
+          {% trans "تطبيق" %}
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{# ===== ملخص سريع للتقرير ===== #}
+<div class="mb-2 small text-muted">
+  {% blocktrans with total=low_total %}
+    يوجد {{ total }} مستوى مخزون تحت الحد الأدنى على مستوى النظام.
+  {% endblocktrans %}
+  {% if below_min_only %}
+    <span class="badge bg-danger-subtle text-danger ms-1">
+      {% trans "يتم عرض المستويات تحت الحد الأدنى فقط." %}
+    </span>
+  {% endif %}
 </div>
 
 <div class="card border-0 shadow-sm mb-3">
   <div class="card-body p-0">
-    <table class="table table-hover mb-0 align-middle">
+    <table class="table table-hover mb-0 align-middle table-sm">
       <thead class="table-light">
         <tr>
           <th>{% trans "المنتج" %}</th>
@@ -27,15 +93,14 @@
           <th class="text-end">{% trans "المتوفر" %}</th>
           <th class="text-end">{% trans "المحجوز" %}</th>
           <th class="text-end">{% trans "الحد الأدنى" %}</th>
-          <th class="text-end">{% trans "الحد الأعلى" %}</th>
-          <th class="text-end" style="width: 100px;">{% trans "إجراءات" %}</th>
+          <th class="text-end">{% trans "الحالة" %}</th>
+          <th class="text-end" style="width: 140px;">{% trans "إجراءات" %}</th>
         </tr>
       </thead>
 
       <tbody>
         {% for lvl in object_list %}
           <tr>
-
             {# المنتج #}
             <td>
               <a href="{% url 'inventory:stocklevel_detail' lvl.pk %}"
@@ -43,7 +108,7 @@
                 {{ lvl.product.name }}
               </a>
               <div class="small text-muted">
-                {{ lvl.product.sku|default:"" }}
+                {{ lvl.product.code }}
               </div>
             </td>
 
@@ -73,21 +138,43 @@
 
             <td class="text-end fw-semibold">{{ lvl.quantity_on_hand }}</td>
             <td class="text-end">{{ lvl.quantity_reserved }}</td>
-            <td class="text-end">{{ lvl.min_quantity|default:"-" }}</td>
-            <td class="text-end">{{ lvl.max_quantity|default:"-" }}</td>
+            <td class="text-end">{{ lvl.min_stock }}</td>
+
+            {# الحالة بناءً على is_below_min #}
+            <td class="text-end">
+              {% if lvl.is_below_min %}
+                <span class="badge bg-danger-subtle text-danger">
+                  {% trans "تحت الحد الأدنى" %}
+                </span>
+              {% else %}
+                <span class="badge bg-success-subtle text-success">
+                  {% trans "ضمن الحد" %}
+                </span>
+              {% endif %}
+            </td>
 
             <td class="text-end">
-              <a href="{% url 'inventory:stocklevel_detail' lvl.pk %}"
-                 class="btn btn-sm btn-outline-secondary">
-                {% trans "عرض" %}
-              </a>
+              <div class="btn-group btn-group-sm">
+                <a href="{% url 'inventory:stocklevel_detail' lvl.pk %}"
+                   class="btn btn-outline-secondary">
+                  {% trans "عرض" %}
+                </a>
+                <a href="{% url 'inventory:stocklevel_update' lvl.pk %}"
+                   class="btn btn-outline-primary">
+                  {% trans "تعديل" %}
+                </a>
+              </div>
             </td>
           </tr>
 
         {% empty %}
           <tr>
             <td colspan="8" class="text-center text-muted py-4">
-              {% trans "لا توجد بيانات لمستويات المخزون حالياً." %}
+              {% if below_min_only %}
+                {% trans "لا توجد مستويات تحت الحد الأدنى وفقاً للفلاتر الحالية." %}
+              {% else %}
+                {% trans "لا توجد بيانات لمستويات المخزون حالياً." %}
+              {% endif %}
             </td>
           </tr>
         {% endfor %}

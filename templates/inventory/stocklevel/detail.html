@@ -33,11 +33,9 @@
           <dt class="col-sm-3">{% trans "المنتج" %}</dt>
           <dd class="col-sm-9">
             {{ object.product.name }}
-            {% if object.product.sku %}
-              <div class="text-muted">
-                {{ object.product.sku }}
-              </div>
-            {% endif %}
+            <div class="text-muted">
+              {{ object.product.code }}
+            </div>
           </dd>
 
           <dt class="col-sm-3">{% trans "المخزن" %}</dt>
@@ -76,12 +74,20 @@
 
           <dt class="col-sm-3">{% trans "الحد الأدنى" %}</dt>
           <dd class="col-sm-9">
-            {{ object.min_quantity|default:"-" }}
+            {{ object.min_stock }}
           </dd>
 
-          <dt class="col-sm-3">{% trans "الحد الأعلى" %}</dt>
+          <dt class="col-sm-3">{% trans "الحالة" %}</dt>
           <dd class="col-sm-9">
-            {{ object.max_quantity|default:"-" }}
+            {% if object.is_below_min %}
+              <span class="badge bg-danger-subtle text-danger">
+                {% trans "تحت الحد الأدنى" %}
+              </span>
+            {% else %}
+              <span class="badge bg-success-subtle text-success">
+                {% trans "ضمن الحد" %}
+              </span>
+            {% endif %}
           </dd>
 
         </dl>
@@ -109,7 +115,7 @@
         <div class="card-body small text-muted">
           <strong class="d-block mb-1">{% trans "ملاحظة" %}:</strong>
           <p class="mb-0">
-            {% trans "يمكن ربط هذا المستوى بحركات المخزون (إدخال/إخراج/تحويل) لتحديث الكميات تلقائياً لاحقاً." %}
+            {% trans "يتم تحديث هذه الكميات تلقائياً من حركات المخزون (إدخال/إخراج/تحويل) حسب منطق التطبيق." %}
           </p>
         </div>
       </div>

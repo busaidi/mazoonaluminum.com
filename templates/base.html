@@ -159,23 +159,42 @@
   {% endif %}
 {% endif %}
 
+{% if user.is_authenticated and user.is_staff %}
 
-        {# دفتر الأستاذ للموظفين #}
-        {% if user.is_authenticated and user.is_staff %}
+  <!-- Ledger dashboard -->
+  <li class="nav-item">
+    <a class="nav-link {% if request.resolver_match.namespace == 'ledger' %}active{% endif %}"
+       href="{% url 'ledger:dashboard' %}">
+      {% trans "دفتر الأستاذ" %}
+    </a>
+  </li>
 
-          <li class="nav-item">
-            <a class="nav-link {% if request.resolver_match.namespace == 'ledger' %}active{% endif %}"
-               href="{% url 'ledger:dashboard' %}">
-              {% trans "دفتر الأستاذ" %}
-            </a>
-          </li>
-                   <li class="nav-item">
+  <!-- Audit log -->
+  <li class="nav-item">
     <a class="nav-link {% if request.resolver_match.namespace == 'core' and request.resolver_match.url_name == 'audit_log_list' %}active{% endif %}"
        href="{% url 'core:audit_log_list' %}">
       {% trans "سجل التدقيق" %}
     </a>
   </li>
-        {% endif %}
+
+  <!-- Inventory dashboard -->
+  <li class="nav-item">
+    {% if request.resolver_match.namespace == 'inventory' and subsection == 'dashboard' %}
+      <a class="nav-link active"
+         href="{% url 'inventory:dashboard' %}">
+        {% trans "لوحة التحكم" %}
+      </a>
+    {% else %}
+      <a class="nav-link"
+         href="{% url 'inventory:dashboard' %}">
+        {% trans "لوحة التحكم" %}
+      </a>
+    {% endif %}
+  </li>
+
+{% endif %}
+
+
           {# Notifications dropdown #}
           {% include "core/notifications/_navbar_dropdown.html" %}
 

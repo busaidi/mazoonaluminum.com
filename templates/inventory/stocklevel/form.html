@@ -89,37 +89,13 @@
 
         <div class="col-md-3">
           <label class="form-label small fw-semibold">
-            {% trans "الحد الأدنى" %}
+            {% trans "الحد الأدنى / مستوى إعادة الطلب" %}
           </label>
-          {{ form.min_quantity }}
-          {% if form.min_quantity.errors %}
-            <div class="text-danger small">{{ form.min_quantity.errors }}</div>
+          {{ form.min_stock }}
+          {% if form.min_stock.errors %}
+            <div class="text-danger small">{{ form.min_stock.errors }}</div>
           {% endif %}
         </div>
-
-        <div class="col-md-3">
-          <label class="form-label small fw-semibold">
-            {% trans "الحد الأعلى" %}
-          </label>
-          {{ form.max_quantity }}
-          {% if form.max_quantity.errors %}
-            <div class="text-danger small">{{ form.max_quantity.errors }}</div>
-          {% endif %}
-        </div>
-
-        {% if form.is_active %}
-          <div class="col-md-3">
-            <div class="form-check mt-4 pt-2">
-              {{ form.is_active }}
-              <label class="form-check-label small fw-semibold">
-                {% trans "فعّال" %}
-              </label>
-            </div>
-            {% if form.is_active.errors %}
-              <div class="text-danger small">{{ form.is_active.errors }}</div>
-            {% endif %}
-          </div>
-        {% endif %}
       </div>
 
       <div class="mt-4 d-flex justify-content-between">

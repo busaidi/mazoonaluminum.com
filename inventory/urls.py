@@ -131,6 +131,11 @@ urlpatterns = [
         name="stocklevel_list",
     ),
     path(
+        "stock-levels/create/",
+        views.StockLevelCreateView.as_view(),
+        name="stocklevel_create",
+    ),
+    path(
         "stock-levels/<int:pk>/",
         views.StockLevelDetailView.as_view(),
         name="stocklevel_detail",
@@ -140,5 +145,4 @@ urlpatterns = [
         views.StockLevelUpdateView.as_view(),
         name="stocklevel_update",
     ),
-
 ]

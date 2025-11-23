@@ -72,6 +72,7 @@
           <th class="text-end">{% trans "الكمية" %}</th>
           <th>{% trans "من" %}</th>
           <th>{% trans "إلى" %}</th>
+          <th>{% trans "الحالة" %}</th>
           <th>{% trans "النوع" %}</th>
           <th>{% trans "المرجع" %}</th>
           <th class="text-end">{% trans "عرض" %}</th>
@@ -103,6 +104,28 @@
               {{ move.to_warehouse.name|default:"-" }}
             </td>
 
+            {# الحالة #}
+            <td>
+              {% if move.status == "draft" %}
+                <span class="badge bg-secondary-subtle text-secondary">
+                  {% trans "مسودة" %}
+                </span>
+              {% elif move.status == "done" %}
+                <span class="badge bg-success-subtle text-success">
+                  {% trans "منفذة" %}
+                </span>
+              {% elif move.status == "cancelled" %}
+                <span class="badge bg-danger-subtle text-danger">
+                  {% trans "ملغاة" %}
+                </span>
+              {% else %}
+                <span class="badge bg-light text-muted">
+                  {{ move.get_status_display }}
+                </span>
+              {% endif %}
+            </td>
+
+            {# النوع #}
             <td>
               {% if move.move_type == "in" %}
                 <span class="badge bg-success-subtle text-success">{% trans "إدخال" %}</span>
@@ -127,7 +150,7 @@
 
         {% empty %}
           <tr>
-            <td colspan="8" class="text-center text-muted py-4">
+            <td colspan="9" class="text-center text-muted py-4">
               {% trans "لا توجد حركات مسجلة." %}
             </td>
           </tr>

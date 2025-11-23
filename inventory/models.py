@@ -15,7 +15,6 @@ from core.models import TimeStampedModel
 # ============================================================
 # Categories
 # ============================================================
-
 class ProductCategory(TimeStampedModel):
     """
     Simple category tree for inventory product.
@@ -25,18 +24,18 @@ class ProductCategory(TimeStampedModel):
     slug = models.SlugField(
         max_length=120,
         unique=True,
-        verbose_name=_("Slug"),
-        help_text=_("URL-safe identifier, e.g. mazoon-46-system"),
+        verbose_name=_("المعرّف (Slug)"),
+        help_text=_("معرّف يصلح للرابط بدون مسافات، مثل: mazoon-46-system"),
     )
 
     name = models.CharField(
         max_length=200,
-        verbose_name=_("Category name"),
+        verbose_name=_("اسم التصنيف"),
     )
 
     description = models.TextField(
         blank=True,
-        verbose_name=_("Description"),
+        verbose_name=_("وصف التصنيف"),
     )
 
     parent = models.ForeignKey(
@@ -45,17 +44,17 @@ class ProductCategory(TimeStampedModel):
         null=True,
         blank=True,
         related_name="children",
-        verbose_name=_("Parent category"),
+        verbose_name=_("التصنيف الأب"),
     )
 
     is_active = models.BooleanField(
         default=True,
-        verbose_name=_("Active"),
+        verbose_name=_("نشط"),
     )
 
     class Meta:
-        verbose_name = _("Product category")
-        verbose_name_plural = _("Product categories")
+        verbose_name = _("تصنيف منتج")
+        verbose_name_plural = _("تصنيفات المنتجات")
         ordering = ("name",)
 
     def __str__(self) -> str:
@@ -63,7 +62,44 @@ class ProductCategory(TimeStampedModel):
             return f"{self.parent} → {self.name}"
         return self.name
 
+    # ============================
+    # Helpers
+    # ============================
 
+    @property
+    def full_path(self) -> str:
+        """
+        Full hierarchical path, e.g. "Systems / Thermal Break / Sliding".
+        Useful for dropdowns and reports.
+        """
+        parts = [self.name]
+        parent = self.parent
+        while parent is not None:
+            parts.append(parent.name)
+            parent = parent.parent
+        parts.reverse()
+        return " / ".join(parts)
+
+    def active_children(self):
+        """
+        Return only active child categories.
+        """
+        return self.children.filter(is_active=True)
+
+    def products_count(self) -> int:
+        """
+        Number of active products in this category (direct only).
+        """
+        # Product.category has related_name="products"
+        return self.products.filter(is_active=True).count()
+
+    def can_be_deleted(self) -> bool:
+        """
+        Simple rule:
+        - No child categories
+        - No products
+        """
+        return not self.children.exists() and not self.products.exists()
 # ============================================================
 # Products
 # ============================================================
@@ -71,7 +107,7 @@ class ProductCategory(TimeStampedModel):
 class Product(TimeStampedModel):
     """
     Core inventory product.
-    This is the master product used by inventory / orders / invoices.
+    Master product used by inventory / orders / invoices.
     Website / portal visibility is controlled by `is_published`.
     """
 
@@ -81,71 +117,130 @@ class Product(TimeStampedModel):
         null=True,
         blank=True,
         related_name="products",
-        verbose_name=_("Category"),
+        verbose_name=_("التصنيف"),
     )
 
     # Internal product code / SKU
     code = models.CharField(
         max_length=50,
         unique=True,
-        verbose_name=_("Product code"),
-        help_text=_("Internal code / SKU, e.g. MZN-46-FRAME."),
+        verbose_name=_("كود المنتج"),
+        help_text=_("كود داخلي فريد، مثل: MZN-46-FRAME"),
     )
 
     # Name/description (يمكن لاحقاً ربطها بـ django-modeltranslation)
     name = models.CharField(
         max_length=255,
-        verbose_name=_("Product name"),
+        verbose_name=_("اسم المنتج"),
     )
 
     short_description = models.CharField(
         max_length=255,
         blank=True,
-        verbose_name=_("Short description"),
-        help_text=_("One-line description shown in lists."),
+        verbose_name=_("وصف مختصر"),
+        help_text=_("سطر واحد يظهر في القوائم والجداول."),
     )
 
     description = models.TextField(
         blank=True,
-        verbose_name=_("Full description"),
+        verbose_name=_("وصف تفصيلي"),
     )
 
     # Unit of measure (base)
     uom = models.CharField(
         max_length=20,
         default="PCS",
-        verbose_name=_("Unit of measure"),
-        help_text=_("Example: PCS, M, KG, SET."),
+        verbose_name=_("وحدة القياس"),
+        help_text=_("مثال: PCS, M, KG, SET"),
     )
 
     # Is this tracked in stock?
     is_stock_item = models.BooleanField(
         default=True,
-        verbose_name=_("Stock item"),
-        help_text=_("If disabled, stock will not be tracked for this product."),
+        verbose_name=_("يُتابَع في المخزون"),
+        help_text=_("إذا تم تعطيله، لن يتم تتبع هذا المنتج في حركات المخزون."),
     )
 
     # Status flags
     is_active = models.BooleanField(
         default=True,
-        verbose_name=_("Active"),
-        help_text=_("If disabled, product is not used in new documents."),
+        verbose_name=_("نشط"),
+        help_text=_("إذا تم تعطيله، لن يظهر في المستندات الجديدة."),
     )
 
     # نشر المنتج على البورتال / الموقع
     is_published = models.BooleanField(
         default=False,
-        verbose_name=_("Published"),
-        help_text=_("If enabled, product can appear on website / portal."),
+        verbose_name=_("منشور على الموقع/البوابة"),
+        help_text=_("إذا تم تفعيله، يمكن عرض المنتج في الموقع أو بوابة العملاء."),
     )
 
     class Meta:
-        verbose_name = _("Product")
-        verbose_name_plural = _("Products")
+        verbose_name = _("منتج")
+        verbose_name_plural = _("المنتجات")
         ordering = ("code",)
 
     def __str__(self) -> str:
         return f"{self.code} – {self.name}"
+
+    # ============================
+    # Inventory helpers
+    # ============================
+
+    @property
+    def total_on_hand(self) -> Decimal:
+        """
+        Total quantity on hand across all warehouses/locations.
+
+        Uses StockLevel -> related_name="stock_levels".
+        """
+        agg = self.stock_levels.aggregate(total=Sum("quantity_on_hand"))
+        return agg["total"] or Decimal("0.000")
+
+    def low_stock_levels(self):
+        """
+        Returns queryset of StockLevel rows where this product
+        is below the minimum stock (per warehouse/location).
+        """
+        return self.stock_levels.filter(
+            min_stock__gt=Decimal("0.000"),
+            quantity_on_hand__lt=F("min_stock"),
+        )
+
+    @property
+    def has_low_stock_anywhere(self) -> bool:
+        """
+        True if this product is below min stock in any warehouse/location.
+        """
+        return self.low_stock_levels().exists()
+
+    def total_on_hand_in_warehouse(self, warehouse) -> Decimal:
+        """
+        Quantity on hand for this product in a specific warehouse.
+        """
+        agg = self.stock_levels.filter(warehouse=warehouse).aggregate(
+            total=Sum("quantity_on_hand")
+        )
+        return agg["total"] or Decimal("0.000")
+
+    def has_stock(self, warehouse=None) -> bool:
+        """
+        Returns True if there is any stock for this product.
+
+        - If warehouse is provided: check only that warehouse.
+        - Otherwise: check total_on_hand across all warehouses.
+        """
+        if warehouse is not None:
+            return self.total_on_hand_in_warehouse(warehouse) > Decimal("0.000")
+        return self.total_on_hand > Decimal("0.000")
+
+    def can_be_deleted(self) -> bool:
+        """
+        Simple rule: product can be deleted if it has no stock moves.
+
+        You can later extend this to check orders/invoices, etc.
+        """
+        return not self.stock_moves.exists()
 
 
 # ============================================================
@@ -431,6 +526,39 @@ class StockMove(TimeStampedModel):
     @property
     def is_done(self) -> bool:
         return self.status == self.Status.DONE
+
+    def save(self, *args, **kwargs):
+        """
+        Override save to ربط تعديل المخزون بحالة الحركة (status).
+
+        المنطق:
+          - إذا كانت حركة جديدة (بدون pk):
+              * لو status = DONE → نطبّق تأثير الحركة على المخزون.
+              * غير ذلك → لا شيء.
+          - إذا كانت حركة موجودة:
+              * نقرأ الحالة القديمة من قاعدة البيانات.
+              * نستدعي خدمة apply_stock_move_status_change لتطبيق فرق الحالة.
+        """
+        from .services import apply_stock_move_status_change  # import محلي لتجنّب circular import
+
+        is_create = self.pk is None
+        old_status = None
+
+        if not is_create:
+            try:
+                # نقرأ الحالة القديمة فقط بدون تحميل كل الحقول
+                old_status = self.__class__.objects.only("status").get(pk=self.pk).status
+            except self.__class__.DoesNotExist:
+                # حالة نادرة جداً، نعاملها كإنشاء جديد
+                is_create = True
+                old_status = None
+
+        # نحفظ أولاً (حتى يكون عندنا pk وأي تغييرات أخرى)
+        super().save(*args, **kwargs)
+
+        # بعدها نطبّق منطق تعديل المخزون بناءً على تغيير الحالة
+        apply_stock_move_status_change(move=self, old_status=old_status, is_create=is_create)
+
 
 
 # ============================================================

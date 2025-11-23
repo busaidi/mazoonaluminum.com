@@ -14,6 +14,7 @@ from django.views.generic import (
     UpdateView,
 )
 
+from .forms import StockMoveForm, ProductForm, StockLevelForm, ProductCategoryForm
 from .models import (
     ProductCategory,
     Product,
@@ -117,7 +118,6 @@ class InventoryDashboardView(InventoryStaffRequiredMixin, TemplateView):
 # ============================================================
 # Product categories
 # ============================================================
-
 class ProductCategoryListView(InventoryStaffRequiredMixin, ListView):
     model = ProductCategory
     template_name = "inventory/category/list.html"
@@ -144,12 +144,12 @@ class ProductCategoryListView(InventoryStaffRequiredMixin, ListView):
 
 class ProductCategoryCreateView(InventoryStaffRequiredMixin, CreateView):
     model = ProductCategory
-    fields = ["slug", "name", "description", "parent", "is_active"]
+    form_class = ProductCategoryForm
     template_name = "inventory/category/form.html"
     success_url = reverse_lazy("inventory:category_list")
 
     def form_valid(self, form):
-        messages.success(self.request, "Category created successfully.")
+        messages.success(self.request, "تم إنشاء التصنيف بنجاح.")
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -161,12 +161,12 @@ class ProductCategoryCreateView(InventoryStaffRequiredMixin, CreateView):
 
 class ProductCategoryUpdateView(InventoryStaffRequiredMixin, UpdateView):
     model = ProductCategory
-    fields = ["slug", "name", "description", "parent", "is_active"]
+    form_class = ProductCategoryForm
     template_name = "inventory/category/form.html"
     success_url = reverse_lazy("inventory:category_list")
 
     def form_valid(self, form):
-        messages.success(self.request, "Category updated successfully.")
+        messages.success(self.request, "تم تحديث التصنيف بنجاح.")
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -174,7 +174,6 @@ class ProductCategoryUpdateView(InventoryStaffRequiredMixin, UpdateView):
         ctx["subsection"] = "categories"
         ctx["mode"] = "update"
         return ctx
-
 
 # ============================================================
 # Products
@@ -253,22 +252,12 @@ class ProductDetailView(InventoryStaffRequiredMixin, DetailView):
 
 class ProductCreateView(InventoryStaffRequiredMixin, CreateView):
     model = Product
-    fields = [
-        "category",
-        "code",
-        "name",
-        "short_description",
-        "description",
-        "uom",
-        "is_stock_item",
-        "is_active",
-        "is_published",
-    ]
+    form_class = ProductForm
     template_name = "inventory/product/form.html"
     success_url = reverse_lazy("inventory:product_list")
 
     def form_valid(self, form):
-        messages.success(self.request, "Product created successfully.")
+        messages.success(self.request, "تم إنشاء المنتج بنجاح.")
         return super().form_valid(form)
 
     def get_initial(self):
@@ -287,22 +276,12 @@ class ProductCreateView(InventoryStaffRequiredMixin, CreateView):
 
 class ProductUpdateView(InventoryStaffRequiredMixin, UpdateView):
     model = Product
-    fields = [
-        "category",
-        "code",
-        "name",
-        "short_description",
-        "description",
-        "uom",
-        "is_stock_item",
-        "is_active",
-        "is_published",
-    ]
+    form_class = ProductForm
     template_name = "inventory/product/form.html"
     success_url = reverse_lazy("inventory:product_list")
 
     def form_valid(self, form):
-        messages.success(self.request, "Product updated successfully.")
+        messages.success(self.request, "تم تحديث بيانات المنتج بنجاح.")
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -310,6 +289,7 @@ class ProductUpdateView(InventoryStaffRequiredMixin, UpdateView):
         ctx["subsection"] = "products"
         ctx["mode"] = "update"
         return ctx
+
 
 
 # ============================================================
@@ -522,20 +502,7 @@ class StockMoveDetailView(InventoryStaffRequiredMixin, DetailView):
 
 class StockMoveCreateView(InventoryStaffRequiredMixin, CreateView):
     model = StockMove
-    fields = [
-        "move_type",
-        "product",
-        "from_warehouse",
-        "from_location",
-        "to_warehouse",
-        "to_location",
-        "quantity",
-        "uom",
-        "move_date",
-        "status",
-        "reference",
-        "note",
-    ]
+    form_class = StockMoveForm
     template_name = "inventory/stockmove/form.html"
     success_url = reverse_lazy("inventory:move_list")
 
@@ -565,20 +532,7 @@ class StockMoveCreateView(InventoryStaffRequiredMixin, CreateView):
 
 class StockMoveUpdateView(InventoryStaffRequiredMixin, UpdateView):
     model = StockMove
-    fields = [
-        "move_type",
-        "product",
-        "from_warehouse",
-        "from_location",
-        "to_warehouse",
-        "to_location",
-        "quantity",
-        "uom",
-        "move_date",
-        "status",
-        "reference",
-        "note",
-    ]
+    form_class = StockMoveForm
     template_name = "inventory/stockmove/form.html"
     success_url = reverse_lazy("inventory:move_list")
 
@@ -612,6 +566,7 @@ class StockLevelListView(InventoryStaffRequiredMixin, ListView):
 
         q = self.request.GET.get("q", "").strip()
         wh = self.request.GET.get("warehouse") or None
+        below_min = self.request.GET.get("below_min") == "1"
 
         if q:
             qs = qs.filter(
@@ -624,19 +579,32 @@ class StockLevelListView(InventoryStaffRequiredMixin, ListView):
         if wh:
             qs = qs.filter(warehouse_id=wh)
 
+        if below_min:
+            qs = qs.filter(
+                min_stock__gt=Decimal("0.000"),
+                quantity_on_hand__lt=F("min_stock"),
+            )
+
         self.search_query = q
         self.warehouse_filter = wh
+        self.below_min_only = below_min
         return qs
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["q"] = getattr(self, "search_query", "")
         ctx["warehouse_filter"] = getattr(self, "warehouse_filter", None)
+        ctx["below_min_only"] = getattr(self, "below_min_only", False)
         ctx["warehouses"] = Warehouse.objects.filter(is_active=True)
+
+        # إجمالي المستويات تحت الحد الأدنى (بدون فلاتر البحث)
+        ctx["low_total"] = StockLevel.objects.filter(
+            min_stock__gt=Decimal("0.000"),
+            quantity_on_hand__lt=F("min_stock"),
+        ).count()
+
         ctx["subsection"] = "stock_levels"
         return ctx
-
-
 
 
 class StockLevelDetailView(InventoryStaffRequiredMixin, DetailView):
@@ -645,14 +613,47 @@ class StockLevelDetailView(InventoryStaffRequiredMixin, DetailView):
     context_object_name = "object"
 
 
-
-class StockLevelUpdateView(InventoryStaffRequiredMixin, UpdateView):
+class StockLevelCreateView(InventoryStaffRequiredMixin, CreateView):
     model = StockLevel
-    fields = [
-        "min_quantity",
-        "max_quantity",
-    ]
+    form_class = StockLevelForm
     template_name = "inventory/stocklevel/form.html"
 
     def get_success_url(self):
         return reverse("inventory:stocklevel_detail", kwargs={"pk": self.object.pk})
+
+    def form_valid(self, form):
+        messages.success(self.request, "تم إنشاء مستوى المخزون بنجاح.")
+        return super().form_valid(form)
+
+    def get_initial(self):
+        """
+        لو جاي من رابط فيه product / warehouse / location في الـ query string
+        نملأها تلقائيًا كقيمة افتراضية.
+        مثال: /inventory/stock-levels/create/?product=5&warehouse=2
+        """
+        initial = super().get_initial()
+        product_id = self.request.GET.get("product")
+        warehouse_id = self.request.GET.get("warehouse")
+        location_id = self.request.GET.get("location")
+
+        if product_id:
+            initial["product"] = product_id
+        if warehouse_id:
+            initial["warehouse"] = warehouse_id
+        if location_id:
+            initial["location"] = location_id
+
+        return initial
+
+
+class StockLevelUpdateView(InventoryStaffRequiredMixin, UpdateView):
+    model = StockLevel
+    form_class = StockLevelForm
+    template_name = "inventory/stocklevel/form.html"
+
+    def get_success_url(self):
+        return reverse("inventory:stocklevel_detail", kwargs={"pk": self.object.pk})
+
+    def form_valid(self, form):
+        messages.success(self.request, "تم تحديث مستوى المخزون بنجاح.")
+        return super().form_valid(form)
