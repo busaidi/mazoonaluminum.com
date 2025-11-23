@@ -1,0 +1,92 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block title %}{{ object.name }}{% endblock %}
+
+{% block inventory_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 fw-bold mb-1">{{ object.name }}</h1>
+  <a href="{% url 'inventory:product_update' object.pk %}" class="btn btn-secondary btn-sm">
+    {% trans "تعديل المنتج" %}
+  </a>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="card-body">
+
+    <p class="text-muted small mb-1">
+      <strong>{% trans "الكود" %}:</strong> {{ object.code }}
+    </p>
+
+    {% if object.category %}
+      <p class="text-muted small mb-1">
+        <strong>{% trans "الفئة" %}:</strong> {{ object.category.name }}
+      </p>
+    {% endif %}
+
+    <p><strong>{% trans "الوصف" %}:</strong></p>
+    <p class="text-muted">{{ object.description|linebreaks }}</p>
+
+    <p class="mb-2">
+      <strong>{% trans "نوع الوحدة" %}:</strong> {{ object.uom }}
+    </p>
+
+    <p class="mb-2">
+      <strong>{% trans "الحالة" %}:</strong>
+      {% if object.is_published %}
+        <span class="badge bg-success">{% trans "منشور" %}</span>
+      {% else %}
+        <span class="badge bg-secondary">{% trans "غير منشور" %}</span>
+      {% endif %}
+    </p>
+
+    {% if stock_levels %}
+      <hr>
+      <h5 class="fw-bold mb-2">{% trans "مستويات المخزون" %}</h5>
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>{% trans "المخزن" %}</th>
+              <th>{% trans "الموقع" %}</th>
+              <th class="text-end">{% trans "المتوفر" %}</th>
+              <th class="text-end">{% trans "محجوز" %}</th>
+              <th class="text-end">{% trans "الحد الأدنى" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for lvl in stock_levels %}
+              <tr>
+                <td>{{ lvl.warehouse.code }}</td>
+                <td>{{ lvl.location.code }}</td>
+
+                <td class="text-end fw-semibold">
+                  {{ lvl.quantity_on_hand }}
+                </td>
+
+                <td class="text-end">
+                  {{ lvl.quantity_reserved }}
+                </td>
+
+                <td class="text-end">
+                  {{ lvl.min_stock }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <p class="text-muted small mt-2">
+        {% trans "إجمالي الكمية المتوفرة" %}:
+        <strong>{{ total_on_hand }}</strong>
+      </p>
+
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}

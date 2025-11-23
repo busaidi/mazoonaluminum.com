@@ -1,0 +1,148 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "تفاصيل حركة مخزون" %}{% endblock %}
+
+{% block inventory_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 fw-bold mb-1">
+      {% trans "تفاصيل حركة المخزون" %}
+    </h1>
+    <p class="text-muted small mb-0">
+      {% trans "عرض تفاصيل الحركة المسجلة على المنتج والمخازن." %}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'inventory:move_update' object.pk %}" class="btn btn-sm btn-primary">
+      {% trans "تعديل" %}
+    </a>
+    <a href="{% url 'inventory:move_list' %}" class="btn btn-sm btn-outline-secondary">
+      {% trans "رجوع" %}
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-sm-3">{% trans "المنتج" %}</dt>
+          <dd class="col-sm-9">
+            {{ object.product.name }}
+            <div class="text-muted">
+              {{ object.product.sku|default:"" }}
+            </div>
+          </dd>
+
+          <dt class="col-sm-3">{% trans "الكمية" %}</dt>
+          <dd class="col-sm-9 fw-semibold">
+            {{ object.quantity }}
+          </dd>
+
+          <dt class="col-sm-3">{% trans "نوع الحركة" %}</dt>
+          <dd class="col-sm-9">
+            {% if object.move_type == "in" %}
+              <span class="badge bg-success-subtle text-success border">
+                {% trans "إدخال" %}
+              </span>
+            {% elif object.move_type == "out" %}
+              <span class="badge bg-danger-subtle text-danger border">
+                {% trans "إخراج" %}
+              </span>
+            {% elif object.move_type == "transfer" %}
+              <span class="badge bg-info-subtle text-info border">
+                {% trans "تحويل" %}
+              </span>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-secondary border">
+                {{ object.move_type }}
+              </span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-sm-3">{% trans "من مخزن" %}</dt>
+          <dd class="col-sm-9">
+            {% if object.from_warehouse %}
+              {{ object.from_warehouse.name }}
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-sm-3">{% trans "من موقع" %}</dt>
+          <dd class="col-sm-9">
+            {% if object.from_location %}
+              {{ object.from_location.name }}
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-sm-3">{% trans "إلى مخزن" %}</dt>
+          <dd class="col-sm-9">
+            {% if object.to_warehouse %}
+              {{ object.to_warehouse.name }}
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-sm-3">{% trans "إلى موقع" %}</dt>
+          <dd class="col-sm-9">
+            {% if object.to_location %}
+              {{ object.to_location.name }}
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-sm-3">{% trans "تاريخ الحركة" %}</dt>
+          <dd class="col-sm-9">
+            {{ object.move_date|date:"Y-m-d H:i" }}
+          </dd>
+
+          <dt class="col-sm-3">{% trans "المرجع" %}</dt>
+          <dd class="col-sm-9">
+            {{ object.reference|default:"-" }}
+          </dd>
+
+          <dt class="col-sm-3">{% trans "ملاحظات" %}</dt>
+          <dd class="col-sm-9">
+            {{ object.note|default:"-"|linebreaksbr }}
+          </dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <aside class="position-sticky" style="top: 80px;">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body small text-muted">
+          <h2 class="h6 fw-bold mb-2">{% trans "معلومات سجلّية" %}</h2>
+          <p class="mb-1">
+            <strong>{% trans "تاريخ الإنشاء" %}:</strong>
+            {{ object.created_at|date:"Y-m-d H:i" }}
+          </p>
+          <p class="mb-0">
+            <strong>{% trans "آخر تحديث" %}:</strong>
+            {{ object.updated_at|date:"Y-m-d H:i" }}
+          </p>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm">
+        <div class="card-body small text-muted">
+          <strong class="d-block mb-1">{% trans "ملاحظة" %}:</strong>
+          <p class="mb-0">
+            {% trans "يمكن لاحقاً ربط هذه الحركات مع أوامر الشراء، الفواتير، والإرجاعات لتحديث المخزون تلقائياً." %}
+          </p>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}

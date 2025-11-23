@@ -1,0 +1,111 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "المنتجات" %}{% endblock %}
+
+{% block inventory_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 fw-bold mb-1">{% trans "المنتجات" %}</h1>
+    <p class="text-muted small mb-0">
+      {% trans "عرض وإدارة جميع المنتجات المسجلة في النظام." %}
+    </p>
+  </div>
+  <a href="{% url 'inventory:product_create' %}" class="btn btn-primary btn-sm">
+    {% trans "إضافة منتج" %}
+  </a>
+</div>
+
+{# ===== البحث ===== #}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-md-4">
+        <input type="text"
+               name="q"
+               value="{{ q }}"
+               placeholder="{% trans 'بحث بالاسم أو الكود...' %}"
+               class="form-control form-control-sm">
+      </div>
+
+      <div class="col-md-3">
+        <select name="category" class="form-select form-select-sm">
+          <option value="">{% trans "كل الفئات" %}</option>
+          {% for cat in categories %}
+            <option value="{{ cat.id }}" {% if category_filter == cat.id|stringformat:"s" %}selected{% endif %}>
+              {{ cat.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3 form-check form-switch ms-2">
+        <input type="checkbox"
+               name="published"
+               value="1"
+               id="published"
+               class="form-check-input"
+               {% if only_published %}checked{% endif %}>
+        <label for="published" class="form-check-label small">
+          {% trans "منشور فقط" %}
+        </label>
+      </div>
+
+      <div class="col-md-2 text-end">
+        <button class="btn btn-outline-primary btn-sm w-100">
+          {% trans "بحث" %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ===== قائمة المنتجات ===== #}
+<div class="row row-cols-1 row-cols-md-3 g-3">
+  {% for p in object_list %}
+    <div class="col">
+      <div class="card shadow-sm h-100 border-0">
+        <div class="card-body d-flex flex-column">
+
+          <h5 class="fw-bold mb-1">{{ p.name }}</h5>
+          <span class="text-muted small d-block mb-2">{{ p.code }}</span>
+
+          {% if p.category %}
+            <span class="badge bg-light text-dark border mb-2">{{ p.category.name }}</span>
+          {% endif %}
+
+          {% if p.description %}
+            <p class="text-muted small mb-2">
+              {{ p.short_description|default:p.description|truncatechars:80 }}
+            </p>
+          {% endif %}
+
+          <div class="mt-auto">
+            {% if p.is_published %}
+              <span class="badge bg-success">{% trans "منشور" %}</span>
+            {% else %}
+              <span class="badge bg-secondary">{% trans "غير منشور" %}</span>
+            {% endif %}
+          </div>
+
+          <div class="d-flex justify-content-between mt-3">
+            <a href="{% url 'inventory:product_detail' p.pk %}"
+               class="btn btn-outline-primary btn-sm">
+              {% trans "عرض" %}
+            </a>
+            <a href="{% url 'inventory:product_update' p.pk %}"
+               class="btn btn-outline-secondary btn-sm">
+              {% trans "تعديل" %}
+            </a>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <p class="text-muted">{% trans "لا توجد منتجات حالياً." %}</p>
+  {% endfor %}
+</div>
+
+{% endblock %}

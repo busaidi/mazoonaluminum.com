@@ -1,0 +1,136 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block title %}
+  {% if object %}
+    {% trans "تعديل مستوى مخزون" %}
+  {% else %}
+    {% trans "إضافة مستوى مخزون" %}
+  {% endif %}
+{% endblock %}
+
+{% block inventory_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 fw-bold mb-1">
+      {% if object %}
+        {% trans "تعديل مستوى المخزون" %}
+      {% else %}
+        {% trans "إضافة مستوى مخزون لمنتج" %}
+      {% endif %}
+    </h1>
+    <p class="text-muted small mb-0">
+      {% trans "تحديد الكميات المتوفرة والمحجوزة لكل منتج في مخزن وموقع معيّن." %}
+    </p>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">
+            {% trans "المنتج" %}
+          </label>
+          {{ form.product }}
+          {% if form.product.errors %}
+            <div class="text-danger small">{{ form.product.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold">
+            {% trans "المخزن" %}
+          </label>
+          {{ form.warehouse }}
+          {% if form.warehouse.errors %}
+            <div class="text-danger small">{{ form.warehouse.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold">
+            {% trans "الموقع" %}
+          </label>
+          {{ form.location }}
+          {% if form.location.errors %}
+            <div class="text-danger small">{{ form.location.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold">
+            {% trans "المتوفر" %}
+          </label>
+          {{ form.quantity_on_hand }}
+          {% if form.quantity_on_hand.errors %}
+            <div class="text-danger small">{{ form.quantity_on_hand.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold">
+            {% trans "المحجوز" %}
+          </label>
+          {{ form.quantity_reserved }}
+          {% if form.quantity_reserved.errors %}
+            <div class="text-danger small">{{ form.quantity_reserved.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold">
+            {% trans "الحد الأدنى" %}
+          </label>
+          {{ form.min_quantity }}
+          {% if form.min_quantity.errors %}
+            <div class="text-danger small">{{ form.min_quantity.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold">
+            {% trans "الحد الأعلى" %}
+          </label>
+          {{ form.max_quantity }}
+          {% if form.max_quantity.errors %}
+            <div class="text-danger small">{{ form.max_quantity.errors }}</div>
+          {% endif %}
+        </div>
+
+        {% if form.is_active %}
+          <div class="col-md-3">
+            <div class="form-check mt-4 pt-2">
+              {{ form.is_active }}
+              <label class="form-check-label small fw-semibold">
+                {% trans "فعّال" %}
+              </label>
+            </div>
+            {% if form.is_active.errors %}
+              <div class="text-danger small">{{ form.is_active.errors }}</div>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="mt-4 d-flex justify-content-between">
+        <a href="{% url 'inventory:stocklevel_list' %}" class="btn btn-link">
+          {% trans "رجوع إلى مستويات المخزون" %}
+        </a>
+        <button type="submit" class="btn btn-primary">
+          {% trans "حفظ" %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

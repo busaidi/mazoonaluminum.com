@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "portal.apps.PortalConfig",
     "cart",
     "ledger",
+    "inventory.apps.InventoryConfig",
 ]
 
 MIDDLEWARE = [

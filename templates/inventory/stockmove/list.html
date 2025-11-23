@@ -1,0 +1,141 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "حركات المخزون" %}{% endblock %}
+
+{% block inventory_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 fw-bold mb-1">{% trans "حركات المخزون" %}</h1>
+    <p class="text-muted small mb-0">
+      {% trans "عرض جميع عمليات الإدخال والإخراج والتحويل في المخازن." %}
+    </p>
+  </div>
+
+  <a href="{% url 'inventory:move_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i>
+    {% trans "حركة جديدة" %}
+  </a>
+</div>
+
+{# ===== البحث والفلاتر ===== #}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-center">
+
+      <div class="col-md-4">
+        <input type="text"
+               name="q"
+               class="form-control form-control-sm"
+               value="{{ request.GET.q }}"
+               placeholder="{% trans 'بحث بالمنتج أو المرجع...' %}">
+      </div>
+
+      <div class="col-md-3">
+        <select name="warehouse" class="form-select form-select-sm">
+          <option value="">{% trans "كل المخازن" %}</option>
+          {% for w in warehouses %}
+            <option value="{{ w.id }}" {% if request.GET.warehouse == w.id|stringformat:"s" %}selected{% endif %}>
+              {{ w.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <select name="move_type" class="form-select form-select-sm">
+          <option value="">{% trans "كل الأنواع" %}</option>
+          <option value="in"       {% if request.GET.move_type == "in"       %}selected{% endif %}>{% trans "إدخال" %}</option>
+          <option value="out"      {% if request.GET.move_type == "out"      %}selected{% endif %}>{% trans "إخراج" %}</option>
+          <option value="transfer" {% if request.GET.move_type == "transfer" %}selected{% endif %}>{% trans "تحويل" %}</option>
+        </select>
+      </div>
+
+      <div class="col-md-2 d-grid">
+        <button class="btn btn-outline-primary btn-sm">{% trans "تطبيق" %}</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{# ===== نتائج الحركات ===== #}
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 table-sm">
+
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "التاريخ" %}</th>
+          <th>{% trans "المنتج" %}</th>
+          <th class="text-end">{% trans "الكمية" %}</th>
+          <th>{% trans "من" %}</th>
+          <th>{% trans "إلى" %}</th>
+          <th>{% trans "النوع" %}</th>
+          <th>{% trans "المرجع" %}</th>
+          <th class="text-end">{% trans "عرض" %}</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for move in object_list %}
+          <tr>
+            <td class="small text-muted">{{ move.move_date|date:"Y-m-d" }}</td>
+
+            <td>
+              <a href="{% url 'inventory:move_detail' move.pk %}"
+                 class="fw-semibold text-decoration-none">
+                {{ move.product.name }}
+              </a>
+              {% if move.product.sku %}
+                <div class="text-muted small">{{ move.product.sku }}</div>
+              {% endif %}
+            </td>
+
+            <td class="text-end fw-semibold">{{ move.quantity }}</td>
+
+            <td class="small">
+              {{ move.from_warehouse.name|default:"-" }}
+            </td>
+
+            <td class="small">
+              {{ move.to_warehouse.name|default:"-" }}
+            </td>
+
+            <td>
+              {% if move.move_type == "in" %}
+                <span class="badge bg-success-subtle text-success">{% trans "إدخال" %}</span>
+              {% elif move.move_type == "out" %}
+                <span class="badge bg-danger-subtle text-danger">{% trans "إخراج" %}</span>
+              {% else %}
+                <span class="badge bg-info-subtle text-info">{% trans "تحويل" %}</span>
+              {% endif %}
+            </td>
+
+            <td class="small text-muted" title="{{ move.reference }}">
+              {{ move.reference|default:"-"|truncatechars:25 }}
+            </td>
+
+            <td class="text-end">
+              <a href="{% url 'inventory:move_detail' move.pk %}"
+                 class="btn btn-sm btn-outline-secondary">
+                {% trans "عرض" %}
+              </a>
+            </td>
+          </tr>
+
+        {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">
+              {% trans "لا توجد حركات مسجلة." %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+
+    </table>
+  </div>
+</div>
+
+{% endblock %}

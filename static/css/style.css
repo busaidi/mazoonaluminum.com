@@ -472,3 +472,13 @@ a:not(.btn):not(.nav-link):focus {
   color: var(--mazoon-primary);
   font-size: 1rem;
 }
+.kpi-card {
+  border-radius: 8px;
+  background-color: var(--mazoon-card-bg);
+  border: 1px solid var(--mazoon-border-soft);
+  padding: 0.5rem;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+}
+.kpi-card .h3 {
+  color: var(--mazoon-primary) !important;
+}

@@ -17,7 +17,7 @@ from .models import BlogPost, Comment, Product, Category, Tag, ContactMessage
 class HomeView(TemplateView):
     """
     Public landing page for Mazoon Aluminum.
-    Shows latest blog posts and featured products.
+    Shows latest blog posts and featured product.
     """
     template_name = "website/home.html"
 
@@ -185,11 +185,11 @@ class BlogDetailView(DetailView):
 
 class ProductListView(ListView):
     """
-    Public list of active products.
+    Public list of active product.
     """
     model = Product
     template_name = "website/product_list.html"
-    context_object_name = "products"
+    context_object_name = "product"
 
     def get_queryset(self):
         return Product.objects.filter(is_active=True).order_by("name")

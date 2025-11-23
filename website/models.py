@@ -108,7 +108,7 @@ class Product(TimeStampedModel):
     is_active = models.BooleanField(default=True)
 
     image = models.ImageField(
-        upload_to="products/",
+        upload_to="product/",
         blank=True,
         null=True,
     )

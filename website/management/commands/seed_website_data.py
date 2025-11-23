@@ -4,7 +4,7 @@ from django.utils import timezone
 
 
 class Command(BaseCommand):
-    help = "Seed default categories, tags, blog posts, and products for Mazoon Aluminum website (AR + EN)."
+    help = "Seed default categories, tags, blog posts, and product for Mazoon Aluminum website (AR + EN)."
 
     def handle(self, *args, **options):
 
@@ -14,7 +14,7 @@ class Command(BaseCommand):
         categories_data = [
             # slug, name_ar, name_en
             ("aluminum-systems", "أنظمة الألمنيوم", "Aluminum systems"),
-            ("products", "المنتجات", "Products"),
+            ("product", "المنتجات", "Products"),
             ("news", "الأخبار", "News"),
             ("technology", "التقنيات", "Technology"),
             ("mazoon-blog", "مدونة مزون", "Mazoon blog"),
@@ -128,7 +128,7 @@ class Command(BaseCommand):
 
             products.append(product)
 
-        self.stdout.write(self.style.SUCCESS(f"Created/updated {len(products)} products."))
+        self.stdout.write(self.style.SUCCESS(f"Created/updated {len(products)} product."))
 
         # -------------------------
         # BLOG POSTS (AR + EN)
@@ -139,7 +139,7 @@ class Command(BaseCommand):
                 "title_ar": "مرحبا بكم في مدونة مزون ألمنيوم",
                 "title_en": "Welcome to Mazoon Aluminum blog",
                 "body_ar": "هذه أول تدوينة في منصة مزون ألمنيوم لعرض الأنظمة، المنتجات، والأخبار التقنية.",
-                "body_en": "This is the first post in Mazoon Aluminum blog to showcase systems, products, and technical news.",
+                "body_en": "This is the first post in Mazoon Aluminum blog to showcase systems, product, and technical news.",
                 "meta_title_ar": "مدونة مزون ألمنيوم – التدوينة الأولى",
                 "meta_title_en": "Mazoon Aluminum blog – first post",
                 "meta_description_ar": "تعرّف على مدونة مزون ألمنيوم وأحدث الأخبار حول أنظمة النوافذ والأبواب.",

@@ -1,0 +1,99 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "مستويات المخزون" %}{% endblock %}
+
+{% block inventory_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 fw-bold mb-1">
+      {% trans "مستويات المخزون" %}
+    </h1>
+    <p class="text-muted small mb-0">
+      {% trans "عرض الكميات المتوفرة لكل منتج في كل مخزن أو موقع." %}
+    </p>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>{% trans "المنتج" %}</th>
+          <th>{% trans "المخزن" %}</th>
+          <th>{% trans "الموقع" %}</th>
+          <th class="text-end">{% trans "المتوفر" %}</th>
+          <th class="text-end">{% trans "المحجوز" %}</th>
+          <th class="text-end">{% trans "الحد الأدنى" %}</th>
+          <th class="text-end">{% trans "الحد الأعلى" %}</th>
+          <th class="text-end" style="width: 100px;">{% trans "إجراءات" %}</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for lvl in object_list %}
+          <tr>
+
+            {# المنتج #}
+            <td>
+              <a href="{% url 'inventory:stocklevel_detail' lvl.pk %}"
+                 class="text-decoration-none fw-semibold">
+                {{ lvl.product.name }}
+              </a>
+              <div class="small text-muted">
+                {{ lvl.product.sku|default:"" }}
+              </div>
+            </td>
+
+            {# المخزن #}
+            <td class="small">
+              {% if lvl.warehouse %}
+                <a href="{% url 'inventory:warehouse_update' lvl.warehouse.pk %}"
+                   class="text-decoration-none">
+                  {{ lvl.warehouse.name }}
+                </a>
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+
+            {# الموقع #}
+            <td class="small">
+              {% if lvl.location %}
+                <a href="{% url 'inventory:location_update' lvl.location.pk %}"
+                   class="text-decoration-none">
+                  {{ lvl.location.name }}
+                </a>
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+
+            <td class="text-end fw-semibold">{{ lvl.quantity_on_hand }}</td>
+            <td class="text-end">{{ lvl.quantity_reserved }}</td>
+            <td class="text-end">{{ lvl.min_quantity|default:"-" }}</td>
+            <td class="text-end">{{ lvl.max_quantity|default:"-" }}</td>
+
+            <td class="text-end">
+              <a href="{% url 'inventory:stocklevel_detail' lvl.pk %}"
+                 class="btn btn-sm btn-outline-secondary">
+                {% trans "عرض" %}
+              </a>
+            </td>
+          </tr>
+
+        {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">
+              {% trans "لا توجد بيانات لمستويات المخزون حالياً." %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

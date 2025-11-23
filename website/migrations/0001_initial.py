@@ -58,7 +58,7 @@ class Migration(migrations.Migration):
                 ('description_en', models.TextField(blank=True, null=True)),
                 ('price', models.DecimalField(decimal_places=2, default=0, max_digits=10)),
                 ('is_active', models.BooleanField(default=True)),
-                ('image', models.ImageField(blank=True, null=True, upload_to='products/')),
+                ('image', models.ImageField(blank=True, null=True, upload_to='product/')),
             ],
             options={
                 'ordering': ('name',),

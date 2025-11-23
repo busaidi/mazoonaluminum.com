@@ -24,8 +24,8 @@ urlpatterns = [
     path("blog/<slug:slug>/", BlogDetailView.as_view(), name="blog_detail"),
 
     # PRODUCTS
-    path("products/", ProductListView.as_view(), name="product_list"),
-    path("products/<slug:slug>/", ProductDetailView.as_view(), name="product_detail"),
+    path("product/", ProductListView.as_view(), name="product_list"),
+    path("product/<slug:slug>/", ProductDetailView.as_view(), name="product_detail"),
 
     # CONTACT
     path("contact/", ContactView.as_view(), name="contact"),

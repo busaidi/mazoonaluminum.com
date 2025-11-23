@@ -81,7 +81,7 @@ class CustomerPortalMixin:
 class CustomerInvoiceQuerysetMixin(CustomerPortalMixin):
     """
     Mixin that restricts invoice queries to the current portal customer
-    and prefetches related items/products for performance.
+    and prefetches related items/product for performance.
     """
 
     def get_queryset(self):
@@ -270,7 +270,7 @@ class PortalOrderDetailView(CustomerOrderQuerysetMixin, DetailView):
     context_object_name = "order"
 
     def get_queryset(self):
-        # Extend the queryset from the mixin with prefetch for items/products.
+        # Extend the queryset from the mixin with prefetch for items/product.
         return (
             super()
             .get_queryset()

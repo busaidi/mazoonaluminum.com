@@ -142,7 +142,7 @@ class Cart:
 
     def __len__(self) -> int:
         """
-        Return the number of distinct products in the cart.
+        Return the number of distinct product in the cart.
         (Keeps existing behavior for backward compatibility.)
         """
         return len(self.cart)

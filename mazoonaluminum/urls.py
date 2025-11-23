@@ -37,6 +37,7 @@ urlpatterns += i18n_patterns(
     path("portal/", include("portal.urls")),
     path("cart/", include("cart.urls", namespace="cart")),
     path("accounts/", include("django.contrib.auth.urls")),
+    path("inventory/", include("inventory.urls", namespace="inventory")),
 
 )
 

@@ -1,0 +1,189 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block title %}
+  {% if object %}
+    {% trans "تعديل حركة مخزون" %}
+  {% else %}
+    {% trans "حركة مخزون جديدة" %}
+  {% endif %}
+{% endblock %}
+
+{% block inventory_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 fw-bold mb-1">
+      {% if object %}
+        {% trans "تعديل حركة المخزون" %}
+      {% else %}
+        {% trans "إنشاء حركة مخزون جديدة" %}
+      {% endif %}
+    </h1>
+    <p class="text-muted small mb-0">
+      {% trans "استخدم هذه الشاشة لتسجيل إدخال، إخراج، أو تحويل مخزون بين المخازن والمواقع." %}
+    </p>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger small">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <div class="row g-3">
+        {# ===== المنتج / الكمية / نوع الحركة / التاريخ ===== #}
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold">
+            {% trans "المنتج" %}
+          </label>
+          {{ form.product }}
+          {% if form.product.errors %}
+            <div class="text-danger small">{{ form.product.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold">
+            {% trans "الكمية" %}
+          </label>
+          {{ form.quantity }}
+          {% if form.quantity.errors %}
+            <div class="text-danger small">{{ form.quantity.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold">
+            {% trans "وحدة القياس" %}
+          </label>
+          {{ form.uom }}
+          {% if form.uom.errors %}
+            <div class="text-danger small">{{ form.uom.errors }}</div>
+          {% endif %}
+          <div class="form-text small text-muted">
+            {% trans "غالباً ما تطابق وحدة القياس في بطاقة المنتج." %}
+          </div>
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold">
+            {% trans "نوع الحركة" %}
+          </label>
+          {{ form.move_type }}
+          {% if form.move_type.errors %}
+            <div class="text-danger small">{{ form.move_type.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold">
+            {% trans "تاريخ الحركة" %}
+          </label>
+          {{ form.move_date }}
+          {% if form.move_date.errors %}
+            <div class="text-danger small">{{ form.move_date.errors }}</div>
+          {% endif %}
+        </div>
+
+        {# ===== من مخزن / موقع ===== #}
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">
+            {% trans "من مخزن / موقع" %}
+          </label>
+          <div class="row g-2">
+            <div class="col-6">
+              {{ form.from_warehouse }}
+              {% if form.from_warehouse.errors %}
+                <div class="text-danger small">{{ form.from_warehouse.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="col-6">
+              {{ form.from_location }}
+              {% if form.from_location.errors %}
+                <div class="text-danger small">{{ form.from_location.errors }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        {# ===== إلى مخزن / موقع ===== #}
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">
+            {% trans "إلى مخزن / موقع" %}
+          </label>
+          <div class="row g-2">
+            <div class="col-6">
+              {{ form.to_warehouse }}
+              {% if form.to_warehouse.errors %}
+                <div class="text-danger small">{{ form.to_warehouse.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="col-6">
+              {{ form.to_location }}
+              {% if form.to_location.errors %}
+                <div class="text-danger small">{{ form.to_location.errors }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        {# ===== الحالة ===== #}
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold">
+            {% trans "حالة الحركة" %}
+          </label>
+          {{ form.status }}
+          {% if form.status.errors %}
+            <div class="text-danger small">{{ form.status.errors }}</div>
+          {% endif %}
+          <div class="form-text small text-muted">
+            {% trans "يمكنك تركها مسوّدة (Draft) أو تحديد منتهية (Done)." %}
+          </div>
+        </div>
+
+        {# ===== المرجع ===== #}
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold">
+            {% trans "مرجع الحركة" %}
+          </label>
+          {{ form.reference }}
+          {% if form.reference.errors %}
+            <div class="text-danger small">{{ form.reference.errors }}</div>
+          {% endif %}
+          <div class="form-text small text-muted">
+            {% trans "مثل رقم الفاتورة، أمر الشراء، أو مستند داخلي." %}
+          </div>
+        </div>
+
+        {# ===== الملاحظات ===== #}
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold">
+            {% trans "ملاحظات" %}
+          </label>
+          {{ form.note }}
+          {% if form.note.errors %}
+            <div class="text-danger small">{{ form.note.errors }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="mt-4 d-flex justify-content-between">
+        <a href="{% url 'inventory:move_list' %}" class="btn btn-link">
+          {% trans "رجوع إلى حركات المخزون" %}
+        </a>
+        <button type="submit" class="btn btn-primary">
+          {% trans "حفظ" %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

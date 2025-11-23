@@ -258,7 +258,7 @@ class InvoiceUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
         else:
             ctx["item_formset"] = InvoiceItemFormSet(instance=invoice)
 
-        # Same products JSON used in create
+        # Same product JSON used in create
         ctx = self.inject_products_json(ctx)
 
         return ctx

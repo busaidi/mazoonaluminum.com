@@ -1,0 +1,53 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block title %}
+  {% if object %}{% trans "تعديل بيانات المخزن" %}{% else %}{% trans "إضافة مخزن جديد" %}{% endif %}
+{% endblock %}
+
+{% block inventory_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 fw-bold mb-1">
+    {% if object %}
+      {% trans "تعديل بيانات المخزن" %}
+    {% else %}
+      {% trans "إضافة مخزن جديد" %}
+    {% endif %}
+  </h1>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+
+    <form method="post" class="row g-3">
+      {% csrf_token %}
+
+      {% for field in form %}
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">{{ field.label }}</label>
+          {{ field }}
+
+          {% if field.help_text %}
+            <div class="form-text small">{{ field.help_text }}</div>
+          {% endif %}
+
+          {% for error in field.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+
+      <div class="col-12 mt-3 d-flex justify-content-between">
+        <a href="{% url 'inventory:warehouse_list' %}" class="btn btn-link">
+          {% trans "رجوع إلى القائمة" %}
+        </a>
+        <button class="btn btn-primary">{% trans "حفظ" %}</button>
+      </div>
+
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

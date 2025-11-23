@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "لوحة المخزون" %}{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+  {# شريط التنقل الموحد #}
+  {% include "inventory/_nav.html" %}
+
+  {# عنوان الصفحة #}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h4 fw-bold mb-1">
+        {% trans "لوحة التحكم - المخزون" %}
+      </h1>
+      <p class="text-muted small mb-0">
+        {% trans "نظرة سريعة على حالة المخزون، الحركات الأخيرة، والتنبيهات." %}
+      </p>
+    </div>
+  </div>
+
+  {# كروت الـ KPI — ستايل Mazoon #}
+  <div class="row g-3 mb-4">
+
+    <div class="col-md-3 col-sm-6">
+      <div class="card shadow-sm border-0 kpi-card h-100">
+        <div class="card-body">
+          <div class="text-muted small mb-1">{% trans "إجمالي المنتجات" %}</div>
+          <div class="h3 fw-bold text-mazoon mb-1">{{ total_products }}</div>
+          <div class="small text-muted">
+            {% blocktrans with active=active_products published=published_products %}
+              نشط: {{ active }} / منشور: {{ published }}
+            {% endblocktrans %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+      <div class="card shadow-sm border-0 kpi-card h-100">
+        <div class="card-body">
+          <div class="text-muted small mb-1">{% trans "عدد المخازن" %}</div>
+          <div class="h3 fw-bold text-mazoon mb-1">{{ total_warehouses }}</div>
+          <div class="small text-muted">
+            {% blocktrans with locations=total_locations %}
+              مواقع التخزين: {{ locations }}
+            {% endblocktrans %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+      <div class="card shadow-sm border-0 kpi-card h-100">
+        <div class="card-body">
+          <div class="text-muted small mb-1">{% trans "حركات المخزون" %}</div>
+          <div class="h3 fw-bold text-mazoon mb-1">{{ total_moves }}</div>
+          <div class="small text-muted">
+            {% blocktrans with done=done_moves %} مكتملة: {{ done }} {% endblocktrans %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+      <div class="card shadow-sm border-0 kpi-card h-100">
+        <div class="card-body">
+          <div class="text-muted small mb-1">{% trans "فئات المنتجات" %}</div>
+          <div class="h3 fw-bold text-mazoon mb-1">{{ total_categories }}</div>
+          <div class="small text-muted">
+            {% trans "تصنيفات فعّالة" %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {# الصف الثاني: ملخص المخزون + تنبيهات انخفاض المخزون #}
+  <div class="row g-3 mb-4">
+
+    {# ملخص المخزون حسب المخزن #}
+    <div class="col-lg-8">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">{% trans "ملخص المخزون حسب المخزن" %}</h5>
+        </div>
+        <div class="card-body">
+          {% if stock_per_warehouse %}
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>{% trans "كود المخزن" %}</th>
+                    <th>{% trans "اسم المخزن" %}</th>
+                    <th class="text-end">{% trans "إجمالي الكمية المتوفرة" %}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in stock_per_warehouse %}
+                    <tr>
+                      <td class="fw-semibold">
+                        <a href="{% url 'inventory:warehouse_list' %}?q={{ row.warehouse__code }}">
+                          {{ row.warehouse__code }}
+                        </a>
+                      </td>
+                      <td>{{ row.warehouse__name }}</td>
+                      <td class="text-end">
+                        {{ row.total_qty|default:"0.000" }}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="text-muted mb-0">
+              {% trans "لا توجد بيانات مخزون حالياً لعرضها." %}
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# تنبيهات انخفاض المخزون #}
+    <div class="col-lg-4">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">{% trans "تنبيهات انخفاض المخزون" %}</h5>
+          {% if low_stock_levels %}
+            <span class="badge bg-warning text-dark">
+              {% blocktrans with count=low_stock_levels|length %}
+                {{ count }} صنف منخفض
+              {% endblocktrans %}
+            </span>
+          {% endif %}
+        </div>
+        <div class="card-body">
+          {% if low_stock_levels %}
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>{% trans "المنتج" %}</th>
+                    <th>{% trans "المخزن" %}</th>
+                    <th class="text-end">{% trans "المتوفر" %}</th>
+                    <th class="text-end">{% trans "الحد الأدنى" %}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for level in low_stock_levels|slice:":8" %}
+                    <tr>
+                      <td>
+                        <a href="{% url 'inventory:product_list' %}?q={{ level.product.code }}">
+                          {{ level.product.code }}
+                        </a>
+                      </td>
+                      <td>{{ level.warehouse.code }}</td>
+                      <td class="text-end text-danger fw-semibold">
+                        {{ level.quantity_on_hand }}
+                      </td>
+                      <td class="text-end">
+                        {{ level.min_stock }}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% if low_stock_levels|length > 8 %}
+              <p class="text-muted small mt-2 mb-0">
+                {% blocktrans with count=low_stock_levels|length %}
+                  يوجد المزيد من الأصناف المنخفضة (إجمالي: {{ count }}).
+                {% endblocktrans %}
+              </p>
+            {% endif %}
+          {% else %}
+            <p class="text-muted mb-0">
+              {% trans "لا توجد حالياً أصناف تحت الحد الأدنى للمخزون." %}
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {# الصف الثالث: أحدث حركات المخزون #}
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">{% trans "أحدث حركات المخزون" %}</h5>
+          <a href="{% url 'inventory:move_list' %}" class="btn btn-sm btn-outline-secondary">
+            {% trans "عرض كل الحركات" %}
+          </a>
+        </div>
+        <div class="card-body">
+          {% if recent_moves %}
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>{% trans "التاريخ" %}</th>
+                    <th>{% trans "المنتج" %}</th>
+                    <th>{% trans "النوع" %}</th>
+                    <th class="text-end">{% trans "الكمية" %}</th>
+                    <th>{% trans "من" %}</th>
+                    <th>{% trans "إلى" %}</th>
+                    <th>{% trans "الحالة" %}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for move in recent_moves %}
+                    <tr>
+                      <td class="small text-muted">
+                        {{ move.move_date|date:"Y-m-d H:i" }}
+                      </td>
+                      <td>
+                        <a href="{% url 'inventory:product_list' %}?q={{ move.product.code }}">
+                          {{ move.product.code }}
+                        </a>
+                      </td>
+                      <td>
+                        <span class="badge bg-light text-dark border">
+                          {{ move.get_move_type_display }}
+                        </span>
+                      </td>
+                      <td class="text-end fw-semibold">
+                        {{ move.quantity }} {{ move.uom }}
+                      </td>
+                      <td class="small">
+                        {% if move.from_warehouse %}
+                          {{ move.from_warehouse.code }}
+                          {% if move.from_location %}
+                            / {{ move.from_location.code }}
+                          {% endif %}
+                        {% else %}
+                          <span class="text-muted">—</span>
+                        {% endif %}
+                      </td>
+                      <td class="small">
+                        {% if move.to_warehouse %}
+                          {{ move.to_warehouse.code }}
+                          {% if move.to_location %}
+                            / {{ move.to_location.code }}
+                          {% endif %}
+                        {% else %}
+                          <span class="text-muted">—</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if move.status == move.Status.DONE %}
+                          <span class="badge bg-success">{% trans "مكتملة" %}</span>
+                        {% elif move.status == move.Status.DRAFT %}
+                          <span class="badge bg-secondary">{% trans "مسودة" %}</span>
+                        {% elif move.status == move.Status.CANCELLED %}
+                          <span class="badge bg-danger">{% trans "ملغاة" %}</span>
+                        {% else %}
+                          <span class="badge bg-light text-dark">{{ move.get_status_display }}</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="text-muted mb-0">
+              {% trans "لا توجد حركات مخزون حديثة للعرض." %}
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# صف صغير للإجراءات السريعة (أزرار فقط بدل كروت منفصلة) #}
+  <div class="row g-2 mb-3">
+    <div class="col-auto">
+      <a href="{% url 'inventory:product_list' %}" class="btn btn-sm btn-outline-primary">
+        {% trans "إدارة المنتجات" %}
+      </a>
+    </div>
+    <div class="col-auto">
+      <a href="{% url 'inventory:warehouse_list' %}" class="btn btn-sm btn-outline-primary">
+        {% trans "إدارة المخازن" %}
+      </a>
+    </div>
+    <div class="col-auto">
+      <a href="{% url 'inventory:location_list' %}" class="btn btn-sm btn-outline-primary">
+        {% trans "مواقع التخزين" %}
+      </a>
+    </div>
+    <div class="col-auto">
+      <a href="{% url 'inventory:stocklevel_list' %}" class="btn btn-sm btn-outline-primary">
+        {% trans "مستويات المخزون" %}
+      </a>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

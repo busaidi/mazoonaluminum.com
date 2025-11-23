@@ -1416,7 +1416,7 @@ msgstr "Invoice details"
 
 #: templates/accounting/invoices/invoice_form.html:141
 msgid "بنود الفاتورة (منتجات أو بنود حرة)"
-msgstr "Invoice items (products or free items)"
+msgstr "Invoice items (product or free items)"
 
 #: templates/accounting/invoices/invoice_form.html:144
 msgid ""
@@ -1646,7 +1646,7 @@ msgstr "Edit order #%(id)s"
 #: templates/accounting/orders/order_form.html:22
 msgid "إدارة طلبات الزبائن مع إمكانية إضافة بنود من المنتجات أو كبنود حرة."
 msgstr ""
-"Manage customer orders with the ability to add items from products or as "
+"Manage customer orders with the ability to add items from product or as "
 "free items."
 
 #: templates/accounting/orders/order_form.html:26
@@ -2933,16 +2933,16 @@ msgstr ""
 msgid ""
 "اكتشف مقالات وأنشطة مزون ألمنيوم عن الأنظمة، المنتجات، والأخبار التقنية."
 msgstr ""
-"Discover Mazoon Aluminum articles and activities about systems, products, "
+"Discover Mazoon Aluminum articles and activities about systems, product, "
 "and technical news."
 
 #: templates/website/blog_list.html:53 templates/website/blog_list.html:104
 #: templates/website/blog_list.html:159
 msgid ""
-"Discover Mazoon Aluminum articles about systems, products, and technical "
+"Discover Mazoon Aluminum articles about systems, product, and technical "
 "news."
 msgstr ""
-"Discover Mazoon Aluminum articles about systems, products, and technical "
+"Discover Mazoon Aluminum articles about systems, product, and technical "
 "news."
 
 #: templates/website/blog_list.html:186
@@ -3210,7 +3210,7 @@ msgstr "Featured Products"
 
 #: templates/website/home.html:188
 msgid "عرض جميع المنتجات"
-msgstr "View all products"
+msgstr "View all product"
 
 #: templates/website/home.html:206 templates/website/product_detail.html:51
 msgid "متوفر"
@@ -3218,7 +3218,7 @@ msgstr "Available"
 
 #: templates/website/home.html:213
 msgid "لا توجد منتجات حتى الآن."
-msgstr "No products available yet."
+msgstr "No product available yet."
 
 #: templates/website/home.html:221
 msgid "أحدث من المدونة"
@@ -3318,7 +3318,7 @@ msgstr "View cart"
 
 #: templates/website/product_detail.html:92
 msgid "الرجاء تسجيل الدخول لتتمكن من الطلب أو إضافة المنتجات إلى السلة."
-msgstr "Please log in to place an order or add products to the cart."
+msgstr "Please log in to place an order or add product to the cart."
 
 #: templates/website/product_detail.html:108
 msgid "عن هذا المنتج"
@@ -3365,7 +3365,7 @@ msgstr "Featured"
 
 #: templates/website/product_list.html:119
 msgid "لا توجد منتجات متاحة حالياً."
-msgstr "No products available at the moment."
+msgstr "No product available at the moment."
 
 #: templates/website/sample.html:9
 msgid ""

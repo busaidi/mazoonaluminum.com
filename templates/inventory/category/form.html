@@ -1,0 +1,43 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "فئة المنتج" %}{% endblock %}
+
+{% block inventory_content %}
+
+<h1 class="h4 fw-bold mb-3">
+  {% if mode == "create" %}
+    {% trans "إضافة فئة جديدة" %}
+  {% else %}
+    {% trans "تعديل فئة المنتج" %}
+  {% endif %}
+</h1>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <form method="post" class="row g-3">
+      {% csrf_token %}
+
+      {% for field in form %}
+        <div class="col-md-6">
+          <label class="form-label small">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}
+            <div class="form-text small">{{ field.help_text }}</div>
+          {% endif %}
+          {% for error in field.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+
+      <div class="col-12">
+        <button class="btn btn-primary">
+          {% trans "حفظ" %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

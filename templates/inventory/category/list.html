@@ -1,0 +1,94 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "فئات المنتجات" %}{% endblock %}
+
+{% block inventory_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 fw-bold mb-1">{% trans "فئات المنتجات" %}</h1>
+    <p class="text-muted small mb-0">
+      {% trans "تصنيف المنتجات إلى مجموعات رئيسية وفرعية لسهولة التنظيم." %}
+    </p>
+  </div>
+  <a href="{% url 'inventory:category_create' %}" class="btn btn-primary btn-sm">
+    {% trans "إضافة فئة" %}
+  </a>
+</div>
+
+{# ===== البحث ===== #}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-md-6">
+        <input type="text"
+               name="q"
+               value="{{ q }}"
+               class="form-control form-control-sm"
+               placeholder="{% trans 'بحث بالاسم أو الـ Slug...' %}">
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-outline-primary btn-sm w-100">
+          {% trans "بحث" %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <table class="table table-sm table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 22%;">{% trans "الاسم" %}</th>
+          <th style="width: 18%;">{% trans "Slug" %}</th>
+          <th style="width: 20%;">{% trans "الفئة الأب" %}</th>
+          <th>{% trans "الوصف" %}</th>
+          <th class="text-center" style="width: 8%;">{% trans "الحالة" %}</th>
+          <th class="text-end" style="width: 10%;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in object_list %}
+          <tr>
+            <td class="fw-semibold">{{ c.name }}</td>
+            <td><code class="small">{{ c.slug }}</code></td>
+            <td>
+              {% if c.parent %}
+                {{ c.parent.name }}
+              {% else %}
+                <span class="text-muted small">— {% trans "رئيسية" %}</span>
+              {% endif %}
+            </td>
+            <td class="text-muted small">
+              {{ c.description|default:"-" }}
+            </td>
+            <td class="text-center">
+              {% if c.is_active %}
+                <span class="badge bg-success">{% trans "نشطة" %}</span>
+              {% else %}
+                <span class="badge bg-secondary">{% trans "موقوفة" %}</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <a href="{% url 'inventory:category_update' c.pk %}"
+                 class="btn btn-sm btn-outline-secondary">
+                {% trans "تعديل" %}
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-3">
+              {% trans "لا توجد فئات مسجلة حالياً." %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

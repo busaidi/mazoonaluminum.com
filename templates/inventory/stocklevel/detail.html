@@ -1,0 +1,120 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block title %}{{ object.product.name }} – {% trans "مستوى المخزون" %}{% endblock %}
+
+{% block inventory_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 fw-bold mb-1">
+      {{ object.product.name }}
+    </h1>
+    <p class="text-muted small mb-0">
+      {% trans "تفاصيل مستوى المخزون لهذا المنتج في مخزن/موقع محدد." %}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'inventory:stocklevel_update' object.pk %}" class="btn btn-sm btn-primary">
+      {% trans "تعديل" %}
+    </a>
+    <a href="{% url 'inventory:stocklevel_list' %}" class="btn btn-sm btn-outline-secondary">
+      {% trans "رجوع" %}
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <dl class="row mb-0 small">
+
+          <dt class="col-sm-3">{% trans "المنتج" %}</dt>
+          <dd class="col-sm-9">
+            {{ object.product.name }}
+            {% if object.product.sku %}
+              <div class="text-muted">
+                {{ object.product.sku }}
+              </div>
+            {% endif %}
+          </dd>
+
+          <dt class="col-sm-3">{% trans "المخزن" %}</dt>
+          <dd class="col-sm-9">
+            {% if object.warehouse %}
+              <a href="{% url 'inventory:warehouse_update' object.warehouse.pk %}"
+                 class="text-decoration-none">
+                {{ object.warehouse.name }}
+              </a>
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-sm-3">{% trans "الموقع" %}</dt>
+          <dd class="col-sm-9">
+            {% if object.location %}
+              <a href="{% url 'inventory:location_update' object.location.pk %}"
+                 class="text-decoration-none">
+                {{ object.location.name }}
+              </a>
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-sm-3">{% trans "المتوفر" %}</dt>
+          <dd class="col-sm-9 fw-semibold">
+            {{ object.quantity_on_hand }}
+          </dd>
+
+          <dt class="col-sm-3">{% trans "المحجوز" %}</dt>
+          <dd class="col-sm-9">
+            {{ object.quantity_reserved }}
+          </dd>
+
+          <dt class="col-sm-3">{% trans "الحد الأدنى" %}</dt>
+          <dd class="col-sm-9">
+            {{ object.min_quantity|default:"-" }}
+          </dd>
+
+          <dt class="col-sm-3">{% trans "الحد الأعلى" %}</dt>
+          <dd class="col-sm-9">
+            {{ object.max_quantity|default:"-" }}
+          </dd>
+
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <aside class="position-sticky" style="top: 80px;">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body small text-muted">
+          <h2 class="h6 fw-bold mb-2">{% trans "معلومات إضافية" %}</h2>
+          <p class="mb-1">
+            <strong>{% trans "تاريخ الإنشاء" %}:</strong>
+            {{ object.created_at|date:"Y-m-d H:i" }}
+          </p>
+          <p class="mb-0">
+            <strong>{% trans "آخر تحديث" %}:</strong>
+            {{ object.updated_at|date:"Y-m-d H:i" }}
+          </p>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm">
+        <div class="card-body small text-muted">
+          <strong class="d-block mb-1">{% trans "ملاحظة" %}:</strong>
+          <p class="mb-0">
+            {% trans "يمكن ربط هذا المستوى بحركات المخزون (إدخال/إخراج/تحويل) لتحديث الكميات تلقائياً لاحقاً." %}
+          </p>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+{% endblock %}

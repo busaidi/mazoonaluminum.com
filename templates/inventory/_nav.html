@@ -1,0 +1,65 @@
+{% load i18n %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h3 fw-bold mb-1 text-mazoon">
+      {% trans "نظام إدارة المخزون" %}
+    </h1>
+    <p class="text-muted small mb-0">
+      {% trans "إدارة المنتجات والمخازن وحركات ومستويات المخزون" %}
+    </p>
+  </div>
+</div>
+
+<ul class="nav nav-pills mazoon-nav bg-mazoon-card p-2 rounded mb-4">
+
+  <li class="nav-item">
+    <a class="nav-link {% if subsection == 'dashboard' %}active{% endif %}"
+       href="{% url 'inventory:dashboard' %}">
+      {% trans "لوحة التحكم" %}
+    </a>
+  </li>
+
+  <li class="nav-item">
+    <a class="nav-link {% if subsection == 'products' %}active{% endif %}"
+       href="{% url 'inventory:product_list' %}">
+      {% trans "المنتجات" %}
+    </a>
+  </li>
+
+  <li class="nav-item">
+    <a class="nav-link {% if subsection == 'categories' %}active{% endif %}"
+       href="{% url 'inventory:category_list' %}">
+      {% trans "الفئات" %}
+    </a>
+  </li>
+
+  <li class="nav-item">
+    <a class="nav-link {% if subsection == 'warehouses' %}active{% endif %}"
+       href="{% url 'inventory:warehouse_list' %}">
+      {% trans "المخازن" %}
+    </a>
+  </li>
+
+  <li class="nav-item">
+    <a class="nav-link {% if subsection == 'locations' %}active{% endif %}"
+       href="{% url 'inventory:location_list' %}">
+      {% trans "مواقع التخزين" %}
+    </a>
+  </li>
+
+  <li class="nav-item">
+    <a class="nav-link {% if subsection == 'moves' %}active{% endif %}"
+       href="{% url 'inventory:move_list' %}">
+      {% trans "حركات المخزون" %}
+    </a>
+  </li>
+
+  <li class="nav-item">
+    <a class="nav-link {% if subsection == 'stock_levels' %}active{% endif %}"
+       href="{% url 'inventory:stocklevel_list' %}">
+      {% trans "مستويات المخزون" %}
+    </a>
+  </li>
+
+</ul>

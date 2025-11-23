@@ -17,7 +17,7 @@ class StaticEnglishSitemap(Sitemap):
             "about": "/en/about/",
             "lab": "/en/lab/",
             "blog_list": "/en/blog/",
-            "product_list": "/en/products/",
+            "product_list": "/en/product/",
             "contact": "/en/contact/",
         }
         return paths[item]
@@ -37,7 +37,7 @@ class StaticArabicSitemap(Sitemap):
             "about": "/ar/about/",
             "lab": "/ar/lab/",
             "blog_list": "/ar/blog/",
-            "product_list": "/ar/products/",
+            "product_list": "/ar/product/",
             "contact": "/ar/contact/",
         }
         return paths[item]
@@ -82,7 +82,7 @@ class ProductEnglishSitemap(Sitemap):
         return Product.objects.filter(is_active=True)
 
     def location(self, obj):
-        return f"/en/products/{obj.slug}/"
+        return f"/en/product/{obj.slug}/"
 
     def lastmod(self, obj):
         return obj.updated_at
@@ -97,7 +97,7 @@ class ProductArabicSitemap(Sitemap):
         return Product.objects.filter(is_active=True)
 
     def location(self, obj):
-        return f"/ar/products/{obj.slug}/"
+        return f"/ar/product/{obj.slug}/"
 
     def lastmod(self, obj):
         return obj.updated_at

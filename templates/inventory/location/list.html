@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "مواقع التخزين" %}{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+  {# nav الموحد #}
+  {% include "inventory/_nav.html" %}
+
+  <div class="card shadow-sm border-0 mb-4 bg-mazoon-card">
+    <div class="card-body">
+
+      <h2 class="h5 fw-bold text-mazoon mb-3">
+        {% trans "مواقع التخزين" %}
+      </h2>
+
+      <form method="get" class="row g-2 mb-3">
+
+        <div class="col-md-4 col-sm-6">
+          <input type="text" name="q" value="{{ q }}"
+                 class="form-control"
+                 placeholder="{% trans 'بحث بالرمز أو الاسم أو المخزن' %}">
+        </div>
+
+        <div class="col-md-4 col-sm-6">
+          <select name="warehouse" class="form-select">
+            <option value="">{% trans 'كل المخازن' %}</option>
+
+            {% for wh in warehouses %}
+              <option value="{{ wh.id }}"
+                      {% if warehouse_filter|default:'' == wh.id|stringformat:'s' %}selected{% endif %}>
+                {{ wh.code }} — {{ wh.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-md-2 col-sm-4">
+          <button class="btn btn-primary w-100" type="submit">
+            {% trans "بحث" %}
+          </button>
+        </div>
+
+        <div class="col-md-2 col-sm-4">
+          <a href="{% url 'inventory:location_create' %}"
+             class="btn btn-outline-primary w-100">
+            {% trans "إضافة موقع" %}
+          </a>
+        </div>
+
+      </form>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>{% trans "المخزن" %}</th>
+              <th>{% trans "الرمز" %}</th>
+              <th>{% trans "الاسم" %}</th>
+              <th>{% trans "النوع" %}</th>
+              <th>{% trans "الحالة" %}</th>
+              <th class="text-end">{% trans "إجراءات" %}</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for loc in locations %}
+            <tr>
+              <td>{{ loc.warehouse.code }}</td>
+              <td class="fw-bold">{{ loc.code }}</td>
+              <td>{{ loc.name }}</td>
+
+              <td>
+                {% if loc.type == 'internal' %}
+                  <span class="badge bg-secondary">{% trans "داخلي" %}</span>
+                {% elif loc.type == 'supplier' %}
+                  <span class="badge bg-warning text-dark">{% trans "مورد" %}</span>
+                {% elif loc.type == 'customer' %}
+                  <span class="badge bg-info text-dark">{% trans "زبون" %}</span>
+                {% elif loc.type == 'scrap' %}
+                  <span class="badge bg-danger">{% trans "خردة" %}</span>
+                {% elif loc.type == 'transit' %}
+                  <span class="badge bg-primary">{% trans "عابر" %}</span>
+                {% endif %}
+              </td>
+
+              <td>
+                {% if loc.is_active %}
+                  <span class="badge bg-success">{% trans "نشط" %}</span>
+                {% else %}
+                  <span class="badge bg-danger">{% trans "متوقف" %}</span>
+                {% endif %}
+              </td>
+
+              <td class="text-end">
+                <a href="{% url 'inventory:location_update' loc.id %}"
+                   class="btn btn-sm btn-primary">
+                  {% trans "تعديل" %}
+                </a>
+              </td>
+            </tr>
+
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-muted py-4">
+                {% trans "لا توجد مواقع حالياً." %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+
+        </table>
+      </div>
+
+      {# Pagination #}
+      {% if is_paginated %}
+      <div class="mt-3">
+        {% include "partials/pagination.html" %}
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
