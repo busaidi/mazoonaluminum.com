@@ -14,14 +14,14 @@ from django.views.generic import (
     UpdateView,
 )
 
-from .forms import StockMoveForm, ProductForm, StockLevelForm, ProductCategoryForm
+from .forms import StockMoveForm, ProductForm, StockLevelForm, ProductCategoryForm, InventorySettingsForm
 from .models import (
     ProductCategory,
     Product,
     Warehouse,
     StockLocation,
     StockMove,
-    StockLevel,
+    StockLevel, InventorySettings,
 )
 from .services import get_stock_summary_per_warehouse, get_low_stock_levels, filter_below_min_stock_levels, \
     get_low_stock_total, filter_stock_moves_queryset, filter_products_queryset
@@ -657,3 +657,25 @@ class StockLevelUpdateView(InventoryStaffRequiredMixin, UpdateView):
     def form_valid(self, form):
         messages.success(self.request, "تم تحديث مستوى المخزون بنجاح.")
         return super().form_valid(form)
+
+
+
+
+class InventorySettingsView(InventoryStaffRequiredMixin, UpdateView):
+    model = InventorySettings
+    form_class = InventorySettingsForm
+    template_name = "inventory/settings/form.html"
+    success_url = reverse_lazy("inventory:settings")
+
+    def get_object(self, queryset=None):
+        # django-solo pattern
+        return InventorySettings.get_solo()
+
+    def form_valid(self, form):
+        messages.success(self.request, "تم حفظ إعدادات المخزون بنجاح.")
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["subsection"] = "settings"
+        return ctx

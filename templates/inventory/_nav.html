@@ -61,6 +61,12 @@
       {% trans "مستويات المخزون" %}
     </a>
   </li>
+<li class="nav-item">
+  <a class="nav-link {% if subsection == 'settings' %}active{% endif %}"
+     href="{% url 'inventory:settings' %}">
+    {% trans "الإعدادات" %}
+  </a>
+</li>
 
 </ul>
 

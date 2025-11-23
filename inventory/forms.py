@@ -2,8 +2,9 @@
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
-from .models import StockMove, Product, StockLevel, ProductCategory
+from .models import StockMove, Product, StockLevel, ProductCategory, InventorySettings
 
 
 class StockMoveForm(forms.ModelForm):
@@ -235,3 +236,72 @@ class ProductCategoryForm(forms.ModelForm):
                 widget.attrs["class"] = (css + " form-check-input").strip()
             else:
                 widget.attrs["class"] = (css + " form-control").strip()
+
+
+
+
+class InventorySettingsForm(forms.ModelForm):
+    class Meta:
+        model = InventorySettings
+        fields = [
+            "stock_move_in_prefix",
+            "stock_move_out_prefix",
+            "stock_move_transfer_prefix",
+        ]
+        widgets = {
+            "stock_move_in_prefix": forms.TextInput(
+                attrs={
+                    "class": "form-control form-control-sm",
+                    "dir": "ltr",
+                    "placeholder": "IN- أو STM-IN- مثلاً",
+                }
+            ),
+            "stock_move_out_prefix": forms.TextInput(
+                attrs={
+                    "class": "form-control form-control-sm",
+                    "dir": "ltr",
+                    "placeholder": "OUT- أو STM-OUT- مثلاً",
+                }
+            ),
+            "stock_move_transfer_prefix": forms.TextInput(
+                attrs={
+                    "class": "form-control form-control-sm",
+                    "dir": "ltr",
+                    "placeholder": "TRF- أو STM-TRF- مثلاً",
+                }
+            ),
+        }
+        labels = {
+            "stock_move_in_prefix": _("بادئة حركات الوارد (IN)"),
+            "stock_move_out_prefix": _("بادئة حركات الصادر (OUT)"),
+            "stock_move_transfer_prefix": _("بادئة حركات التحويل (TRANSFER)"),
+        }
+        help_texts = {
+            "stock_move_in_prefix": _(
+                "تُستخدم كبادئة لحركات المخزون الواردة. "
+                "مثال: IN- أو STM-IN-. سيتم استخدامها داخل نمط ترقيم يحتوي على {seq}."
+            ),
+            "stock_move_out_prefix": _(
+                "تُستخدم كبادئة لحركات المخزون الصادرة. "
+                "مثال: OUT- أو STM-OUT-."
+            ),
+            "stock_move_transfer_prefix": _(
+                "تُستخدم كبادئة لحركات تحويل المخزون بين المواقع. "
+                "مثال: TRF- أو STM-TRF-."
+            ),
+        }
+
+    # ====== Helper للتنظيف ======
+    def _clean_prefix(self, field_name: str) -> str:
+        value = self.cleaned_data.get(field_name, "") or ""
+        # نشيل المسافات ونخليها كابيتال
+        return value.strip().upper()
+
+    def clean_stock_move_in_prefix(self):
+        return self._clean_prefix("stock_move_in_prefix")
+
+    def clean_stock_move_out_prefix(self):
+        return self._clean_prefix("stock_move_out_prefix")
+
+    def clean_stock_move_transfer_prefix(self):
+        return self._clean_prefix("stock_move_transfer_prefix")

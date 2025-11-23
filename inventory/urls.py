@@ -3,6 +3,7 @@
 from django.urls import path
 
 from . import views
+from .views import InventorySettingsView
 
 app_name = "inventory"
 
@@ -145,4 +146,8 @@ urlpatterns = [
         views.StockLevelUpdateView.as_view(),
         name="stocklevel_update",
     ),
+
+
+    #setting
+    path("settings/", InventorySettingsView.as_view(), name="settings"),
 ]

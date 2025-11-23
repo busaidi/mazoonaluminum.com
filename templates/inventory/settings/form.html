@@ -1,0 +1,64 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "إعدادات المخزون" %}{% endblock %}
+
+{% block inventory_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 fw-bold mb-1 text-mazoon">
+      {% trans "إعدادات المخزون" %}
+    </h1>
+    <p class="text-muted small mb-0">
+      {% trans "ضبط بادئات ترقيم حركات المخزون حسب نوع الحركة." %}
+    </p>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <form method="post" class="row g-3">
+      {% csrf_token %}
+
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold">
+          {% trans "بادئة الحركات الواردة (IN)" %}
+        </label>
+        {{ form.stock_move_in_prefix }}
+        <div class="form-text small">
+          {% trans "مثال: IN أو REC أو PUR." %}
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold">
+          {% trans "بادئة الحركات الصادرة (OUT)" %}
+        </label>
+        {{ form.stock_move_out_prefix }}
+        <div class="form-text small">
+          {% trans "مثال: OUT أو ISS أو SAL." %}
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold">
+          {% trans "بادئة حركات التحويل (TRANSFER)" %}
+        </label>
+        {{ form.stock_move_transfer_prefix }}
+        <div class="form-text small">
+          {% trans "مثال: TRF أو MOV." %}
+        </div>
+      </div>
+
+      <div class="col-12 mt-3">
+        <button class="btn btn-primary btn-sm">
+          {% trans "حفظ الإعدادات" %}
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{% endblock %}

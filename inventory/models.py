@@ -6,10 +6,11 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Sum, F
 from django.utils import timezone
+from solo.models import SingletonModel
 from django.utils.translation import gettext_lazy as _
 
 
-from core.models import TimeStampedModel
+from core.models import TimeStampedModel, NumberedModel
 from inventory.managers import ProductCategoryManager, ProductManager, StockLocationManager, StockMoveManager, \
     StockLevelManager, WarehouseManager
 
@@ -398,7 +399,7 @@ class StockLocation(TimeStampedModel):
 # Stock moves
 # ============================================================
 
-class StockMove(TimeStampedModel):
+class StockMove(NumberedModel):
     """
     Single stock movement from a source location to a destination location.
     You can later link it to PurchaseOrder, SalesOrder, Manufacturing, etc.
@@ -506,6 +507,36 @@ class StockMove(TimeStampedModel):
         verbose_name = _("Stock move")
         verbose_name_plural = _("Stock moves")
         ordering = ("-move_date", "-id")
+
+    # ============================
+    # Numbering context
+    # ============================
+
+    def get_numbering_context(self) -> dict:
+        """
+        نضيف prefix حسب نوع الحركة:
+          - IN  → من الإعدادات
+          - OUT → من الإعدادات
+          - TRANSFER → من الإعدادات
+
+        هذا الـ prefix يُستخدم في pattern حق NumberingScheme
+        مثل: {prefix}-{seq:05d}
+        """
+        from inventory.models import InventorySettings  # لو الموديل في نفس الملف تقدر تشيله وتستخدم InventorySettings مباشرة
+
+        ctx = super().get_numbering_context()
+
+        settings = InventorySettings.get_solo()
+
+        prefix_map = {
+            self.MoveType.IN: settings.stock_move_in_prefix or "IN",
+            self.MoveType.OUT: settings.stock_move_out_prefix or "OUT",
+            self.MoveType.TRANSFER: settings.stock_move_transfer_prefix or "TRF",
+        }
+
+        ctx["prefix"] = prefix_map.get(self.move_type, "MV")
+        return ctx
+
 
     def __str__(self) -> str:
         return f"{self.product.code}: {self.quantity} {self.uom}"
@@ -674,3 +705,33 @@ class StockLevel(TimeStampedModel):
             return False
         return self.quantity_on_hand < self.min_stock
 
+
+
+
+
+class InventorySettings(SingletonModel):
+    """
+    إعدادات المخزون العامة (منها البادئة لترقيم حركات المخزون).
+    """
+
+    stock_move_in_prefix = models.CharField(
+        max_length=10,
+        default="IN",
+        verbose_name=_("بادئة الحركات الواردة (IN)"),
+    )
+    stock_move_out_prefix = models.CharField(
+        max_length=10,
+        default="OUT",
+        verbose_name=_("بادئة الحركات الصادرة (OUT)"),
+    )
+    stock_move_transfer_prefix = models.CharField(
+        max_length=10,
+        default="TRF",
+        verbose_name=_("بادئة حركات التحويل (TRANSFER)"),
+    )
+
+    class Meta:
+        verbose_name = _("إعدادات المخزون")
+
+    def __str__(self) -> str:
+        return "Inventory settings"
