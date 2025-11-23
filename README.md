@@ -26,8 +26,13 @@ python manage.py makemigrations
 ```bash
 pip install -r requirements.txt
 ```
+
 ```bash
 pip install --upgrade pip
+```
+#on windows
+```bash
+python.exe -m pip install --upgrade pip
 ```
 
 ```bash

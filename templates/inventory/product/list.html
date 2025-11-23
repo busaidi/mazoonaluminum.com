@@ -9,12 +9,53 @@
   <div>
     <h1 class="h4 fw-bold mb-1">{% trans "المنتجات" %}</h1>
     <p class="text-muted small mb-0">
-      {% trans "عرض وإدارة جميع المنتجات المسجلة في النظام." %}
+      {% trans "عرض وإدارة جميع المنتجات المسجلة في النظام مع ملخص حالة المخزون." %}
     </p>
   </div>
   <a href="{% url 'inventory:product_create' %}" class="btn btn-primary btn-sm">
     {% trans "إضافة منتج" %}
   </a>
+</div>
+
+{# ===== ملخص أعلى القائمة ===== #}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div class="d-flex flex-wrap gap-2">
+      <span class="badge bg-light text-muted border">
+        {% blocktrans with count=page_obj.paginator.count %}
+          {{ count }} منتج
+        {% endblocktrans %}
+      </span>
+
+      {% if only_published %}
+        <span class="badge bg-success-subtle text-success border">
+          {% trans "منشور فقط" %}
+        </span>
+      {% endif %}
+
+      {% if category_filter %}
+        <span class="badge bg-info-subtle text-info border">
+          {% trans "مفلتر حسب الفئة" %}
+        </span>
+      {% endif %}
+
+      {% if q %}
+        <span class="badge bg-secondary-subtle text-muted border">
+          {% blocktrans with query=q %}
+            نتيجة بحث عن: “{{ query }}”
+          {% endblocktrans %}
+        </span>
+      {% endif %}
+    </div>
+
+    <div>
+      {% if q or category_filter or only_published %}
+        <a href="?" class="btn btn-link btn-sm text-decoration-none">
+          {% trans "إعادة تعيين الفلاتر" %}
+        </a>
+      {% endif %}
+    </div>
+  </div>
 </div>
 
 {# ===== البحث ===== #}
@@ -40,16 +81,18 @@
         </select>
       </div>
 
-      <div class="col-md-3 form-check form-switch ms-2">
-        <input type="checkbox"
-               name="published"
-               value="1"
-               id="published"
-               class="form-check-input"
-               {% if only_published %}checked{% endif %}>
-        <label for="published" class="form-check-label small">
-          {% trans "منشور فقط" %}
-        </label>
+      <div class="col-md-3 d-flex align-items-center">
+        <div class="form-check form-switch ms-2">
+          <input type="checkbox"
+                 name="published"
+                 value="1"
+                 id="published"
+                 class="form-check-input"
+                 {% if only_published %}checked{% endif %}>
+          <label for="published" class="form-check-label small">
+            {% trans "منشور فقط" %}
+          </label>
+        </div>
       </div>
 
       <div class="col-md-2 text-end">
@@ -61,51 +104,204 @@
   </div>
 </div>
 
-{# ===== قائمة المنتجات ===== #}
-<div class="row row-cols-1 row-cols-md-3 g-3">
+{# ===== قائمة المنتجات – كروت ERP غنية ===== #}
+<div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
   {% for p in object_list %}
     <div class="col">
       <div class="card shadow-sm h-100 border-0">
+
+        {# هيدر البطاقة: الاسم + الكود #}
+        <div class="card-header bg-white border-0 pb-0">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h5 class="fw-bold mb-1 text-truncate" title="{{ p.name }}">
+                {{ p.name }}
+              </h5>
+              <div class="small text-muted">
+                {% trans "الكود" %}:
+                <span class="fw-semibold">{{ p.code }}</span>
+              </div>
+            </div>
+
+            <div class="text-end">
+              {# حالة النشر #}
+              {% if p.is_published %}
+                <span class="badge bg-success-subtle text-success border small d-block mb-1">
+                  {% trans "منشور" %}
+                </span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-muted border small d-block mb-1">
+                  {% trans "غير منشور" %}
+                </span>
+              {% endif %}
+
+              {# حالة التتبع في المخزون #}
+              {% if p.is_stock_item %}
+                <span class="badge bg-primary-subtle text-primary border small">
+                  {% trans "يُتابَع في المخزون" %}
+                </span>
+              {% else %}
+                <span class="badge bg-warning-subtle text-warning border small">
+                  {% trans "غير متابع في المخزون" %}
+                </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
         <div class="card-body d-flex flex-column">
 
-          <h5 class="fw-bold mb-1">{{ p.name }}</h5>
-          <span class="text-muted small d-block mb-2">{{ p.code }}</span>
-
-          {% if p.category %}
-            <span class="badge bg-light text-dark border mb-2">{{ p.category.name }}</span>
-          {% endif %}
-
-          {% if p.description %}
-            <p class="text-muted small mb-2">
-              {{ p.short_description|default:p.description|truncatechars:80 }}
-            </p>
-          {% endif %}
-
-          <div class="mt-auto">
-            {% if p.is_published %}
-              <span class="badge bg-success">{% trans "منشور" %}</span>
-            {% else %}
-              <span class="badge bg-secondary">{% trans "غير منشور" %}</span>
-            {% endif %}
+          {# صف الفئة + وحدة القياس #}
+          <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+            <div class="small">
+              <span class="text-muted">{% trans "الفئة" %}:</span>
+              {% if p.category %}
+                <span class="fw-semibold">{{ p.category.name }}</span>
+              {% else %}
+                <span class="text-muted">{% trans "غير محدد" %}</span>
+              {% endif %}
+            </div>
+            <div class="small">
+              <span class="text-muted">{% trans "الوحدة" %}:</span>
+              <span class="fw-semibold">{{ p.uom }}</span>
+            </div>
           </div>
 
-          <div class="d-flex justify-content-between mt-3">
-            <a href="{% url 'inventory:product_detail' p.pk %}"
-               class="btn btn-outline-primary btn-sm">
-              {% trans "عرض" %}
-            </a>
-            <a href="{% url 'inventory:product_update' p.pk %}"
-               class="btn btn-outline-secondary btn-sm">
-              {% trans "تعديل" %}
-            </a>
+          {# وصف مختصر #}
+          <p class="text-muted small mb-3">
+            {% if p.short_description %}
+              {{ p.short_description|truncatechars:100 }}
+            {% elif p.description %}
+              {{ p.description|truncatechars:100 }}
+            {% else %}
+              <span class="text-muted">{% trans "لا يوجد وصف مختصر." %}</span>
+            {% endif %}
+          </p>
+
+          {# ملخص المخزون #}
+          <div class="border rounded-3 p-2 mb-3 small bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="text-muted mb-1">
+                  {% trans "إجمالي المخزون المتوفر" %}
+                </div>
+                <div class="fw-bold">
+                  {{ p.total_on_hand|default:"0.000" }} {{ p.uom }}
+                </div>
+              </div>
+              <div class="text-end">
+                {% if p.has_low_stock_anywhere %}
+                  <span class="badge bg-danger-subtle text-danger border d-block mb-1">
+                    {% trans "مخزون منخفض" %}
+                  </span>
+                  <span class="text-muted small d-block">
+                    {% trans "أحد المستودعات تحت الحد الأدنى." %}
+                  </span>
+                {% else %}
+                  <span class="badge bg-success-subtle text-success border d-block">
+                    {% trans "مستقر" %}
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          {# حالة التفعيل #}
+          <div class="d-flex justify-content-between align-items-center small mb-2">
+            <div>
+              <span class="text-muted">{% trans "حالة المنتج" %}:</span>
+              {% if p.is_active %}
+                <span class="text-success fw-semibold">
+                  {% trans "نشط" %}
+                </span>
+              {% else %}
+                <span class="text-danger fw-semibold">
+                  {% trans "غير نشط" %}
+                </span>
+              {% endif %}
+            </div>
+          </div>
+
+          {# أزرار الإجراءات #}
+          <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+            <div class="btn-group btn-group-sm" role="group">
+              <a href="{% url 'inventory:product_detail' p.pk %}"
+                 class="btn btn-outline-primary">
+                {% trans "عرض التفاصيل" %}
+              </a>
+              <a href="{% url 'inventory:product_update' p.pk %}"
+                 class="btn btn-outline-secondary">
+                {% trans "تعديل" %}
+              </a>
+            </div>
+
+            {# زر مستقبلي لإنشاء حركة مخزون أو أمر بيع لهذا المنتج #}
+            <div class="dropdown">
+              <button class="btn btn-light btn-sm border dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                {% trans "إجراءات" %}
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                  <a class="dropdown-item disabled" href="#">
+                    {% trans "إنشاء حركة مخزون لهذا المنتج" %}
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item disabled" href="#">
+                    {% trans "إنشاء أمر بيع" %}
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
 
         </div>
       </div>
     </div>
   {% empty %}
-    <p class="text-muted">{% trans "لا توجد منتجات حالياً." %}</p>
+    <div class="col">
+      <div class="alert alert-light border text-center text-muted mb-0">
+        {% trans "لا توجد منتجات حالياً." %}
+      </div>
+    </div>
   {% endfor %}
 </div>
+
+{# ===== ترقيم الصفحات ===== #}
+{% if is_paginated %}
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center mb-0">
+      {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&category={{ category_filter }}{% if only_published %}&published=1{% endif %}">
+            {% trans "السابق" %}
+          </a>
+        </li>
+      {% else %}
+        <li class="page-item disabled">
+          <span class="page-link">{% trans "السابق" %}</span>
+        </li>
+      {% endif %}
+
+      <li class="page-item disabled">
+        <span class="page-link">
+          {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+        </span>
+      </li>
+
+      {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}&category={{ category_filter }}{% if only_published %}&published=1{% endif %}">
+            {% trans "التالي" %}
+          </a>
+        </li>
+      {% else %}
+        <li class="page-item disabled">
+          <span class="page-link">{% trans "التالي" %}</span>
+        </li>
+      {% endif %}
+    </ul>
+  </nav>
+{% endif %}
 
 {% endblock %}

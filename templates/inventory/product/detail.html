@@ -6,45 +6,231 @@
 {% block inventory_content %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h4 fw-bold mb-1">{{ object.name }}</h1>
-  <a href="{% url 'inventory:product_update' object.pk %}" class="btn btn-secondary btn-sm">
-    {% trans "تعديل المنتج" %}
-  </a>
+  <div>
+    <div class="d-flex align-items-center gap-2 mb-1">
+      <h1 class="h4 fw-bold mb-0 text-truncate" title="{{ object.name }}">
+        {{ object.name }}
+      </h1>
+      <span class="badge bg-light text-muted border small">
+        {% trans "الكود" %}: {{ object.code }}
+      </span>
+    </div>
+
+    <p class="text-muted small mb-0">
+      {% if object.category %}
+        <span class="me-2">
+          <span class="text-muted">{% trans "الفئة" %}:</span>
+          <span class="fw-semibold">{{ object.category.name }}</span>
+        </span>
+        <span class="text-muted mx-1">•</span>
+      {% endif %}
+      <span class="me-2">
+        <span class="text-muted">{% trans "الوحدة" %}:</span>
+        <span class="fw-semibold">{{ object.uom }}</span>
+      </span>
+    </p>
+  </div>
+
+  <div class="d-flex flex-column align-items-end gap-2">
+    {# زر تعديل + قائمة إنشاء حركات مخزون #}
+    <div class="btn-group btn-group-sm" role="group">
+      <a href="{% url 'inventory:product_update' object.pk %}"
+         class="btn btn-secondary">
+        {% trans "تعديل المنتج" %}
+      </a>
+      <button type="button"
+              class="btn btn-outline-primary dropdown-toggle"
+              data-bs-toggle="dropdown"
+              aria-expanded="false">
+        {% trans "إنشاء حركة مخزون" %}
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+          <a class="dropdown-item"
+             href="{% url 'inventory:move_create' %}?product={{ object.pk }}&move_type=in">
+            {% trans "حركة واردة (إضافة للمخزون)" %}
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item"
+             href="{% url 'inventory:move_create' %}?product={{ object.pk }}&move_type=out">
+            {% trans "حركة صادرة (خصم من المخزون)" %}
+          </a>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+        <li>
+          <a class="dropdown-item"
+             href="{% url 'inventory:move_create' %}?product={{ object.pk }}&move_type=transfer">
+            {% trans "تحويل بين مواقع/مستودعات" %}
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-end gap-1">
+      {% if object.is_published %}
+        <span class="badge bg-success-subtle text-success border small">
+          {% trans "منشور على الموقع/البوابة" %}
+        </span>
+      {% else %}
+        <span class="badge bg-secondary-subtle text-muted border small">
+          {% trans "غير منشور" %}
+        </span>
+      {% endif %}
+
+      {% if object.is_stock_item %}
+        <span class="badge bg-primary-subtle text-primary border small">
+          {% trans "يُتابَع في المخزون" %}
+        </span>
+      {% else %}
+        <span class="badge bg-warning-subtle text-warning border small">
+          {% trans "غير متابع في المخزون" %}
+        </span>
+      {% endif %}
+
+      {% if object.is_active %}
+        <span class="badge bg-success-subtle text-success border small">
+          {% trans "نشط" %}
+        </span>
+      {% else %}
+        <span class="badge bg-danger-subtle text-danger border small">
+          {% trans "غير نشط" %}
+        </span>
+      {% endif %}
+    </div>
+  </div>
 </div>
 
-<div class="card shadow-sm border-0">
+<div class="card shadow-sm border-0 mb-3">
   <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-7">
 
-    <p class="text-muted small mb-1">
-      <strong>{% trans "الكود" %}:</strong> {{ object.code }}
-    </p>
+        <h6 class="fw-bold mb-2">{% trans "الوصف" %}</h6>
+        <p class="text-muted small mb-3">
+          {% if object.short_description %}
+            {{ object.short_description }}
+          {% else %}
+            <span class="text-muted">{% trans "لا يوجد وصف مختصر." %}</span>
+          {% endif %}
+        </p>
 
-    {% if object.category %}
-      <p class="text-muted small mb-1">
-        <strong>{% trans "الفئة" %}:</strong> {{ object.category.name }}
-      </p>
-    {% endif %}
+        {% if object.description %}
+          <div class="border rounded-3 p-2 bg-light-subtle mb-3">
+            <div class="text-muted small mb-1">
+              {% trans "الوصف التفصيلي" %}
+            </div>
+            <div class="small">
+              {{ object.description|linebreaks }}
+            </div>
+          </div>
+        {% endif %}
 
-    <p><strong>{% trans "الوصف" %}:</strong></p>
-    <p class="text-muted">{{ object.description|linebreaks }}</p>
+        <div class="row g-2 small">
+          <div class="col-sm-6">
+            <div class="border rounded-3 p-2 h-100">
+              <div class="text-muted mb-1">{% trans "الوحدة الأساسية" %}</div>
+              <div class="fw-semibold">{{ object.uom }}</div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="border rounded-3 p-2 h-100">
+              <div class="text-muted mb-1">{% trans "التاريخ" %}</div>
+              <div class="mb-1">
+                <span class="text-muted">{% trans "تم الإنشاء" %}:</span>
+                <span class="fw-semibold">{{ object.created_at|date:"Y-m-d H:i" }}</span>
+              </div>
+              <div>
+                <span class="text-muted">{% trans "آخر تعديل" %}:</span>
+                <span class="fw-semibold">{{ object.updated_at|date:"Y-m-d H:i" }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-    <p class="mb-2">
-      <strong>{% trans "نوع الوحدة" %}:</strong> {{ object.uom }}
-    </p>
+      </div>
 
-    <p class="mb-2">
-      <strong>{% trans "الحالة" %}:</strong>
-      {% if object.is_published %}
-        <span class="badge bg-success">{% trans "منشور" %}</span>
-      {% else %}
-        <span class="badge bg-secondary">{% trans "غير منشور" %}</span>
-      {% endif %}
-    </p>
+      <div class="col-md-5">
+        <div class="border rounded-3 p-3 bg-light mb-2">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+              <div class="text-muted small mb-1">
+                {% trans "إجمالي المخزون المتوفر" %}
+              </div>
+              <div class="h5 mb-0 fw-bold">
+                {{ total_on_hand|default:"0.000" }} {{ object.uom }}
+              </div>
+            </div>
+            <div class="text-end">
+              {% if object.has_low_stock_anywhere %}
+                <span class="badge bg-danger-subtle text-danger border d-block mb-1">
+                  {% trans "مخزون منخفض" %}
+                </span>
+                <span class="text-muted small d-block">
+                  {% trans "يوجد مستوى واحد على الأقل تحت الحد الأدنى." %}
+                </span>
+              {% else %}
+                <span class="badge bg-success-subtle text-success border d-block">
+                  {% trans "حالة المخزون مستقرة" %}
+                </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
 
-    {% if stock_levels %}
-      <hr>
-      <h5 class="fw-bold mb-2">{% trans "مستويات المخزون" %}</h5>
+        {% if stock_levels %}
+          <div class="border rounded-3 p-3 bg-white small">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="fw-bold">{% trans "ملخص المواقع" %}</span>
+              <span class="badge bg-light text-muted border">
+                {% blocktrans with count=stock_levels|length %}
+                  {{ count }} مستوى مخزون
+                {% endblocktrans %}
+              </span>
+            </div>
+            <ul class="list-unstyled mb-0">
+              {% for lvl in stock_levels|slice:":3" %}
+                <li class="d-flex justify-content-between align-items-center mb-1">
+                  <div>
+                    <span class="fw-semibold">{{ lvl.warehouse.code }}</span>
+                    <span class="text-muted">/ {{ lvl.location.code }}</span>
+                  </div>
+                  <div class="text-end">
+                    <div class="fw-semibold">
+                      {{ lvl.quantity_on_hand }} {{ object.uom }}
+                    </div>
+                    {% if lvl.is_below_min %}
+                      <span class="badge bg-warning-subtle text-warning border small">
+                        {% trans "تحت الحد الأدنى" %}
+                      </span>
+                    {% endif %}
+                  </div>
+                </li>
+              {% endfor %}
+              {% if stock_levels|length > 3 %}
+                <li class="text-muted small mt-1">
+                  {% blocktrans with extra=stock_levels|length|add:"-3" %}
+                    و {{ extra }} مستوى إضافي...
+                  {% endblocktrans %}
+                </li>
+              {% endif %}
+            </ul>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
 
+{% if stock_levels %}
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+      <h5 class="fw-bold mb-0">{% trans "مستويات المخزون حسب المستودع والموقع" %}</h5>
+      <span class="text-muted small">
+        {% trans "تفصيل الكميات والحد الأدنى لكل موقع." %}
+      </span>
+    </div>
+    <div class="card-body pt-0">
       <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
           <thead class="table-light">
@@ -53,25 +239,48 @@
               <th>{% trans "الموقع" %}</th>
               <th class="text-end">{% trans "المتوفر" %}</th>
               <th class="text-end">{% trans "محجوز" %}</th>
+              <th class="text-end">{% trans "المتاح" %}</th>
               <th class="text-end">{% trans "الحد الأدنى" %}</th>
+              <th class="text-end">{% trans "الحالة" %}</th>
             </tr>
           </thead>
           <tbody>
             {% for lvl in stock_levels %}
-              <tr>
-                <td>{{ lvl.warehouse.code }}</td>
-                <td>{{ lvl.location.code }}</td>
-
+              <tr class="{% if lvl.is_below_min %}table-warning{% endif %}">
+                <td>
+                  <span class="fw-semibold">{{ lvl.warehouse.code }}</span>
+                  <span class="text-muted small d-block">{{ lvl.warehouse.name }}</span>
+                </td>
+                <td>
+                  <span class="fw-semibold">{{ lvl.location.code }}</span>
+                  <span class="text-muted small d-block">{{ lvl.location.name }}</span>
+                </td>
                 <td class="text-end fw-semibold">
                   {{ lvl.quantity_on_hand }}
                 </td>
-
                 <td class="text-end">
                   {{ lvl.quantity_reserved }}
                 </td>
-
+                <td class="text-end">
+                  {{ lvl.available_quantity|default:0 }}
+                </td>
                 <td class="text-end">
                   {{ lvl.min_stock }}
+                </td>
+                <td class="text-end">
+                  {% if lvl.is_below_min and lvl.min_stock %}
+                    <span class="badge bg-danger-subtle text-danger border small">
+                      {% trans "تحت الحد الأدنى" %}
+                    </span>
+                  {% elif lvl.min_stock and lvl.quantity_on_hand > 0 %}
+                    <span class="badge bg-success-subtle text-success border small">
+                      {% trans "فوق الحد الأدنى" %}
+                    </span>
+                  {% else %}
+                    <span class="badge bg-secondary-subtle text-muted border small">
+                      {% trans "بدون حد أدنى" %}
+                    </span>
+                  {% endif %}
                 </td>
               </tr>
             {% endfor %}
@@ -79,14 +288,16 @@
         </table>
       </div>
 
-      <p class="text-muted small mt-2">
-        {% trans "إجمالي الكمية المتوفرة" %}:
-        <strong>{{ total_on_hand }}</strong>
+      <p class="text-muted small mt-2 mb-0">
+        {% trans "إجمالي الكمية المتوفرة لجميع المستويات" %}:
+        <strong>{{ total_on_hand|default:"0.000" }} {{ object.uom }}</strong>
       </p>
-
-    {% endif %}
-
+    </div>
   </div>
-</div>
+{% else %}
+  <div class="alert alert-light border text-muted small">
+    {% trans "لا توجد مستويات مخزون مسجلة لهذا المنتج حتى الآن." %}
+  </div>
+{% endif %}
 
 {% endblock %}

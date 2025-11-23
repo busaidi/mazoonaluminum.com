@@ -23,6 +23,8 @@ from .models import (
     StockMove,
     StockLevel,
 )
+from .services import get_stock_summary_per_warehouse, get_low_stock_levels, filter_below_min_stock_levels, \
+    get_low_stock_total, filter_stock_moves_queryset, filter_products_queryset
 
 
 # ============================================================
@@ -81,20 +83,10 @@ class InventoryDashboardView(InventoryStaffRequiredMixin, TemplateView):
         )
 
         # stock summary per warehouse (نستخدم warehouse مباشرة + quantity_on_hand)
-        stock_per_warehouse = (
-            StockLevel.objects
-            .select_related("warehouse")
-            .values("warehouse__code", "warehouse__name")
-            .annotate(total_qty=Sum("quantity_on_hand"))
-            .order_by("warehouse__code")
-        )
+        stock_per_warehouse = get_stock_summary_per_warehouse()
 
         # Low stock: min_stock > 0 && quantity_on_hand < min_stock
-        low_stock_levels = (
-            StockLevel.objects
-            .select_related("product", "warehouse", "location")
-            .filter(min_stock__gt=0, quantity_on_hand__lt=F("min_stock"))
-        )
+        low_stock_levels = get_low_stock_levels()
 
         ctx.update(
             {
@@ -185,28 +177,25 @@ class ProductListView(InventoryStaffRequiredMixin, ListView):
     context_object_name = "products"
     paginate_by = 25
 
+
     def get_queryset(self):
-        qs = (
+        # Base queryset مع العلاقات والترتيب
+        base_qs = (
             Product.objects
             .select_related("category")
             .order_by("code")
         )
+
         q = self.request.GET.get("q", "").strip()
         category_id = self.request.GET.get("category") or None
         only_published = self.request.GET.get("published") == "1"
 
-        if q:
-            qs = qs.filter(
-                Q(code__icontains=q)
-                | Q(name__icontains=q)
-                | Q(short_description__icontains=q)
-            )
-
-        if category_id:
-            qs = qs.filter(category_id=category_id)
-
-        if only_published:
-            qs = qs.filter(is_published=True)
+        qs = filter_products_queryset(
+            base_qs,
+            q=q,
+            category_id=category_id,
+            only_published=only_published,
+        )
 
         self.search_query = q
         self.category_filter = category_id
@@ -442,7 +431,8 @@ class StockMoveListView(InventoryStaffRequiredMixin, ListView):
     paginate_by = 50
 
     def get_queryset(self):
-        qs = (
+        # Base queryset مع العلاقات والترتيب
+        base_qs = (
             StockMove.objects
             .select_related(
                 "product",
@@ -458,25 +448,18 @@ class StockMoveListView(InventoryStaffRequiredMixin, ListView):
         move_type = self.request.GET.get("move_type") or None
         status = self.request.GET.get("status") or None
 
-        if q:
-            qs = qs.filter(
-                Q(product__code__icontains=q)
-                | Q(product__name__icontains=q)
-                | Q(reference__icontains=q)
-                | Q(from_warehouse__code__icontains=q)
-                | Q(to_warehouse__code__icontains=q)
-            )
-
-        if move_type in dict(StockMove.MoveType.choices):
-            qs = qs.filter(move_type=move_type)
-
-        if status in dict(StockMove.Status.choices):
-            qs = qs.filter(status=status)
+        qs = filter_stock_moves_queryset(
+            base_qs,
+            q=q,
+            move_type=move_type,
+            status=status,
+        )
 
         self.search_query = q
         self.move_type_filter = move_type
         self.status_filter = status
         return qs
+
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -487,6 +470,7 @@ class StockMoveListView(InventoryStaffRequiredMixin, ListView):
         ctx["status_choices"] = StockMove.Status.choices
         ctx["subsection"] = "moves"
         return ctx
+
 
 
 class StockMoveDetailView(InventoryStaffRequiredMixin, DetailView):
@@ -507,10 +491,31 @@ class StockMoveCreateView(InventoryStaffRequiredMixin, CreateView):
     success_url = reverse_lazy("inventory:move_list")
 
     def get_initial(self):
+        """
+        Prefill form using query string params when available:
+        ?product=ID&move_type=in|out|transfer&from_warehouse=&from_location=&to_warehouse=&to_location=
+        """
         initial = super().get_initial()
-        # قيمة أولية منطقية للكمية
+        request = self.request
+
+        # sensible default for quantity
         initial.setdefault("quantity", Decimal("0.000"))
+
+        # map query params to form fields
+        for field in [
+            "product",
+            "move_type",
+            "from_warehouse",
+            "from_location",
+            "to_warehouse",
+            "to_location",
+        ]:
+            value = request.GET.get(field)
+            if value:
+                initial[field] = value
+
         return initial
+
 
     def form_valid(self, form):
         """
@@ -580,15 +585,13 @@ class StockLevelListView(InventoryStaffRequiredMixin, ListView):
             qs = qs.filter(warehouse_id=wh)
 
         if below_min:
-            qs = qs.filter(
-                min_stock__gt=Decimal("0.000"),
-                quantity_on_hand__lt=F("min_stock"),
-            )
+            qs = filter_below_min_stock_levels(qs)
 
         self.search_query = q
         self.warehouse_filter = wh
         self.below_min_only = below_min
         return qs
+
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -598,10 +601,7 @@ class StockLevelListView(InventoryStaffRequiredMixin, ListView):
         ctx["warehouses"] = Warehouse.objects.filter(is_active=True)
 
         # إجمالي المستويات تحت الحد الأدنى (بدون فلاتر البحث)
-        ctx["low_total"] = StockLevel.objects.filter(
-            min_stock__gt=Decimal("0.000"),
-            quantity_on_hand__lt=F("min_stock"),
-        ).count()
+        ctx["low_total"] = get_low_stock_total()
 
         ctx["subsection"] = "stock_levels"
         return ctx

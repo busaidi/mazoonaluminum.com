@@ -10,6 +10,8 @@ from django.utils.translation import gettext_lazy as _
 
 
 from core.models import TimeStampedModel
+from inventory.managers import ProductCategoryManager, ProductManager, StockLocationManager, StockMoveManager, \
+    StockLevelManager, WarehouseManager
 
 
 # ============================================================
@@ -51,6 +53,8 @@ class ProductCategory(TimeStampedModel):
         default=True,
         verbose_name=_("نشط"),
     )
+
+    objects = ProductCategoryManager()
 
     class Meta:
         verbose_name = _("تصنيف منتج")
@@ -175,6 +179,8 @@ class Product(TimeStampedModel):
         help_text=_("إذا تم تفعيله، يمكن عرض المنتج في الموقع أو بوابة العملاء."),
     )
 
+    objects = ProductManager()
+
     class Meta:
         verbose_name = _("منتج")
         verbose_name_plural = _("المنتجات")
@@ -275,6 +281,8 @@ class Warehouse(TimeStampedModel):
         verbose_name=_("Active"),
     )
 
+    objects = WarehouseManager()
+
     class Meta:
         verbose_name = _("Warehouse")
         verbose_name_plural = _("Warehouses")
@@ -284,13 +292,16 @@ class Warehouse(TimeStampedModel):
         return f"{self.code} – {self.name}"
 
     @property
-    def stock_levels(self):
+    def stock_levels_qs(self):
         """
-        كل مستويات المخزون المرتبطة بهذا المستودع.
-        نستخدم select_related لتقليل الاستعلامات في القوالب.
+        All stock levels for this warehouse with related product and location.
+
+        Note:
+        We use 'stock_levels_qs' to avoid shadowing the reverse relation
+        'stock_levels' from StockLevel.related_name.
         """
         return (
-            self.stock_levels
+            self.stock_levels  # ← هذا الآن هو الـ reverse manager الحقيقي
             .select_related("product", "location")
             .all()
         )
@@ -319,6 +330,7 @@ class Warehouse(TimeStampedModel):
         هل يوجد أي صنف منخفض المخزون في هذا المستودع؟
         """
         return self.low_stock_count > 0
+
 
 # ============================================================
 # Stock locations
@@ -370,6 +382,7 @@ class StockLocation(TimeStampedModel):
         default=True,
         verbose_name=_("Active"),
     )
+    objects = StockLocationManager()
 
     class Meta:
         verbose_name = _("Stock location")
@@ -486,6 +499,8 @@ class StockMove(TimeStampedModel):
         blank=True,
         verbose_name=_("Note"),
     )
+
+    objects = StockMoveManager()
 
     class Meta:
         verbose_name = _("Stock move")
@@ -618,6 +633,8 @@ class StockLevel(TimeStampedModel):
         verbose_name=_("Minimum stock"),
     )
 
+    objects = StockLevelManager()
+
     class Meta:
         verbose_name = _("Stock level")
         verbose_name_plural = _("Stock levels")
@@ -640,10 +657,20 @@ class StockLevel(TimeStampedModel):
     # ============================
 
     @property
+    def available_quantity(self) -> Decimal:
+        """
+        Available quantity = on_hand - reserved.
+        """
+        return (self.quantity_on_hand or Decimal("0.000")) - (
+                self.quantity_reserved or Decimal("0.000")
+        )
+
+    @property
     def is_below_min(self) -> bool:
         """
-        هل الكمية الحالية أقل من الحد الأدنى المحدد لهذا المستوى؟
+        Is current quantity below configured minimum?
         """
         if not self.min_stock:
             return False
         return self.quantity_on_hand < self.min_stock
+

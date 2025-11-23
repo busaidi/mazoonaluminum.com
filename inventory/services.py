@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Sum, Q
 from django.utils.translation import gettext_lazy as _
 
 from .models import StockLevel, StockMove
@@ -173,6 +173,42 @@ def apply_stock_move_on_delete(move: StockMove) -> None:
 # ============================================================
 # Reservation helpers (order-level reservations)
 # ============================================================
+# ============================================================
+# Dashboard helpers
+# ============================================================
+
+def get_stock_summary_per_warehouse():
+    """
+    ملخص إجمالي الكمية لكل مستودع.
+    يرجع QuerySet من dicts:
+      - warehouse__code
+      - warehouse__name
+      - total_qty
+    """
+    return (
+        StockLevel.objects
+        .select_related("warehouse")
+        .values("warehouse__code", "warehouse__name")
+        .annotate(total_qty=Sum("quantity_on_hand"))
+        .order_by("warehouse__code")
+    )
+
+
+def get_low_stock_levels():
+    """
+    جميع مستويات المخزون التي تحت الحد الأدنى:
+      min_stock > 0 && quantity_on_hand < min_stock
+    مع select_related للعرض في القوالب بدون N+1.
+    """
+    return (
+        StockLevel.objects
+        .select_related("product", "warehouse", "location")
+        .filter(
+            min_stock__gt=Decimal("0.000"),
+            quantity_on_hand__lt=F("min_stock"),
+        )
+    )
+
 
 @transaction.atomic
 def reserve_stock_for_order(
@@ -283,3 +319,101 @@ def get_available_stock(*, product, warehouse, location) -> Decimal:
         return Decimal("0.000")
 
     return (level.quantity_on_hand or Decimal("0.000")) - (level.quantity_reserved or Decimal("0.000"))
+# ============================================================
+# Stock level list helpers
+# ============================================================
+
+def filter_below_min_stock_levels(qs):
+    """
+    يطبّق فلتر 'تحت الحد الأدنى' على QuerySet معيّن.
+    يُستخدم في شاشة مستويات المخزون وغيرها.
+    """
+    return qs.filter(
+        min_stock__gt=Decimal("0.000"),
+        quantity_on_hand__lt=F("min_stock"),
+    )
+
+
+def get_low_stock_total() -> int:
+    """
+    يعيد العدد الإجمالي لمستويات المخزون تحت الحد الأدنى
+    (بدون أي فلاتر بحث).
+    """
+    base_qs = StockLevel.objects.all()
+    return filter_below_min_stock_levels(base_qs).count()
+# ============================================================
+# Stock move list helpers
+# ============================================================
+
+def filter_stock_moves_queryset(
+    qs,
+    *,
+    q: str | None = None,
+    move_type: str | None = None,
+    status: str | None = None,
+):
+    """
+    يطبّق فلاتر البحث القياسية على QuerySet لحركات المخزون:
+
+      - q         : بحث بالكود / اسم المنتج / المرجع / كود المخزن
+      - move_type : نوع الحركة (in / out / transfer)
+      - status    : حالة الحركة (draft / done / cancelled)
+
+    لا يغيّر select_related أو order_by — هذا مسئولية الفيو.
+    """
+    if q:
+        q = q.strip()
+        if q:
+            qs = qs.filter(
+                Q(product__code__icontains=q)
+                | Q(product__name__icontains=q)
+                | Q(reference__icontains=q)
+                | Q(from_warehouse__code__icontains=q)
+                | Q(to_warehouse__code__icontains=q)
+            )
+
+    # فلترة نوع الحركة (نتأكد أن القيمة من الخيارات المسموحة)
+    if move_type in dict(StockMove.MoveType.choices):
+        qs = qs.filter(move_type=move_type)
+
+    # فلترة الحالة
+    if status in dict(StockMove.Status.choices):
+        qs = qs.filter(status=status)
+
+    return qs
+# ============================================================
+# Product list helpers
+# ============================================================
+
+def filter_products_queryset(
+    qs,
+    *,
+    q: str | None = None,
+    category_id: str | None = None,
+    only_published: bool = False,
+):
+    """
+    يطبّق فلاتر البحث القياسية على QuerySet للمنتجات:
+
+      - q             : بحث بالكود / الاسم / الوصف المختصر
+      - category_id   : رقم التصنيف (id) لتقييد النتائج
+      - only_published: لو True يعرض المنتجات المنشورة فقط
+
+    لا يغيّر select_related أو order_by — هذا مسئولية الفيو.
+    """
+    if q:
+        q = q.strip()
+        if q:
+            qs = qs.filter(
+                Q(code__icontains=q)
+                | Q(name__icontains=q)
+                | Q(short_description__icontains=q)
+            )
+
+    if category_id:
+        qs = qs.filter(category_id=category_id)
+
+    if only_published:
+        qs = qs.filter(is_published=True)
+
+    return qs
