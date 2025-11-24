@@ -18,17 +18,32 @@ python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 ```
 ```bash
-pip install "Django>=5.2,<5.3"
+pip install -r requirements.txt
 ```
+```bash
+pip install --upgrade pip
+```
+
 ```bash
 python manage.py makemigrations
 ```
 ```bash
-pip install -r requirements.txt
+python manage.py migrate
 ```
-
 ```bash
-pip install --upgrade pip
+python manage.py seed_users
+```
+```bash
+python manage.py seed_website_data
+```
+```bash
+python manage.py seed_journals
+```
+```bash
+ python manage.py seed_uom
+```
+```bash
+python manage.py runserver
 ```
 #on windows
 ```bash
@@ -41,9 +56,7 @@ python -m pip freeze > requirements.txt
 ```bash
 python manage.py shell
 ```
-```bash
-python manage.py migrate
-```
+
 ```bash
 python manage.py createsuperuser
 ```
@@ -51,10 +64,7 @@ python manage.py createsuperuser
 ```bash
 python manage.py seed_accounting_staff_group
 ```
-```bash
 
-python manage.py seed_users
-```
 
 
 
@@ -64,18 +74,12 @@ python manage.py seed_hamed_user
 ```bash
 python manage.py seed_agent_customer
 ```
-```bash
-python manage.py seed_website_data
-```
+
 ```bash
 python manage.py seed_accounts
 ```
-```bash
-python manage.py seed_journals
-```
-```bash
-python manage.py runserver
-```
+
+
 ```bash
 python manage.py test ledger -v 2
 ```

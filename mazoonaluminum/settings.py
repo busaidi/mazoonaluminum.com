@@ -19,13 +19,14 @@ INSTALLED_APPS = [
     "django.contrib.sitemaps",
     "modeltranslation",
     #my Website Blog and product
-    "core",
-    "website",
+    "core.apps.CoreConfig",
+    "website.apps.WebsiteConfig",
     "accounting.apps.AccountingConfig",
     "portal.apps.PortalConfig",
-    "cart",
-    "ledger",
+    "cart.apps.CartConfig",
+    "ledger.apps.LedgerConfig",
     "inventory.apps.InventoryConfig",
+    "uom.apps.UomConfig",
 ]
 
 MIDDLEWARE = [

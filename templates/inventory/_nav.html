@@ -62,6 +62,13 @@
     </a>
   </li>
 <li class="nav-item">
+  <a class="nav-link {% if subsection == 'uom' %}active{% endif %}"
+     href="{% url 'uom:unit_list' %}">
+    <i class="bi bi-sliders"></i>
+    <span class="me-2">{% trans "وحدات القياس" %}</span>
+  </a>
+</li>
+<li class="nav-item">
   <a class="nav-link {% if subsection == 'settings' %}active{% endif %}"
      href="{% url 'inventory:settings' %}">
     {% trans "الإعدادات" %}

@@ -13,6 +13,7 @@ from django.utils.translation import gettext_lazy as _
 from core.models import TimeStampedModel, NumberedModel
 from inventory.managers import ProductCategoryManager, ProductManager, StockLocationManager, StockMoveManager, \
     StockLevelManager, WarehouseManager
+from uom.models import UnitOfMeasure
 
 
 # ============================================================
@@ -133,7 +134,7 @@ class Product(TimeStampedModel):
         help_text=_("كود داخلي فريد، مثل: MZN-46-FRAME"),
     )
 
-    # Name/description (يمكن لاحقاً ربطها بـ django-modeltranslation)
+    # Name/description (later can be linked to django-modeltranslation)
     name = models.CharField(
         max_length=255,
         verbose_name=_("اسم المنتج"),
@@ -151,13 +152,71 @@ class Product(TimeStampedModel):
         verbose_name=_("وصف تفصيلي"),
     )
 
-    # Unit of measure (base)
-    uom = models.CharField(
-        max_length=20,
-        default="PCS",
-        verbose_name=_("وحدة القياس"),
-        help_text=_("مثال: PCS, M, KG, SET"),
+    # ============================
+    #   Units of measure
+    # ============================
+
+    # Base quantity UoM (e.g. m, pcs)
+    base_uom = models.ForeignKey(
+        UnitOfMeasure,
+        on_delete=models.PROTECT,
+        related_name="products_as_base",
+        verbose_name=_("وحدة القياس الأساسية"),
+        help_text=_("الوحدة الأساسية للمخزون، مثل: M, PCS."),
     )
+
+    # Optional alternative UoM (e.g. roll, box) with factor
+    alt_uom = models.ForeignKey(
+        UnitOfMeasure,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="products_as_alt",
+        verbose_name=_("وحدة بديلة"),
+        help_text=_(
+            "وحدة أخرى للبيع أو الشراء (مثل: لفة، كرتون). "
+            "سيتم تعريف 1 وحدة بديلة كـ alt_factor من الوحدة الأساسية."
+        ),
+    )
+
+    alt_factor = models.DecimalField(
+        max_digits=18,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        verbose_name=_("عامل تحويل الوحدة البديلة"),
+        help_text=_(
+            "كم تساوي 1 وحدة بديلة من الوحدة الأساسية. "
+            "مثال: إذا الأساس متر والبديلة لفة 6م، اكتب 6."
+        ),
+    )
+
+    # Weight UoM (e.g. kg) and relation to base unit
+    weight_uom = models.ForeignKey(
+        UnitOfMeasure,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="products_as_weight",
+        verbose_name=_("وحدة الوزن"),
+        help_text=_("الوحدة المستخدمة للوزن، مثل: KG."),
+    )
+
+    weight_per_base = models.DecimalField(
+        max_digits=18,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        verbose_name=_("الوزن لكل وحدة أساسية"),
+        help_text=_(
+            "الوزن في وحدة الوزن لكل 1 من الوحدة الأساسية. "
+            "مثال: إذا الأساس متر ووحدة الوزن كجم، هذا الحقل هو كجم/م."
+        ),
+    )
+
+    # ============================
+    #   Inventory / status flags
+    # ============================
 
     # Is this tracked in stock?
     is_stock_item = models.BooleanField(
@@ -189,6 +248,120 @@ class Product(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.code} – {self.name}"
+
+    # ============================
+    #   UoM converters
+    # ============================
+
+    def convert_qty(self, qty, from_uom, to_uom):
+        """
+        Convert quantity between base_uom and alt_uom using alt_factor.
+
+        Rules:
+        - 1 alt_uom = alt_factor * base_uom
+        """
+        if qty is None:
+            return None
+
+        qty = Decimal(qty)
+
+        # Same unit: nothing to do
+        if from_uom == to_uom:
+            return qty
+
+        if not self.alt_uom or not self.alt_factor:
+            raise ValueError("No alternative unit/factor configured for this product.")
+
+        factor = Decimal(self.alt_factor)
+
+        # alt -> base
+        if from_uom == self.alt_uom and to_uom == self.base_uom:
+            return qty * factor
+
+        # base -> alt
+        if from_uom == self.base_uom and to_uom == self.alt_uom:
+            if factor == 0:
+                raise ZeroDivisionError("alt_factor cannot be zero.")
+            return qty / factor
+
+        raise ValueError("Unsupported conversion for this product (unit is not linked).")
+
+    def to_base(self, qty, uom=None):
+        """
+        Always return quantity in base_uom.
+        If uom is None, assume qty is already in base_uom.
+        """
+        if qty is None:
+            return None
+
+        if uom is None or uom == self.base_uom:
+            return Decimal(qty)
+
+        return self.convert_qty(qty=qty, from_uom=uom, to_uom=self.base_uom)
+
+    def to_alt(self, qty, uom=None):
+        """
+        Return quantity in alt_uom (if configured).
+        If uom is None, assume qty is in base_uom.
+        """
+        if qty is None:
+            return None
+
+        if not self.alt_uom:
+            raise ValueError("No alternative unit configured for this product.")
+
+        from_uom = uom or self.base_uom
+        return self.convert_qty(qty=qty, from_uom=from_uom, to_uom=self.alt_uom)
+
+    def qty_to_weight(self, qty, qty_uom=None):
+        """
+        Convert any quantity (base or alt) to weight in 'weight_uom'.
+
+        Steps:
+        1) Convert qty to base_uom.
+        2) Multiply by weight_per_base to get weight.
+        """
+        if qty is None:
+            return None
+
+        if self.weight_uom is None or self.weight_per_base is None:
+            raise ValueError("Weight is not configured for this product.")
+
+        qty_base = self.to_base(qty=qty, uom=qty_uom)
+        return qty_base * Decimal(self.weight_per_base)
+
+    def weight_to_qty(self, weight, to_uom=None):
+        """
+        Convert a weight (in 'weight_uom') back to quantity (base or alt).
+
+        Steps:
+        1) Compute quantity in base_uom: qty_base = weight / weight_per_base
+        2) If to_uom is alt_uom, convert base -> alt
+        """
+        if weight is None:
+            return None
+
+        if self.weight_uom is None or self.weight_per_base is None:
+            raise ValueError("Weight is not configured for this product.")
+
+        weight = Decimal(weight)
+
+        if self.weight_per_base == 0:
+            raise ZeroDivisionError("weight_per_base cannot be zero.")
+
+        qty_base = weight / Decimal(self.weight_per_base)
+
+        if to_uom is None or to_uom == self.base_uom:
+            return qty_base
+
+        if to_uom == self.alt_uom:
+            return self.convert_qty(
+                qty=qty_base,
+                from_uom=self.base_uom,
+                to_uom=self.alt_uom,
+            )
+
+        raise ValueError("Unsupported target unit for this product.")
 
     # ============================
     # Inventory helpers
@@ -248,6 +421,7 @@ class Product(TimeStampedModel):
         You can later extend this to check orders/invoices, etc.
         """
         return not self.stock_moves.exists()
+
 
 
 # ============================================================
@@ -403,6 +577,11 @@ class StockMove(NumberedModel):
     """
     Single stock movement from a source location to a destination location.
     You can later link it to PurchaseOrder, SalesOrder, Manufacturing, etc.
+
+    Important:
+    - Stored quantity is in whatever UoM the user selected (uom field).
+    - For updating StockLevel we should always convert to product.base_uom
+      using product.to_base(...) (see get_base_quantity()).
     """
 
     class MoveType(models.TextChoices):
@@ -471,11 +650,21 @@ class StockMove(NumberedModel):
         verbose_name=_("Quantity"),
     )
 
-    uom = models.CharField(
-        max_length=20,
+
+    # 🔴 كان CharField, الآن ForeignKey على UnitOfMeasure
+    uom = models.ForeignKey(
+        UnitOfMeasure,
+        on_delete=models.PROTECT,
+        related_name="stock_moves",
         verbose_name=_("Unit of measure"),
-        help_text=_("Usually copied from product.uom."),
+        help_text=_(
+            "Unit of measure used for this move "
+            "(must be base or alternative UoM of the product)."
+        ),
+        null=True,   # ✅ مؤقتاً عشان نعدي مرحلة المايغريشن بدون مشكلة
+        blank=True,  # ✅
     )
+
 
     move_date = models.DateTimeField(
         default=timezone.now,
@@ -515,16 +704,19 @@ class StockMove(NumberedModel):
     def get_numbering_context(self) -> dict:
         """
         نضيف prefix حسب نوع الحركة:
-          - IN  → من الإعدادات
-          - OUT → من الإعدادات
-          - TRANSFER → من الإعدادات
+          - IN       → من إعدادات المخزون
+          - OUT      → من إعدادات المخزون
+          - TRANSFER → من إعدادات المخزون
 
-        هذا الـ prefix يُستخدم في pattern حق NumberingScheme
-        مثل: {prefix}-{seq:05d}
+        هذا الـ prefix يُستخدم في pattern مثل: {prefix}-{seq:05d}
         """
-        from inventory.models import InventorySettings  # لو الموديل في نفس الملف تقدر تشيله وتستخدم InventorySettings مباشرة
+        from inventory.models import InventorySettings  # import محلي
 
-        ctx = super().get_numbering_context()
+        # نأخذ أي سياق أساسي من NumberedModel (لو موجود)
+        try:
+            ctx = super().get_numbering_context() or {}
+        except AttributeError:
+            ctx = {}
 
         settings = InventorySettings.get_solo()
 
@@ -537,9 +729,14 @@ class StockMove(NumberedModel):
         ctx["prefix"] = prefix_map.get(self.move_type, "MV")
         return ctx
 
-
     def __str__(self) -> str:
-        return f"{self.product.code}: {self.quantity} {self.uom}"
+        # نعرض كود المنتج + الكمية + كود وحدة القياس
+        uom_code = self.uom.code if self.uom_id else "?"
+        return f"{self.product.code}: {self.quantity} {uom_code}"
+
+    # ============================
+    # Validation
+    # ============================
 
     def clean(self):
         super().clean()
@@ -569,9 +766,33 @@ class StockMove(NumberedModel):
             if self.to_location.warehouse_id != self.to_warehouse_id:
                 raise ValidationError(_("Destination location must belong to destination warehouse."))
 
+        # ✅ تأكد أن الـ UoM المختارة متوافقة مع المنتج:
+        if self.product_id and self.uom_id:
+            allowed_uoms = [self.product.base_uom]
+            if self.product.alt_uom:
+                allowed_uoms.append(self.product.alt_uom)
+            # هنا عمداً ما نسمح بوحدة الوزن لحركة المخزون (نخزن المخزون دائماً بوحدة الكمية)
+            if self.uom not in allowed_uoms:
+                raise ValidationError(
+                    _("Selected unit of measure is not configured for this product (must be base or alternative UoM).")
+                )
+
+    # ============================
+    # Helpers
+    # ============================
+
     @property
     def is_done(self) -> bool:
         return self.status == self.Status.DONE
+
+    def get_base_quantity(self) -> Decimal:
+        """
+        Return quantity of this move converted to product.base_uom.
+
+        This should be used when updating StockLevel.quantity_on_hand so that
+        all stock levels are stored in a single consistent UoM (the base_uom).
+        """
+        return self.product.to_base(self.quantity, uom=self.uom)
 
     def save(self, *args, **kwargs):
         """
@@ -592,18 +813,15 @@ class StockMove(NumberedModel):
 
         if not is_create:
             try:
-                # نقرأ الحالة القديمة فقط بدون تحميل كل الحقول
                 old_status = self.__class__.objects.only("status").get(pk=self.pk).status
             except self.__class__.DoesNotExist:
-                # حالة نادرة جداً، نعاملها كإنشاء جديد
                 is_create = True
                 old_status = None
 
-        # نحفظ أولاً (حتى يكون عندنا pk وأي تغييرات أخرى)
         super().save(*args, **kwargs)
 
-        # بعدها نطبّق منطق تعديل المخزون بناءً على تغيير الحالة
         apply_stock_move_status_change(move=self, old_status=old_status, is_create=is_create)
+
 
 
 

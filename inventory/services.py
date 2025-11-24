@@ -16,13 +16,13 @@ from .models import StockLevel, StockMove
 @transaction.atomic
 def _adjust_stock_level(*, product, warehouse, location, delta: Decimal) -> StockLevel:
     """
-    يعدّل مستوى المخزون (quantity_on_hand) بمقدار delta.
+    يعدّل مستوى المخزون (quantity_on_hand) بمقدار delta *بالوحدة الأساسية للمنتج* (base_uom).
+
     إذا لم يوجد StockLevel لهذا المنتج + (مخزن/موقع) يتم إنشاؤه بصفر ثم التطبيق.
 
     نستخدم select_for_update + F expressions لسلامة التوازي (concurrency).
     """
     if delta == 0:
-        # لا حاجة لأي استعلامات إذا ما في تغيير
         level, _ = StockLevel.objects.get_or_create(
             product=product,
             warehouse=warehouse,
@@ -49,13 +49,11 @@ def _adjust_stock_level(*, product, warehouse, location, delta: Decimal) -> Stoc
         )
     )
 
-    # نستخدم F expression لتحديث الكمية بأمان في بيئة multi-user
     level.quantity_on_hand = F("quantity_on_hand") + Decimal(delta)
     level.save(update_fields=["quantity_on_hand"])
-
-    # نرجع القيمة الجديدة بعد التحديث من قاعدة البيانات
     level.refresh_from_db(fields=["quantity_on_hand"])
     return level
+
 
 
 def _apply_move_delta(move: StockMove, *, factor: Decimal) -> None:
@@ -65,8 +63,13 @@ def _apply_move_delta(move: StockMove, *, factor: Decimal) -> None:
     factor:
       +1  = تطبيق الحركة (posting)
       -1  = عكس الحركة (unposting أو حذف)
+
+    ملاحظة:
+      - نستخدم get_base_quantity بحيث تكون كل التعديلات على StockLevel
+        بوحدة القياس الأساسية للمنتج (product.base_uom) مهما كانت وحدة الحركة.
     """
-    qty = (move.quantity or Decimal("0")) * factor
+    base_qty = move.get_base_quantity() or Decimal("0")
+    qty = base_qty * factor
     if qty == 0:
         return
 
@@ -78,7 +81,7 @@ def _apply_move_delta(move: StockMove, *, factor: Decimal) -> None:
             product=move.product,
             warehouse=move.to_warehouse,
             location=move.to_location,
-            delta=qty,
+            delta=qty,  # qty بالـ base_uom
         )
 
     # Outgoing: نطرح من الـ source
@@ -96,20 +99,20 @@ def _apply_move_delta(move: StockMove, *, factor: Decimal) -> None:
     elif move.move_type == StockMove.MoveType.TRANSFER:
         if not (move.from_warehouse and move.from_location and move.to_warehouse and move.to_location):
             raise ValidationError(_("Transfer move requires both source and destination."))
-        # ننقص من المصدر
+
         _adjust_stock_level(
             product=move.product,
             warehouse=move.from_warehouse,
             location=move.from_location,
             delta=-qty,
         )
-        # نضيف للوجهة
         _adjust_stock_level(
             product=move.product,
             warehouse=move.to_warehouse,
             location=move.to_location,
             delta=qty,
         )
+
 
 
 # ============================================================

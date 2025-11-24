@@ -167,11 +167,13 @@ class StockMoveQuerySet(models.QuerySet):
         """
         return self.select_related(
             "product",
+            "uom",            # ✅ مهم الآن بعد ما صارت FK
             "from_warehouse",
             "to_warehouse",
             "from_location",
             "to_location",
         )
+
 
 
 class StockMoveManager(models.Manager.from_queryset(StockMoveQuerySet)):

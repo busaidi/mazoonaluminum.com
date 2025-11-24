@@ -22,7 +22,6 @@ class NumberingScheme(models.Model):
 
     model_label = models.CharField(
         max_length=100,
-        unique=True,
         verbose_name=_("اسم الموديل (label)"),
         help_text=_("مثال: accounting.Invoice أو accounting.Order"),
     )
@@ -68,6 +67,8 @@ class NumberingScheme(models.Model):
         indexes = [
             models.Index(fields=["model_label"]),
         ]
+        # الآن التفرّد على (model_label + field_name) معاً
+        unique_together = ("model_label", "field_name")
 
     def __str__(self) -> str:
         return f"{self.model_label} → {self.pattern}"
@@ -79,12 +80,45 @@ class NumberingScheme(models.Model):
             raise ValidationError(_("نمط الترقيم يجب أن يحتوي على المتغير {seq}."))
 
     @classmethod
-    def get_for_instance(cls, instance: models.Model) -> "NumberingScheme":
+    def get_for_instance(
+        cls,
+        instance: models.Model,
+        field_name: str = "number",
+    ) -> "NumberingScheme":
         """
-        Get active scheme for given model instance label.
+        Get active scheme for given model instance label + field_name.
+        لو ما وجد، ينشئ سكيم افتراضي أوتوماتيكياً (حل جذري لمشكلة
+        'No active NumberingScheme configured ...' مع أي DB جديدة).
         """
         label = instance._meta.label  # e.g. "accounting.Invoice"
+
         try:
-            return cls.objects.get(model_label=label, is_active=True)
+            return cls.objects.get(
+                model_label=label,
+                field_name=field_name,
+                is_active=True,
+            )
         except cls.DoesNotExist:
-            raise ValueError(f"No active NumberingScheme configured for '{label}'")
+            # ===== fallback: إنشاء سكيم افتراضي =====
+            # نمط افتراضي عام
+            pattern = "{seq:06d}"
+            reset = cls.ResetPolicy.NEVER
+
+            # تخصيص لبعض الموديلات المعروفة
+            if label == "inventory.StockMove":
+                # نستخدم {prefix} القادم من StockMove.get_numbering_context()
+                pattern = "{prefix}-{seq:05d}"
+                reset = cls.ResetPolicy.YEAR
+            elif label == "accounting.Invoice":
+                pattern = "INV-{year}-{seq:04d}"
+                reset = cls.ResetPolicy.YEAR
+
+            scheme = cls.objects.create(
+                model_label=label,
+                field_name=field_name,
+                pattern=pattern,
+                reset=reset,
+                start=1,
+                is_active=True,
+            )
+            return scheme

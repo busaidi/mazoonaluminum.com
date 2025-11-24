@@ -25,14 +25,25 @@
         <span class="text-muted mx-1">•</span>
       {% endif %}
       <span class="me-2">
-        <span class="text-muted">{% trans "الوحدة" %}:</span>
-        <span class="fw-semibold">{{ object.uom }}</span>
+        <span class="text-muted">{% trans "الوحدة الأساسية" %}:</span>
+        <span class="fw-semibold">
+          {{ object.base_uom }}
+        </span>
       </span>
+      {% if object.alt_uom %}
+        <span class="text-muted mx-1">•</span>
+        <span class="me-2">
+          <span class="text-muted">{% trans "وحدة بديلة" %}:</span>
+          <span class="fw-semibold">
+            {{ object.alt_uom }}
+          </span>
+        </span>
+      {% endif %}
     </p>
   </div>
 
   <div class="d-flex flex-column align-items-end gap-2">
-    {# زر تعديل + قائمة إنشاء حركات مخزون #}
+    {# زر تعديل + إنشاء حركات مخزون #}
     <div class="btn-group btn-group-sm" role="group">
       <a href="{% url 'inventory:product_update' object.pk %}"
          class="btn btn-secondary">
@@ -67,33 +78,33 @@
       </ul>
     </div>
 
-    <div class="d-flex flex-wrap justify-content-end gap-1">
+    <div class="d-flex flex-wrap justify-content-end gap-1 small">
       {% if object.is_published %}
-        <span class="badge bg-success-subtle text-success border small">
+        <span class="badge bg-success-subtle text-success border">
           {% trans "منشور على الموقع/البوابة" %}
         </span>
       {% else %}
-        <span class="badge bg-secondary-subtle text-muted border small">
+        <span class="badge bg-secondary-subtle text-muted border">
           {% trans "غير منشور" %}
         </span>
       {% endif %}
 
       {% if object.is_stock_item %}
-        <span class="badge bg-primary-subtle text-primary border small">
+        <span class="badge bg-primary-subtle text-primary border">
           {% trans "يُتابَع في المخزون" %}
         </span>
       {% else %}
-        <span class="badge bg-warning-subtle text-warning border small">
+        <span class="badge bg-warning-subtle text-warning border">
           {% trans "غير متابع في المخزون" %}
         </span>
       {% endif %}
 
       {% if object.is_active %}
-        <span class="badge bg-success-subtle text-success border small">
+        <span class="badge bg-success-subtle text-success border">
           {% trans "نشط" %}
         </span>
       {% else %}
-        <span class="badge bg-danger-subtle text-danger border small">
+        <span class="badge bg-danger-subtle text-danger border">
           {% trans "غير نشط" %}
         </span>
       {% endif %}
@@ -129,13 +140,7 @@
         <div class="row g-2 small">
           <div class="col-sm-6">
             <div class="border rounded-3 p-2 h-100">
-              <div class="text-muted mb-1">{% trans "الوحدة الأساسية" %}</div>
-              <div class="fw-semibold">{{ object.uom }}</div>
-            </div>
-          </div>
-          <div class="col-sm-6">
-            <div class="border rounded-3 p-2 h-100">
-              <div class="text-muted mb-1">{% trans "التاريخ" %}</div>
+              <div class="text-muted mb-1">{% trans "التواريخ" %}</div>
               <div class="mb-1">
                 <span class="text-muted">{% trans "تم الإنشاء" %}:</span>
                 <span class="fw-semibold">{{ object.created_at|date:"Y-m-d H:i" }}</span>
@@ -146,9 +151,45 @@
               </div>
             </div>
           </div>
+
+          <div class="col-sm-6">
+            <div class="border rounded-3 p-2 h-100">
+              <div class="text-muted mb-1">{% trans "معلومات وحدات القياس" %}</div>
+
+              <div class="mb-1">
+                <span class="text-muted">{% trans "الوحدة الأساسية" %}:</span>
+                <span class="fw-semibold">{{ object.base_uom }}</span>
+              </div>
+
+              {% if object.alt_uom and object.alt_factor %}
+                <div class="mb-1">
+                  <span class="text-muted">{% trans "وحدة بديلة" %}:</span>
+                  <span class="fw-semibold">{{ object.alt_uom }}</span>
+                  <span class="text-muted small d-block">
+                    {% blocktrans with factor=object.alt_factor %}
+                      1 وحدة بديلة = {{ factor }} من الوحدة الأساسية
+                    {% endblocktrans %}
+                  </span>
+                </div>
+              {% endif %}
+
+              {% if object.weight_uom and object.weight_per_base %}
+                <div>
+                  <span class="text-muted">{% trans "الوزن" %}:</span>
+                  <span class="fw-semibold">
+                    {{ object.weight_per_base }} {{ object.weight_uom }}
+                    / {{ object.base_uom }}
+                  </span>
+                </div>
+              {% endif %}
+            </div>
+          </div>
         </div>
 
       </div>
+
+
+        <!-- عمود المخزون + ملخص المواقع -->
 
       <div class="col-md-5">
         <div class="border rounded-3 p-3 bg-light mb-2">
@@ -158,7 +199,8 @@
                 {% trans "إجمالي المخزون المتوفر" %}
               </div>
               <div class="h5 mb-0 fw-bold">
-                {{ total_on_hand|default:"0.000" }} {{ object.uom }}
+                {{ total_on_hand|default:"0.000" }}
+                <span class="fs-6 text-muted">{{ object.base_uom }}</span>
               </div>
             </div>
             <div class="text-end">
@@ -197,7 +239,7 @@
                   </div>
                   <div class="text-end">
                     <div class="fw-semibold">
-                      {{ lvl.quantity_on_hand }} {{ object.uom }}
+                      {{ lvl.quantity_on_hand }} {{ object.base_uom }}
                     </div>
                     {% if lvl.is_below_min %}
                       <span class="badge bg-warning-subtle text-warning border small">
@@ -256,16 +298,16 @@
                   <span class="text-muted small d-block">{{ lvl.location.name }}</span>
                 </td>
                 <td class="text-end fw-semibold">
-                  {{ lvl.quantity_on_hand }}
+                  {{ lvl.quantity_on_hand }} {{ object.base_uom }}
                 </td>
                 <td class="text-end">
-                  {{ lvl.quantity_reserved }}
+                  {{ lvl.quantity_reserved|default:"0.000" }} {{ object.base_uom }}
                 </td>
                 <td class="text-end">
-                  {{ lvl.available_quantity|default:0 }}
+                  {{ lvl.available_quantity|default:0 }} {{ object.base_uom }}
                 </td>
                 <td class="text-end">
-                  {{ lvl.min_stock }}
+                  {{ lvl.min_stock }} {{ object.base_uom }}
                 </td>
                 <td class="text-end">
                   {% if lvl.is_below_min and lvl.min_stock %}
@@ -290,7 +332,9 @@
 
       <p class="text-muted small mt-2 mb-0">
         {% trans "إجمالي الكمية المتوفرة لجميع المستويات" %}:
-        <strong>{{ total_on_hand|default:"0.000" }} {{ object.uom }}</strong>
+        <strong>
+          {{ total_on_hand|default:"0.000" }} {{ object.base_uom }}
+        </strong>
       </p>
     </div>
   </div>

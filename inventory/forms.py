@@ -4,13 +4,17 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
+from uom.models import UnitOfMeasure
 from .models import StockMove, Product, StockLevel, ProductCategory, InventorySettings
 
 
 class StockMoveForm(forms.ModelForm):
     """
     Form لحركة المخزون مع تجهيز بسيط للـ widgets
-    (نستخدمه مع القالب اللي فيه JS للتحكم في from/to).
+    (يُستخدم مع القالب الذي يحتوي على JS للتحكم في from/to).
+
+    - يدعم اختيار وحدة قياس متوافقة مع إعداد المنتج:
+      base_uom / alt_uom / weight_uom.
     """
 
     class Meta:
@@ -29,32 +33,86 @@ class StockMoveForm(forms.ModelForm):
             "reference",
             "note",
         ]
+        widgets = {
+            # نضبط النوع مباشرة هنا
+            "move_date": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # إضافة كلاس Bootstrap بشكل عام
+        # ==== عناوين عربية أساسية ====
+        self.fields["product"].label = "المنتج"
+        self.fields["move_type"].label = "نوع الحركة"
+        self.fields["from_warehouse"].label = "من مخزن"
+        self.fields["from_location"].label = "من موقع"
+        self.fields["to_warehouse"].label = "إلى مخزن"
+        self.fields["to_location"].label = "إلى موقع"
+        self.fields["quantity"].label = "الكمية"
+        self.fields["uom"].label = "وحدة القياس"
+        self.fields["move_date"].label = "تاريخ/وقت الحركة"
+        self.fields["status"].label = "الحالة"
+        self.fields["reference"].label = "مرجع خارجي"
+        self.fields["note"].label = "ملاحظات"
+
+        self.fields["quantity"].help_text = "أدخل الكمية بناءً على وحدة القياس المختارة."
+        self.fields["uom"].help_text = (
+            "اختر وحدة قياس متوافقة مع إعداد المنتج "
+            "(الوحدة الأساسية أو البديلة أو وحدة الوزن إذا كانت منطقية للحركة)."
+        )
+
+        # ==== تقييد وحدات القياس على الوحدات المفعّلة ====
+        if "uom" in self.fields:
+            self.fields["uom"].queryset = UnitOfMeasure.objects.filter(is_active=True)
+
+        # ==== إضافة كلاس Bootstrap بشكل عام ====
         for name, field in self.fields.items():
-            css = field.widget.attrs.get("class", "")
-            # نترك textarea/select على راحتهم، بس نضيف class عام
-            field.widget.attrs["class"] = (css + " form-control").strip()
+            widget = field.widget
+            css = widget.attrs.get("class", "")
 
-        # بعض الحقول نفضلها تظهر كـ select (لو مش ظاهرة من قبل)
-        for name in ["move_type", "status", "product",
-                     "from_warehouse", "from_location",
-                     "to_warehouse", "to_location"]:
-            field = self.fields.get(name)
-            if field:
-                css = field.widget.attrs.get("class", "")
-                # نخليها form-select بدل form-control لو تحب
-                # لكن عشان ما نلخبط باقي التصميم، نخليها كما هي الآن.
-                field.widget.attrs["class"] = css.replace(
-                    "form-control", ""
-                ).strip() + " form-select"
+            # نضبط select كـ form-select
+            if isinstance(widget, (forms.Select, forms.SelectMultiple)):
+                widget.attrs["class"] = (css.replace("form-control", "") + " form-select").strip()
+            elif isinstance(widget, forms.CheckboxInput):
+                widget.attrs["class"] = (css + " form-check-input").strip()
+            else:
+                widget.attrs["class"] = (css + " form-control").strip()
 
-        # تحسين بسيط لحقل التاريخ/الوقت
-        if "move_date" in self.fields:
-            self.fields["move_date"].widget.input_type = "datetime-local"
+    def clean_quantity(self):
+        """
+        التأكد من أن الكمية أكبر من صفر.
+        """
+        qty = self.cleaned_data.get("quantity")
+        if qty is None or qty <= 0:
+            raise ValidationError("الكمية يجب أن تكون أكبر من صفر.")
+        return qty
+
+    def clean(self):
+        """
+        التحقق من توافق وحدة القياس مع إعداد المنتج:
+        - يسمح فقط بالوحدات:
+          base_uom, alt_uom, weight_uom (إن وُجدت).
+        """
+        cleaned = super().clean()
+        product = cleaned.get("product")
+        uom = cleaned.get("uom")
+
+        if product and uom:
+            allowed_uoms = [product.base_uom]
+            if product.alt_uom:
+                allowed_uoms.append(product.alt_uom)
+            if product.weight_uom:
+                allowed_uoms.append(product.weight_uom)
+
+            if uom not in allowed_uoms:
+                raise ValidationError(
+                    "وحدة القياس المختارة لا تتوافق مع إعدادات هذا المنتج. "
+                    "يُرجى اختيار وحدة من الوحدات المحددة للمنتج."
+                )
+
+        return cleaned
+
+
 
 
 
@@ -62,8 +120,8 @@ class StockMoveForm(forms.ModelForm):
 
 class ProductForm(forms.ModelForm):
     """
-    Form لإدارة المنتجات في المخزون.
-    الواجهة باللغة العربية، مع بعض التهيئة البسيطة للحقول.
+    Form for managing products in inventory.
+    Arabic UI labels, with simple Bootstrap integration.
     """
 
     class Meta:
@@ -74,7 +132,13 @@ class ProductForm(forms.ModelForm):
             "name",
             "short_description",
             "description",
-            "uom",
+            # UoM fields
+            "base_uom",
+            "alt_uom",
+            "alt_factor",
+            "weight_uom",
+            "weight_per_base",
+            # Flags
             "is_stock_item",
             "is_active",
             "is_published",
@@ -89,7 +153,13 @@ class ProductForm(forms.ModelForm):
         self.fields["name"].label = "اسم المنتج"
         self.fields["short_description"].label = "وصف مختصر"
         self.fields["description"].label = "وصف تفصيلي"
-        self.fields["uom"].label = "وحدة القياس"
+
+        self.fields["base_uom"].label = "وحدة القياس الأساسية"
+        self.fields["alt_uom"].label = "وحدة بديلة"
+        self.fields["alt_factor"].label = "عامل تحويل الوحدة البديلة"
+        self.fields["weight_uom"].label = "وحدة الوزن"
+        self.fields["weight_per_base"].label = "الوزن لكل وحدة أساسية"
+
         self.fields["is_stock_item"].label = "يُتابَع في المخزون"
         self.fields["is_active"].label = "نشط"
         self.fields["is_published"].label = "منشور على الموقع/البوابة"
@@ -97,32 +167,72 @@ class ProductForm(forms.ModelForm):
         self.fields["code"].help_text = "كود داخلي فريد، مثل: MZN-46-FRAME"
         self.fields["short_description"].help_text = "سطر واحد يظهر في القوائم والجداول."
         self.fields["description"].help_text = "وصف كامل للمنتج يمكن استخدامه في الموقع أو العروض."
-        self.fields["uom"].help_text = "مثال: PCS, M, KG, SET"
+
+        self.fields["base_uom"].help_text = "الوحدة الأساسية للمخزون، مثل: M للمتر، PCS للقطعة."
+        self.fields["alt_uom"].help_text = "وحدة أخرى للبيع أو الشراء (مثل: لفة، كرتون)."
+        self.fields["alt_factor"].help_text = (
+            "كم تساوي 1 وحدة بديلة من الوحدة الأساسية. "
+            "مثال: إذا الأساس متر والبديلة لفة 6م، اكتب 6."
+        )
+        self.fields["weight_uom"].help_text = "الوحدة المستخدمة للوزن، مثل: KG."
+        self.fields["weight_per_base"].help_text = (
+            "الوزن في وحدة الوزن لكل 1 من الوحدة الأساسية. "
+            "مثال: إذا الأساس متر ووحدة الوزن كجم، هذا الحقل هو كجم/م."
+        )
+
         self.fields["is_stock_item"].help_text = "إذا تم تعطيله، لن يتم تتبع هذا المنتج في حركات المخزون."
         self.fields["is_active"].help_text = "إذا تم تعطيله، لن يظهر في المستندات الجديدة."
         self.fields["is_published"].help_text = "إذا تم تفعيله، يمكن عرضه في الموقع أو بوابة العملاء."
+
+        # Limit UoM fields to active units
+        active_uoms = UnitOfMeasure.objects.filter(is_active=True)
+        if "base_uom" in self.fields:
+            self.fields["base_uom"].queryset = active_uoms
+        if "alt_uom" in self.fields:
+            self.fields["alt_uom"].queryset = active_uoms
+        if "weight_uom" in self.fields:
+            self.fields["weight_uom"].queryset = active_uoms
 
         # Add Bootstrap classes
         for name, field in self.fields.items():
             widget = field.widget
             css = widget.attrs.get("class", "")
-            # checkbox نتركها على راحة Bootstrap (form-check)
+            # Keep checkboxes as form-check-input
             if isinstance(widget, forms.CheckboxInput):
                 widget.attrs["class"] = (css + " form-check-input").strip()
             else:
                 widget.attrs["class"] = (css + " form-control").strip()
+
+        # Optional: numeric field tuning
+        if "alt_factor" in self.fields:
+            self.fields["alt_factor"].widget.attrs.setdefault("step", "0.000001")
+            self.fields["alt_factor"].widget.attrs.setdefault("min", "0")
+        if "weight_per_base" in self.fields:
+            self.fields["weight_per_base"].widget.attrs.setdefault("step", "0.000001")
+            self.fields["weight_per_base"].widget.attrs.setdefault("min", "0")
 
     def clean_code(self):
         """
         Normalize product code:
         - strip spaces
         - uppercase
-
-        This keeps all product codes in a consistent format.
         """
         code = self.cleaned_data.get("code", "") or ""
         code = code.strip().upper()
         return code
+
+    def clean_alt_factor(self):
+        """
+        Ensure alt_factor is only set when alt_uom is provided and vice versa.
+        """
+        alt_uom = self.cleaned_data.get("alt_uom")
+        alt_factor = self.cleaned_data.get("alt_factor")
+
+        if alt_uom and not alt_factor:
+            raise forms.ValidationError("يجب تحديد عامل التحويل عند اختيار وحدة بديلة.")
+        if alt_factor and not alt_uom:
+            raise forms.ValidationError("لا يمكن تعيين عامل تحويل بدون وحدة بديلة.")
+        return alt_factor
 
 
 

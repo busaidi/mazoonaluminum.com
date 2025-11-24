@@ -19,20 +19,213 @@
     <form method="post" enctype="multipart/form-data" class="row g-3">
       {% csrf_token %}
 
-      {% for field in form %}
-        <div class="col-md-6">
-          <label class="form-label small">{{ field.label }}</label>
-          {{ field }}
-          {% if field.help_text %}
-            <div class="form-text">{{ field.help_text }}</div>
+      {# أخطاء عامة على مستوى الفورم #}
+      {% if form.non_field_errors %}
+        <div class="col-12">
+          <div class="alert alert-danger small mb-0">
+            {% for error in form.non_field_errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="col-md-7">
+
+        <div class="mb-3">
+          <label for="{{ form.category.id_for_label }}" class="form-label small">
+            {{ form.category.label }}
+          </label>
+          {{ form.category }}
+          {% if form.category.help_text %}
+            <div class="form-text small">{{ form.category.help_text }}</div>
           {% endif %}
-          {% for error in field.errors %}
+          {% for error in form.category.errors %}
             <div class="text-danger small">{{ error }}</div>
           {% endfor %}
         </div>
-      {% endfor %}
 
-      <div class="col-12">
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <label for="{{ form.code.id_for_label }}" class="form-label small">
+              {{ form.code.label }}
+            </label>
+            {{ form.code }}
+            {% if form.code.help_text %}
+              <div class="form-text small">{{ form.code.help_text }}</div>
+            {% endif %}
+            {% for error in form.code.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-sm-6">
+            <label for="{{ form.name.id_for_label }}" class="form-label small">
+              {{ form.name.label }}
+            </label>
+            {{ form.name }}
+            {% if form.name.help_text %}
+              <div class="form-text small">{{ form.name.help_text }}</div>
+            {% endif %}
+            {% for error in form.name.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="mb-3 mt-3">
+          <label for="{{ form.short_description.id_for_label }}" class="form-label small">
+            {{ form.short_description.label }}
+          </label>
+          {{ form.short_description }}
+          {% if form.short_description.help_text %}
+            <div class="form-text small">{{ form.short_description.help_text }}</div>
+          {% endif %}
+          {% for error in form.short_description.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="mb-3">
+          <label for="{{ form.description.id_for_label }}" class="form-label small">
+            {{ form.description.label }}
+          </label>
+          {{ form.description }}
+          {% if form.description.help_text %}
+            <div class="form-text small">{{ form.description.help_text }}</div>
+          {% endif %}
+          {% for error in form.description.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="col-md-5">
+        <div class="border rounded-3 p-3 mb-3 bg-light-subtle">
+          <h6 class="fw-bold small mb-2">
+            {% trans "وحدات القياس" %}
+          </h6>
+
+          <div class="mb-3">
+            <label for="{{ form.base_uom.id_for_label }}" class="form-label small">
+              {{ form.base_uom.label }}
+            </label>
+            {{ form.base_uom }}
+            {% if form.base_uom.help_text %}
+              <div class="form-text small">{{ form.base_uom.help_text }}</div>
+            {% endif %}
+            {% for error in form.base_uom.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label for="{{ form.alt_uom.id_for_label }}" class="form-label small">
+                {{ form.alt_uom.label }}
+              </label>
+              {{ form.alt_uom }}
+              {% if form.alt_uom.help_text %}
+                <div class="form-text small">{{ form.alt_uom.help_text }}</div>
+              {% endif %}
+              {% for error in form.alt_uom.errors %}
+                <div class="text-danger small">{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="col-sm-6">
+              <label for="{{ form.alt_factor.id_for_label }}" class="form-label small">
+                {{ form.alt_factor.label }}
+              </label>
+              {{ form.alt_factor }}
+              {% if form.alt_factor.help_text %}
+                <div class="form-text small">{{ form.alt_factor.help_text }}</div>
+              {% endif %}
+              {% for error in form.alt_factor.errors %}
+                <div class="text-danger small">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label for="{{ form.weight_uom.id_for_label }}" class="form-label small">
+                {{ form.weight_uom.label }}
+              </label>
+              {{ form.weight_uom }}
+              {% if form.weight_uom.help_text %}
+                <div class="form-text small">{{ form.weight_uom.help_text }}</div>
+              {% endif %}
+              {% for error in form.weight_uom.errors %}
+                <div class="text-danger small">{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="col-sm-6">
+              <label for="{{ form.weight_per_base.id_for_label }}" class="form-label small">
+                {{ form.weight_per_base.label }}
+              </label>
+              {{ form.weight_per_base }}
+              {% if form.weight_per_base.help_text %}
+                <div class="form-text small">{{ form.weight_per_base.help_text }}</div>
+              {% endif %}
+              {% for error in form.weight_per_base.errors %}
+                <div class="text-danger small">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+
+        <div class="border rounded-3 p-3 bg-white">
+          <h6 class="fw-bold small mb-2">
+            {% trans "حالة المنتج" %}
+          </h6>
+
+          <div class="form-check mb-2">
+            {{ form.is_stock_item }}
+            <label for="{{ form.is_stock_item.id_for_label }}" class="form-check-label small">
+              {{ form.is_stock_item.label }}
+            </label>
+            {% if form.is_stock_item.help_text %}
+              <div class="form-text small">{{ form.is_stock_item.help_text }}</div>
+            {% endif %}
+            {% for error in form.is_stock_item.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="form-check mb-2">
+            {{ form.is_active }}
+            <label for="{{ form.is_active.id_for_label }}" class="form-check-label small">
+              {{ form.is_active.label }}
+            </label>
+            {% if form.is_active.help_text %}
+              <div class="form-text small">{{ form.is_active.help_text }}</div>
+            {% endif %}
+            {% for error in form.is_active.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="form-check mb-0">
+            {{ form.is_published }}
+            <label for="{{ form.is_published.id_for_label }}" class="form-check-label small">
+              {{ form.is_published.label }}
+            </label>
+            {% if form.is_published.help_text %}
+              <div class="form-text small">{{ form.is_published.help_text }}</div>
+            {% endif %}
+            {% for error in form.is_published.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 mt-2">
         <button class="btn btn-primary">
           {% trans "حفظ" %}
         </button>

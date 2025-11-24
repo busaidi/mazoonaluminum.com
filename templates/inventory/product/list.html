@@ -151,9 +151,9 @@
 
         <div class="card-body d-flex flex-column">
 
-          {# صف الفئة + وحدة القياس #}
-          <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
-            <div class="small">
+          {# صف الفئة + وحدات القياس #}
+          <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 small">
+            <div>
               <span class="text-muted">{% trans "الفئة" %}:</span>
               {% if p.category %}
                 <span class="fw-semibold">{{ p.category.name }}</span>
@@ -161,9 +161,14 @@
                 <span class="text-muted">{% trans "غير محدد" %}</span>
               {% endif %}
             </div>
-            <div class="small">
-              <span class="text-muted">{% trans "الوحدة" %}:</span>
-              <span class="fw-semibold">{{ p.uom }}</span>
+            <div class="text-end">
+              <span class="text-muted">{% trans "الوحدة الأساسية" %}:</span>
+              <span class="fw-semibold">{{ p.base_uom }}</span>
+              {% if p.alt_uom %}
+                <span class="text-muted mx-1">•</span>
+                <span class="text-muted">{% trans "وحدة بديلة" %}:</span>
+                <span class="fw-semibold">{{ p.alt_uom }}</span>
+              {% endif %}
             </div>
           </div>
 
@@ -186,7 +191,8 @@
                   {% trans "إجمالي المخزون المتوفر" %}
                 </div>
                 <div class="fw-bold">
-                  {{ p.total_on_hand|default:"0.000" }} {{ p.uom }}
+                  {{ p.total_on_hand|default:"0.000" }}
+                  <span class="text-muted">{{ p.base_uom }}</span>
                 </div>
               </div>
               <div class="text-end">
@@ -235,20 +241,27 @@
               </a>
             </div>
 
-            {# زر مستقبلي لإنشاء حركة مخزون أو أمر بيع لهذا المنتج #}
             <div class="dropdown">
               <button class="btn btn-light btn-sm border dropdown-toggle" type="button" data-bs-toggle="dropdown">
                 {% trans "إجراءات" %}
               </button>
               <ul class="dropdown-menu dropdown-menu-end">
                 <li>
-                  <a class="dropdown-item disabled" href="#">
-                    {% trans "إنشاء حركة مخزون لهذا المنتج" %}
+                  <a class="dropdown-item"
+                     href="{% url 'inventory:move_create' %}?product={{ p.pk }}&move_type=in">
+                    {% trans "حركة واردة لهذا المنتج" %}
                   </a>
                 </li>
                 <li>
+                  <a class="dropdown-item"
+                     href="{% url 'inventory:move_create' %}?product={{ p.pk }}&move_type=out">
+                    {% trans "حركة صادرة لهذا المنتج" %}
+                  </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
                   <a class="dropdown-item disabled" href="#">
-                    {% trans "إنشاء أمر بيع" %}
+                    {% trans "إنشاء أمر بيع (لاحقاً)" %}
                   </a>
                 </li>
               </ul>
@@ -273,7 +286,8 @@
     <ul class="pagination pagination-sm justify-content-center mb-0">
       {% if page_obj.has_previous %}
         <li class="page-item">
-          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&category={{ category_filter }}{% if only_published %}&published=1{% endif %}">
+          <a class="page-link"
+             href="?page={{ page_obj.previous_page_number }}&q={{ q }}&category={{ category_filter }}{% if only_published %}&published=1{% endif %}">
             {% trans "السابق" %}
           </a>
         </li>
@@ -291,7 +305,8 @@
 
       {% if page_obj.has_next %}
         <li class="page-item">
-          <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}&category={{ category_filter }}{% if only_published %}&published=1{% endif %}">
+          <a class="page-link"
+             href="?page={{ page_obj.next_page_number }}&q={{ q }}&category={{ category_filter }}{% if only_published %}&published=1{% endif %}">
             {% trans "التالي" %}
           </a>
         </li>

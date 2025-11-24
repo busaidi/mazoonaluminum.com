@@ -1,0 +1,129 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "وحدات القياس" %}{% endblock %}
+
+{% block inventory_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 fw-bold mb-1">{% trans "وحدات القياس" %}</h1>
+    <p class="text-muted small mb-0">
+      {% trans "إدارة وحدات القياس المستخدمة في المنتجات وحركات المخزون." %}
+    </p>
+  </div>
+  <a href="{% url 'uom:unit_create' %}" class="btn btn-primary btn-sm">
+    {% trans "إضافة وحدة قياس" %}
+  </a>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-md-4">
+        <input type="text"
+               name="q"
+               value="{{ q }}"
+               placeholder="{% trans 'بحث بالاسم أو الكود...' %}"
+               class="form-control form-control-sm">
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-outline-primary btn-sm w-100">
+          {% trans "بحث" %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    {% if units %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>{% trans "الاسم" %}</th>
+              <th>{% trans "الكود" %}</th>
+              <th>{% trans "الفئة" %}</th>
+              <th>{% trans "الحالة" %}</th>
+              <th class="text-end">{% trans "إجراءات" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in units %}
+              <tr>
+                <td>{{ u.name }}</td>
+                <td dir="ltr" class="fw-semibold">{{ u.code }}</td>
+                <td>
+                  {{ u.get_category_display|default:u.category }}
+                </td>
+                <td>
+                  {% if u.is_active %}
+                    <span class="badge bg-success-subtle text-success border small">
+                      {% trans "نشطة" %}
+                    </span>
+                  {% else %}
+                    <span class="badge bg-secondary-subtle text-muted border small">
+                      {% trans "معطلة" %}
+                    </span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <a href="{% url 'uom:unit_update' u.pk %}"
+                     class="btn btn-outline-secondary btn-sm">
+                    {% trans "تعديل" %}
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if is_paginated %}
+        <div class="card-footer border-0">
+          <nav class="mt-2">
+            <ul class="pagination pagination-sm justify-content-center mb-0">
+              {% if page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}">
+                    {% trans "السابق" %}
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">{% trans "السابق" %}</span>
+                </li>
+              {% endif %}
+
+              <li class="page-item disabled">
+                <span class="page-link">
+                  {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+                </span>
+              </li>
+
+              {% if page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}">
+                    {% trans "التالي" %}
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">{% trans "التالي" %}</span>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="p-3 text-center text-muted small">
+        {% trans "لا توجد وحدات قياس حالياً." %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
