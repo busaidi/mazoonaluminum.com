@@ -67,14 +67,19 @@ EOF
 #Production
 ```bash
 cat > .env << 'EOF'
-DJANGO_SECRET_KEY=change-me-to-a-long-random-secret
+DJANGO_SECRET_KEY=$(openssl rand -hex 64)
 DJANGO_DEBUG=False
 DJANGO_ALLOWED_HOSTS=omanskylight.com www.omanskylight.com 127.0.0.1
 EOF
 ```
 
 ```bash
-python -m pip freeze > requirements.txt
+pip freeze > requirements.txt
+```
+
+
+```bash
+openssl rand -hex 64
 ```
 ```bash
 python manage.py shell
