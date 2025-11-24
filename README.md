@@ -53,6 +53,26 @@ python manage.py runserver
 python.exe -m pip install --upgrade pip
 ```
 
+#devlopment
+
+```bash
+cat > .env << 'EOF'
+DJANGO_SECRET_KEY=dev-secret-key-change-me-locally
+DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=127.0.0.1 localhost
+EOF
+
+```
+
+#Production
+```bash
+cat > .env << 'EOF'
+DJANGO_SECRET_KEY=change-me-to-a-long-random-secret
+DJANGO_DEBUG=False
+DJANGO_ALLOWED_HOSTS=omanskylight.com www.omanskylight.com 127.0.0.1
+EOF
+```
+
 ```bash
 python -m pip freeze > requirements.txt
 ```
