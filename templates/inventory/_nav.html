@@ -1,106 +1,116 @@
 {% load i18n %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <div>
-    <h1 class="h3 fw-bold mb-1 text-mazoon">
-      {% trans "نظام إدارة المخزون" %}
-    </h1>
+<div class="mb-3">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <div>
+      <h1 class="h3 fw-bold mb-1 text-mazoon">
+        {% trans "نظام إدارة المخزون" %}
+      </h1>
+      <p class="text-muted small mb-0">
+        {% trans "إدارة المنتجات والمخازن وحركات ومستويات المخزون ضمن منصة Mazoon ERP." %}
+      </p>
+    </div>
+  </div>
+
+  <ul class="nav nav-pills mazoon-nav bg-mazoon-card p-2 rounded-3 shadow-sm mb-2">
+
+    <li class="nav-item">
+      <a class="nav-link px-3 py-1 {% if subsection == 'dashboard' %}active{% endif %}"
+         href="{% url 'inventory:dashboard' %}">
+        <i class="bi bi-speedometer2 ms-1"></i>
+        <span>{% trans "لوحة التحكم" %}</span>
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link px-3 py-1 {% if subsection == 'products' %}active{% endif %}"
+         href="{% url 'inventory:product_list' %}">
+        <i class="bi bi-box-seam ms-1"></i>
+        <span>{% trans "المنتجات" %}</span>
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link px-3 py-1 {% if subsection == 'categories' %}active{% endif %}"
+         href="{% url 'inventory:category_list' %}">
+        <i class="bi bi-tags ms-1"></i>
+        <span>{% trans "الفئات" %}</span>
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link px-3 py-1 {% if subsection == 'warehouses' %}active{% endif %}"
+         href="{% url 'inventory:warehouse_list' %}">
+        <i class="bi bi-buildings ms-1"></i>
+        <span>{% trans "المخازن" %}</span>
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link px-3 py-1 {% if subsection == 'locations' %}active{% endif %}"
+         href="{% url 'inventory:location_list' %}">
+        <i class="bi bi-geo-alt ms-1"></i>
+        <span>{% trans "مواقع التخزين" %}</span>
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link px-3 py-1 {% if subsection == 'moves' %}active{% endif %}"
+         href="{% url 'inventory:move_list' %}">
+        <i class="bi bi-arrow-left-right ms-1"></i>
+        <span>{% trans "حركات المخزون" %}</span>
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link px-3 py-1 {% if subsection == 'stock_levels' %}active{% endif %}"
+         href="{% url 'inventory:stocklevel_list' %}">
+        <i class="bi bi-layers ms-1"></i>
+        <span>{% trans "مستويات المخزون" %}</span>
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link px-3 py-1 {% if subsection == 'uom' %}active{% endif %}"
+         href="{% url 'uom:unit_list' %}">
+        <i class="bi bi-rulers ms-1"></i>
+        <span>{% trans "وحدات القياس" %}</span>
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link px-3 py-1 {% if subsection == 'settings' %}active{% endif %}"
+         href="{% url 'inventory:settings' %}">
+        <i class="bi bi-sliders ms-1"></i>
+        <span>{% trans "الإعدادات" %}</span>
+      </a>
+    </li>
+
+  </ul>
+
+  <div class="mb-3">
     <p class="text-muted small mb-0">
-      {% trans "إدارة المنتجات والمخازن وحركات ومستويات المخزون" %}
+      {% if subsection == 'dashboard' %}
+        {% trans "نظرة عامة على المخزون وحركاته مع مؤشرات سريعة." %}
+      {% elif subsection == 'products' %}
+        {% trans "تعريف وإدارة المنتجات ووحدات القياس وحالة النشر والتتبع في المخزون." %}
+      {% elif subsection == 'categories' %}
+        {% trans "تنظيم المنتجات في تصنيفات وفئات منطقية لتسهيل البحث والتقارير." %}
+      {% elif subsection == 'warehouses' %}
+        {% trans "إدارة المستودعات الرئيسية التي يتم فيها حفظ المخزون." %}
+      {% elif subsection == 'locations' %}
+        {% trans "تعريف المواقع والأرفف داخل كل مستودع لتتبع أدق لحركة المخزون." %}
+      {% elif subsection == 'moves' %}
+        {% trans "تسجيل وإدارة الحركات الواردة والصادرة والتحويلات بين المستودعات والمواقع." %}
+      {% elif subsection == 'stock_levels' %}
+        {% trans "متابعة مستويات المخزون، الحدود الدنيا، وحالة توفر الكميات لكل موقع." %}
+      {% elif subsection == 'uom' %}
+        {% trans "إدارة وحدات القياس الأساسية والبديلة والرموز المستخدمة في النظام." %}
+      {% elif subsection == 'settings' %}
+        {% trans "ضبط إعدادات المخزون العامة مثل بادئات ترقيم الحركات." %}
+      {% else %}
+        {% trans "اختر إحدى الشاشات أعلاه لإدارة بيانات المخزون." %}
+      {% endif %}
     </p>
   </div>
-</div>
-
-<ul class="nav nav-pills mazoon-nav bg-mazoon-card p-2 rounded-3 shadow-sm mb-2">
-
-  <li class="nav-item">
-    <a class="nav-link px-3 py-1 {% if subsection == 'dashboard' %}active{% endif %}"
-       href="{% url 'inventory:dashboard' %}">
-      {% trans "لوحة التحكم" %}
-    </a>
-  </li>
-
-  <li class="nav-item">
-    <a class="nav-link px-3 py-1 {% if subsection == 'products' %}active{% endif %}"
-       href="{% url 'inventory:product_list' %}">
-      {% trans "المنتجات" %}
-    </a>
-  </li>
-
-  <li class="nav-item">
-    <a class="nav-link px-3 py-1 {% if subsection == 'categories' %}active{% endif %}"
-       href="{% url 'inventory:category_list' %}">
-      {% trans "الفئات" %}
-    </a>
-  </li>
-
-  <li class="nav-item">
-    <a class="nav-link px-3 py-1 {% if subsection == 'warehouses' %}active{% endif %}"
-       href="{% url 'inventory:warehouse_list' %}">
-      {% trans "المخازن" %}
-    </a>
-  </li>
-
-  <li class="nav-item">
-    <a class="nav-link px-3 py-1 {% if subsection == 'locations' %}active{% endif %}"
-       href="{% url 'inventory:location_list' %}">
-      {% trans "مواقع التخزين" %}
-    </a>
-  </li>
-
-  <li class="nav-item">
-    <a class="nav-link px-3 py-1 {% if subsection == 'moves' %}active{% endif %}"
-       href="{% url 'inventory:move_list' %}">
-      {% trans "حركات المخزون" %}
-    </a>
-  </li>
-
-  <li class="nav-item">
-    <a class="nav-link px-3 py-1 {% if subsection == 'stock_levels' %}active{% endif %}"
-       href="{% url 'inventory:stocklevel_list' %}">
-      {% trans "مستويات المخزون" %}
-    </a>
-  </li>
-
-  <li class="nav-item">
-    <a class="nav-link px-3 py-1 {% if subsection == 'uom' %}active{% endif %}"
-       href="{% url 'uom:unit_list' %}">
-      <span>{% trans "وحدات القياس" %}</span>
-    </a>
-  </li>
-
-  <li class="nav-item">
-    <a class="nav-link px-3 py-1 {% if subsection == 'settings' %}active{% endif %}"
-       href="{% url 'inventory:settings' %}">
-      {% trans "الإعدادات" %}
-    </a>
-  </li>
-
-</ul>
-
-{# وصف التبويب الحالي تحت الشريط، مو داخل الأزرار #}
-<div class="mb-4">
-  <p class="text-muted small mb-0">
-    {% if subsection == 'dashboard' %}
-      {% trans "نظرة عامة على المخزون وحركاته مع مؤشرات سريعة." %}
-    {% elif subsection == 'products' %}
-      {% trans "تعريف وإدارة المنتجات ووحدات القياس وحالة النشر والتتبع في المخزون." %}
-    {% elif subsection == 'categories' %}
-      {% trans "تنظيم المنتجات في تصنيفات وفئات منطقية لتسهيل البحث والتقارير." %}
-    {% elif subsection == 'warehouses' %}
-      {% trans "إدارة المستودعات الرئيسية التي يتم فيها حفظ المخزون." %}
-    {% elif subsection == 'locations' %}
-      {% trans "تعريف المواقع والأرفف داخل كل مستودع لتتبع أدق لحركة المخزون." %}
-    {% elif subsection == 'moves' %}
-      {% trans "تسجيل وإدارة الحركات الواردة والصادرة والتحويلات بين المستودعات والمواقع." %}
-    {% elif subsection == 'stock_levels' %}
-      {% trans "متابعة مستويات المخزون، الحدود الدنيا، وحالة توفر الكميات لكل موقع." %}
-    {% elif subsection == 'uom' %}
-      {% trans "إدارة وحدات القياس الأساسية والبديلة والرموز المستخدمة في النظام." %}
-    {% elif subsection == 'settings' %}
-      {% trans "ضبط إعدادات المخزون العامة مثل بادئات ترقيم الحركات." %}
-    {% else %}
-      {% trans "اختر إحدى الشاشات أعلاه لإدارة بيانات المخزون." %}
-    {% endif %}
-  </p>
 </div>

@@ -11,18 +11,28 @@
 
 {% block inventory_content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <div>
-    <h1 class="h4 fw-bold mb-1">
-      {% if object %}
-        {% trans "تعديل حركة مخزون" %}
-      {% else %}
-        {% trans "حركة مخزون جديدة" %}
-      {% endif %}
-    </h1>
-    <p class="text-muted small mb-0">
-      {% trans "قم بتسجيل حركة دخول، خروج، أو تحويل بين المخازن والمواقع، مع إمكانية إضافة عدة منتجات في نفس الحركة." %}
-    </p>
+{# ───── هيدر Mazoon للفورم ───── #}
+<div class="card border-0 shadow-sm mb-3 bg-mazoon-card">
+  <div class="card-body d-flex justify-content-between align-items-center gap-3">
+    <div>
+      <h1 class="h5 fw-bold mb-1 text-mazoon">
+        {% if object %}
+          {% trans "تعديل حركة مخزون" %}
+        {% else %}
+          {% trans "حركة مخزون جديدة" %}
+        {% endif %}
+      </h1>
+      <p class="text-muted small mb-0">
+        {% trans "سجّل حركة إدخال، إخراج، أو تحويل بين المخازن والمواقع مع إمكانية إضافة عدة منتجات في نفس الحركة." %}
+      </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'inventory:move_list' %}"
+         class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-right-short ms-1"></i>
+        {% trans "رجوع إلى الحركات" %}
+      </a>
+    </div>
   </div>
 </div>
 
@@ -34,7 +44,7 @@
 
       {# أخطاء عامة لفورم الهيدر #}
       {% if form.non_field_errors %}
-        <div class="alert alert-danger">
+        <div class="alert alert-danger small">
           {% for error in form.non_field_errors %}
             <div>{{ error }}</div>
           {% endfor %}
@@ -45,12 +55,12 @@
 
         {# نوع الحركة + الحالة + التاريخ #}
         <div class="col-md-4">
-          <label class="form-label" for="{{ form.move_type.id_for_label }}">
+          <label class="form-label small fw-semibold" for="{{ form.move_type.id_for_label }}">
             {{ form.move_type.label }}
           </label>
           {{ form.move_type }}
-          <div class="form-text">
-            {% trans "اختر نوع الحركة: دخول، خروج، أو تحويل." %}
+          <div class="form-text small">
+            {% trans "اختر نوع الحركة: إدخال، إخراج، أو تحويل." %}
           </div>
           {% for error in form.move_type.errors %}
             <div class="text-danger small">{{ error }}</div>
@@ -58,11 +68,11 @@
         </div>
 
         <div class="col-md-4">
-          <label class="form-label" for="{{ form.status.id_for_label }}">
+          <label class="form-label small fw-semibold" for="{{ form.status.id_for_label }}">
             {{ form.status.label }}
           </label>
           {{ form.status }}
-          <div class="form-text">
+          <div class="form-text small">
             {% trans "يمكن حفظ الحركة كمسودة أو اعتمادها مباشرة." %}
           </div>
           {% for error in form.status.errors %}
@@ -71,7 +81,7 @@
         </div>
 
         <div class="col-md-4">
-          <label class="form-label" for="{{ form.move_date.id_for_label }}">
+          <label class="form-label small fw-semibold" for="{{ form.move_date.id_for_label }}">
             {{ form.move_date.label }}
           </label>
           {{ form.move_date }}
@@ -80,16 +90,18 @@
           {% endfor %}
         </div>
 
-        {# بيانات المصدر (from_) #}
         <div class="col-12">
           <hr class="my-2">
         </div>
 
+        {# بيانات المصدر (from_) #}
         <div class="col-md-6" id="stockmove-from-group">
-          <h6 class="fw-bold mb-2">{% trans "المصدر (من)" %}</h6>
+          <h6 class="fw-bold mb-2 small text-uppercase text-muted">
+            {% trans "المصدر (من)" %}
+          </h6>
 
           <div class="mb-2">
-            <label class="form-label" for="{{ form.from_warehouse.id_for_label }}">
+            <label class="form-label small fw-semibold" for="{{ form.from_warehouse.id_for_label }}">
               {{ form.from_warehouse.label }}
             </label>
             {{ form.from_warehouse }}
@@ -99,11 +111,10 @@
           </div>
 
           <div class="mb-2">
-            <label class="form-label" for="id_from_location">
+            <label class="form-label small fw-semibold" for="id_from_location">
               {{ form.from_location.label }}
             </label>
-            {# نرسم الـ select يدويًا لنضيف data-warehouse على كل option #}
-            <select name="from_location" id="id_from_location" class="form-select">
+            <select name="from_location" id="id_from_location" class="form-select form-select-sm">
               <option value="">{% trans "اختر موقعاً" %}</option>
               {% with current_from=form.from_location.value %}
                 {% for loc in form.from_location.field.queryset %}
@@ -123,10 +134,12 @@
 
         {# بيانات الوجهة (to_) #}
         <div class="col-md-6" id="stockmove-to-group">
-          <h6 class="fw-bold mb-2">{% trans "الوجهة (إلى)" %}</h6>
+          <h6 class="fw-bold mb-2 small text-uppercase text-muted">
+            {% trans "الوجهة (إلى)" %}
+          </h6>
 
           <div class="mb-2">
-            <label class="form-label" for="{{ form.to_warehouse.id_for_label }}">
+            <label class="form-label small fw-semibold" for="{{ form.to_warehouse.id_for_label }}">
               {{ form.to_warehouse.label }}
             </label>
             {{ form.to_warehouse }}
@@ -136,10 +149,10 @@
           </div>
 
           <div class="mb-2">
-            <label class="form-label" for="id_to_location">
+            <label class="form-label small fw-semibold" for="id_to_location">
               {{ form.to_location.label }}
             </label>
-            <select name="to_location" id="id_to_location" class="form-select">
+            <select name="to_location" id="id_to_location" class="form-select form-select-sm">
               <option value="">{% trans "اختر موقعاً" %}</option>
               {% with current_to=form.to_location.value %}
                 {% for loc in form.to_location.field.queryset %}
@@ -163,7 +176,7 @@
 
         {# مرجع + ملاحظات #}
         <div class="col-md-6">
-          <label class="form-label" for="{{ form.reference.id_for_label }}">
+          <label class="form-label small fw-semibold" for="{{ form.reference.id_for_label }}">
             {{ form.reference.label }}
           </label>
           {{ form.reference }}
@@ -173,7 +186,7 @@
         </div>
 
         <div class="col-md-6">
-          <label class="form-label" for="{{ form.note.id_for_label }}">
+          <label class="form-label small fw-semibold" for="{{ form.note.id_for_label }}">
             {{ form.note.label }}
           </label>
           {{ form.note }}
@@ -184,14 +197,14 @@
 
       </div>
 
+      {# ───── بنود الحركة (Formset) ───── #}
       <div class="mt-4">
         <h5 class="h6 fw-bold mb-2">
           {% trans "بنود الحركة (المنتجات)" %}
         </h5>
 
-        {# أخطاء عامة للفورمست #}
         {% if line_formset.non_form_errors %}
-          <div class="alert alert-danger">
+          <div class="alert alert-danger small">
             {% for error in line_formset.non_form_errors %}
               <div>{{ error }}</div>
             {% endfor %}
@@ -213,32 +226,52 @@
             </thead>
             <tbody>
               {% for line_form in line_formset %}
-                <tr>
+                <tr class="stockmove-line-row">
                   {# الحقول المخفية (id, move, ...) #}
                   {% for hidden in line_form.hidden_fields %}
                     {{ hidden }}
                   {% endfor %}
 
+                  {# المنتج مع data-base-uom و data-alt-uom #}
                   <td>
-                    {{ line_form.product }}
+                    <select name="{{ line_form.product.html_name }}"
+                            id="{{ line_form.product.id_for_label }}"
+                            class="form-select form-select-sm">
+                      <option value="">{% trans "اختر منتجاً" %}</option>
+                      {% with current_prod=line_form.product.value %}
+                        {% for p in line_form.product.field.queryset %}
+                          <option value="{{ p.pk }}"
+                                  data-base-uom="{{ p.base_uom_id }}"
+                                  data-alt-uom="{{ p.alt_uom_id|default_if_none:'' }}"
+                                  {% if current_prod|stringformat:"s" == p.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ p.code }} — {{ p.name }}
+                          </option>
+                        {% endfor %}
+                      {% endwith %}
+                    </select>
                     {% for error in line_form.product.errors %}
                       <div class="text-danger small">{{ error }}</div>
                     {% endfor %}
                   </td>
+
+                  {# الكمية #}
                   <td>
                     {{ line_form.quantity }}
                     {% for error in line_form.quantity.errors %}
                       <div class="text-danger small">{{ error }}</div>
                     {% endfor %}
                   </td>
+
+                  {# وحدة القياس #}
                   <td>
                     {{ line_form.uom }}
                     {% for error in line_form.uom.errors %}
                       <div class="text-danger small">{{ error }}</div>
                     {% endfor %}
                   </td>
+
+                  {# ملاحظات البند إن وُجد الحقل #}
                   <td>
-                    {# لو عندك حقل note/line_note في الفورم #}
                     {% if line_form.line_note %}
                       {{ line_form.line_note }}
                       {% for error in line_form.line_note.errors %}
@@ -248,6 +281,8 @@
                       <span class="text-muted small">—</span>
                     {% endif %}
                   </td>
+
+                  {# حذف السطر #}
                   <td class="text-center">
                     {% if line_form.DELETE %}
                       <div class="form-check d-flex justify-content-center">
@@ -266,21 +301,26 @@
                     </td>
                   </tr>
                 {% endif %}
-
               {% endfor %}
             </tbody>
           </table>
         </div>
 
-        {# تقدر لاحقاً تضيف زر "إضافة سطر" بـ JS، لكن حالياً نعتمد على extra في الفورمست #}
+        {# لاحقاً ممكن نضيف زر JS لإضافة صفوف ديناميكية #}
       </div>
 
-      <div class="mt-4 d-flex justify-content-between">
+      <div class="mt-4 d-flex justify-content-between align-items-center">
         <a href="{% url 'inventory:move_list' %}" class="btn btn-link">
           {% trans "رجوع إلى حركات المخزون" %}
         </a>
         <button type="submit" class="btn btn-primary">
-          {% trans "حفظ" %}
+          {% if object %}
+            <i class="bi bi-save ms-1"></i>
+            {% trans "حفظ التعديلات" %}
+          {% else %}
+            <i class="bi bi-check2-circle ms-1"></i>
+            {% trans "حفظ الحركة" %}
+          {% endif %}
         </button>
       </div>
 
@@ -288,7 +328,7 @@
   </div>
 </div>
 
-{# === جافاسكربت للتحكم في نوع الحركة + فلترة المواقع حسب المخزن === #}
+{# ───── جافاسكربت: منطق نوع الحركة + فلترة المواقع + ربط UoM بالبند ───── #}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const moveTypeSelect = document.getElementById("id_move_type");
@@ -325,7 +365,6 @@
       const whId = warehouseSelect.value;
 
       Array.from(locationSelect.options).forEach(function (opt) {
-        // أول خيار (الفارغ) نخليه دائما ظاهر
         if (!opt.value) {
           opt.hidden = false;
           opt.disabled = false;
@@ -335,7 +374,6 @@
         const optWhId = opt.getAttribute("data-warehouse");
 
         if (!whId) {
-          // لو ما مختار مخزن: نخفي كل المواقع
           opt.hidden = true;
           opt.disabled = true;
         } else {
@@ -345,7 +383,6 @@
         }
       });
 
-      // لو الموقع المحدد لا يتوافق مع المخزن، نفرغه
       const selected = locationSelect.options[locationSelect.selectedIndex];
       if (selected && selected.hidden) {
         locationSelect.value = "";
@@ -358,7 +395,6 @@
       const value = moveTypeSelect.value;
 
       if (value === "in") {
-        // حركة دخول: نركز على الوجهة فقط
         if (fromGroup) fromGroup.style.display = "none";
         if (toGroup) toGroup.style.display = "";
 
@@ -371,7 +407,6 @@
         setRequired(toLocation, true);
 
       } else if (value === "out") {
-        // حركة خروج: نركز على المصدر فقط
         if (fromGroup) fromGroup.style.display = "";
         if (toGroup) toGroup.style.display = "none";
 
@@ -384,7 +419,6 @@
         setRequired(fromLocation, true);
 
       } else if (value === "transfer") {
-        // تحويل: نحتاج المصدر والوجهة
         if (fromGroup) fromGroup.style.display = "";
         if (toGroup) toGroup.style.display = "";
 
@@ -394,12 +428,11 @@
         setRequired(toLocation, true);
       }
 
-      // بعد تغيير نوع الحركة، نعيد فلترة المواقع
       filterLocations(fromWarehouse, fromLocation);
       filterLocations(toWarehouse, toLocation);
     }
 
-    // عند أول تحميل: نفلتر حسب المخازن الحالية (لو في initial/POST)
+    // أول تحميل
     filterLocations(fromWarehouse, fromLocation);
     filterLocations(toWarehouse, toLocation);
 
@@ -419,6 +452,76 @@
       updateMoveFields();
       moveTypeSelect.addEventListener("change", updateMoveFields);
     }
+
+    // ============================
+    // ربط وحدة القياس بوحدة المنتج في البنود
+    // ============================
+
+    function updateLineUomForRow(row) {
+      const productSelect = row.querySelector('select[name$="-product"]');
+      const uomSelect = row.querySelector('select[name$="-uom"]');
+
+      if (!productSelect || !uomSelect) return;
+
+      const selectedOpt = productSelect.options[productSelect.selectedIndex];
+      if (!selectedOpt || !selectedOpt.value) {
+        Array.from(uomSelect.options).forEach(function (opt) {
+          opt.hidden = false;
+          opt.disabled = false;
+        });
+        return;
+      }
+
+      const baseId = selectedOpt.getAttribute("data-base-uom");
+      const altId = selectedOpt.getAttribute("data-alt-uom");
+
+      Array.from(uomSelect.options).forEach(function (opt) {
+        if (!opt.value) {
+          opt.hidden = false;
+          opt.disabled = false;
+          return;
+        }
+
+        const val = opt.value;
+        const allowed = (val === baseId) || (altId && val === altId);
+
+        opt.hidden = !allowed;
+        opt.disabled = !allowed;
+      });
+
+      const selectedIndex = uomSelect.selectedIndex;
+      const selectedOptUom = uomSelect.options[selectedIndex];
+
+      const currentAllowed =
+        selectedOptUom &&
+        !selectedOptUom.hidden &&
+        !selectedOptUom.disabled;
+
+      if (!currentAllowed) {
+        if (baseId) {
+          uomSelect.value = baseId;
+        } else {
+          uomSelect.value = "";
+        }
+      }
+    }
+
+    function initLinesUom() {
+      const rows = document.querySelectorAll("tr.stockmove-line-row");
+
+      rows.forEach(function (row) {
+        updateLineUomForRow(row);
+
+        const productSelect = row.querySelector('select[name$="-product"]');
+        if (productSelect) {
+          productSelect.addEventListener("change", function () {
+            updateLineUomForRow(row);
+          });
+        }
+      });
+    }
+
+    initLinesUom();
   });
 </script>
 

@@ -5,14 +5,25 @@
 
 {% block inventory_content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <div>
-    <h1 class="h4 fw-bold mb-1 text-mazoon">
-      {% trans "إعدادات المخزون" %}
-    </h1>
-    <p class="text-muted small mb-0">
-      {% trans "ضبط بادئات ترقيم حركات المخزون حسب نوع الحركة." %}
-    </p>
+{# ───── هيدر Mazoon لإعدادات المخزون ───── #}
+<div class="card border-0 shadow-sm mb-3 bg-mazoon-card">
+  <div class="card-body d-flex justify-content-between align-items-center gap-3">
+    <div>
+      <h1 class="h5 fw-bold mb-1 text-mazoon">
+        {% trans "إعدادات المخزون" %}
+      </h1>
+      <p class="text-muted small mb-0">
+        {% trans "ضبط بادئات ترقيم حركات المخزون حسب نوع الحركة، لتوحيد أرقام الحركات في التقارير والمستندات." %}
+      </p>
+    </div>
+    <div class="text-end small text-muted">
+      <div class="fw-semibold">
+        {% trans "إعدادات عامة على مستوى النظام" %}
+      </div>
+      <div>
+        {% trans "تنطبق على جميع حركات المخزون الحالية والمستقبلية." %}
+      </div>
+    </div>
   </div>
 </div>
 
@@ -21,38 +32,63 @@
     <form method="post" class="row g-3">
       {% csrf_token %}
 
+      {# أخطاء عامة على مستوى الفورم #}
+      {% if form.non_field_errors %}
+        <div class="col-12">
+          {% for error in form.non_field_errors %}
+            <div class="alert alert-danger py-1 small mb-2">{{ error }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {# IN prefix #}
       <div class="col-md-4">
-        <label class="form-label small fw-semibold">
+        <label class="form-label small fw-semibold" for="{{ form.stock_move_in_prefix.id_for_label }}">
           {% trans "بادئة الحركات الواردة (IN)" %}
         </label>
         {{ form.stock_move_in_prefix }}
         <div class="form-text small">
-          {% trans "مثال: IN أو REC أو PUR." %}
+          {% trans "مثال: IN أو REC أو PUR. ستظهر قبل رقم حركة الإدخال." %}
         </div>
+        {% for error in form.stock_move_in_prefix.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
       </div>
 
+      {# OUT prefix #}
       <div class="col-md-4">
-        <label class="form-label small fw-semibold">
+        <label class="form-label small fw-semibold" for="{{ form.stock_move_out_prefix.id_for_label }}">
           {% trans "بادئة الحركات الصادرة (OUT)" %}
         </label>
         {{ form.stock_move_out_prefix }}
         <div class="form-text small">
-          {% trans "مثال: OUT أو ISS أو SAL." %}
+          {% trans "مثال: OUT أو ISS أو SAL. تُستخدم عادةً لحركات الصرف والبيع." %}
         </div>
+        {% for error in form.stock_move_out_prefix.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
       </div>
 
+      {# TRANSFER prefix #}
       <div class="col-md-4">
-        <label class="form-label small fw-semibold">
+        <label class="form-label small fw-semibold" for="{{ form.stock_move_transfer_prefix.id_for_label }}">
           {% trans "بادئة حركات التحويل (TRANSFER)" %}
         </label>
         {{ form.stock_move_transfer_prefix }}
         <div class="form-text small">
-          {% trans "مثال: TRF أو MOV." %}
+          {% trans "مثال: TRF أو MOV. تُستخدم عند تحويل الكميات بين المخازن أو المواقع." %}
         </div>
+        {% for error in form.stock_move_transfer_prefix.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
       </div>
 
-      <div class="col-12 mt-3">
+      <div class="col-12 mt-3 d-flex justify-content-between">
+        <div class="small text-muted">
+          {% trans "يمكن تغيير هذه البادئات لاحقاً، لكن يفضّل تثبيتها مبكراً لتوحيد ترقيم الحركات." %}
+        </div>
         <button class="btn btn-primary btn-sm">
+          <i class="bi bi-check2 ms-1"></i>
           {% trans "حفظ الإعدادات" %}
         </button>
       </div>

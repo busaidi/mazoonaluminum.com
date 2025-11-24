@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "inventory/base_inventory.html" %}
 {% load i18n %}
 
 {% block title %}
@@ -9,71 +9,146 @@
   {% endif %}
 {% endblock %}
 
-{% block content %}
+{% block inventory_content %}
 
-<div class="container-fluid">
-
-  {# nav الموحد #}
-  {% include "inventory/_nav.html" %}
-
-  <div class="card shadow-sm border-0 bg-mazoon-card">
-    <div class="card-body">
-
-      <h2 class="h5 fw-bold text-mazoon mb-3">
+{# هيدر Mazoon #}
+<div class="card shadow-sm border-0 mb-3 bg-mazoon-card">
+  <div class="card-body d-flex justify-content-between align-items-center gap-3">
+    <div>
+      <h1 class="h5 fw-bold mb-1 text-mazoon">
         {% if mode == "create" %}
           {% trans "إضافة موقع جديد" %}
         {% else %}
           {% trans "تعديل بيانات الموقع" %}
         {% endif %}
-      </h2>
+      </h1>
+      <p class="text-muted small mb-0">
+        {% trans "المواقع تُستخدم لتوزيع المخزون داخل المخزن (رف، منطقة، ساحة خارجية، موقع مورد أو زبون...)." %}
+      </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'inventory:location_list' %}"
+         class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-right-short ms-1"></i>
+        {% trans "رجوع إلى قائمة المواقع" %}
+      </a>
+    </div>
+  </div>
+</div>
 
-      <form method="post" novalidate>
-        {% csrf_token %}
+<div class="card shadow-sm border-0">
+  <div class="card-body">
 
-        <div class="row g-3">
+    <form method="post" novalidate class="row g-3">
+      {% csrf_token %}
 
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">{% trans "المخزن" %}</label>
-            {{ form.warehouse }}
+      {# أخطاء عامة #}
+      {% if form.non_field_errors %}
+        <div class="col-12">
+          <div class="alert alert-danger small">
+            {% for error in form.non_field_errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
           </div>
-
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">{% trans "الرمز" %}</label>
-            {{ form.code }}
-          </div>
-
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">{% trans "الاسم" %}</label>
-            {{ form.name }}
-          </div>
-
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">{% trans "النوع" %}</label>
-            {{ form.type }}
-          </div>
-
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">{% trans "الحالة" %}</label>
-            {{ form.is_active }}
-          </div>
-
         </div>
+      {% endif %}
 
-        <div class="d-flex justify-content-end mt-4">
+      <div class="col-md-4">
+        <label for="{{ form.warehouse.id_for_label }}" class="form-label small fw-semibold">
+          {{ form.warehouse.label }}
+        </label>
+        {{ form.warehouse }}
+        {% if form.warehouse.help_text %}
+          <div class="form-text small">{{ form.warehouse.help_text }}</div>
+        {% endif %}
+        {% for error in form.warehouse.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="col-md-4">
+        <label for="{{ form.code.id_for_label }}" class="form-label small fw-semibold">
+          {{ form.code.label }}
+        </label>
+        {{ form.code }}
+        {% if form.code.help_text %}
+          <div class="form-text small">{{ form.code.help_text }}</div>
+        {% endif %}
+        {% for error in form.code.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="col-md-4">
+        <label for="{{ form.name.id_for_label }}" class="form-label small fw-semibold">
+          {{ form.name.label }}
+        </label>
+        {{ form.name }}
+        {% if form.name.help_text %}
+          <div class="form-text small">{{ form.name.help_text }}</div>
+        {% endif %}
+        {% for error in form.name.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="col-md-4">
+        <label for="{{ form.type.id_for_label }}" class="form-label small fw-semibold">
+          {{ form.type.label }}
+        </label>
+        {{ form.type }}
+        {% if form.type.help_text %}
+          <div class="form-text small">{{ form.type.help_text }}</div>
+        {% endif %}
+        {% for error in form.type.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="col-md-4">
+        <label for="{{ form.is_active.id_for_label }}" class="form-label small fw-semibold d-block">
+          {{ form.is_active.label }}
+        </label>
+        <div class="form-check">
+          {{ form.is_active }}
+          {% if form.is_active.help_text %}
+            <div class="form-text small">{{ form.is_active.help_text }}</div>
+          {% endif %}
+          {% for error in form.is_active.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# لو عندك حقول إضافية في الفورم، نعرضها هنا بشكل تلقائي #}
+      {% for field in form.hidden_fields %}
+        {{ field }}
+      {% endfor %}
+
+      <div class="col-12 mt-3 d-flex justify-content-between align-items-center">
+        <div class="text-muted small">
+          {% trans "يمكن إيقاف الموقع مؤقتاً بدون حذفه، مع إبقاء السجلات التاريخية للحركات." %}
+        </div>
+        <div class="d-flex gap-2">
+          <a href="{% url 'inventory:location_list' %}"
+             class="btn btn-outline-secondary">
+            {% trans "إلغاء" %}
+          </a>
           <button type="submit" class="btn btn-primary">
             {% if mode == "create" %}
+              <i class="bi bi-check2-circle ms-1"></i>
               {% trans "إنشاء" %}
             {% else %}
+              <i class="bi bi-save ms-1"></i>
               {% trans "حفظ التعديلات" %}
             {% endif %}
           </button>
         </div>
+      </div>
 
-      </form>
+    </form>
 
-    </div>
   </div>
-
 </div>
 
 {% endblock %}

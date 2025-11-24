@@ -5,21 +5,57 @@
 
 {% block inventory_content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <div>
-    <h1 class="h4 fw-bold mb-1">{% trans "حركات المخزون" %}</h1>
-    <p class="text-muted small mb-0">
-      {% trans "عرض جميع عمليات الإدخال والإخراج والتحويل في المخازن." %}
-    </p>
-  </div>
+{# ───── هيدر Mazoon + CTA ───── #}
+<div class="card border-0 shadow-sm mb-3 bg-mazoon-card">
+  <div class="card-body d-flex justify-content-between align-items-center gap-3">
+    <div>
+      <h1 class="h5 fw-bold mb-1 text-mazoon">
+        {% trans "حركات المخزون" %}
+      </h1>
+      <p class="text-muted small mb-0">
+        {% trans "عرض جميع عمليات الإدخال والإخراج والتحويل بين المخازن والمواقع مع ملخص سريع للبنود." %}
+      </p>
+    </div>
 
-  <a href="{% url 'inventory:move_create' %}" class="btn btn-primary btn-sm">
-    <i class="bi bi-plus-lg"></i>
-    {% trans "حركة جديدة" %}
-  </a>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+
+      {% if page_obj %}
+        <span class="badge bg-light text-muted border">
+          {% blocktrans with count=page_obj.paginator.count %}
+            {{ count }} حركة في النظام
+          {% endblocktrans %}
+        </span>
+      {% endif %}
+
+      {# شارة النوع لو محدد #}
+      {% if request.GET.move_type %}
+        <span class="badge bg-primary-subtle text-primary border small">
+          {% if request.GET.move_type == "in" %}
+            {% trans "فلتر: حركات الإدخال" %}
+          {% elif request.GET.move_type == "out" %}
+            {% trans "فلتر: حركات الإخراج" %}
+          {% elif request.GET.move_type == "transfer" %}
+            {% trans "فلتر: حركات التحويل" %}
+          {% endif %}
+        </span>
+      {% endif %}
+
+      {# شارة المخزن لو محدد #}
+      {% if request.GET.warehouse %}
+        <span class="badge bg-info-subtle text-info border small">
+          {% trans "فلتر حسب مخزن محدد" %}
+        </span>
+      {% endif %}
+
+      <a href="{% url 'inventory:move_create' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg ms-1"></i>
+        {% trans "حركة جديدة" %}
+      </a>
+    </div>
+  </div>
 </div>
 
-{# ===== البحث والفلاتر ===== #}
+{# ───── البحث والفلاتر ───── #}
 <div class="card border-0 shadow-sm mb-3">
   <div class="card-body py-2">
     <form method="get" class="row g-2 align-items-center">
@@ -29,7 +65,7 @@
                name="q"
                class="form-control form-control-sm"
                value="{{ request.GET.q }}"
-               placeholder="{% trans 'بحث بالمنتج أو المرجع...' %}">
+               placeholder="{% trans 'بحث بالمنتج أو المرجع أو رقم الحركة...' %}">
       </div>
 
       <div class="col-md-3">
@@ -37,7 +73,7 @@
           <option value="">{% trans "كل المخازن" %}</option>
           {% for w in warehouses %}
             <option value="{{ w.id }}" {% if request.GET.warehouse == w.id|stringformat:"s" %}selected{% endif %}>
-              {{ w.name }}
+              {{ w.code }} — {{ w.name }}
             </option>
           {% endfor %}
         </select>
@@ -52,70 +88,128 @@
         </select>
       </div>
 
-      <div class="col-md-2 d-grid">
-        <button class="btn btn-outline-primary btn-sm">{% trans "تطبيق" %}</button>
+      <div class="col-md-2 d-flex justify-content-end gap-2">
+        <button class="btn btn-outline-primary btn-sm flex-grow-1">
+          <i class="bi bi-filter ms-1"></i>
+          {% trans "تطبيق" %}
+        </button>
+
+        {% if request.GET.q or request.GET.warehouse or request.GET.move_type %}
+          <a href="{% url 'inventory:move_list' %}"
+             class="btn btn-link btn-sm text-decoration-none">
+            <i class="bi bi-x-circle ms-1"></i>
+            {% trans "إعادة تعيين" %}
+          </a>
+        {% endif %}
       </div>
 
     </form>
   </div>
 </div>
 
-{# ===== نتائج الحركات ===== #}
+{# ───── نتائج الحركات ───── #}
 <div class="card border-0 shadow-sm">
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0 table-sm">
-
       <thead class="table-light">
         <tr>
-          <th>{% trans "التاريخ" %}</th>
-          <th>{% trans "المنتج" %}</th>
-          <th class="text-end">{% trans "الكمية" %}</th>
-          <th>{% trans "من" %}</th>
-          <th>{% trans "إلى" %}</th>
-          <th>{% trans "الحالة" %}</th>
-          <th>{% trans "النوع" %}</th>
-          <th>{% trans "المرجع" %}</th>
-          <th class="text-end">{% trans "عرض" %}</th>
+          <th style="width: 10%;">{% trans "التاريخ" %}</th>
+          <th style="width: 15%;">{% trans "رقم الحركة" %}</th>
+          <th style="width: 30%;">{% trans "ملخص البنود" %}</th>
+          <th class="text-end" style="width: 10%;">{% trans "إجمالي الكمية" %}</th>
+          <th style="width: 15%;">{% trans "من" %}</th>
+          <th style="width: 15%;">{% trans "إلى" %}</th>
+          <th style="width: 10%;">{% trans "الحالة" %}</th>
+          <th style="width: 10%;">{% trans "النوع" %}</th>
         </tr>
       </thead>
 
       <tbody>
         {% for move in object_list %}
           <tr>
-            <td class="small text-muted">{{ move.move_date|date:"Y-m-d" }}</td>
+            {# التاريخ #}
+            <td class="small text-muted">
+              {{ move.move_date|date:"Y-m-d" }}
+            </td>
 
-            <td>
+            {# رقم الحركة #}
+            <td class="small">
               <a href="{% url 'inventory:move_detail' move.pk %}"
-                 class="fw-semibold text-decoration-none">
-                {{ move.product.name }}
+                 class="fw-semibold text-decoration-none" dir="ltr">
+                {{ move.serial|default:move.pk }}
               </a>
-              {% if move.product.sku %}
-                <div class="text-muted small">{{ move.product.sku }}</div>
+              {% if move.reference %}
+                <div class="text-muted small">
+                  {{ move.reference }}
+                </div>
               {% endif %}
             </td>
 
-            <td class="text-end fw-semibold">{{ move.quantity }}</td>
-
+            {# ملخص البنود: عدد البنود + أول منتج #}
             <td class="small">
-              {{ move.from_warehouse.name|default:"-" }}
+              {% with lines_count=move.lines.count %}
+                {% if lines_count %}
+                  <div class="fw-semibold">
+                    {% blocktrans count lines_count as cnt %}
+                      {{ cnt }} بند
+                    {% plural %}
+                      {{ cnt }} بنود
+                    {% endblocktrans %}
+                  </div>
+                  {% with first_line=move.lines.first %}
+                    {% if first_line %}
+                      <div class="text-muted small">
+                        {{ first_line.product.code }} – {{ first_line.product.name }}
+                      </div>
+                    {% endif %}
+                  {% endwith %}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              {% endwith %}
             </td>
 
+            {# إجمالي الكمية #}
+            <td class="text-end fw-semibold small">
+              {{ move.total_lines_quantity }}
+            </td>
+
+            {# من مخزن #}
             <td class="small">
-              {{ move.to_warehouse.name|default:"-" }}
+              {% if move.from_warehouse %}
+                <span class="fw-semibold">{{ move.from_warehouse.code }}</span>
+                <div class="text-muted small">
+                  {{ move.from_warehouse.name }}
+                </div>
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+
+            {# إلى مخزن #}
+            <td class="small">
+              {% if move.to_warehouse %}
+                <span class="fw-semibold">{{ move.to_warehouse.code }}</span>
+                <div class="text-muted small">
+                  {{ move.to_warehouse.name }}
+                </div>
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
             </td>
 
             {# الحالة #}
-            <td>
+            <td class="small">
               {% if move.status == "draft" %}
-                <span class="badge bg-secondary-subtle text-secondary">
+                <span class="badge badge-mazoon badge-draft">
                   {% trans "مسودة" %}
                 </span>
               {% elif move.status == "done" %}
-                <span class="badge bg-success-subtle text-success">
+                <span class="badge badge-mazoon badge-confirmed">
                   {% trans "منفذة" %}
                 </span>
               {% elif move.status == "cancelled" %}
-                <span class="badge bg-danger-subtle text-danger">
+                <span class="badge badge-mazoon badge-cancelled">
                   {% trans "ملغاة" %}
                 </span>
               {% else %}
@@ -126,31 +220,30 @@
             </td>
 
             {# النوع #}
-            <td>
+            <td class="small">
               {% if move.move_type == "in" %}
-                <span class="badge bg-success-subtle text-success">{% trans "إدخال" %}</span>
+                <span class="badge bg-success-subtle text-success">
+                  {% trans "إدخال" %}
+                </span>
               {% elif move.move_type == "out" %}
-                <span class="badge bg-danger-subtle text-danger">{% trans "إخراج" %}</span>
+                <span class="badge bg-danger-subtle text-danger">
+                  {% trans "إخراج" %}
+                </span>
+              {% elif move.move_type == "transfer" %}
+                <span class="badge bg-info-subtle text-info">
+                  {% trans "تحويل" %}
+                </span>
               {% else %}
-                <span class="badge bg-info-subtle text-info">{% trans "تحويل" %}</span>
+                <span class="badge bg-secondary-subtle text-secondary">
+                  {{ move.get_move_type_display }}
+                </span>
               {% endif %}
-            </td>
-
-            <td class="small text-muted" title="{{ move.reference }}">
-              {{ move.reference|default:"-"|truncatechars:25 }}
-            </td>
-
-            <td class="text-end">
-              <a href="{% url 'inventory:move_detail' move.pk %}"
-                 class="btn btn-sm btn-outline-secondary">
-                {% trans "عرض" %}
-              </a>
             </td>
           </tr>
 
         {% empty %}
           <tr>
-            <td colspan="9" class="text-center text-muted py-4">
+            <td colspan="8" class="text-center text-muted py-4">
               {% trans "لا توجد حركات مسجلة." %}
             </td>
           </tr>
@@ -159,6 +252,12 @@
 
     </table>
   </div>
+
+  {% if is_paginated %}
+    <div class="card-footer border-0">
+      {% include "includes/_pagination.html" %}
+    </div>
+  {% endif %}
 </div>
 
 {% endblock %}

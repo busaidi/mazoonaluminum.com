@@ -5,34 +5,81 @@
 
 {% block inventory_content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <div>
-    <h1 class="h4 fw-bold mb-1">
-      {{ object.product.name }}
-    </h1>
-    <p class="text-muted small mb-0">
-      {% trans "تفاصيل مستوى المخزون لهذا المنتج في مخزن/موقع محدد." %}
-    </p>
-  </div>
-  <div class="d-flex gap-2">
-    <a href="{% url 'inventory:stocklevel_update' object.pk %}" class="btn btn-sm btn-primary">
-      {% trans "تعديل" %}
-    </a>
-    <a href="{% url 'inventory:stocklevel_list' %}" class="btn btn-sm btn-outline-secondary">
-      {% trans "رجوع" %}
-    </a>
+{# هيدر Mazoon لعرض المنتج + الأكشنز #}
+<div class="card border-0 shadow-sm mb-3 bg-mazoon-card">
+  <div class="card-body d-flex justify-content-between align-items-start gap-3">
+
+    <div class="flex-grow-1">
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <h1 class="h5 fw-bold mb-0 text-mazoon">
+          {{ object.product.name }}
+        </h1>
+        <span class="badge bg-light text-muted border small" dir="ltr">
+          {{ object.product.code }}
+        </span>
+      </div>
+
+      <p class="text-muted small mb-0">
+        {% trans "تفاصيل مستوى المخزون لهذا المنتج في مخزن/موقع محدد." %}
+      </p>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+
+      <div class="d-flex flex-column align-items-end small">
+        {% if object.is_below_min %}
+          <span class="badge badge-mazoon badge-cancelled mb-1">
+            <i class="bi bi-exclamation-triangle ms-1"></i>
+            {% trans "تحت الحد الأدنى" %}
+          </span>
+          <span class="text-muted">
+            {% trans "يفضّل مراجعة الكميات أو إنشاء أمر شراء." %}
+          </span>
+        {% else %}
+          <span class="badge badge-mazoon badge-confirmed mb-1">
+            <i class="bi bi-check2-circle ms-1"></i>
+            {% trans "ضمن الحد" %}
+          </span>
+          <span class="text-muted">
+            {% trans "لا يوجد إنذار حالي لهذا المستوى." %}
+          </span>
+        {% endif %}
+      </div>
+
+      <div class="btn-group btn-group-sm" role="group">
+        <a href="{% url 'inventory:stocklevel_update' object.pk %}"
+           class="btn btn-outline-primary">
+          <i class="bi bi-pencil-square ms-1"></i>
+          {% trans "تعديل" %}
+        </a>
+        <a href="{% url 'inventory:stocklevel_list' %}"
+           class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-right-short ms-1"></i>
+          {% trans "رجوع للقائمة" %}
+        </a>
+      </div>
+
+    </div>
   </div>
 </div>
 
 <div class="row g-3">
+
+  {# العمود الرئيسي: التفاصيل #}
   <div class="col-lg-8">
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-body">
+
+        <h2 class="h6 fw-bold mb-3">
+          <i class="bi bi-box-seam ms-1"></i>
+          {% trans "بيانات مستوى المخزون" %}
+        </h2>
+
         <dl class="row mb-0 small">
 
           <dt class="col-sm-3">{% trans "المنتج" %}</dt>
           <dd class="col-sm-9">
-            {{ object.product.name }}
+            <span class="fw-semibold">{{ object.product.name }}</span>
             <div class="text-muted">
               {{ object.product.code }}
             </div>
@@ -43,7 +90,8 @@
             {% if object.warehouse %}
               <a href="{% url 'inventory:warehouse_update' object.warehouse.pk %}"
                  class="text-decoration-none">
-                {{ object.warehouse.name }}
+                <span class="fw-semibold">{{ object.warehouse.code }}</span>
+                <span class="text-muted small d-block">{{ object.warehouse.name }}</span>
               </a>
             {% else %}
               <span class="text-muted">-</span>
@@ -55,7 +103,8 @@
             {% if object.location %}
               <a href="{% url 'inventory:location_update' object.location.pk %}"
                  class="text-decoration-none">
-                {{ object.location.name }}
+                <span class="fw-semibold">{{ object.location.code }}</span>
+                <span class="text-muted small d-block">{{ object.location.name }}</span>
               </a>
             {% else %}
               <span class="text-muted">-</span>
@@ -69,22 +118,22 @@
 
           <dt class="col-sm-3">{% trans "المحجوز" %}</dt>
           <dd class="col-sm-9">
-            {{ object.quantity_reserved }}
+            {{ object.quantity_reserved|default:"0" }}
           </dd>
 
           <dt class="col-sm-3">{% trans "الحد الأدنى" %}</dt>
           <dd class="col-sm-9">
-            {{ object.min_stock }}
+            {{ object.min_stock|default:"0" }}
           </dd>
 
           <dt class="col-sm-3">{% trans "الحالة" %}</dt>
           <dd class="col-sm-9">
             {% if object.is_below_min %}
-              <span class="badge bg-danger-subtle text-danger">
+              <span class="badge badge-mazoon badge-cancelled">
                 {% trans "تحت الحد الأدنى" %}
               </span>
             {% else %}
-              <span class="badge bg-success-subtle text-success">
+              <span class="badge badge-mazoon badge-confirmed">
                 {% trans "ضمن الحد" %}
               </span>
             {% endif %}
@@ -95,11 +144,16 @@
     </div>
   </div>
 
+  {# العمود الجانبي: معلومات إضافية / ملاحظات #}
   <div class="col-lg-4">
     <aside class="position-sticky" style="top: 80px;">
+
       <div class="card border-0 shadow-sm mb-3">
         <div class="card-body small text-muted">
-          <h2 class="h6 fw-bold mb-2">{% trans "معلومات إضافية" %}</h2>
+          <h2 class="h6 fw-bold mb-2">
+            <i class="bi bi-clock-history ms-1"></i>
+            {% trans "معلومات زمنية" %}
+          </h2>
           <p class="mb-1">
             <strong>{% trans "تاريخ الإنشاء" %}:</strong>
             {{ object.created_at|date:"Y-m-d H:i" }}
@@ -113,12 +167,16 @@
 
       <div class="card border-0 shadow-sm">
         <div class="card-body small text-muted">
-          <strong class="d-block mb-1">{% trans "ملاحظة" %}:</strong>
+          <h2 class="h6 fw-bold mb-2">
+            <i class="bi bi-info-circle ms-1"></i>
+            {% trans "ملاحظة" %}
+          </h2>
           <p class="mb-0">
-            {% trans "يتم تحديث هذه الكميات تلقائياً من حركات المخزون (إدخال/إخراج/تحويل) حسب منطق التطبيق." %}
+            {% trans "يتم تحديث هذه الكميات عادةً تلقائياً من حركات المخزون (إدخال، إخراج، تحويل) حسب منطق التطبيق وإجراءات العمل المعتمدة." %}
           </p>
         </div>
       </div>
+
     </aside>
   </div>
 </div>

@@ -77,6 +77,8 @@ class StockMoveForm(forms.ModelForm):
 class StockMoveLineForm(forms.ModelForm):
     """
     فورم بند واحد في حركة المخزون (منتج + كمية + وحدة قياس)
+    - يقيّد uom على الوحدة الأساسية + البديلة للمنتج.
+    - يضبط افتراضيًا وحدة القياس على base_uom لو ما اختار المستخدم شيء.
     """
 
     class Meta:
@@ -90,16 +92,87 @@ class StockMoveLineForm(forms.ModelForm):
         self.fields["quantity"].label = "الكمية"
         self.fields["uom"].label = "وحدة القياس"
 
-        # وحدات قياس مفعّلة فقط
-        self.fields["uom"].queryset = UnitOfMeasure.objects.filter(is_active=True)
+        # مبدئياً: كل الوحدات المفعّلة
+        if "uom" in self.fields:
+            self.fields["uom"].queryset = UnitOfMeasure.objects.filter(is_active=True)
 
+        # نحاول نحدد المنتج لهذا السطر (من POST أو instance أو initial)
+        product = self._get_current_product()
+        if product:
+            self._limit_uom_to_product(product)
+
+        # Bootstrap classes
         for name, field in self.fields.items():
             widget = field.widget
             css = widget.attrs.get("class", "")
             if isinstance(widget, (forms.Select, forms.SelectMultiple)):
                 widget.attrs["class"] = (css.replace("form-control", "") + " form-select").strip()
+            elif isinstance(widget, forms.CheckboxInput):
+                widget.attrs["class"] = (css + " form-check-input").strip()
             else:
                 widget.attrs["class"] = (css + " form-control").strip()
+
+    # ============================
+    # Helpers
+    # ============================
+
+    def _get_current_product(self):
+        """
+        يحاول يستنتج المنتج لهذا السطر:
+        - لو الفورم bound: من self.data
+        - لو instance موجود: من instance.product
+        - لو initial فيه product: يستخدمه
+        """
+        product = None
+
+        if self.is_bound:
+            product_key = self.add_prefix("product")  # مثال: form-0-product
+            product_id = self.data.get(product_key)
+            if product_id:
+                try:
+                    product = Product.objects.get(pk=product_id)
+                except Product.DoesNotExist:
+                    product = None
+        else:
+            # في حالة edit أو initial قبل POST
+            if self.instance.pk and self.instance.product_id:
+                product = self.instance.product
+            elif "product" in self.initial:
+                init_val = self.initial["product"]
+                if isinstance(init_val, Product):
+                    product = init_val
+                else:
+                    try:
+                        product = Product.objects.get(pk=init_val)
+                    except Product.DoesNotExist:
+                        product = None
+
+        return product
+
+    def _limit_uom_to_product(self, product: Product):
+        """
+        يقيّد queryset لحقل uom على:
+        - base_uom
+        - alt_uom (لو موجودة)
+        ويضبط initial على base_uom لو ما فيه اختيار من المستخدم.
+        """
+        allowed = [product.base_uom]
+        if product.alt_uom_id:
+            allowed.append(product.alt_uom)
+
+        qs = UnitOfMeasure.objects.filter(pk__in=[u.pk for u in allowed])
+        self.fields["uom"].queryset = qs
+
+        # لو السطر جديد وما فيه uom جاية من POST → نخلي الافتراضي base_uom
+        uom_key = self.add_prefix("uom")
+        has_user_uom = self.is_bound and self.data.get(uom_key)
+
+        if not self.instance.pk and not has_user_uom:
+            self.fields["uom"].initial = product.base_uom
+
+    # ============================
+    # Validation
+    # ============================
 
     def clean_quantity(self):
         qty = self.cleaned_data.get("quantity")
@@ -112,15 +185,23 @@ class StockMoveLineForm(forms.ModelForm):
         product = cleaned.get("product")
         uom = cleaned.get("uom")
 
-        if product and uom:
-            allowed_uoms = [product.base_uom]
-            if product.alt_uom:
-                allowed_uoms.append(product.alt_uom)
-            if uom not in allowed_uoms:
-                raise ValidationError(
-                    "وحدة القياس المختارة لا تتوافق مع إعدادات هذا المنتج. "
-                    "يُرجى اختيار وحدة من الوحدات المحددة للمنتج."
-                )
+        if not product:
+            return cleaned
+
+        allowed_uoms = [product.base_uom]
+        if product.alt_uom:
+            allowed_uoms.append(product.alt_uom)
+
+        # لو ما اختار وحدة → نخليها تلقائيًا base_uom
+        if uom is None:
+            cleaned["uom"] = product.base_uom
+            uom = cleaned["uom"]
+
+        if uom not in allowed_uoms:
+            raise ValidationError(
+                "وحدة القياس المختارة لا تتوافق مع إعدادات هذا المنتج. "
+                "يُرجى اختيار وحدة من الوحدات المحددة للمنتج."
+            )
 
         return cleaned
 

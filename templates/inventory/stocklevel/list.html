@@ -5,23 +5,40 @@
 
 {% block inventory_content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <div>
-    <h1 class="h4 fw-bold mb-1">
-      {% trans "مستويات المخزون" %}
-    </h1>
-    <p class="text-muted small mb-0">
-      {% trans "عرض الكميات المتوفرة لكل منتج في كل مخزن أو موقع." %}
-    </p>
-  </div>
+{# ───── هيدر Mazoon + CTA ───── #}
+<div class="card border-0 shadow-sm mb-3 bg-mazoon-card">
+  <div class="card-body d-flex justify-content-between align-items-center gap-3">
+    <div>
+      <h1 class="h5 fw-bold mb-1 text-mazoon">
+        {% trans "مستويات المخزون" %}
+      </h1>
+      <p class="text-muted small mb-0">
+        {% trans "عرض الكميات المتوفرة لكل منتج في كل مخزن وموقع، مع إبراز المستويات تحت الحد الأدنى." %}
+      </p>
+    </div>
 
-  <a href="{% url 'inventory:stocklevel_create' %}" class="btn btn-primary btn-sm">
-    <i class="bi bi-plus-lg"></i>
-    {% trans "مستوى جديد" %}
-  </a>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <span class="badge bg-light text-muted border">
+        {% blocktrans with count=object_list|length %}
+          {{ count }} مستوى في هذه الصفحة
+        {% endblocktrans %}
+      </span>
+
+      {% if below_min_only %}
+        <span class="badge bg-danger-subtle text-danger border small">
+          {% trans "يتم عرض المستويات تحت الحد الأدنى فقط" %}
+        </span>
+      {% endif %}
+
+      <a href="{% url 'inventory:stocklevel_create' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-circle ms-1"></i>
+        {% trans "مستوى جديد" %}
+      </a>
+    </div>
+  </div>
 </div>
 
-{# ===== البحث والفلاتر ===== #}
+{# ───── البحث والفلاتر ───── #}
 <div class="card border-0 shadow-sm mb-3">
   <div class="card-body py-2">
     <form method="get" class="row g-2 align-items-center">
@@ -38,8 +55,9 @@
         <select name="warehouse" class="form-select form-select-sm">
           <option value="">{% trans "كل المخازن" %}</option>
           {% for w in warehouses %}
-            <option value="{{ w.id }}" {% if warehouse_filter == w.id|stringformat:"s" %}selected{% endif %}>
-              {{ w.name }}
+            <option value="{{ w.id }}"
+                    {% if warehouse_filter == w.id|stringformat:"s" %}selected{% endif %}>
+              {{ w.code }} — {{ w.name }}
             </option>
           {% endfor %}
         </select>
@@ -60,47 +78,52 @@
         </div>
       </div>
 
-      <div class="col-md-2 d-grid">
-        <button class="btn btn-outline-primary btn-sm">
+      <div class="col-md-2 d-flex justify-content-end gap-2">
+        <button class="btn btn-outline-primary btn-sm flex-grow-1">
+          <i class="bi bi-filter ms-1"></i>
           {% trans "تطبيق" %}
         </button>
+
+        {% if q or warehouse_filter or below_min_only %}
+          <a href="{% url 'inventory:stocklevel_list' %}"
+             class="btn btn-link btn-sm text-decoration-none">
+            <i class="bi bi-x-circle ms-1"></i>
+            {% trans "إعادة تعيين" %}
+          </a>
+        {% endif %}
       </div>
 
     </form>
   </div>
 </div>
 
-{# ===== ملخص سريع للتقرير ===== #}
+{# ───── ملخص سريع للمستويات المنخفضة عالمياً ───── #}
 <div class="mb-2 small text-muted">
   {% blocktrans with total=low_total %}
     يوجد {{ total }} مستوى مخزون تحت الحد الأدنى على مستوى النظام.
   {% endblocktrans %}
-  {% if below_min_only %}
-    <span class="badge bg-danger-subtle text-danger ms-1">
-      {% trans "يتم عرض المستويات تحت الحد الأدنى فقط." %}
-    </span>
-  {% endif %}
 </div>
 
+{# ───── جدول مستويات المخزون ───── #}
 <div class="card border-0 shadow-sm mb-3">
   <div class="card-body p-0">
     <table class="table table-hover mb-0 align-middle table-sm">
       <thead class="table-light">
         <tr>
-          <th>{% trans "المنتج" %}</th>
-          <th>{% trans "المخزن" %}</th>
-          <th>{% trans "الموقع" %}</th>
-          <th class="text-end">{% trans "المتوفر" %}</th>
-          <th class="text-end">{% trans "المحجوز" %}</th>
-          <th class="text-end">{% trans "الحد الأدنى" %}</th>
-          <th class="text-end">{% trans "الحالة" %}</th>
-          <th class="text-end" style="width: 140px;">{% trans "إجراءات" %}</th>
+          <th style="width: 26%;">{% trans "المنتج" %}</th>
+          <th style="width: 16%;">{% trans "المخزن" %}</th>
+          <th style="width: 16%;">{% trans "الموقع" %}</th>
+          <th class="text-end" style="width: 10%;">{% trans "المتوفر" %}</th>
+          <th class="text-end" style="width: 10%;">{% trans "المحجوز" %}</th>
+          <th class="text-end" style="width: 10%;">{% trans "الحد الأدنى" %}</th>
+          <th class="text-end" style="width: 12%;">{% trans "الحالة" %}</th>
+          <th class="text-end" style="width: 14%;">{% trans "إجراءات" %}</th>
         </tr>
       </thead>
 
       <tbody>
         {% for lvl in object_list %}
-          <tr>
+          <tr class="{% if lvl.is_below_min %}table-warning{% endif %}">
             {# المنتج #}
             <td>
               <a href="{% url 'inventory:stocklevel_detail' lvl.pk %}"
@@ -117,7 +140,8 @@
               {% if lvl.warehouse %}
                 <a href="{% url 'inventory:warehouse_update' lvl.warehouse.pk %}"
                    class="text-decoration-none">
-                  {{ lvl.warehouse.name }}
+                  <span class="fw-semibold">{{ lvl.warehouse.code }}</span>
+                  <span class="text-muted d-block">{{ lvl.warehouse.name }}</span>
                 </a>
               {% else %}
                 <span class="text-muted">-</span>
@@ -129,25 +153,34 @@
               {% if lvl.location %}
                 <a href="{% url 'inventory:location_update' lvl.location.pk %}"
                    class="text-decoration-none">
-                  {{ lvl.location.name }}
+                  <span class="fw-semibold">{{ lvl.location.code }}</span>
+                  <span class="text-muted d-block">{{ lvl.location.name }}</span>
                 </a>
               {% else %}
                 <span class="text-muted">-</span>
               {% endif %}
             </td>
 
-            <td class="text-end fw-semibold">{{ lvl.quantity_on_hand }}</td>
-            <td class="text-end">{{ lvl.quantity_reserved }}</td>
-            <td class="text-end">{{ lvl.min_stock }}</td>
+            <td class="text-end fw-semibold">
+              {{ lvl.quantity_on_hand }}
+            </td>
+
+            <td class="text-end">
+              {{ lvl.quantity_reserved|default:"0" }}
+            </td>
+
+            <td class="text-end">
+              {{ lvl.min_stock|default:"0" }}
+            </td>
 
             {# الحالة بناءً على is_below_min #}
             <td class="text-end">
               {% if lvl.is_below_min %}
-                <span class="badge bg-danger-subtle text-danger">
+                <span class="badge badge-mazoon badge-cancelled">
                   {% trans "تحت الحد الأدنى" %}
                 </span>
               {% else %}
-                <span class="badge bg-success-subtle text-success">
+                <span class="badge badge-mazoon badge-confirmed">
                   {% trans "ضمن الحد" %}
                 </span>
               {% endif %}
@@ -157,10 +190,12 @@
               <div class="btn-group btn-group-sm">
                 <a href="{% url 'inventory:stocklevel_detail' lvl.pk %}"
                    class="btn btn-outline-secondary">
+                  <i class="bi bi-eye ms-1"></i>
                   {% trans "عرض" %}
                 </a>
                 <a href="{% url 'inventory:stocklevel_update' lvl.pk %}"
                    class="btn btn-outline-primary">
+                  <i class="bi bi-pencil-square ms-1"></i>
                   {% trans "تعديل" %}
                 </a>
               </div>
