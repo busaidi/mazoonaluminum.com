@@ -21,7 +21,7 @@
       {% endif %}
     </h1>
     <p class="text-muted small mb-0">
-      {% trans "قم بتسجيل حركة دخول، خروج، أو تحويل بين المخازن والمواقع." %}
+      {% trans "قم بتسجيل حركة دخول، خروج، أو تحويل بين المخازن والمواقع، مع إمكانية إضافة عدة منتجات في نفس الحركة." %}
     </p>
   </div>
 </div>
@@ -32,7 +32,7 @@
     <form method="post" novalidate>
       {% csrf_token %}
 
-      {# أخطاء عامة للفورم #}
+      {# أخطاء عامة لفورم الهيدر #}
       {% if form.non_field_errors %}
         <div class="alert alert-danger">
           {% for error in form.non_field_errors %}
@@ -43,18 +43,8 @@
 
       <div class="row g-3">
 
-        {# المنتج + نوع الحركة + الحالة #}
-        <div class="col-md-6">
-          <label class="form-label" for="{{ form.product.id_for_label }}">
-            {{ form.product.label }}
-          </label>
-          {{ form.product }}
-          {% for error in form.product.errors %}
-            <div class="text-danger small">{{ error }}</div>
-          {% endfor %}
-        </div>
-
-        <div class="col-md-3">
+        {# نوع الحركة + الحالة + التاريخ #}
+        <div class="col-md-4">
           <label class="form-label" for="{{ form.move_type.id_for_label }}">
             {{ form.move_type.label }}
           </label>
@@ -67,7 +57,7 @@
           {% endfor %}
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-4">
           <label class="form-label" for="{{ form.status.id_for_label }}">
             {{ form.status.label }}
           </label>
@@ -76,6 +66,16 @@
             {% trans "يمكن حفظ الحركة كمسودة أو اعتمادها مباشرة." %}
           </div>
           {% for error in form.status.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label" for="{{ form.move_date.id_for_label }}">
+            {{ form.move_date.label }}
+          </label>
+          {{ form.move_date }}
+          {% for error in form.move_date.errors %}
             <div class="text-danger small">{{ error }}</div>
           {% endfor %}
         </div>
@@ -99,10 +99,22 @@
           </div>
 
           <div class="mb-2">
-            <label class="form-label" for="{{ form.from_location.id_for_label }}">
+            <label class="form-label" for="id_from_location">
               {{ form.from_location.label }}
             </label>
-            {{ form.from_location }}
+            {# نرسم الـ select يدويًا لنضيف data-warehouse على كل option #}
+            <select name="from_location" id="id_from_location" class="form-select">
+              <option value="">{% trans "اختر موقعاً" %}</option>
+              {% with current_from=form.from_location.value %}
+                {% for loc in form.from_location.field.queryset %}
+                  <option value="{{ loc.pk }}"
+                          data-warehouse="{{ loc.warehouse_id }}"
+                          {% if current_from|stringformat:"s" == loc.pk|stringformat:"s" %}selected{% endif %}>
+                    {{ loc.code }} — {{ loc.name }} ({{ loc.warehouse.name }})
+                  </option>
+                {% endfor %}
+              {% endwith %}
+            </select>
             {% for error in form.from_location.errors %}
               <div class="text-danger small">{{ error }}</div>
             {% endfor %}
@@ -124,10 +136,21 @@
           </div>
 
           <div class="mb-2">
-            <label class="form-label" for="{{ form.to_location.id_for_label }}">
+            <label class="form-label" for="id_to_location">
               {{ form.to_location.label }}
             </label>
-            {{ form.to_location }}
+            <select name="to_location" id="id_to_location" class="form-select">
+              <option value="">{% trans "اختر موقعاً" %}</option>
+              {% with current_to=form.to_location.value %}
+                {% for loc in form.to_location.field.queryset %}
+                  <option value="{{ loc.pk }}"
+                          data-warehouse="{{ loc.warehouse_id }}"
+                          {% if current_to|stringformat:"s" == loc.pk|stringformat:"s" %}selected{% endif %}>
+                    {{ loc.code }} — {{ loc.name }} ({{ loc.warehouse.name }})
+                  </option>
+                {% endfor %}
+              {% endwith %}
+            </select>
             {% for error in form.to_location.errors %}
               <div class="text-danger small">{{ error }}</div>
             {% endfor %}
@@ -135,38 +158,7 @@
         </div>
 
         <div class="col-12">
-          <hr class="my-2">
-        </div>
-
-        {# الكمية + وحدة القياس + التاريخ #}
-        <div class="col-md-4">
-          <label class="form-label" for="{{ form.quantity.id_for_label }}">
-            {{ form.quantity.label }}
-          </label>
-          {{ form.quantity }}
-          {% for error in form.quantity.errors %}
-            <div class="text-danger small">{{ error }}</div>
-          {% endfor %}
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label" for="{{ form.uom.id_for_label }}">
-            {{ form.uom.label }}
-          </label>
-          {{ form.uom }}
-          {% for error in form.uom.errors %}
-            <div class="text-danger small">{{ error }}</div>
-          {% endfor %}
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label" for="{{ form.move_date.id_for_label }}">
-            {{ form.move_date.label }}
-          </label>
-          {{ form.move_date }}
-          {% for error in form.move_date.errors %}
-            <div class="text-danger small">{{ error }}</div>
-          {% endfor %}
+          <hr class="my-3">
         </div>
 
         {# مرجع + ملاحظات #}
@@ -192,6 +184,97 @@
 
       </div>
 
+      <div class="mt-4">
+        <h5 class="h6 fw-bold mb-2">
+          {% trans "بنود الحركة (المنتجات)" %}
+        </h5>
+
+        {# أخطاء عامة للفورمست #}
+        {% if line_formset.non_form_errors %}
+          <div class="alert alert-danger">
+            {% for error in line_formset.non_form_errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {{ line_formset.management_form }}
+
+        <div class="table-responsive border rounded">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th style="width: 45%;">{% trans "المنتج" %}</th>
+                <th style="width: 15%;">{% trans "الكمية" %}</th>
+                <th style="width: 15%;">{% trans "وحدة القياس" %}</th>
+                <th style="width: 20%;">{% trans "ملاحظات البند" %}</th>
+                <th style="width: 5%;" class="text-center">{% trans "حذف" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for line_form in line_formset %}
+                <tr>
+                  {# الحقول المخفية (id, move, ...) #}
+                  {% for hidden in line_form.hidden_fields %}
+                    {{ hidden }}
+                  {% endfor %}
+
+                  <td>
+                    {{ line_form.product }}
+                    {% for error in line_form.product.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+                  <td>
+                    {{ line_form.quantity }}
+                    {% for error in line_form.quantity.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+                  <td>
+                    {{ line_form.uom }}
+                    {% for error in line_form.uom.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+                  <td>
+                    {# لو عندك حقل note/line_note في الفورم #}
+                    {% if line_form.line_note %}
+                      {{ line_form.line_note }}
+                      {% for error in line_form.line_note.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                      {% endfor %}
+                    {% else %}
+                      <span class="text-muted small">—</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    {% if line_form.DELETE %}
+                      <div class="form-check d-flex justify-content-center">
+                        {{ line_form.DELETE }}
+                      </div>
+                    {% endif %}
+                  </td>
+                </tr>
+
+                {% if line_form.non_field_errors %}
+                  <tr>
+                    <td colspan="5">
+                      {% for error in line_form.non_field_errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                      {% endfor %}
+                    </td>
+                  </tr>
+                {% endif %}
+
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {# تقدر لاحقاً تضيف زر "إضافة سطر" بـ JS، لكن حالياً نعتمد على extra في الفورمست #}
+      </div>
+
       <div class="mt-4 d-flex justify-content-between">
         <a href="{% url 'inventory:move_list' %}" class="btn btn-link">
           {% trans "رجوع إلى حركات المخزون" %}
@@ -205,7 +288,7 @@
   </div>
 </div>
 
-{# === جافاسكربت للتحكم في حقول from/to حسب نوع الحركة === #}
+{# === جافاسكربت للتحكم في نوع الحركة + فلترة المواقع حسب المخزن === #}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const moveTypeSelect = document.getElementById("id_move_type");
@@ -229,9 +312,43 @@
     function clearField(field) {
       if (!field) return;
       if (field.tagName === "SELECT") {
-        field.selectedIndex = 0;  // يخليها على الخيار الفارغ الأول
+        field.selectedIndex = 0;
       } else {
         field.value = "";
+      }
+    }
+
+    // فلترة المواقع حسب المخزن
+    function filterLocations(warehouseSelect, locationSelect) {
+      if (!warehouseSelect || !locationSelect) return;
+
+      const whId = warehouseSelect.value;
+
+      Array.from(locationSelect.options).forEach(function (opt) {
+        // أول خيار (الفارغ) نخليه دائما ظاهر
+        if (!opt.value) {
+          opt.hidden = false;
+          opt.disabled = false;
+          return;
+        }
+
+        const optWhId = opt.getAttribute("data-warehouse");
+
+        if (!whId) {
+          // لو ما مختار مخزن: نخفي كل المواقع
+          opt.hidden = true;
+          opt.disabled = true;
+        } else {
+          const match = (optWhId === whId);
+          opt.hidden = !match;
+          opt.disabled = !match;
+        }
+      });
+
+      // لو الموقع المحدد لا يتوافق مع المخزن، نفرغه
+      const selected = locationSelect.options[locationSelect.selectedIndex];
+      if (selected && selected.hidden) {
+        locationSelect.value = "";
       }
     }
 
@@ -276,12 +393,30 @@
         setRequired(toWarehouse, true);
         setRequired(toLocation, true);
       }
+
+      // بعد تغيير نوع الحركة، نعيد فلترة المواقع
+      filterLocations(fromWarehouse, fromLocation);
+      filterLocations(toWarehouse, toLocation);
+    }
+
+    // عند أول تحميل: نفلتر حسب المخازن الحالية (لو في initial/POST)
+    filterLocations(fromWarehouse, fromLocation);
+    filterLocations(toWarehouse, toLocation);
+
+    if (fromWarehouse) {
+      fromWarehouse.addEventListener("change", function () {
+        filterLocations(fromWarehouse, fromLocation);
+      });
+    }
+
+    if (toWarehouse) {
+      toWarehouse.addEventListener("change", function () {
+        filterLocations(toWarehouse, toLocation);
+      });
     }
 
     if (moveTypeSelect) {
-      // في أول تحميل للصفحة
       updateMoveFields();
-      // عند تغيير نوع الحركة
       moveTypeSelect.addEventListener("change", updateMoveFields);
     }
   });

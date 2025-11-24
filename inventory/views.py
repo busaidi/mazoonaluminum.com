@@ -4,6 +4,7 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Sum, Q, F
+from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
 from django.urls.base import reverse
 from django.views.generic import (
@@ -14,7 +15,8 @@ from django.views.generic import (
     UpdateView,
 )
 
-from .forms import StockMoveForm, ProductForm, StockLevelForm, ProductCategoryForm, InventorySettingsForm
+from .forms import StockMoveForm, ProductForm, StockLevelForm, ProductCategoryForm, InventorySettingsForm, \
+    StockMoveLineFormSet
 from .models import (
     ProductCategory,
     Product,
@@ -69,16 +71,16 @@ class InventoryDashboardView(InventoryStaffRequiredMixin, TemplateView):
         total_moves = StockMove.objects.count()
         done_moves = StockMove.objects.filter(status=StockMove.Status.DONE).count()
 
-        # recent 10 moves
+        # recent 10 moves – الآن بدون product لأنه انتقل للـ lines
         recent_moves = (
             StockMove.objects
             .select_related(
-                "product",
                 "from_warehouse",
                 "to_warehouse",
                 "from_location",
                 "to_location",
             )
+            .prefetch_related("lines__product", "lines__uom")
             .order_by("-move_date", "-id")[:10]
         )
 
@@ -432,15 +434,15 @@ class StockMoveListView(InventoryStaffRequiredMixin, ListView):
 
     def get_queryset(self):
         # Base queryset مع العلاقات والترتيب
-        base_qs = (
+        qs = (
             StockMove.objects
             .select_related(
-                "product",
                 "from_warehouse",
                 "to_warehouse",
                 "from_location",
                 "to_location",
             )
+            .prefetch_related("lines__product", "lines__uom")
             .order_by("-move_date", "-id")
         )
 
@@ -448,18 +450,27 @@ class StockMoveListView(InventoryStaffRequiredMixin, ListView):
         move_type = self.request.GET.get("move_type") or None
         status = self.request.GET.get("status") or None
 
-        qs = filter_stock_moves_queryset(
-            base_qs,
-            q=q,
-            move_type=move_type,
-            status=status,
-        )
+        if q:
+            qs = qs.filter(
+                Q(reference__icontains=q)
+                | Q(from_warehouse__code__icontains=q)
+                | Q(to_warehouse__code__icontains=q)
+                | Q(from_location__code__icontains=q)
+                | Q(to_location__code__icontains=q)
+                | Q(lines__product__code__icontains=q)
+                | Q(lines__product__name__icontains=q)
+            ).distinct()
+
+        if move_type:
+            qs = qs.filter(move_type=move_type)
+
+        if status:
+            qs = qs.filter(status=status)
 
         self.search_query = q
         self.move_type_filter = move_type
         self.status_filter = status
         return qs
-
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -473,6 +484,7 @@ class StockMoveListView(InventoryStaffRequiredMixin, ListView):
 
 
 
+
 class StockMoveDetailView(InventoryStaffRequiredMixin, DetailView):
     model = StockMove
     template_name = "inventory/stockmove/detail.html"
@@ -480,8 +492,11 @@ class StockMoveDetailView(InventoryStaffRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        move = self.object
+        ctx["lines"] = move.lines.select_related("product", "uom").all()
         ctx["subsection"] = "moves"
         return ctx
+
 
 
 class StockMoveCreateView(InventoryStaffRequiredMixin, CreateView):
@@ -493,17 +508,12 @@ class StockMoveCreateView(InventoryStaffRequiredMixin, CreateView):
     def get_initial(self):
         """
         Prefill form using query string params when available:
-        ?product=ID&move_type=in|out|transfer&from_warehouse=&from_location=&to_warehouse=&to_location=
+        ?move_type=in|out|transfer&from_warehouse=&from_location=&to_warehouse=&to_location=
         """
         initial = super().get_initial()
         request = self.request
 
-        # sensible default for quantity
-        initial.setdefault("quantity", Decimal("0.000"))
-
-        # map query params to form fields
         for field in [
-            "product",
             "move_type",
             "from_warehouse",
             "from_location",
@@ -516,22 +526,38 @@ class StockMoveCreateView(InventoryStaffRequiredMixin, CreateView):
 
         return initial
 
-
-    def form_valid(self, form):
-        """
-        هنا نخلي Django يتكفل بعملية الحفظ مرة واحدة فقط
-        عن طريق super().form_valid(form)
-        وبعدها نضيف رسالة النجاح.
-        """
-        response = super().form_valid(form)
-        messages.success(self.request, "Stock move created successfully.")
-        return response
-
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+
+        if self.request.POST:
+            ctx["line_formset"] = StockMoveLineFormSet(self.request.POST, instance=self.object)
+        else:
+            ctx["line_formset"] = StockMoveLineFormSet(instance=self.object)
+
         ctx["subsection"] = "moves"
         ctx["mode"] = "create"
         return ctx
+
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        line_formset = context["line_formset"]
+
+        if not line_formset.is_valid():
+            # لو في أخطاء في البنود نرجع نفس الصفحة مع الأخطاء
+            return self.render_to_response(self.get_context_data(form=form))
+
+        # نحفظ الهيدر
+        self.object = form.save()
+
+        # نربط البنود بالهيدر ثم نحفظها
+        line_formset.instance = self.object
+        line_formset.save()
+
+        messages.success(self.request, "تم إنشاء حركة المخزون بنجاح.")
+        return HttpResponseRedirect(self.get_success_url())
+
+
 
 
 
@@ -541,15 +567,32 @@ class StockMoveUpdateView(InventoryStaffRequiredMixin, UpdateView):
     template_name = "inventory/stockmove/form.html"
     success_url = reverse_lazy("inventory:move_list")
 
-    def form_valid(self, form):
-        messages.success(self.request, "Stock move updated successfully.")
-        return super().form_valid(form)
-
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+
+        if self.request.POST:
+            ctx["line_formset"] = StockMoveLineFormSet(self.request.POST, instance=self.object)
+        else:
+            ctx["line_formset"] = StockMoveLineFormSet(instance=self.object)
+
         ctx["subsection"] = "moves"
         ctx["mode"] = "update"
         return ctx
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        line_formset = context["line_formset"]
+
+        if not line_formset.is_valid():
+            return self.render_to_response(self.get_context_data(form=form))
+
+        self.object = form.save()
+        line_formset.instance = self.object
+        line_formset.save()
+
+        messages.success(self.request, "تم تحديث حركة المخزون بنجاح.")
+        return HttpResponseRedirect(self.get_success_url())
+
 
 
 # ============================================================

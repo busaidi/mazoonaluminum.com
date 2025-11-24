@@ -43,8 +43,7 @@
         <table class="table table-sm align-middle mb-0">
           <thead class="table-light">
             <tr>
-              <th>{% trans "الاسم" %}</th>
-              <th>{% trans "الكود" %}</th>
+              <th>{% trans "الاسم / الكود" %}</th>
               <th>{% trans "الفئة" %}</th>
               <th>{% trans "الحالة" %}</th>
               <th class="text-end">{% trans "إجراءات" %}</th>
@@ -53,10 +52,19 @@
           <tbody>
             {% for u in units %}
               <tr>
-                <td>{{ u.name }}</td>
-                <td dir="ltr" class="fw-semibold">{{ u.code }}</td>
                 <td>
-                  {{ u.get_category_display|default:u.category }}
+                  <div class="fw-semibold">{{ u.name }}</div>
+                  <div class="small text-muted" dir="ltr">
+                    {{ u.code }}
+                  </div>
+                  {% if u.notes %}
+                    <div class="small text-muted">
+                      {{ u.notes }}
+                    </div>
+                  {% endif %}
+                </td>
+                <td>
+                  {{ u.category }}
                 </td>
                 <td>
                   {% if u.is_active %}
@@ -120,7 +128,11 @@
       {% endif %}
     {% else %}
       <div class="p-3 text-center text-muted small">
-        {% trans "لا توجد وحدات قياس حالياً." %}
+        {% if q %}
+          {% trans "لا توجد وحدات قياس مطابقة لبحثك." %}
+        {% else %}
+          {% trans "لا توجد وحدات قياس حالياً." %}
+        {% endif %}
       </div>
     {% endif %}
   </div>

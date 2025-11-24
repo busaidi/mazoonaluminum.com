@@ -16,14 +16,10 @@ class UomCategory(models.Model):
         help_text=_("مثال: length, weight, area, volume, unit, time."),
     )
 
-    name_ar = models.CharField(
+    # حقل واحد فقط، والترجمة تتكفّل فيها modeltranslation
+    name = models.CharField(
         max_length=100,
-        verbose_name=_("الاسم (عربي)"),
-    )
-
-    name_en = models.CharField(
-        max_length=100,
-        verbose_name=_("الاسم (إنجليزي)"),
+        verbose_name=_("الاسم"),
     )
 
     description = models.CharField(
@@ -44,8 +40,9 @@ class UomCategory(models.Model):
         ordering = ("code", "id")
 
     def __str__(self) -> str:
-        # يظهر الاسم العربي أولاً، وإذا فاضي يستخدم الإنجليزي أو الكود
-        return self.name_ar or self.name_en or self.code
+        # modeltranslation سترجع القيمة المناسبة حسب اللغة الحالية
+        # فإذا اللغة 'ar' سترجع name_ar، وإذا 'en' سترجع name_en
+        return self.name or self.code
 
 
 class UnitOfMeasure(models.Model):
@@ -74,14 +71,10 @@ class UnitOfMeasure(models.Model):
         help_text=_("مثال: M, KG, PCS, ROLL."),
     )
 
-    name_ar = models.CharField(
+    # نفس الفكرة: حقل واحد فقط
+    name = models.CharField(
         max_length=100,
-        verbose_name=_("اسم الوحدة (عربي)"),
-    )
-
-    name_en = models.CharField(
-        max_length=100,
-        verbose_name=_("اسم الوحدة (إنجليزي)"),
+        verbose_name=_("اسم الوحدة"),
     )
 
     symbol = models.CharField(
@@ -109,5 +102,5 @@ class UnitOfMeasure(models.Model):
         ordering = ("category", "code", "id")
 
     def __str__(self) -> str:
-        # يظهر الاسم العربي + الكود لتوضيح أكثر
-        return f"{self.name_ar} ({self.code})"
+        # name سيرجع المترجم حسب اللغة
+        return f"{self.name} ({self.code})"

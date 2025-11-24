@@ -2,75 +2,51 @@
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.forms.models import inlineformset_factory
 from django.utils.translation import gettext_lazy as _
 
 from uom.models import UnitOfMeasure
-from .models import StockMove, Product, StockLevel, ProductCategory, InventorySettings
+from .models import StockMove, Product, StockLevel, ProductCategory, InventorySettings, StockLocation, StockMoveLine
 
 
 class StockMoveForm(forms.ModelForm):
     """
-    Form لحركة المخزون مع تجهيز بسيط للـ widgets
-    (يُستخدم مع القالب الذي يحتوي على JS للتحكم في from/to).
-
-    - يدعم اختيار وحدة قياس متوافقة مع إعداد المنتج:
-      base_uom / alt_uom / weight_uom.
+    فورم رأس حركة المخزون (بدون منتجات)
     """
 
     class Meta:
         model = StockMove
         fields = [
-            "product",
             "move_type",
             "from_warehouse",
             "from_location",
             "to_warehouse",
             "to_location",
-            "quantity",
-            "uom",
             "move_date",
             "status",
             "reference",
             "note",
         ]
         widgets = {
-            # نضبط النوع مباشرة هنا
             "move_date": forms.DateTimeInput(attrs={"type": "datetime-local"}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # ==== عناوين عربية أساسية ====
-        self.fields["product"].label = "المنتج"
         self.fields["move_type"].label = "نوع الحركة"
         self.fields["from_warehouse"].label = "من مخزن"
         self.fields["from_location"].label = "من موقع"
         self.fields["to_warehouse"].label = "إلى مخزن"
         self.fields["to_location"].label = "إلى موقع"
-        self.fields["quantity"].label = "الكمية"
-        self.fields["uom"].label = "وحدة القياس"
         self.fields["move_date"].label = "تاريخ/وقت الحركة"
         self.fields["status"].label = "الحالة"
         self.fields["reference"].label = "مرجع خارجي"
         self.fields["note"].label = "ملاحظات"
 
-        self.fields["quantity"].help_text = "أدخل الكمية بناءً على وحدة القياس المختارة."
-        self.fields["uom"].help_text = (
-            "اختر وحدة قياس متوافقة مع إعداد المنتج "
-            "(الوحدة الأساسية أو البديلة أو وحدة الوزن إذا كانت منطقية للحركة)."
-        )
-
-        # ==== تقييد وحدات القياس على الوحدات المفعّلة ====
-        if "uom" in self.fields:
-            self.fields["uom"].queryset = UnitOfMeasure.objects.filter(is_active=True)
-
-        # ==== إضافة كلاس Bootstrap بشكل عام ====
         for name, field in self.fields.items():
             widget = field.widget
             css = widget.attrs.get("class", "")
-
-            # نضبط select كـ form-select
             if isinstance(widget, (forms.Select, forms.SelectMultiple)):
                 widget.attrs["class"] = (css.replace("form-control", "") + " form-select").strip()
             elif isinstance(widget, forms.CheckboxInput):
@@ -78,21 +54,60 @@ class StockMoveForm(forms.ModelForm):
             else:
                 widget.attrs["class"] = (css + " form-control").strip()
 
+    def clean(self):
+        cleaned = super().clean()
+
+        from_wh = cleaned.get("from_warehouse")
+        from_loc = cleaned.get("from_location")
+        to_wh = cleaned.get("to_warehouse")
+        to_loc = cleaned.get("to_location")
+
+        # تأكد أن المواقع تتبع المخازن عند تعبئتها
+        if from_loc and from_wh and from_loc.warehouse_id != from_wh.id:
+            self.add_error("from_location", "الموقع المختار لا يتبع المخزن المحدد (من مخزن).")
+
+        if to_loc and to_wh and to_loc.warehouse_id != to_wh.id:
+            self.add_error("to_location", "الموقع المختار لا يتبع المخزن المحدد (إلى مخزن).")
+
+        return cleaned
+
+
+
+
+class StockMoveLineForm(forms.ModelForm):
+    """
+    فورم بند واحد في حركة المخزون (منتج + كمية + وحدة قياس)
+    """
+
+    class Meta:
+        model = StockMoveLine
+        fields = ["product", "quantity", "uom"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["product"].label = "المنتج"
+        self.fields["quantity"].label = "الكمية"
+        self.fields["uom"].label = "وحدة القياس"
+
+        # وحدات قياس مفعّلة فقط
+        self.fields["uom"].queryset = UnitOfMeasure.objects.filter(is_active=True)
+
+        for name, field in self.fields.items():
+            widget = field.widget
+            css = widget.attrs.get("class", "")
+            if isinstance(widget, (forms.Select, forms.SelectMultiple)):
+                widget.attrs["class"] = (css.replace("form-control", "") + " form-select").strip()
+            else:
+                widget.attrs["class"] = (css + " form-control").strip()
+
     def clean_quantity(self):
-        """
-        التأكد من أن الكمية أكبر من صفر.
-        """
         qty = self.cleaned_data.get("quantity")
         if qty is None or qty <= 0:
             raise ValidationError("الكمية يجب أن تكون أكبر من صفر.")
         return qty
 
     def clean(self):
-        """
-        التحقق من توافق وحدة القياس مع إعداد المنتج:
-        - يسمح فقط بالوحدات:
-          base_uom, alt_uom, weight_uom (إن وُجدت).
-        """
         cleaned = super().clean()
         product = cleaned.get("product")
         uom = cleaned.get("uom")
@@ -101,9 +116,6 @@ class StockMoveForm(forms.ModelForm):
             allowed_uoms = [product.base_uom]
             if product.alt_uom:
                 allowed_uoms.append(product.alt_uom)
-            if product.weight_uom:
-                allowed_uoms.append(product.weight_uom)
-
             if uom not in allowed_uoms:
                 raise ValidationError(
                     "وحدة القياس المختارة لا تتوافق مع إعدادات هذا المنتج. "
@@ -112,6 +124,14 @@ class StockMoveForm(forms.ModelForm):
 
         return cleaned
 
+
+StockMoveLineFormSet = inlineformset_factory(
+    StockMove,
+    StockMoveLine,
+    form=StockMoveLineForm,
+    extra=3,         # عدد صفوف جديدة افتراضية
+    can_delete=True, # يسمح بحذف البنود
+)
 
 
 

@@ -29,14 +29,20 @@ class UnitOfMeasureListView(UomStaffRequiredMixin, ListView):
     paginate_by = 25
 
     def get_queryset(self):
-        qs = UnitOfMeasure.objects.all().order_by("category", "name_ar")
+        # select_related لأداء أفضل
+        qs = (
+            UnitOfMeasure.objects
+            .select_related("category")
+            .order_by("category", "name")  # name = الحقل المترجم حسب اللغة الحالية
+        )
+
         q = self.request.GET.get("q", "").strip()
         if q:
             qs = qs.filter(
-                Q(name_ar__icontains=q)
-                | Q(name_en__icontains=q)
+                Q(name_ar__icontains=q)      # بحث بالاسم العربي
+                | Q(name_en__icontains=q)    # بحث بالاسم الإنجليزي
                 | Q(code__icontains=q)
-                | Q(symbol__icontains=q)
+                | Q(symbol__icontains=q)     # لو symbol مترجم وتريد تبحث في الاثنين: symbol_ar/symbol_en
             )
         self.search_query = q
         return qs

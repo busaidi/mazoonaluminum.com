@@ -19,12 +19,12 @@ class UnitOfMeasureForm(forms.ModelForm):
         ]
 
         labels = {
-            "name_ar": _("الاسم (عربي)"),
-            "name_en": _("الاسم (إنجليزي)"),
+            "name_ar": _("اسم الوحدة (عربي)"),
+            "name_en": _("اسم الوحدة (إنجليزي)"),
             "code": _("الكود"),
             "symbol": _("الرمز المختصر"),
             "category": _("الفئة"),
-            "is_active": _("نشطة"),
+            "is_active": _("نشطة؟"),
             "notes": _("ملاحظات"),
         }
 
@@ -36,7 +36,7 @@ class UnitOfMeasureForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # إضافة كلاس Bootstrap
+        # إضافة كلاس Bootstrap لكل الحقول
         for name, field in self.fields.items():
             widget = field.widget
             css = widget.attrs.get("class", "")

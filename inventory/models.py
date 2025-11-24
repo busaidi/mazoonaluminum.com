@@ -573,15 +573,21 @@ class StockLocation(TimeStampedModel):
 # Stock moves
 # ============================================================
 
+# ============================================================
+# Stock moves (Header)
+# ============================================================
+
 class StockMove(NumberedModel):
     """
-    Single stock movement from a source location to a destination location.
-    You can later link it to PurchaseOrder, SalesOrder, Manufacturing, etc.
+    Stock move header (document).
+    يحتوي على معلومات الحركة العامة:
+      - نوع الحركة (دخول / خروج / تحويل)
+      - من مخزن / إلى مخزن
+      - من موقع / إلى موقع
+      - التاريخ، الحالة، المرجع، الملاحظات
 
-    Important:
-    - Stored quantity is in whatever UoM the user selected (uom field).
-    - For updating StockLevel we should always convert to product.base_uom
-      using product.to_base(...) (see get_base_quantity()).
+    تفاصيل المنتجات (البنود) موجودة في:
+      - StockMoveLine (many lines per move)
     """
 
     class MoveType(models.TextChoices):
@@ -593,13 +599,6 @@ class StockMove(NumberedModel):
         DRAFT = "draft", _("Draft")
         DONE = "done", _("Done")
         CANCELLED = "cancelled", _("Cancelled")
-
-    product = models.ForeignKey(
-        Product,
-        on_delete=models.PROTECT,
-        related_name="stock_moves",
-        verbose_name=_("Product"),
-    )
 
     move_type = models.CharField(
         max_length=20,
@@ -643,28 +642,6 @@ class StockMove(NumberedModel):
         related_name="incoming_moves",
         verbose_name=_("To location"),
     )
-
-    quantity = models.DecimalField(
-        max_digits=12,
-        decimal_places=3,
-        verbose_name=_("Quantity"),
-    )
-
-
-    # 🔴 كان CharField, الآن ForeignKey على UnitOfMeasure
-    uom = models.ForeignKey(
-        UnitOfMeasure,
-        on_delete=models.PROTECT,
-        related_name="stock_moves",
-        verbose_name=_("Unit of measure"),
-        help_text=_(
-            "Unit of measure used for this move "
-            "(must be base or alternative UoM of the product)."
-        ),
-        null=True,   # ✅ مؤقتاً عشان نعدي مرحلة المايغريشن بدون مشكلة
-        blank=True,  # ✅
-    )
-
 
     move_date = models.DateTimeField(
         default=timezone.now,
@@ -712,7 +689,6 @@ class StockMove(NumberedModel):
         """
         from inventory.models import InventorySettings  # import محلي
 
-        # نأخذ أي سياق أساسي من NumberedModel (لو موجود)
         try:
             ctx = super().get_numbering_context() or {}
         except AttributeError:
@@ -730,9 +706,7 @@ class StockMove(NumberedModel):
         return ctx
 
     def __str__(self) -> str:
-        # نعرض كود المنتج + الكمية + كود وحدة القياس
-        uom_code = self.uom.code if self.uom_id else "?"
-        return f"{self.product.code}: {self.quantity} {uom_code}"
+        return f"Move #{self.pk} ({self.get_move_type_display()})"
 
     # ============================
     # Validation
@@ -740,9 +714,6 @@ class StockMove(NumberedModel):
 
     def clean(self):
         super().clean()
-
-        if self.quantity is None or self.quantity <= 0:
-            raise ValidationError(_("Quantity must be greater than zero."))
 
         # تأكد من الحقول المطلوبة حسب نوع الحركة
         if self.move_type == self.MoveType.IN:
@@ -766,17 +737,6 @@ class StockMove(NumberedModel):
             if self.to_location.warehouse_id != self.to_warehouse_id:
                 raise ValidationError(_("Destination location must belong to destination warehouse."))
 
-        # ✅ تأكد أن الـ UoM المختارة متوافقة مع المنتج:
-        if self.product_id and self.uom_id:
-            allowed_uoms = [self.product.base_uom]
-            if self.product.alt_uom:
-                allowed_uoms.append(self.product.alt_uom)
-            # هنا عمداً ما نسمح بوحدة الوزن لحركة المخزون (نخزن المخزون دائماً بوحدة الكمية)
-            if self.uom not in allowed_uoms:
-                raise ValidationError(
-                    _("Selected unit of measure is not configured for this product (must be base or alternative UoM).")
-                )
-
     # ============================
     # Helpers
     # ============================
@@ -785,28 +745,25 @@ class StockMove(NumberedModel):
     def is_done(self) -> bool:
         return self.status == self.Status.DONE
 
-    def get_base_quantity(self) -> Decimal:
+    @property
+    def total_lines_quantity(self) -> Decimal:
         """
-        Return quantity of this move converted to product.base_uom.
-
-        This should be used when updating StockLevel.quantity_on_hand so that
-        all stock levels are stored in a single consistent UoM (the base_uom).
+        مجموع الكميات في كل البنود (كما هي في وحداتها المختارة).
+        مجرد معلومة للعرض، وليس أساس التحديث في StockLevel.
         """
-        return self.product.to_base(self.quantity, uom=self.uom)
+        agg = self.lines.aggregate(total=Sum("quantity"))
+        return agg["total"] or Decimal("0.000")
 
     def save(self, *args, **kwargs):
         """
-        Override save to ربط تعديل المخزون بحالة الحركة (status).
+        يربط تحديث المخزون بتغيير حالة الحركة (status).
 
-        المنطق:
-          - إذا كانت حركة جديدة (بدون pk):
-              * لو status = DONE → نطبّق تأثير الحركة على المخزون.
-              * غير ذلك → لا شيء.
-          - إذا كانت حركة موجودة:
-              * نقرأ الحالة القديمة من قاعدة البيانات.
-              * نستدعي خدمة apply_stock_move_status_change لتطبيق فرق الحالة.
+        المنطق المتوقع في apply_stock_move_status_change:
+          - يمر على self.lines ويحدث StockLevel بحسب:
+            * move_type
+            * الكمية الأساسية (base_uom) لكل سطر
         """
-        from .services import apply_stock_move_status_change  # import محلي لتجنّب circular import
+        from .services import apply_stock_move_status_change  # import محلي
 
         is_create = self.pk is None
         old_status = None
@@ -823,6 +780,97 @@ class StockMove(NumberedModel):
         apply_stock_move_status_change(move=self, old_status=old_status, is_create=is_create)
 
 
+
+
+
+# ============================================================
+# Stock move lines (Detail)
+# ============================================================
+
+class StockMoveLine(TimeStampedModel):
+    """
+    Single line in a stock move.
+    كل سطر يحتوي:
+      - المنتج
+      - الكمية
+      - وحدة القياس
+
+    المخزون الفعلي يتم تحديثه بناءً على:
+      - move.move_type
+      - base quantity لكل سطر (product.base_uom)
+    """
+
+    move = models.ForeignKey(
+        StockMove,
+        on_delete=models.CASCADE,
+        related_name="lines",
+        verbose_name=_("Stock move"),
+    )
+
+    # ⚠️ مهم: related_name = "stock_moves" عشان تظل:
+    # product.stock_moves موجودة وتستخدم في Product.can_be_deleted
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT,
+        related_name="stock_moves",
+        verbose_name=_("Product"),
+    )
+
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        verbose_name=_("Quantity"),
+    )
+
+    uom = models.ForeignKey(
+        UnitOfMeasure,
+        on_delete=models.PROTECT,
+        related_name="stock_move_lines",
+        verbose_name=_("Unit of measure"),
+        help_text=_(
+            "Unit of measure used for this line "
+            "(must be base or alternative UoM of the product)."
+        ),
+    )
+
+    class Meta:
+        verbose_name = _("Stock move line")
+        verbose_name_plural = _("Stock move lines")
+
+    def __str__(self) -> str:
+        uom_code = self.uom.code if self.uom_id else "?"
+        return f"{self.product.code}: {self.quantity} {uom_code}"
+
+    # ============================
+    # Validation
+    # ============================
+
+    def clean(self):
+        super().clean()
+
+        if self.quantity is None or self.quantity <= 0:
+            raise ValidationError(_("Quantity must be greater than zero."))
+
+        if self.product_id and self.uom_id:
+            allowed_uoms = [self.product.base_uom]
+            if self.product.alt_uom:
+                allowed_uoms.append(self.product.alt_uom)
+            # عمداً لا نسمح باستخدام weight_uom كبند حركة
+            if self.uom not in allowed_uoms:
+                raise ValidationError(
+                    _("Selected unit of measure is not configured for this product (must be base or alternative UoM).")
+                )
+
+    # ============================
+    # Helpers
+    # ============================
+
+    def get_base_quantity(self) -> Decimal:
+        """
+        يرجع الكمية المحوّلة إلى وحدة المنتج الأساسية base_uom.
+        هذه القيمة هي اللي لازم تُستخدم لتحديث StockLevel.
+        """
+        return self.product.to_base(self.quantity, uom=self.uom)
 
 
 # ============================================================

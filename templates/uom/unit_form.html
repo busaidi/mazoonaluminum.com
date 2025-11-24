@@ -5,36 +5,145 @@
 
 {% block inventory_content %}
 
-<h1 class="h4 fw-bold mb-3">
-  {% if mode == "create" %}
-    {% trans "إضافة وحدة قياس جديدة" %}
-  {% else %}
-    {% trans "تعديل وحدة القياس" %}
-  {% endif %}
-</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 fw-bold mb-1">
+      {% if mode == "create" %}
+        {% trans "إضافة وحدة قياس جديدة" %}
+      {% else %}
+        {% trans "تعديل وحدة القياس" %}
+      {% endif %}
+    </h1>
+    <p class="text-muted small mb-0">
+      {% trans "استخدم هذا النموذج لإدارة وحدات القياس التي تُستخدم في المنتجات وحركات المخزون." %}
+    </p>
+  </div>
+  <a href="{% url 'uom:unit_list' %}" class="btn btn-outline-secondary btn-sm">
+    {% trans "رجوع إلى قائمة الوحدات" %}
+  </a>
+</div>
 
 <div class="card border-0 shadow-sm">
   <div class="card-body">
     <form method="post" class="row g-3">
       {% csrf_token %}
 
-      {% for field in form %}
-        <div class="col-md-6">
-          <label class="form-label small">{{ field.label }}</label>
-          {{ field }}
-          {% if field.help_text %}
-            <div class="form-text small">{{ field.help_text }}</div>
+      {# أخطاء عامة (non_field_errors) #}
+      {% if form.non_field_errors %}
+        <div class="col-12">
+          {% for error in form.non_field_errors %}
+            <div class="alert alert-danger py-1 mb-2 small">{{ error }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {# الاسم عربي #}
+      <div class="col-md-6">
+        <label for="{{ form.name_ar.id_for_label }}" class="form-label small">
+          {{ form.name_ar.label }}
+        </label>
+        {{ form.name_ar }}
+        {% if form.name_ar.help_text %}
+          <div class="form-text small">{{ form.name_ar.help_text }}</div>
+        {% endif %}
+        {% for error in form.name_ar.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      {# الاسم إنجليزي #}
+      <div class="col-md-6">
+        <label for="{{ form.name_en.id_for_label }}" class="form-label small">
+          {{ form.name_en.label }}
+        </label>
+        {{ form.name_en }}
+        {% if form.name_en.help_text %}
+          <div class="form-text small">{{ form.name_en.help_text }}</div>
+        {% endif %}
+        {% for error in form.name_en.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      {# الكود #}
+      <div class="col-md-4">
+        <label for="{{ form.code.id_for_label }}" class="form-label small">
+          {{ form.code.label }}
+        </label>
+        {{ form.code }}
+        {% if form.code.help_text %}
+          <div class="form-text small">{{ form.code.help_text }}</div>
+        {% endif %}
+        {% for error in form.code.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      {# الرمز #}
+      <div class="col-md-4">
+        <label for="{{ form.symbol.id_for_label }}" class="form-label small">
+          {{ form.symbol.label }}
+        </label>
+        {{ form.symbol }}
+        {% if form.symbol.help_text %}
+          <div class="form-text small">{{ form.symbol.help_text }}</div>
+        {% endif %}
+        {% for error in form.symbol.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      {# الفئة #}
+      <div class="col-md-4">
+        <label for="{{ form.category.id_for_label }}" class="form-label small">
+          {{ form.category.label }}
+        </label>
+        {{ form.category }}
+        {% if form.category.help_text %}
+          <div class="form-text small">{{ form.category.help_text }}</div>
+        {% endif %}
+        {% for error in form.category.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      {# ملاحظات #}
+      <div class="col-12">
+        <label for="{{ form.notes.id_for_label }}" class="form-label small">
+          {{ form.notes.label }}
+        </label>
+        {{ form.notes }}
+        {% if form.notes.help_text %}
+          <div class="form-text small">{{ form.notes.help_text }}</div>
+        {% endif %}
+        {% for error in form.notes.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      {# حالة نشطة #}
+      <div class="col-12">
+        <div class="form-check">
+          {{ form.is_active }}
+          <label class="form-check-label small ms-1" for="{{ form.is_active.id_for_label }}">
+            {{ form.is_active.label }}
+          </label>
+          {% if form.is_active.help_text %}
+            <div class="form-text small">{{ form.is_active.help_text }}</div>
           {% endif %}
-          {% for error in field.errors %}
+          {% for error in form.is_active.errors %}
             <div class="text-danger small">{{ error }}</div>
           {% endfor %}
         </div>
-      {% endfor %}
+      </div>
 
-      <div class="col-12">
+      <div class="col-12 d-flex gap-2">
         <button class="btn btn-primary btn-sm">
           {% trans "حفظ" %}
         </button>
+        <a href="{% url 'uom:unit_list' %}" class="btn btn-outline-secondary btn-sm">
+          {% trans "إلغاء" %}
+        </a>
       </div>
     </form>
   </div>
