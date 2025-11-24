@@ -61,19 +61,20 @@
       {% trans "مستويات المخزون" %}
     </a>
   </li>
-<li class="nav-item">
-  <a class="nav-link {% if subsection == 'uom' %}active{% endif %}"
-     href="{% url 'uom:unit_list' %}">
-    <i class="bi bi-sliders"></i>
-    <span class="me-2">{% trans "وحدات القياس" %}</span>
-  </a>
-</li>
-<li class="nav-item">
-  <a class="nav-link {% if subsection == 'settings' %}active{% endif %}"
-     href="{% url 'inventory:settings' %}">
-    {% trans "الإعدادات" %}
-  </a>
-</li>
+
+  <li class="nav-item">
+    <a class="nav-link px-3 py-1 {% if subsection == 'uom' %}active{% endif %}"
+       href="{% url 'uom:unit_list' %}">
+      <span>{% trans "وحدات القياس" %}</span>
+    </a>
+  </li>
+
+  <li class="nav-item">
+    <a class="nav-link px-3 py-1 {% if subsection == 'settings' %}active{% endif %}"
+       href="{% url 'inventory:settings' %}">
+      {% trans "الإعدادات" %}
+    </a>
+  </li>
 
 </ul>
 
@@ -94,6 +95,10 @@
       {% trans "تسجيل وإدارة الحركات الواردة والصادرة والتحويلات بين المستودعات والمواقع." %}
     {% elif subsection == 'stock_levels' %}
       {% trans "متابعة مستويات المخزون، الحدود الدنيا، وحالة توفر الكميات لكل موقع." %}
+    {% elif subsection == 'uom' %}
+      {% trans "إدارة وحدات القياس الأساسية والبديلة والرموز المستخدمة في النظام." %}
+    {% elif subsection == 'settings' %}
+      {% trans "ضبط إعدادات المخزون العامة مثل بادئات ترقيم الحركات." %}
     {% else %}
       {% trans "اختر إحدى الشاشات أعلاه لإدارة بيانات المخزون." %}
     {% endif %}

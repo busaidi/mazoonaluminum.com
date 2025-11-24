@@ -43,6 +43,9 @@ python manage.py seed_journals
  python manage.py seed_uom
 ```
 ```bash
+python manage.py seed_inventory_demo
+```
+```bash
 python manage.py runserver
 ```
 #on windows
