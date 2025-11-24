@@ -1,0 +1,197 @@
+تحديث النظام:
+sudo apt update && sudo apt upgrade -y
+
+تثبيت الأدوات الأساسية:
+sudo apt install -y python3 python3-venv python3-pip git nginx
+
+(اختياري لكن ممتاز للأمان: تفعيل UFW وفتح فقط 22 و80 و443)
+sudo apt install -y ufw
+sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'
+sudo ufw enable
+
+
+
+2) ربط السيرفر مع GitHub (repo خاص)
+2.1 إنشاء SSH key على السيرفر
+ssh-keygen -t ed25519 -C "deploy@mazoonaluminum.com"
+اضغط Enter لكل الأسئلة (بدون passphrase لو تحب).
+
+الآن اعرض المفتاح العام:
+cat ~/.ssh/id_ed25519.pub
+
+
+
+2.2 إضافة المفتاح في GitHub
+في GitHub:
+
+ادخل على المستودع الخاص: https://github.com/busaidi/mazoonaluminum.com
+
+Settings → Deploy keys → Add deploy key
+
+الاسم مثلاً: mazoonaluminum-vps
+
+الصق المفتاح اللي نسخته.
+
+فعل خيار Allow write access لو بتسوي git push من السيرفر (عادة ما تحتاج، كفاية read فقط).
+
+Save.
+
+
+ssh -T git@github.com
+
+
+لازم يعطيك رسالة مثل:
+
+Hi busaidi! You've successfully authenticated…
+
+
+----
+adduser mazoon
+usermod -aG sudo mazoon
+mkdir -p /opt/mazoonaluminum.com
+chown -R mazoon:mazoon /opt/mazoonaluminum.com
+
+
+su - mazoon
+cd /opt/mazoonaluminum.com
+
+git clone git@github.com:busaidi/mazoonaluminum.com.git .
+
+
+-----------
+mkdir -p /opt/mazoonaluminum.com
+cd /opt/mazoonaluminum.com
+git clone git@github.com:busaidi/mazoonaluminum.com.git .
+
+---------
+cd /opt/mazoonaluminum.com
+
+# تأكد أن Python موجود
+python3 --version
+
+# أنشئ بيئة افتراضية
+python3 -m venv .venv
+
+# فعل البيئة
+source .venv/bin/activate
+
+# حدث pip
+pip install --upgrade pip
+
+# ثبت المتطلبات
+pip install -r requirements.txt
+
+------
+
+
+cd /opt/mazoonaluminum.com
+
+DJANGO_SECRET_KEY=change-me-very-long-random
+DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost,اسم_الدومين_حقك
+
+
+cd /opt/mazoonaluminum.com
+
+# غالباً في manage.py في نفس المجلد
+python manage.py migrate
+python manage.py collectstatic --noinput
+python manage.py createsuperuser  # اختياري الآن
+
+# جرّب تشغيل السيرفر
+python manage.py runserver 0.0.0.0:8000
+
+
+
+cd /opt/mazoonaluminum.com
+mkdir -p staticfiles
+
+
+
+---------
+cd /opt/mazoonaluminum.com
+source .venv/bin/activate
+
+python manage.py collectstatic --noinput
+----------
+cd /opt/mazoonaluminum.com
+source .venv/bin/activate
+
+pip install gunicorn
+
+run:
+gunicorn --bind 0.0.0.0:8000 mazoonaluminum.wsgi:application
+
+----
+nano /etc/systemd/system/mazoonaluminum.service
+
+[Unit]
+Description=Mazoon Aluminum Django app (Gunicorn)
+After=network.target
+
+[Service]
+User=root
+Group=www-data
+WorkingDirectory=/opt/mazoonaluminum.com
+Environment="PATH=/opt/mazoonaluminum.com/.venv/bin"
+ExecStart=/opt/mazoonaluminum.com/.venv/bin/gunicorn \
+    --workers 3 \
+    --bind 127.0.0.1:8000 \
+    mazoonaluminum.wsgi:application
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+--------
+systemctl daemon-reload
+systemctl start mazoonaluminum.service
+systemctl status mazoonaluminum.service
+
+systemctl enable mazoonaluminum.service
+------------
+
+nano /etc/nginx/sites-available/mazoonaluminum
+server {
+    listen 80;
+    server_name your-domain.com www.your-domain.com;
+
+    # Static files
+    location /static/ {
+        alias /opt/mazoonaluminum.com/staticfiles/;
+    }
+
+    # Media (لو استخدمت لاحقًا)
+    # location /media/ {
+    #     alias /opt/mazoonaluminum.com/media/;
+    # }
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+---------
+ln -s /etc/nginx/sites-available/mazoonaluminum /etc/nginx/sites-enabled/mazoonaluminum
+
+nginx -t
+systemctl reload nginx
+
+----------
+
+
+cd /opt/mazoonaluminum.com
+source .venv/bin/activate
+python manage.py runserver 0.0.0.0:8000
+-------
+ln -s /etc/nginx/sites-available/mazoonaluminum /etc/nginx/sites-enabled/mazoonaluminum
+
+------
+tail -n 50 /var/log/nginx/error.log
+------
+
+
