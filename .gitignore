@@ -2,3 +2,7 @@
 .idea/
 .env
 *.env
+.venv/
+__pycache__/
+staticfiles/
+db.sqlite3
