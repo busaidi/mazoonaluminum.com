@@ -1,12 +1,32 @@
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv  # 👈 نحتاج python-dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "change-me-in-production"
+# ---------------------------------
+#   .env
+# ---------------------------------
+# نحاول نحمّل .env من جذر المشروع (لو موجود)
+env_path = BASE_DIR / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
 
-DEBUG = True
+# ---------------------------------
+#   أمان و Debug
+# ---------------------------------
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "change-me-in-development-only")
 
-ALLOWED_HOSTS = []
+DEBUG = os.getenv("DJANGO_DEBUG", "True") == "True"
+
+# مثال: "127.0.0.1 localhost omanskylight.com www.omanskylight.com"
+_raw_hosts = os.getenv("DJANGO_ALLOWED_HOSTS", "")
+if _raw_hosts.strip():
+    ALLOWED_HOSTS = _raw_hosts.split()
+else:
+    # افتراضيًا في التطوير
+    ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -15,10 +35,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    #Library for framework only
+    # Library for framework only
     "django.contrib.sitemaps",
     "modeltranslation",
-    #my Website Blog and product
+    # my Website Blog and product
     "core.apps.CoreConfig",
     "website.apps.WebsiteConfig",
     "accounting.apps.AccountingConfig",
@@ -54,7 +74,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "django.template.context_processors.i18n",
-                #notifications
+                # notifications
                 "core.context_processors.notifications.notifications_context",
             ],
         },
@@ -77,13 +97,8 @@ LANGUAGES = [
     ("en", "English"),
 ]
 
-#for model translation
-# django-modeltranslation settings
 MODELTRANSLATION_DEFAULT_LANGUAGE = "ar"
-
 MODELTRANSLATION_LANGUAGES = ("ar", "en")
-
-# Optional but recommended: fallback when a value is missing in one language
 MODELTRANSLATION_FALLBACK_LANGUAGES = {
     "default": ("ar", "en"),
 }
@@ -96,16 +111,20 @@ TIME_ZONE = "Asia/Muscat"
 USE_I18N = True
 USE_TZ = True
 
+# -----------------------------
+#   Static / Media
+# -----------------------------
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+
+# مهم للإنتاج (collectstatic)
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-
-LOGIN_URL = "login"  # اسم الـ URL وليس المسار النصي
-LOGIN_REDIRECT_URL = "/"      # بعد تسجيل الدخول يوديه وين
-LOGOUT_REDIRECT_URL = "/"     # بعد تسجيل الخروج يوديه وين
-
-
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

@@ -1,2 +1,5 @@
 # Ignore PyCharm project files
 .idea/
+.env
+*.env
+db.sqlite3
