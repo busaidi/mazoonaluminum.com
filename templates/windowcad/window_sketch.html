@@ -1,0 +1,564 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}رسم نافذة / باب (Sketch){% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-3">رسم نافذة / باب – Sketch</h1>
+
+<form id="sketch-form" method="post">
+  {% csrf_token %}
+
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">الاسم</label>
+        <input type="text"
+               name="name"
+               class="form-control form-control-sm"
+               placeholder="مثال: نافذة صالة" />
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">النظام (System)</label>
+        <select name="system_id"
+                id="id_system"
+                class="form-select form-select-sm"
+                required>
+          <option value="">اختر النظام...</option>
+          {% for s in systems %}
+          <option value="{{ s.id }}">{{ s.code }} – {{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Frame Profile</label>
+        <select name="frame_profile_id"
+                id="id_frame_profile"
+                class="form-select form-select-sm"
+                required>
+          <option value="">اختر الفريم...</option>
+          {% for p in frame_profiles %}
+          <option value="{{ p.id }}" data-visible-width="{{ p.visible_width_mm|floatformat:2 }}">
+            {{ p.system.code }} – {{ p.code }} ({{ p.visible_width_mm }} mm)
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- إدخال الأبعاد يدوياً -->
+      <div class="col-md-2">
+        <label class="form-label">العرض (mm)</label>
+        <input type="number"
+               id="id_width_display"
+               class="form-control form-control-sm"
+               min="200" max="4000" step="1"
+               placeholder="مثال: 1200">
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label">الارتفاع (mm)</label>
+        <input type="number"
+               id="id_height_display"
+               class="form-control form-control-sm"
+               min="200" max="4000" step="1"
+               placeholder="مثال: 1500">
+      </div>
+
+      <div class="col-md-2">
+        <button type="button"
+                id="btn-draw-from-dims"
+                class="btn btn-outline-primary btn-sm w-100 mt-4">
+          رسم حسب الأبعاد
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <div>
+        <strong>لوحة الرسم</strong>
+        <span class="small text-muted ms-2">
+          (اضغط واسحب لرسم الفتحة، أو أدخل الأبعاد، ثم استخدم الأدوات لرسم المليون)
+        </span>
+      </div>
+      <div class="btn-group btn-group-sm" role="group" aria-label="Tools">
+        <button type="button"
+                class="btn btn-outline-secondary active"
+                data-tool="frame">
+          رسم الفتحة
+        </button>
+        <button type="button"
+                class="btn btn-outline-secondary"
+                data-tool="vmullion">
+          مليون عمودي
+        </button>
+        <button type="button"
+                class="btn btn-outline-secondary"
+                data-tool="hmullion">
+          مليون أفقي
+        </button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="border"
+           style="width:100%; max-width:650px; aspect-ratio:1; background:#f9fafb;">
+        <svg id="sketch-svg"
+             viewBox="0 0 4000 4000"
+             style="width:100%; height:100%; cursor:crosshair; background:#f3f4f6;">
+        </svg>
+      </div>
+      <div class="small text-muted mt-2" id="dims-display">
+        لم يتم الرسم بعد.
+      </div>
+    </div>
+  </div>
+
+  <!-- hidden fields where JS will store real width/height in mm + mullions -->
+  <input type="hidden" name="width_mm" id="id_width_mm">
+  <input type="hidden" name="height_mm" id="id_height_mm">
+  <input type="hidden" name="mullions_json" id="id_mullions_json">
+
+  <button type="submit" class="btn btn-primary">
+    حفظ التصميم من الرسم
+  </button>
+  <a href="{% url 'windowcad:window_list' %}" class="btn btn-secondary">
+    إلغاء
+  </a>
+</form>
+
+<script>
+  const svg = document.getElementById("sketch-svg");
+  const dimsDisplay = document.getElementById("dims-display");
+  const widthInput = document.getElementById("id_width_mm");
+  const heightInput = document.getElementById("id_height_mm");
+  const mullionsInput = document.getElementById("id_mullions_json");
+  const frameSelect = document.getElementById("id_frame_profile");
+  const toolButtons = document.querySelectorAll("[data-tool]");
+
+  const widthDisplay = document.getElementById("id_width_display");
+  const heightDisplay = document.getElementById("id_height_display");
+  const drawFromDimsBtn = document.getElementById("btn-draw-from-dims");
+
+  const CANVAS_SIZE = 4000;
+  const MARGIN = 200;
+
+  let currentTool = "frame";
+
+  let drawing = false;
+  let startX = 0;
+  let startY = 0;
+  let currentRect = null;
+
+  // outer opening (to allow re-draw when frame changes or from text dims)
+  let outerX = null;
+  let outerY = null;
+  let outerW = null;
+  let outerH = null;
+
+  // inner opening (clear) after drawing frame
+  let innerX = null;
+  let innerY = null;
+  let innerW = null;
+  let innerH = null;
+
+  // mullions = [{orientation: "vertical"/"horizontal", ratio: 0..1}, ...]
+  let mullions = [];
+
+  toolButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      toolButtons.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentTool = btn.dataset.tool;
+    });
+  });
+
+  function createRect(x, y, w, h, strokeWidth, stroke, fill, dash=false) {
+    const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    r.setAttribute("x", x);
+    r.setAttribute("y", y);
+    r.setAttribute("width", w);
+    r.setAttribute("height", h);
+    r.setAttribute("stroke", stroke);
+    r.setAttribute("stroke-width", strokeWidth);
+    r.setAttribute("fill", fill);
+    if (dash) {
+      r.setAttribute("stroke-dasharray", "20 10");
+    }
+    svg.appendChild(r);
+    return r;
+  }
+
+  function createLine(x1, y1, x2, y2, strokeWidth, stroke, dash=false) {
+    const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    l.setAttribute("x1", x1);
+    l.setAttribute("y1", y1);
+    l.setAttribute("x2", x2);
+    l.setAttribute("y2", y2);
+    l.setAttribute("stroke", stroke);
+    l.setAttribute("stroke-width", strokeWidth);
+    if (dash) {
+      l.setAttribute("stroke-dasharray", "10 5");
+    }
+    svg.appendChild(l);
+    return l;
+  }
+
+  function createText(x, y, text) {
+    const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    t.setAttribute("x", x);
+    t.setAttribute("y", y);
+    t.setAttribute("fill", "#4b5563");
+    t.setAttribute("font-size", "60"); // لأن viewBox 0..4000
+    t.setAttribute("text-anchor", "middle");
+    t.textContent = text;
+    svg.appendChild(t);
+    return t;
+  }
+
+  function clearSvg() {
+    while (svg.firstChild) {
+      svg.removeChild(svg.firstChild);
+    }
+  }
+
+  function getMousePos(evt) {
+    const pt = svg.createSVGPoint();
+    pt.x = evt.clientX;
+    pt.y = evt.clientY;
+    const ctm = svg.getScreenCTM().inverse();
+    const loc = pt.matrixTransform(ctm);
+    return { x: loc.x, y: loc.y };
+  }
+
+  svg.addEventListener("mousedown", (e) => {
+    const fpId = frameSelect.value;
+    if (!fpId) {
+      alert("اختر Frame Profile أولاً.");
+      return;
+    }
+
+    const pos = getMousePos(e);
+
+    if (currentTool === "frame") {
+      drawing = true;
+      clearSvg();
+      mullions = [];
+      mullionsInput.value = "[]";
+
+      innerX = innerY = innerW = innerH = null;
+      outerX = outerY = outerW = outerH = null;
+
+      startX = pos.x;
+      startY = pos.y;
+      currentRect = createRect(startX, startY, 0, 0, 4, "#111827", "none", true);
+
+    } else if (currentTool === "vmullion" || currentTool === "hmullion") {
+      if (innerX === null || innerY === null) {
+        alert("ارسم الفتحة أولاً.");
+        return;
+      }
+      const p = getMousePos(e);
+      addMullionAtPosition(p.x, p.y, currentTool);
+    }
+  });
+
+  svg.addEventListener("mousemove", (e) => {
+    if (!drawing || currentTool !== "frame" || !currentRect) return;
+
+    const pos = getMousePos(e);
+    let x = Math.min(startX, pos.x);
+    let y = Math.min(startY, pos.y);
+    let w = Math.abs(pos.x - startX);
+    let h = Math.abs(pos.y - startY);
+
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (x + w > CANVAS_SIZE) w = CANVAS_SIZE - x;
+    if (y + h > CANVAS_SIZE) h = CANVAS_SIZE - y;
+
+    currentRect.setAttribute("x", x);
+    currentRect.setAttribute("y", y);
+    currentRect.setAttribute("width", w);
+    currentRect.setAttribute("height", h);
+
+    dimsDisplay.textContent = `العرض التقريبي: ${w.toFixed(0)} mm – الارتفاع: ${h.toFixed(0)} mm`;
+  });
+
+  svg.addEventListener("mouseup", (e) => {
+    if (!drawing || currentTool !== "frame" || !currentRect) return;
+    drawing = false;
+
+    const x = parseFloat(currentRect.getAttribute("x"));
+    const y = parseFloat(currentRect.getAttribute("y"));
+    const w = parseFloat(currentRect.getAttribute("width"));
+    const h = parseFloat(currentRect.getAttribute("height"));
+
+    if (w < 50 || h < 50) {
+      dimsDisplay.textContent = "المستطيل صغير جداً. أعد الرسم.";
+      clearSvg();
+      currentRect = null;
+      return;
+    }
+
+    outerX = x;
+    outerY = y;
+    outerW = w;
+    outerH = h;
+
+    widthInput.value = w.toFixed(2);
+    heightInput.value = h.toFixed(2);
+
+    widthDisplay.value = w.toFixed(0);
+    heightDisplay.value = h.toFixed(0);
+
+    dimsDisplay.textContent = `العرض النهائي: ${w.toFixed(0)} mm – الارتفاع: ${h.toFixed(0)} mm`;
+
+    redrawWithFrame(x, y, w, h);
+  });
+
+  function redrawWithFrame(x, y, w, h) {
+    clearSvg();
+
+    const selectedOption = frameSelect.options[frameSelect.selectedIndex];
+    const visibleWidth = parseFloat(selectedOption.dataset.visibleWidth || "40");
+
+    // outer = فتحة البناء
+    createRect(x, y, w, h, 4, "#000000", "none", false);
+
+    // inner = الفريم الداخلي حسب عرض الفريم
+    const ix = x + visibleWidth;
+    const iy = y + visibleWidth;
+    const iw = Math.max(w - 2 * visibleWidth, 10);
+    const ih = Math.max(h - 2 * visibleWidth, 10);
+
+    createRect(ix, iy, iw, ih, 4, "#111827", "none", false);
+
+    innerX = ix;
+    innerY = iy;
+    innerW = iw;
+    innerH = ih;
+
+    // dimension lines like AutoCAD
+    drawDimensions(x, y, w, h);
+
+    // إعادة رسم المليونات
+    mullions.forEach(m => {
+      drawMullion(m.orientation, m.ratio, visibleWidth);
+    });
+  }
+
+  function drawDimensions(x, y, w, h) {
+    const offset = 120;  // بُعد خط الديمنشن
+    const arrow = 30;    // طول سهم النهاية
+
+    // Horizontal dimension (top)
+    const dimY = y - offset;
+    createLine(x, dimY, x + w, dimY, 1.5, "#9ca3af");
+    // arrows
+    createLine(x, dimY - arrow / 2, x, dimY + arrow / 2, 1, "#9ca3af");
+    createLine(x + w, dimY - arrow / 2, x + w, dimY + arrow / 2, 1, "#9ca3af");
+    const widthText = createText(x + w / 2, dimY - 10, `${w.toFixed(0)} mm`);
+    widthText.style.cursor = "pointer";
+    widthText.addEventListener("click", () => {
+      editDimension("width", w, widthText);
+    });
+
+    // Vertical dimension (left)
+    const dimX = x - offset;
+    createLine(dimX, y, dimX, y + h, 1.5, "#9ca3af");
+    createLine(dimX - arrow / 2, y, dimX + arrow / 2, y, 1, "#9ca3af");
+    createLine(dimX - arrow / 2, y + h, dimX + arrow / 2, y + h, 1, "#9ca3af");
+    const heightText = createText(dimX, y + h / 2, `${h.toFixed(0)} mm`);
+    heightText.style.cursor = "pointer";
+    heightText.addEventListener("click", () => {
+      editDimension("height", h, heightText);
+    });
+  }
+
+  function editDimension(type, oldValue, textElement) {
+    const foreign = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+    const x = parseFloat(textElement.getAttribute("x")) - 150;
+    const y = parseFloat(textElement.getAttribute("y")) - 80;
+
+    foreign.setAttribute("x", x);
+    foreign.setAttribute("y", y);
+    foreign.setAttribute("width", 300);
+    foreign.setAttribute("height", 160);
+
+    const html = `
+      <div xmlns="http://www.w3.org/1999/xhtml"
+           style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">
+        <input type="number"
+               value="${oldValue.toFixed ? oldValue.toFixed(0) : oldValue}"
+               style="width:90%;height:60px;font-size:28px;border:2px solid #2563eb;
+                      border-radius:8px;padding:4px;text-align:center;" />
+      </div>
+    `;
+
+    foreign.innerHTML = html;
+    svg.appendChild(foreign);
+
+    const input = foreign.querySelector("input");
+    input.focus();
+    input.select();
+
+    function finish(removeOnly=false) {
+      if (svg.contains(foreign)) {
+        svg.removeChild(foreign);
+      }
+      if (!removeOnly) {
+        // nothing
+      }
+    }
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const newVal = parseFloat(input.value);
+        if (!newVal || newVal < 50) {
+          alert("القيمة غير صالحة (يجب أن تكون أكبر من 50 mm).");
+          return;
+        }
+        applyNewDimension(type, newVal);
+        finish();
+      } else if (e.key === "Escape") {
+        finish(true);
+      }
+    });
+
+    input.addEventListener("blur", () => {
+      finish(true);
+    });
+  }
+
+  function applyNewDimension(type, newValue) {
+    if (outerX === null || outerY === null) {
+      return;
+    }
+
+    if (type === "width") {
+      outerW = newValue;
+    } else if (type === "height") {
+      outerH = newValue;
+    }
+
+    // حدود اللوحة
+    if (outerX + outerW > CANVAS_SIZE - MARGIN) {
+      outerW = CANVAS_SIZE - MARGIN - outerX;
+    }
+    if (outerY + outerH > CANVAS_SIZE - MARGIN) {
+      outerH = CANVAS_SIZE - MARGIN - outerY;
+    }
+
+    widthInput.value = outerW.toFixed(2);
+    heightInput.value = outerH.toFixed(2);
+
+    widthDisplay.value = outerW.toFixed(0);
+    heightDisplay.value = outerH.toFixed(0);
+
+    dimsDisplay.textContent = `العرض: ${outerW.toFixed(0)} mm – الارتفاع: ${outerH.toFixed(0)} mm`;
+
+    redrawWithFrame(outerX, outerY, outerW, outerH);
+  }
+
+  function addMullionAtPosition(mouseX, mouseY, tool) {
+    const selectedOption = frameSelect.options[frameSelect.selectedIndex];
+    const visibleWidth = parseFloat(selectedOption.dataset.visibleWidth || "40");
+
+    if (
+      innerX === null || innerY === null ||
+      mouseX < innerX || mouseX > innerX + innerW ||
+      mouseY < innerY || mouseY > innerY + innerH
+    ) {
+      return;
+    }
+
+    if (tool === "vmullion") {
+      const ratio = (mouseX - innerX) / innerW;
+      mullions.push({orientation: "vertical", ratio: ratio});
+      drawMullion("vertical", ratio, visibleWidth);
+    } else if (tool === "hmullion") {
+      const ratio = (mouseY - innerY) / innerH;
+      mullions.push({orientation: "horizontal", ratio: ratio});
+      drawMullion("horizontal", ratio, visibleWidth);
+    }
+
+    mullionsInput.value = JSON.stringify(mullions);
+  }
+
+  function drawMullion(orientation, ratio, thickness) {
+    if (innerX === null || innerY === null) return;
+
+    if (orientation === "vertical") {
+      const centerX = innerX + ratio * innerW;
+      const left = centerX - thickness / 2;
+
+      createRect(
+        left,
+        innerY,
+        thickness,
+        innerH,
+        3,
+        "#10b981",
+        "#d1fae5",
+        false
+      );
+    } else if (orientation === "horizontal") {
+      const centerY = innerY + ratio * innerH;
+      const top = centerY - thickness / 2;
+
+      createRect(
+        innerX,
+        top,
+        innerW,
+        thickness,
+        3,
+        "#0ea5e9",
+        "#e0f2fe",
+        false
+      );
+    }
+  }
+
+  // لو غيّرنا الفريم بعد الرسم، يعيد الرسم بنفس الفتحة والمليونات
+  frameSelect.addEventListener("change", () => {
+    if (outerW !== null && outerH !== null) {
+      redrawWithFrame(outerX, outerY, outerW, outerH);
+    }
+  });
+
+  // زر "رسم حسب الأبعاد" – بدون سحب بالماوس
+  drawFromDimsBtn.addEventListener("click", () => {
+    const fpId = frameSelect.value;
+    if (!fpId) {
+      alert("اختر Frame Profile أولاً.");
+      return;
+    }
+
+    const w = parseFloat(widthDisplay.value || "0");
+    const h = parseFloat(heightDisplay.value || "0");
+
+    if (!w || !h || w < 50 || h < 50) {
+      alert("أدخل عرض وارتفاع صحيحين (أكبر من 50 mm).");
+      return;
+    }
+
+    // نخلي الفتحة في مكان مناسب داخل اللوحة
+    outerX = MARGIN;
+    outerY = MARGIN;
+    outerW = Math.min(w, CANVAS_SIZE - 2 * MARGIN);
+    outerH = Math.min(h, CANVAS_SIZE - 2 * MARGIN);
+
+    widthInput.value = outerW.toFixed(2);
+    heightInput.value = outerH.toFixed(2);
+
+    dimsDisplay.textContent = `العرض: ${outerW.toFixed(0)} mm – الارتفاع: ${outerH.toFixed(0)} mm`;
+
+    mullions = [];
+    mullionsInput.value = "[]";
+    redrawWithFrame(outerX, outerY, outerW, outerH);
+  });
+</script>
+{% endblock %}

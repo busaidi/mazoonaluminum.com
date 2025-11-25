@@ -51,7 +51,8 @@ INSTALLED_APPS = [
     "inventory.apps.InventoryConfig",
     "uom.apps.UomConfig",
     "payments.apps.PaymentsConfig",
-    "sales.apps.SalesConfig"
+    "sales.apps.SalesConfig",
+    "windowcad.apps.WindowcadConfig",
 ]
 
 MIDDLEWARE = [

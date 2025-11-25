@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{{ window.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 mb-1">{{ window.name }}</h1>
+    <div class="text-muted small">
+      نظام: {{ window.system.code }} –
+      Frame: {{ window.frame_profile.code }} –
+      العرض: {{ window.width_mm|floatformat:0 }} mm –
+      الارتفاع: {{ window.height_mm|floatformat:0 }} mm
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'windowcad:window_dxf' window.pk %}"
+       class="btn btn-sm btn-outline-primary">
+      تنزيل DXF
+    </a>
+    <a href="{% url 'windowcad:window_list' %}" class="btn btn-sm btn-secondary">
+      رجوع للقائمة
+    </a>
+  </div>
+</div>
+
+<div class="row">
+  <!-- الرسم -->
+  <div class="col-md-7 mb-3">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header">
+        <strong>رسم 2D (مبسّط)</strong>
+      </div>
+      <div class="card-body">
+        <div style="width:100%; border:1px solid #ddd; background:#f9fafb;">
+          <svg id="window-svg"
+               viewBox="0 0 1000 1000"
+               style="width:100%; height:auto; background:#f3f4f6;"></svg>
+        </div>
+        <div class="small text-muted mt-2">
+          الرسم حسب الأبعاد الحقيقية، مع إطار خارجي، فريم داخلي، Panels، ومليونات.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- الهاردوير -->
+  <div class="col-md-5 mb-3">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header">
+        <strong>الهاردوير لكل Panel</strong>
+      </div>
+      <div class="card-body">
+        {% for item in hardware_summary %}
+          <div class="mb-3">
+            <div class="fw-bold small mb-1">
+              Panel #{{ forloop.counter }}
+              – {{ item.panel.get_type_display }}
+              – {{ item.panel.get_operation_display }}
+            </div>
+            {% if item.hardware %}
+            <ul class="small mb-0">
+              {% for hw in item.hardware %}
+              <li>{{ hw.code }} – {{ hw.name }} ({{ hw.qty }})</li>
+              {% endfor %}
+            </ul>
+            {% else %}
+              <div class="text-muted small">
+                لا توجد عناصر هاردوير مطابقة لهذا المقاس/النوع.
+              </div>
+            {% endif %}
+          </div>
+        {% empty %}
+          <div class="text-muted small">
+            لا توجد Panels مرتبطة بهذا التصميم.
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ==== بيانات من Django ====
+  const totalWidth = {{ window.width_mm|floatformat:4 }};
+  const totalHeight = {{ window.height_mm|floatformat:4 }};
+  const frameFace = {{ window.frame_face_mm|floatformat:4 }};
+  const panels = {{ panels_json|safe }};
+
+  const mullions = [
+    {% for m in window.mullions.all %}
+      {
+        orientation: "{{ m.orientation }}",
+        ratio: {{ m.position_ratio|floatformat:4 }}
+      },
+    {% endfor %}
+  ];
+
+  const svg = document.getElementById("window-svg");
+
+  function rect(x, y, w, h, strokeWidth, stroke, fill) {
+    const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    r.setAttribute("x", x);
+    r.setAttribute("y", y);
+    r.setAttribute("width", w);
+    r.setAttribute("height", h);
+    r.setAttribute("stroke", stroke);
+    r.setAttribute("stroke-width", strokeWidth);
+    r.setAttribute("fill", fill);
+    svg.appendChild(r);
+  }
+
+  // Normalize mm → 0..1000
+  function nX(mm) { return (mm / totalWidth) * 1000; }
+  function nY(mm) { return (mm / totalHeight) * 1000; }
+
+  // Outer frame = فتحة البناء
+  rect(0, 0, 1000, 1000, 8, "#000000", "none");
+
+  // Inner frame = الفريم الحقيقي
+  const innerXmm = frameFace;
+  const innerYmm = frameFace;
+  const innerWmm = totalWidth - 2 * frameFace;
+  const innerHmm = totalHeight - 2 * frameFace;
+
+  rect(
+    nX(innerXmm),
+    nY(innerYmm),
+    nX(innerWmm),
+    nY(innerHmm),
+    6,
+    "#111827",
+    "none"
+  );
+
+  const clearW = innerWmm;
+  const clearH = innerHmm;
+
+  // Panels
+  panels.forEach((p) => {
+    const px = innerXmm + p.x * clearW;
+    const py = innerYmm + p.y * clearH;
+    const pw = p.w * clearW;
+    const ph = p.h * clearH;
+
+    let fill = "#e5e7eb";
+    if (p.type === "door") fill = "#fee2e2";
+    if (p.type === "window") fill = "#dbeafe";
+    if (p.type === "fixed") fill = "#e5e7eb";
+
+    rect(
+      nX(px),
+      nY(py),
+      nX(pw),
+      nY(ph),
+      4,
+      "#4b5563",
+      fill
+    );
+  });
+
+  // Mullions (نفس سماكة الفريم حالياً)
+  const mullionThicknessMm = frameFace;
+
+  mullions.forEach((m) => {
+    if (m.orientation === "vertical") {
+      const centerX = innerXmm + m.ratio * clearW;
+      const left = centerX - mullionThicknessMm / 2.0;
+      const w = mullionThicknessMm;
+
+      rect(
+        nX(left),
+        nY(innerYmm),
+        nX(w),
+        nY(clearH),
+        3,
+        "#10b981",
+        "#d1fae5"
+      );
+    } else if (m.orientation === "horizontal") {
+      const centerY = innerYmm + m.ratio * clearH;
+      const top = centerY - mullionThicknessMm / 2.0;
+      const h = mullionThicknessMm;
+
+      rect(
+        nX(innerXmm),
+        nY(top),
+        nX(clearW),
+        nY(h),
+        3,
+        "#0ea5e9",
+        "#e0f2fe"
+      );
+    }
+  });
+</script>
+{% endblock %}

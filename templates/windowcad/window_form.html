@@ -1,0 +1,94 @@
+{# templates/windowcad/window_form.html #}
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}تصميم نافذة جديدة{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-3">تصميم نافذة / باب جديد</h1>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-header">
+      <strong>بيانات النافذة</strong>
+    </div>
+    <div class="card-body">
+      {{ form.non_field_errors }}
+      <div class="row g-3">
+        {% for field in form %}
+        <div class="col-md-6">
+          <label class="form-label">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}
+          <div class="form-text">{{ field.help_text }}</div>
+          {% endif %}
+          {% for err in field.errors %}
+          <div class="text-danger small">{{ err }}</div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <strong>الأجزاء (Panels)</strong>
+      <small class="text-muted">النِّسَب من الفتحة الداخلية (0–1)</small>
+    </div>
+    <div class="card-body">
+      {{ formset.management_form }}
+      {% for f in formset %}
+        <div class="border rounded p-2 mb-2">
+          {{ f.non_field_errors }}
+          <div class="row g-2 align-items-end">
+            <div class="col-md-2">
+              <label class="form-label">x</label>
+              {{ f.x }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">y</label>
+              {{ f.y }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">w</label>
+              {{ f.w }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">h</label>
+              {{ f.h }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">نوع الجزء</label>
+              {{ f.type }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">التشغيل</label>
+              {{ f.operation }}
+            </div>
+            {% if formset.can_delete %}
+            <div class="col-md-2 mt-2">
+              <label class="form-check">
+                {{ f.DELETE }} حذف
+              </label>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+      <div class="text-muted small">
+        حالياً الإضافة تتم من الـ extra في الفورم، لاحقاً نقدر نضيف أزرار "إضافة جزء".
+      </div>
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-primary">
+    حفظ
+  </button>
+  <a href="{% url 'windowcad:window_list' %}" class="btn btn-secondary">
+    إلغاء
+  </a>
+</form>
+{% endblock %}
