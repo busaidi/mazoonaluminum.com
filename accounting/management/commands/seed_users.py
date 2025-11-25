@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User, Group
 
-from contacts.models import Customer
+from contacts.models import Contact
 
 
 class Command(BaseCommand):
@@ -130,7 +130,7 @@ class Command(BaseCommand):
 
         # إنشاء أو تحديث العميل المرتبط
         # نستخدم user كمفتاح أساسي للربط
-        customer, c_created = Customer.objects.get_or_create(
+        customer, c_created = Contact.objects.get_or_create(
             user=user,
             defaults={
                 # الحقول المترجمة (modeltranslation)
