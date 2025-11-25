@@ -36,9 +36,10 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # Library for framework only
-    "django.contrib.sitemaps",
     "modeltranslation",
-    # my Website Blog and product
+    "django.contrib.sitemaps",
+    # My App
+    "contacts.apps.ContactsConfig",
     "core.apps.CoreConfig",
     "website.apps.WebsiteConfig",
     "accounting.apps.AccountingConfig",

@@ -22,106 +22,6 @@ from core.models.domain import (
 )
 
 
-
-# ============================================================
-# Customer
-# ============================================================
-
-class Customer(models.Model):
-    """
-    Basic customer profile.
-    If 'user' is set, it links to Django auth user (for customer login).
-    """
-
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="customer_profile",
-        help_text="Optional: link to a Django user for customer access.",
-    )
-
-    # --------- Main info ---------
-    name = models.CharField(max_length=255)
-    phone = models.CharField(max_length=50, blank=True)
-    email = models.EmailField(blank=True)
-    company_name = models.CharField(max_length=255, blank=True)
-    tax_number = models.CharField(
-        max_length=50,
-        blank=True,
-        help_text="Optional: VAT / Tax ID if applicable.",
-    )
-
-    # --------- Address (structured) ---------
-    country = models.CharField(
-        max_length=255,
-        blank=True,
-        help_text="Country name (translatable).",
-    )
-    governorate = models.CharField(
-        max_length=255,
-        blank=True,
-        help_text="Governorate / محافظة (translatable).",
-    )
-    wilaya = models.CharField(
-        max_length=255,
-        blank=True,
-        help_text="Wilaya / ولاية (translatable).",
-    )
-    village = models.CharField(
-        max_length=255,
-        blank=True,
-        help_text="Village / قرية (translatable).",
-    )
-    postal_code = models.CharField(
-        max_length=20,
-        blank=True,
-        help_text="Postal code / الرمز البريدي (translatable if needed).",
-    )
-    po_box = models.CharField(
-        max_length=20,
-        blank=True,
-        help_text="P.O. Box / صندوق البريد (translatable if needed).",
-    )
-
-    # Optional free-text address
-    address = models.TextField(blank=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ("name", "id")
-
-    def __str__(self) -> str:
-        return self.name
-
-    # ---------- Aggregated helpers ----------
-
-    @property
-    def total_invoiced(self) -> Decimal:
-        """
-        Sum of all invoices.total_amount for this customer.
-        """
-        total = self.invoices.aggregate(s=Sum("total_amount")).get("s")
-        return total or Decimal("0")
-
-    @property
-    def total_paid(self) -> Decimal:
-        """
-        Sum of all payments.amount for this customer.
-        """
-        total = self.payments.aggregate(s=Sum("amount")).get("s")
-        return total or Decimal("0")
-
-    @property
-    def balance(self) -> Decimal:
-        """
-        Customer balance = total_invoiced - total_paid.
-        """
-        return self.total_invoiced - self.total_paid
-
-
 # ============================================================
 # Invoice & InvoiceItem
 # ============================================================
@@ -140,7 +40,7 @@ class Invoice(NumberedModel, StatefulDomainModel):
         CANCELLED = "cancelled", "Cancelled"
 
     customer = models.ForeignKey(
-        Customer,
+        "contacts.Customer",
         on_delete=models.PROTECT,
         related_name="invoices",
     )
@@ -329,7 +229,7 @@ class Payment(NumberedModel):
         OTHER = "other", "Other"
 
     customer = models.ForeignKey(
-        Customer,
+        "contacts.Customer",
         on_delete=models.PROTECT,
         related_name="payments",
     )
@@ -439,7 +339,7 @@ class Order(NumberedModel, DomainEventsMixin):
     ]
 
     customer = models.ForeignKey(
-        Customer,
+        "contacts.Customer",
         on_delete=models.PROTECT,
         related_name="orders",
         verbose_name="الزبون",

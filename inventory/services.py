@@ -22,20 +22,7 @@ def _adjust_stock_level(*, product, warehouse, location, delta: Decimal) -> Stoc
 
     نستخدم select_for_update + F expressions لسلامة التوازي (concurrency).
     """
-    if delta == 0:
-        level, _ = StockLevel.objects.get_or_create(
-            product=product,
-            warehouse=warehouse,
-            location=location,
-            defaults={
-                "quantity_on_hand": Decimal("0.000"),
-                "quantity_reserved": Decimal("0.000"),
-                "min_stock": Decimal("0.000"),
-            },
-        )
-        return level
-
-    level, created = (
+    level, _ = (
         StockLevel.objects.select_for_update()
         .get_or_create(
             product=product,
@@ -49,70 +36,83 @@ def _adjust_stock_level(*, product, warehouse, location, delta: Decimal) -> Stoc
         )
     )
 
-    level.quantity_on_hand = F("quantity_on_hand") + Decimal(delta)
-    level.save(update_fields=["quantity_on_hand"])
-    level.refresh_from_db(fields=["quantity_on_hand"])
-    return level
+    if delta != 0:
+        level.quantity_on_hand = F("quantity_on_hand") + Decimal(delta)
+        level.save(update_fields=["quantity_on_hand"])
+        level.refresh_from_db(fields=["quantity_on_hand"])
 
+    return level
 
 
 def _apply_move_delta(move: StockMove, *, factor: Decimal) -> None:
     """
-    يطبّق تأثير حركة مخزون واحدة على StockLevel.
+    يطبّق تأثير حركة مخزون واحدة على StockLevel *على مستوى البنود*.
 
     factor:
       +1  = تطبيق الحركة (posting)
       -1  = عكس الحركة (unposting أو حذف)
 
-    ملاحظة:
-      - نستخدم get_base_quantity بحيث تكون كل التعديلات على StockLevel
-        بوحدة القياس الأساسية للمنتج (product.base_uom) مهما كانت وحدة الحركة.
+    المنطق الآن يعتمد على:
+      - move.lines (StockMoveLine)
+      - line.get_base_quantity()  → يحوّل الكمية إلى base_uom للمنتج
+      - move.move_type لتحديد الاتجاه (IN / OUT / TRANSFER)
     """
-    base_qty = move.get_base_quantity() or Decimal("0")
-    qty = base_qty * factor
-    if qty == 0:
+    # نجهّز البنود مع المنتج ووحدة القياس
+    lines = list(move.lines.select_related("product", "uom"))
+    if not lines:
         return
 
-    # Incoming: نضيف للـ destination
-    if move.move_type == StockMove.MoveType.IN:
-        if not move.to_warehouse or not move.to_location:
-            raise ValidationError(_("Incoming move requires destination warehouse and location."))
-        _adjust_stock_level(
-            product=move.product,
-            warehouse=move.to_warehouse,
-            location=move.to_location,
-            delta=qty,  # qty بالـ base_uom
-        )
+    for line in lines:
+        # لو المنتج لا يُتابَع في المخزون نتجاهله
+        if not line.product.is_stock_item:
+            continue
 
-    # Outgoing: نطرح من الـ source
-    elif move.move_type == StockMove.MoveType.OUT:
-        if not move.from_warehouse or not move.from_location:
-            raise ValidationError(_("Outgoing move requires source warehouse and location."))
-        _adjust_stock_level(
-            product=move.product,
-            warehouse=move.from_warehouse,
-            location=move.from_location,
-            delta=-qty,
-        )
+        base_qty = line.get_base_quantity() or Decimal("0")
+        qty = base_qty * factor
+        if qty == 0:
+            continue
 
-    # Transfer: من المصدر إلى الوجهة
-    elif move.move_type == StockMove.MoveType.TRANSFER:
-        if not (move.from_warehouse and move.from_location and move.to_warehouse and move.to_location):
-            raise ValidationError(_("Transfer move requires both source and destination."))
+        # Incoming: نضيف للـ destination
+        if move.move_type == StockMove.MoveType.IN:
+            if not move.to_warehouse or not move.to_location:
+                raise ValidationError(_("Incoming move requires destination warehouse and location."))
 
-        _adjust_stock_level(
-            product=move.product,
-            warehouse=move.from_warehouse,
-            location=move.from_location,
-            delta=-qty,
-        )
-        _adjust_stock_level(
-            product=move.product,
-            warehouse=move.to_warehouse,
-            location=move.to_location,
-            delta=qty,
-        )
+            _adjust_stock_level(
+                product=line.product,
+                warehouse=move.to_warehouse,
+                location=move.to_location,
+                delta=qty,  # qty بالـ base_uom
+            )
 
+        # Outgoing: نطرح من الـ source
+        elif move.move_type == StockMove.MoveType.OUT:
+            if not move.from_warehouse or not move.from_location:
+                raise ValidationError(_("Outgoing move requires source warehouse and location."))
+
+            _adjust_stock_level(
+                product=line.product,
+                warehouse=move.from_warehouse,
+                location=move.from_location,
+                delta=-qty,
+            )
+
+        # Transfer: من المصدر إلى الوجهة
+        elif move.move_type == StockMove.MoveType.TRANSFER:
+            if not (move.from_warehouse and move.from_location and move.to_warehouse and move.to_location):
+                raise ValidationError(_("Transfer move requires both source and destination."))
+
+            _adjust_stock_level(
+                product=line.product,
+                warehouse=move.from_warehouse,
+                location=move.from_location,
+                delta=-qty,
+            )
+            _adjust_stock_level(
+                product=line.product,
+                warehouse=move.to_warehouse,
+                location=move.to_location,
+                delta=qty,
+            )
 
 
 # ============================================================
@@ -176,6 +176,9 @@ def apply_stock_move_on_delete(move: StockMove) -> None:
 # ============================================================
 # Reservation helpers (order-level reservations)
 # ============================================================
+# (كما هي)
+
+
 # ============================================================
 # Dashboard helpers
 # ============================================================
@@ -213,6 +216,10 @@ def get_low_stock_levels():
     )
 
 
+# ============================================================
+# Reservation helpers
+# ============================================================
+
 @transaction.atomic
 def reserve_stock_for_order(
     *,
@@ -228,10 +235,6 @@ def reserve_stock_for_order(
     - يزيد quantity_reserved
     - لا يغيّر quantity_on_hand
     - يمكن ربطه بمناداة من OrderLine في تطبيق accounting.
-
-    ملاحظة:
-      - يفضّل تمرير location صريحة (مثلاً موقع الشحن الرئيسي في ذلك المخزن).
-      - لو تحتاج تحديد location تلقائياً، ممكن تضيف منطق إضافي حسب نظامك.
     """
     if quantity <= 0:
         raise ValidationError(_("Reservation quantity must be positive."))
@@ -322,6 +325,8 @@ def get_available_stock(*, product, warehouse, location) -> Decimal:
         return Decimal("0.000")
 
     return (level.quantity_on_hand or Decimal("0.000")) - (level.quantity_reserved or Decimal("0.000"))
+
+
 # ============================================================
 # Stock level list helpers
 # ============================================================
@@ -344,6 +349,8 @@ def get_low_stock_total() -> int:
     """
     base_qs = StockLevel.objects.all()
     return filter_below_min_stock_levels(base_qs).count()
+
+
 # ============================================================
 # Stock move list helpers
 # ============================================================
@@ -362,14 +369,15 @@ def filter_stock_moves_queryset(
       - move_type : نوع الحركة (in / out / transfer)
       - status    : حالة الحركة (draft / done / cancelled)
 
-    لا يغيّر select_related أو order_by — هذا مسئولية الفيو.
+    ملاحظة:
+      - المنتج الآن على مستوى StockMoveLine، لذلك نستخدم lines__product__...
     """
     if q:
         q = q.strip()
         if q:
             qs = qs.filter(
-                Q(product__code__icontains=q)
-                | Q(product__name__icontains=q)
+                Q(lines__product__code__icontains=q)
+                | Q(lines__product__name__icontains=q)
                 | Q(reference__icontains=q)
                 | Q(from_warehouse__code__icontains=q)
                 | Q(to_warehouse__code__icontains=q)
@@ -384,6 +392,8 @@ def filter_stock_moves_queryset(
         qs = qs.filter(status=status)
 
     return qs
+
+
 # ============================================================
 # Product list helpers
 # ============================================================

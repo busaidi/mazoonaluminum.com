@@ -24,4 +24,4 @@ class AccountingConfig(AppConfig):
         - Do NOT import models or heavy stuff to avoid circular imports.
         """
         import accounting.handlers  # noqa
-        from . import translation  # noqa
+

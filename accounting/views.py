@@ -44,7 +44,8 @@ from .forms import (
     SettingsForm,
 )
 from .mixins import ProductJsonMixin
-from .models import Invoice, Payment, Customer, Order, InvoiceItem, Settings
+from .models import Invoice, Payment, Order, InvoiceItem, Settings
+from contacts.models import Customer
 from .services import convert_order_to_invoice, allocate_general_payment
 
 # ============================================================

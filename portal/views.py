@@ -20,8 +20,9 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 
 from accounting.forms import CustomerProfileForm, CustomerOrderForm
-from accounting.models import Customer, Invoice, Payment, Order, OrderItem
+from accounting.models import  Invoice, Payment, Order, OrderItem
 from cart.cart import Cart
+from contacts.models import Customer
 from core.services.notifications import create_notification
 from website.models import Product
 

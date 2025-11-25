@@ -7,7 +7,8 @@ from django.utils.translation import gettext_lazy as _
 from modeltranslation.forms import TranslationModelForm
 
 from website.models import Product
-from .models import Invoice, Payment, Customer, InvoiceItem, Order, OrderItem, Settings
+from .models import Invoice, Payment, InvoiceItem, Order, OrderItem, Settings
+from contacts.models import Customer
 
 
 # ============================================================
