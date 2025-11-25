@@ -35,7 +35,7 @@ class ContactQuerySet(models.QuerySet):
 
     def with_user(self):
         """
-        الكونتاكتات المرتبطة بمستخدم (بوابة).
+        جهات الاتصال المرتبطة بمستخدم (بوابة).
         """
         return self.exclude(user__isnull=True)
 
@@ -45,6 +45,29 @@ class ContactQuerySet(models.QuerySet):
 
     def companies(self):
         return self.filter(kind="company")
+
+    # --------- فلاتر متعلقة بالشركة ---------
+
+    def with_company(self):
+        """
+        جهات اتصال مرتبطة بسجل شركة (company ليس null).
+        مفيد عندما تريد الأشخاص التابعين للشركات.
+        """
+        return self.exclude(company__isnull=True)
+
+    def without_company(self):
+        """
+        جهات اتصال لا تتبع شركة معينة (company is null).
+        """
+        return self.filter(company__isnull=True)
+
+    def people_of_company(self, company):
+        """
+        كل الأشخاص (kind=person) الذين يتبعون شركة معيّنة.
+        company يمكن أن يكون instance أو id.
+        """
+        company_id = getattr(company, "pk", company)
+        return self.filter(kind="person", company_id=company_id)
 
 
 class ContactManager(models.Manager):
@@ -85,3 +108,13 @@ class ContactManager(models.Manager):
 
     def companies(self):
         return self.get_queryset().companies()
+
+    # فلاتر الشركة
+    def with_company(self):
+        return self.get_queryset().with_company()
+
+    def without_company(self):
+        return self.get_queryset().without_company()
+
+    def people_of_company(self, company):
+        return self.get_queryset().people_of_company(company)

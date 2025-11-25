@@ -1,4 +1,3 @@
-# contacts/views.py
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Q
@@ -39,7 +38,7 @@ class ContactsStaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     @property
     def section(self) -> str:
         """
-        تستخدمها القوالب لتحديد تبويب الكونتاكت.
+        تستخدمها القوالب لتحديد تبويب جهات الاتصال.
         """
         return "contacts"
 
@@ -50,12 +49,18 @@ class ContactsStaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
 
 class ContactListView(ContactsStaffRequiredMixin, ListView):
     model = Contact
-    template_name = "contacts/list.html"  # ← مطابق لاسم القالب
+    template_name = "contacts/list.html"
     context_object_name = "contacts"
     paginate_by = 25
 
     def get_queryset(self):
-        qs = Contact.objects.all().order_by("name", "id")
+        # نستخدم select_related لتقليل عدد الكويريز (user + company)
+        qs = (
+            Contact.objects
+            .all()
+            .select_related("user", "company")
+            .order_by("name", "id")
+        )
 
         # فلتر بسيط للنشاط
         status = self.request.GET.get("status", "active").strip()
@@ -83,6 +88,11 @@ class ContactListView(ContactsStaffRequiredMixin, ListView):
         elif kind == "company":
             qs = qs.companies()
 
+        # 🔹 فلتر الشركة (اختياري): ?company=<id>
+        company_id = self.request.GET.get("company", "").strip()
+        if company_id:
+            qs = qs.filter(company_id=company_id)
+
         # بحث نصي
         q = self.request.GET.get("q", "").strip()
         if q:
@@ -98,6 +108,7 @@ class ContactListView(ContactsStaffRequiredMixin, ListView):
         self.role_filter = role
         self.kind_filter = kind
         self.status_filter = status
+        self.company_filter = company_id
 
         return qs
 
@@ -107,6 +118,7 @@ class ContactListView(ContactsStaffRequiredMixin, ListView):
         ctx["role"] = getattr(self, "role_filter", "")
         ctx["kind"] = getattr(self, "kind_filter", "")
         ctx["status"] = getattr(self, "status_filter", "active")
+        ctx["company_id"] = getattr(self, "company_filter", "")
         ctx["section"] = self.section
         ctx["subsection"] = "contacts"
         return ctx
@@ -114,8 +126,15 @@ class ContactListView(ContactsStaffRequiredMixin, ListView):
 
 class ContactDetailView(ContactsStaffRequiredMixin, DetailView):
     model = Contact
-    template_name = "contacts/detail.html"  # ← مطابق لاسم القالب
+    template_name = "contacts/detail.html"
     context_object_name = "contact"
+
+    def get_queryset(self):
+        """
+        نستخدم select_related لجلب الشركة المرتبطة من نفس الكويري،
+        عشان نقلل عدد الاستعلامات عند استخدام contact.company في القالب.
+        """
+        return Contact.objects.select_related("company")
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -140,16 +159,13 @@ class ContactDetailView(ContactsStaffRequiredMixin, DetailView):
 
 
 # ============================================================
-# Create / Update / Delete views
+# Create / Update / Delete views (بدون BaseFormView)
 # ============================================================
 
-class ContactBaseFormView(ContactsStaffRequiredMixin):
+class ContactCreateView(ContactsStaffRequiredMixin, CreateView):
     """
-    مزيج مشترك بين create/update:
-    - يستخدم ContactForm
-    - يدير ContactAddressFormSet للعناوين.
+    إنشاء جهة اتصال جديدة مع عناوينها.
     """
-
     model = Contact
     form_class = ContactForm
     template_name = "contacts/form.html"
@@ -159,7 +175,9 @@ class ContactBaseFormView(ContactsStaffRequiredMixin):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        # في الإنشاء ما عندنا object بعد، فـ instance = None
         instance = getattr(self, "object", None)
+
         if self.request.method == "POST":
             ctx["address_formset"] = ContactAddressFormSet(
                 self.request.POST,
@@ -169,6 +187,7 @@ class ContactBaseFormView(ContactsStaffRequiredMixin):
             ctx["address_formset"] = ContactAddressFormSet(
                 instance=instance,
             )
+
         ctx["section"] = self.section
         ctx["subsection"] = "contacts"
         return ctx
@@ -177,40 +196,70 @@ class ContactBaseFormView(ContactsStaffRequiredMixin):
         ctx = self.get_context_data(form=form)
         address_formset = ctx.get("address_formset")
 
-        # لو الفورمست غير صالح نرجع القالب مع الأخطاء
         if address_formset is None or not address_formset.is_valid():
+            # لو في أخطاء في العناوين نرجّع نفس الفورم مع الأخطاء
             return self.render_to_response(ctx)
 
-        # نستخدم السيرفس لحفظ الكونتاكت + العناوين في transaction
+        # نحفظ جهة الاتصال + العناوين في معاملة واحدة
         self.object = save_contact_with_addresses(form, address_formset)
-        messages.success(self.request, _("تم حفظ الكونتاكت بنجاح."))
+        messages.success(self.request, _("تم حفظ جهة الاتصال بنجاح."))
         return redirect(self.get_success_url())
 
 
-class ContactCreateView(ContactBaseFormView, CreateView):
+class ContactUpdateView(ContactsStaffRequiredMixin, UpdateView):
     """
-    إنشاء كونتاكت جديد مع عناوينه.
+    تعديل جهة اتصال وعناوينها.
     """
-    pass
+    model = Contact
+    form_class = ContactForm
+    template_name = "contacts/form.html"
 
+    def get_success_url(self):
+        return reverse("contacts:contact_detail", kwargs={"pk": self.object.pk})
 
-class ContactUpdateView(ContactBaseFormView, UpdateView):
-    """
-    تعديل كونتاكت وعناوينه.
-    """
-    pass
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        # في التعديل self.object = جهة الاتصال الحالية
+        instance = getattr(self, "object", None)
+
+        if self.request.method == "POST":
+            ctx["address_formset"] = ContactAddressFormSet(
+                self.request.POST,
+                instance=instance,
+            )
+        else:
+            ctx["address_formset"] = ContactAddressFormSet(
+                instance=instance,
+            )
+
+        ctx["section"] = self.section
+        ctx["subsection"] = "contacts"
+        return ctx
+
+    def form_valid(self, form):
+        # في UpdateView، self.object تم تعيينه في post() قبل form_valid()
+        ctx = self.get_context_data(form=form)
+        address_formset = ctx.get("address_formset")
+
+        if address_formset is None or not address_formset.is_valid():
+            return self.render_to_response(ctx)
+
+        # نحفظ التعديلات على جهة الاتصال والعناوين
+        self.object = save_contact_with_addresses(form, address_formset)
+        messages.success(self.request, _("تم حفظ جهة الاتصال بنجاح."))
+        return redirect(self.get_success_url())
 
 
 class ContactDeleteView(ContactsStaffRequiredMixin, DeleteView):
     model = Contact
-    template_name = "contacts/confirm_delete.html"  # ← مطابق لاسم القالب
+    template_name = "contacts/confirm_delete.html"
     success_url = reverse_lazy("contacts:contact_list")
 
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
         name = str(self.object)
         response = super().delete(request, *args, **kwargs)
-        messages.success(request, _("تم حذف الكونتاكت: %(name)s") % {"name": name})
+        messages.success(request, _("تم حذف جهة الاتصال: %(name)s") % {"name": name})
         return response
 
 
@@ -220,14 +269,19 @@ class ContactDeleteView(ContactsStaffRequiredMixin, DeleteView):
 
 class ContactAutocompleteView(ContactsStaffRequiredMixin, View):
     """
-    إرجاع قائمة مبسطة من الكونتاكت بصيغة JSON.
+    إرجاع قائمة مبسطة من جهات الاتصال بصيغة JSON.
     مفيدة للـ select2 / auto-complete في التطبيقات الأخرى.
     """
 
     def get(self, request, *args, **kwargs):
         q = request.GET.get("q", "").strip()
 
-        qs = Contact.objects.active().order_by("name", "id")
+        qs = (
+            Contact.objects
+            .active()
+            .select_related("company")
+            .order_by("name", "id")
+        )
 
         if q:
             qs = qs.filter(
@@ -246,6 +300,8 @@ class ContactAutocompleteView(ContactsStaffRequiredMixin, View):
                     "id": c.pk,
                     "text": c.name,
                     "kind": c.kind,
+                    "company_id": c.company_id,
+                    "company_name": c.company.name if c.company else "",
                     "is_customer": c.is_customer,
                     "is_supplier": c.is_supplier,
                     "is_owner": c.is_owner,

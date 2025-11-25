@@ -127,7 +127,13 @@
                 </a>
               </td>
               <td class="small">
-                {% if contact.company_name %}
+                {# أولوية للشركة المرتبطة (FK) ثم الاسم النصّي #}
+                {% if contact.company %}
+                  <a href="{% url 'contacts:contact_detail' contact.company_id %}"
+                     class="text-decoration-none">
+                    {{ contact.company.name }}
+                  </a>
+                {% elif contact.company_name %}
                   {{ contact.company_name }}
                 {% else %}
                   <span class="text-muted">—</span>
@@ -214,7 +220,7 @@
           {% if page_obj.has_previous %}
             <li class="page-item">
               <a class="page-link"
-                 href="?page={{ page_obj.previous_page_number }}&q={{ q }}&role={{ role }}&kind={{ kind }}&status={{ status }}">
+                 href="?page={{ page_obj.previous_page_number }}&q={{ q }}&role={{ role }}&kind={{ kind }}&status={{ status }}&company={{ company_id }}">
                 {% trans "السابق" %}
               </a>
             </li>
@@ -233,7 +239,7 @@
           {% if page_obj.has_next %}
             <li class="page-item">
               <a class="page-link"
-                 href="?page={{ page_obj.next_page_number }}&q={{ q }}&role={{ role }}&kind={{ kind }}&status={{ status }}">
+                 href="?page={{ page_obj.next_page_number }}&q={{ q }}&role={{ role }}&kind={{ kind }}&status={{ status }}&company={{ company_id }}">
                 {% trans "التالي" %}
               </a>
             </li>

@@ -28,6 +28,7 @@ from django.views.generic import (
 )
 
 from contacts.forms import ContactForm, ContactAddressFormSet
+from contacts.models import Contact
 from core.models import AuditLog
 from core.services.audit import log_event
 from core.services.notifications import create_notification
@@ -364,7 +365,7 @@ class AccountingDashboardView(AccountingSectionMixin, TemplateView):
         ctx = super().get_context_data(**kwargs)
 
         invoices = Invoice.objects.select_related("customer").all()
-        customers = Customer.objects.all()
+        customers = Contact.objects.all()
         payments = Payment.objects.select_related("customer", "invoice").all()
         orders = Order.objects.select_related("customer").all()
 

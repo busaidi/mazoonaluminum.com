@@ -9,6 +9,12 @@ from .models import Contact, ContactAddress
 class ContactForm(forms.ModelForm):
     """
     الفورم الأساسي لـ Contact (جهة اتصال عامة).
+    يدعم:
+      - فرد / شركة (kind)
+      - ربط الشخص بشركة (company)
+      - بيانات الاتصال
+      - العنوان الرئيسي (مترجم)
+      - الأدوار + الحالة
     """
 
     class Meta:
@@ -16,6 +22,9 @@ class ContactForm(forms.ModelForm):
         fields = [
             # ==== نوع الجهة ====
             "kind",
+
+            # ==== الربط مع شركة (Contact من نوع COMPANY) ====
+            "company",
 
             # ==== الحقول المترجمة ====
             "name_ar",
@@ -53,10 +62,11 @@ class ContactForm(forms.ModelForm):
         ]
         labels = {
             "kind": _("نوع جهة الاتصال"),
+            "company": _("الشركة (من جهات الاتصال)"),
             "name_ar": _("الاسم (عربي)"),
             "name_en": _("الاسم (إنجليزي)"),
-            "company_name_ar": _("اسم الشركة (عربي)"),
-            "company_name_en": _("اسم الشركة (إنجليزي)"),
+            "company_name_ar": _("اسم الشركة (عربي – نص حر)"),
+            "company_name_en": _("اسم الشركة (إنجليزي – نص حر)"),
             "address_ar": _("العنوان التفصيلي (عربي)"),
             "address_en": _("العنوان التفصيلي (إنجليزي)"),
             "country_ar": _("الدولة (عربي)"),
@@ -87,13 +97,25 @@ class ContactForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # نقيّد الشركات في الحقل company على جهات الاتصال من نوع COMPANY و active
+        if "company" in self.fields:
+            self.fields["company"].queryset = (
+                Contact.objects.companies().active().order_by("name")
+            )
+
         for name, field in self.fields.items():
             css = field.widget.attrs.get("class", "")
 
-            if name == "kind":
+            # حقول select (نوع الجهة + الشركة)
+            if name in ("kind", "company"):
                 field.widget.attrs["class"] = (css + " form-select").strip()
+
+            # حقول الأدوار + الحالة (checkboxes)
             elif name in ("is_customer", "is_supplier", "is_owner", "is_employee", "is_active"):
                 field.widget.attrs["class"] = (css + " form-check-input").strip()
+
+            # باقي الحقول input / textarea
             else:
                 field.widget.attrs["class"] = (css + " form-control").strip()
 
@@ -101,8 +123,8 @@ class ContactForm(forms.ModelForm):
 class ContactAddressForm(forms.ModelForm):
     """
     فورم لعناوين جهة الاتصال المتعددة:
-    - يمكن استخدام اسم مختصر (label) اختياري مثل "المكتب الرئيسي"
-    - مع عنوان كامل (سطر/سطرين) + تفاصيل الموقع (الدولة/المحافظة/الولاية/القرية/ص.ب/الرمز).
+    - label مختصر اختياري مثل "المكتب الرئيسي"
+    - عنوان كامل + تفاصيل الموقع.
     """
 
     class Meta:

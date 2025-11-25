@@ -24,7 +24,7 @@
       </p>
     </div>
     <div class="d-flex flex-wrap gap-2">
-      <a href="{% url 'contacts:customer_create' %}" class="btn btn-sm btn-outline-secondary">
+      <a href="{% url 'contacts:contact_create' %}" class="btn btn-sm btn-outline-secondary">
         + {% trans "إضافة زبون" %}
       </a>
       <a href="{% url 'accounting:order_create' %}" class="btn btn-sm btn-outline-secondary">
@@ -119,10 +119,10 @@
             {% trans "إدارة بيانات العملاء وربطهم بالفواتير والدفعات والطلبات." %}
           </p>
           <div class="mt-auto d-flex flex-wrap gap-2">
-            <a href="{% url 'contacts:customer_list' %}" class="btn btn-outline-primary btn-sm">
+            <a href="{% url 'contacts:contact_list' %}" class="btn btn-outline-primary btn-sm">
               {% trans "عرض كل العملاء" %}
             </a>
-            <a href="{% url 'contacts:customer_create' %}" class="btn btn-primary btn-sm">
+            <a href="{% url 'contacts:contact_create' %}" class="btn btn-primary btn-sm">
               + {% trans "إضافة زبون" %}
             </a>
           </div>

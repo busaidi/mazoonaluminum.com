@@ -32,7 +32,7 @@ class Contact(models.Model):
         blank=True,
         related_name="contact_profile",
         verbose_name=_("المستخدم (اختياري)"),
-        help_text=_("ربط الكونتاكت بحساب مستخدم (بوابة العملاء/الموظفين)."),
+        help_text=_("ربط جهة الاتصال بحساب مستخدم (بوابة العملاء/الموظفين)."),
     )
 
     # نوع الكيان (فرد / شركة)
@@ -40,7 +40,7 @@ class Contact(models.Model):
         max_length=20,
         choices=ContactKind.choices,
         default=ContactKind.PERSON,
-        verbose_name=_("نوع الكونتاكت"),
+        verbose_name=_("نوع جهة الاتصال"),
     )
 
     # --------- معلومات أساسية (ستكون مترجمة عبر modeltranslation) ---------
@@ -53,7 +53,20 @@ class Contact(models.Model):
     company_name = models.CharField(
         max_length=255,
         blank=True,
-        verbose_name=_("اسم الشركة (إن وجد)"),
+        verbose_name=_("اسم الشركة (نص حر)"),
+        help_text=_("يُستخدم للعرض حتى لو لم تربطه بسجل شركة في جهات الاتصال."),
+    )
+
+    # 🔹 الشركة (Contact من نوع COMPANY) – شخص واحد ممكن يرتبط بشركة واحدة
+    company = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="people",
+        limit_choices_to={"kind": ContactKind.COMPANY},
+        verbose_name=_("الشركة (جهة اتصال)"),
+        help_text=_("اربط هذا الشخص بسجل شركة في جهات الاتصال."),
     )
 
     # --------- بيانات الاتصال ---------
@@ -74,7 +87,7 @@ class Contact(models.Model):
         verbose_name=_("الرقم الضريبي / VAT"),
     )
 
-    # --------- أدوار الكونتاكت (يمكن يجمع أكثر من دور) ---------
+    # --------- أدوار جهة الاتصال (يمكن يجمع أكثر من دور) ---------
     is_customer = models.BooleanField(
         default=False,
         verbose_name=_("زبون"),
@@ -148,46 +161,61 @@ class Contact(models.Model):
         verbose_name_plural = _("جهات الاتصال")
 
     def __str__(self) -> str:
-        # مستقبلاً ممكن نعدلها حسب kind (شخص / شركة)
         return self.name
+
+    # --------- خصائص لنوع الكيان ---------
+
+    @property
+    def is_person(self) -> bool:
+        """
+        هل هذه الجهة عبارة عن فرد؟
+        """
+        return self.kind == self.ContactKind.PERSON
+
+    @property
+    def is_company(self) -> bool:
+        """
+        هل هذه الجهة عبارة عن شركة؟
+        """
+        return self.kind == self.ContactKind.COMPANY
 
     # ---------- خصائص تجميعية (مفيدة لو هو زبون) ----------
 
     @property
     def total_invoiced(self) -> Decimal:
         """
-        مجموع الفواتير لهذا الكونتاكت لو كان زبون.
+        مجموع الفواتير لهذه الجهة لو كانت زبون.
         يعتمد على related_name='invoices' في Invoice.contact.
         """
         related = getattr(self, "invoices", None)
         if related is None:
             return Decimal("0")
-        value = self.invoices.aggregate(s=Sum("total_amount")).get("s")
+        value = related.aggregate(s=Sum("total_amount")).get("s")
         return value or Decimal("0")
 
     @property
     def total_paid(self) -> Decimal:
         """
-        مجموع المدفوعات لهذا الكونتاكت لو كان زبون.
+        مجموع المدفوعات لهذه الجهة لو كانت زبون.
         يعتمد على related_name='payments' في Payment.contact.
         """
         related = getattr(self, "payments", None)
         if related is None:
             return Decimal("0")
-        value = self.payments.aggregate(s=Sum("amount")).get("s")
+        value = related.aggregate(s=Sum("amount")).get("s")
         return value or Decimal("0")
 
     @property
     def balance(self) -> Decimal:
         """
-        رصيد الكونتاكت (كزبون) = الفواتير - المدفوعات.
+        رصيد الجهة (كزبون) = الفواتير - المدفوعات.
         """
         return self.total_invoiced - self.total_paid
 
 
 class ContactAddress(models.Model):
     """
-    عناوين متعددة لكل كونتاكت.
+    عناوين متعددة لكل جهة اتصال.
     ممكن تستخدم:
       - عنوان فوترة
       - عنوان شحن
@@ -205,7 +233,7 @@ class ContactAddress(models.Model):
         Contact,
         on_delete=models.CASCADE,
         related_name="addresses",
-        verbose_name=_("الكونتاكت"),
+        verbose_name=_("جهة الاتصال"),
     )
 
     # سيكون مترجم عبر modeltranslation

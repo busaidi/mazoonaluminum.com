@@ -37,7 +37,7 @@
       {% endif %}
 
       {# 1) البيانات الأساسية #}
-      <div class="card border-0 shadow-sm mb-3">
+      <div class="card border-0.shadow-sm mb-3">
         <div class="card-body">
           <h2 class="h6 fw-semibold mb-3">{% trans "البيانات الأساسية" %}</h2>
 
@@ -67,6 +67,20 @@
                   {{ form.name_en.errors }}
                 </div>
               </div>
+            </div>
+
+            {# الشركة كجهة اتصال مرتبطة #}
+            <div class="col-md-6">
+              <label class="form-label small mb-1" for="{{ form.company.id_for_label }}">
+                {{ form.company.label }}
+              </label>
+              {{ form.company }}
+              {% if form.company.help_text %}
+                <div class="form-text small text-muted">
+                  {{ form.company.help_text }}
+                </div>
+              {% endif %}
+              {{ form.company.errors }}
             </div>
 
             <div class="col-md-6">
@@ -226,7 +240,7 @@
       </div>
 
       {# 3) الأدوار والحالة #}
-      <div class="card border-0 shadow-sm mb-3">
+      <div class="card border-0.shadow-sm mb-3">
         <div class="card-body">
           <h2 class="h6 fw-semibold mb-3">{% trans "الأدوار والحالة" %}</h2>
 

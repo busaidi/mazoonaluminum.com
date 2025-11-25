@@ -10,7 +10,12 @@
       {{ contact.name }}
     </h1>
     <p class="text-muted small mb-0">
-      {% if contact.company_name %}
+      {% if contact.company %}
+        <a href="{% url 'contacts:contact_detail' contact.company_id %}"
+           class="text-decoration-none">
+          {{ contact.company.name }}
+        </a>
+      {% elif contact.company_name %}
         {{ contact.company_name }}
       {% else %}
         {% trans "جهة اتصال في نظام Mazoon ERP" %}
@@ -49,18 +54,32 @@
           </div>
 
           <div class="col-md-6">
-            <div class="small text-muted mb-1">{% trans "اسم الشركة" %}</div>
-            {% if contact.company_name %}
-              <div class="fw-semibold">{{ contact.company_name }}</div>
+            <div class="small text-muted mb-1">{% trans "نوع جهة الاتصال" %}</div>
+            {% if contact.kind %}
+              <div class="fw-semibold">{{ contact.get_kind_display }}</div>
             {% else %}
               <div class="text-muted small">—</div>
             {% endif %}
           </div>
 
           <div class="col-md-6">
-            <div class="small text-muted mb-1">{% trans "نوع جهة الاتصال" %}</div>
-            {% if contact.kind %}
-              <div class="fw-semibold">{{ contact.get_kind_display }}</div>
+            <div class="small text-muted mb-1">{% trans "الشركة (جهة اتصال)" %}</div>
+            {% if contact.company %}
+              <div class="fw-semibold">
+                <a href="{% url 'contacts:contact_detail' contact.company_id %}"
+                   class="text-decoration-none">
+                  {{ contact.company.name }}
+                </a>
+              </div>
+            {% else %}
+              <div class="text-muted small">—</div>
+            {% endif %}
+          </div>
+
+          <div class="col-md-6">
+            <div class="small text-muted mb-1">{% trans "اسم الشركة (نص حر)" %}</div>
+            {% if contact.company_name %}
+              <div class="fw-semibold">{{ contact.company_name }}</div>
             {% else %}
               <div class="text-muted small">—</div>
             {% endif %}
@@ -181,7 +200,7 @@
     {# العناوين الإضافية #}
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="d-flex justify-content-between.align-items-center mb-2">
           <h2 class="h6 fw-semibold mb-0">{% trans "العناوين الإضافية" %}</h2>
           <a href="{% url 'contacts:contact_edit' contact.pk %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-pencil"></i>
@@ -262,12 +281,78 @@
             {% endfor %}
           </div>
         {% else %}
-          <p class="text-muted small mb-0">
+          <p class="text-muted small.mb-0">
             {% trans "لا توجد عناوين إضافية مسجلة لهذه الجهة." %}
           </p>
         {% endif %}
       </div>
     </div>
+
+    {# في حالة كانت شركة: عرض الأشخاص المرتبطين بها #}
+    {% with people=contact.people.all %}
+      {% if contact.is_company and people %}
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-body">
+            <h2 class="h6 fw-semibold mb-3">
+              {% trans "الأشخاص المرتبطون بهذه الشركة" %}
+            </h2>
+            <div class="table-responsive">
+              <table class="table table-sm table-hover mb-0 align-middle">
+                <thead>
+                  <tr>
+                    <th class="small text-muted">{% trans "الاسم" %}</th>
+                    <th class="small text-muted">{% trans "الهاتف / البريد" %}</th>
+                    <th class="small text-muted">{% trans "الأدوار" %}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for person in people %}
+                    <tr>
+                      <td class="small">
+                        <a href="{% url 'contacts:contact_detail' person.pk %}"
+                           class="text-mazoon text-decoration-none">
+                          {{ person.name }}
+                        </a>
+                      </td>
+                      <td class="small">
+                        {% if person.phone %}
+                          <div>{{ person.phone }}</div>
+                        {% endif %}
+                        {% if person.email %}
+                          <div class="text-muted">{{ person.email }}</div>
+                        {% endif %}
+                        {% if not person.phone and not person.email %}
+                          <span class="text-muted">—</span>
+                        {% endif %}
+                      </td>
+                      <td class="small">
+                        <div class="d-flex flex-wrap gap-1">
+                          {% if person.is_customer %}
+                            <span class="badge bg-dark-subtle text-dark-emphasis small">{% trans "زبون" %}</span>
+                          {% endif %}
+                          {% if person.is_supplier %}
+                            <span class="badge bg-warning-subtle text-warning-emphasis small">{% trans "مورد / شريك" %}</span>
+                          {% endif %}
+                          {% if person.is_owner %}
+                            <span class="badge bg-info-subtle text-info-emphasis small">{% trans "مالك" %}</span>
+                          {% endif %}
+                          {% if person.is_employee %}
+                            <span class="badge bg-success-subtle text-success-emphasis small">{% trans "موظف" %}</span>
+                          {% endif %}
+                          {% if not person.is_customer and not person.is_supplier and not person.is_owner and not person.is_employee %}
+                            <span class="text-muted small">—</span>
+                          {% endif %}
+                        </div>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    {% endwith %}
 
   </div>
 

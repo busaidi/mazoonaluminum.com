@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "حذف كونتاكت" %} – {{ object.name }}{% endblock %}
+{% block title %}{% trans "حذف جهة اتصال" %} – {{ object.name }}{% endblock %}
 
 {% block content %}
 <div class="row">
@@ -9,17 +9,17 @@
     <div class="card border-0 shadow-sm">
       <div class="card-body">
         <h1 class="h5 fw-bold mb-3">
-          {% trans "حذف كونتاكت" %}
+          {% trans "حذف جهة اتصال" %}
         </h1>
 
         <p class="mb-3">
           {% blocktrans with name=object.name %}
-            هل أنت متأكد أنك تريد حذف الكونتاكت "<strong>{{ name }}</strong>"؟
+            هل أنت متأكد أنك تريد حذف جهة الاتصال "<strong>{{ name }}</strong>"؟
           {% endblocktrans %}
         </p>
 
         <p class="text-muted small mb-4">
-          {% trans "سيتم حذف جميع العناوين المرتبطة بهذا الكونتاكت. لا يمكن التراجع عن هذه العملية." %}
+          {% trans "سيتم حذف جميع العناوين المرتبطة بهذه جهة الاتصال. لا يمكن التراجع عن هذه العملية." %}
         </p>
 
         <form method="post">
