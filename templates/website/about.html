@@ -4,35 +4,23 @@
 {# ============ SEO ============ #}
 
 {% block meta_title %}
-  {% if LANGUAGE_CODE == "ar" %}
-    مزون المنيوم – من نحن
-  {% else %}
-    Mazoon Aluminum – About Us
-  {% endif %}
+  {% trans "مزون المنيوم – من نحن" %}
 {% endblock %}
 
 {% block meta_description %}
-  {% if LANGUAGE_CODE == "ar" %}
-    مزون المنيوم علامة تجارية عمانية متخصصة في تطوير وتصنيع أنظمة الألمنيوم للنوافذ والأبواب العازلة للحرارة والجودة العالية.
-  {% else %}
-    Mazoon Aluminum is an Omani brand specialized in developing and manufacturing advanced aluminum window and door systems with high thermal and structural performance.
-  {% endif %}
+  {% blocktrans trimmed %}
+    مزون المنيوم علامة تجارية عُمانية رائدة ومتفردة في تطوير وتصنيع أنظمة الألمنيوم للنوافذ والأبواب، بدأت رحلتها منذ عام 2016 وتطوّر أنظمتها الخاصة منذ 2021 مع تركيز على الجودة والابتكار والاستدامة.
+  {% endblocktrans %}
 {% endblock %}
 
 {% block og_title %}
-  {% if LANGUAGE_CODE == "ar" %}
-    مزون المنيوم – من نحن
-  {% else %}
-    Mazoon Aluminum – About Us
-  {% endif %}
+  {% trans "مزون المنيوم – من نحن" %}
 {% endblock %}
 
 {% block og_description %}
-  {% if LANGUAGE_CODE == "ar" %}
-    مزون المنيوم علامة تجارية عمانية متخصصة في تطوير وتصنيع أنظمة الألمنيوم للنوافذ والأبواب العازلة للحرارة والجودة العالية.
-  {% else %}
-    Mazoon Aluminum is an Omani brand specialized in developing and manufacturing advanced aluminum window and door systems with high thermal and structural performance.
-  {% endif %}
+  {% blocktrans trimmed %}
+    تعرّف على رحلة مزون المنيوم من التأسيس في 2016 إلى تطوير أنظمة ألمنيوم متقدمة للنوافذ والأبواب، مع شراكات موثوقة في السحب والزجاج والأجهزة، ورؤية واضحة للابتكار المستمر.
+  {% endblocktrans %}
 {% endblock %}
 
 {% block og_type %}website{% endblock %}
@@ -42,92 +30,285 @@
 {% block twitter_card %}summary_large_image{% endblock %}
 
 {% block twitter_title %}
-  {% if LANGUAGE_CODE == "ar" %}
-    مزون المنيوم – من نحن
-  {% else %}
-    Mazoon Aluminum – About Us
-  {% endif %}
+  {% trans "مزون المنيوم – من نحن" %}
 {% endblock %}
 
 {% block twitter_description %}
-  {% if LANGUAGE_CODE == "ar" %}
-    مزون المنيوم علامة تجارية عمانية متخصصة في تطوير وتصنيع أنظمة الألمنيوم للنوافذ والأبواب العازلة للحرارة والجودة العالية.
-  {% else %}
-    Mazoon Aluminum is an Omani brand specialized in developing and manufacturing advanced aluminum window and door systems with high thermal and structural performance.
-  {% endif %}
+  {% blocktrans trimmed %}
+    مزون المنيوم علامة تجارية عُمانية متخصصة في أنظمة الألمنيوم للنوافذ والأبواب، تجمع بين الأداء المعتمد، والبحث والتطوير، والشراكات المحلية الموثوقة.
+  {% endblocktrans %}
 {% endblock %}
 
 {% block twitter_image %}{% endblock %}
 
 {% block title %}
-  {% if LANGUAGE_CODE == "ar" %}
-    {% trans "من نحن" %}
-  {% else %}
-    {% trans "About us" %}
-  {% endif %}
+  {% trans "من نحن" %}
 {% endblock %}
 
 {# ============ CONTENT ============ #}
 {% block content %}
-<div class="row g-4">
-  <div class="col-lg-8">
-    <div class="card border-0 shadow-sm mb-3">
-      <div class="card-body">
-        <h1 class="h3 fw-bold mb-3">
-          {% if LANGUAGE_CODE == "ar" %}
-            {% trans "من نحن" %}
-          {% else %}
-            {% trans "About Mazoon Aluminum" %}
-          {% endif %}
+
+{# Hero / Header #}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-4 py-md-5">
+    <div class="row align-items-center g-4">
+      <div class="col-lg-8">
+        <p class="text-uppercase small fw-semibold text-muted mb-2">
+          {% trans "عشر سنوات من التميز في أنظمة الألمنيوم" %}
+        </p>
+        <h1 class="h3 h2-md fw-bold mb-3">
+          {% trans "حول مزون المنيوم" %}
         </h1>
-
-        <div class="small text-muted" style="line-height: 1.9;">
-          {% if LANGUAGE_CODE == "ar" %}
-            <p>
-              مزون المنيوم هي علامة تجارية عمانية رائدة في مجال تطوير وتصنيع أنظمة النوافذ والأبواب
-              المصنعة من الألمنيوم والألمنيوم العازل للحرارة، مع تركيز على الأداء العالي والجمال المعماري.
-            </p>
-            <p>
-              منذ عام 2016، مرّت مزون المنيوم بعدة مراحل من التطوير، وصولاً إلى تصميم الأنظمة الخاصة بها
-              بشكل مستقل ابتداءً من عام 2021، مع اعتماد معايير جودة صارمة وشراكات موثوقة في سحب الألمنيوم،
-              الزجاج، والأجهزة.
-            </p>
-            <p>
-              رؤيتنا هي أن نكون الخيار الأول في أنظمة الألمنيوم عالية الجودة في سلطنة عمان والمنطقة،
-              مع التركيز على الابتكار المستمر وخدمة العملاء والشركاء من المعماريين والورش وأصحاب المنازل.
-            </p>
-          {% else %}
-            <p>
-              Mazoon Aluminum is an Omani brand specializing in the development and manufacturing of
-              advanced aluminum window and door systems, including high-performance thermal break systems.
-            </p>
-            <p>
-              Since 2016, we have evolved through multiple stages, reaching the point of designing our
-              own proprietary systems starting from 2021, with strict quality standards and trusted local
-              partners for extrusion, glass, and hardware.
-            </p>
-            <p>
-              Our vision is to become the leading reference for high-quality aluminum systems in Oman and
-              the region, focusing on continuous innovation and dedicated support for architects, workshops,
-              and homeowners.
-            </p>
-          {% endif %}
-        </div>
+        <p class="mb-0 text-muted" style="line-height: 1.9;">
+          {% blocktrans trimmed %}
+            مزون المنيوم هي علامة تجارية عُمانية رائدة ومتفردة في مجال تطوير وتصنيع أنظمة النوافذ والأبواب من الألمنيوم والألمنيوم العازل للحرارة. أنظمتنا ثمرة تجربة عملية بدأت منذ التأسيس في عام 2016 وتطورت إلى تصميم أنظمة خاصة بنا بشكل مستقل منذ عام 2021، مع تركيز واضح على الجودة، والأداء المعتمد، والملاءمة للمناخ العُماني.
+          {% endblocktrans %}
+        </p>
       </div>
-    </div>
-  </div>
 
-  <div class="col-lg-4">
-    <div class="card border-0 shadow-sm mb-3">
-      <div class="card-body small text-muted">
-        <h2 class="h6 fw-bold mb-3">{% trans "قيمنا" %}</h2>
-        <ul class="mb-0">
-          <li>{% trans "الجودة والاعتمادية في كل نظام." %}</li>
-          <li>{% trans "الابتكار المستمر في التصميم والأداء." %}</li>
-          <li>{% trans "الشراكة طويلة الأمد مع العملاء والمصنعين." %}</li>
-        </ul>
+      <div class="col-lg-4">
+        <div class="row g-2">
+          <div class="col-6 col-lg-12">
+            <div class="border rounded-3 p-3 h-100">
+              <div class="small text-muted mb-1">
+                {% trans "منذ" %}
+              </div>
+              <div class="d-flex align-items-baseline gap-2">
+                <span class="fs-3 fw-bold">2016</span>
+                <span class="small text-muted">
+                  {% trans "بداية الرحلة" %}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-lg-12">
+            <div class="border rounded-3 p-3 h-100">
+              <div class="small text-muted mb-1">
+                {% trans "أنظمة خاصة" %}
+              </div>
+              <div class="d-flex align-items-baseline gap-2">
+                <span class="fs-3 fw-bold">2021</span>
+                <span class="small text-muted">
+                  {% trans "بداية تطوير أنظمة مزون" %}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div> <!-- row -->
       </div>
     </div>
   </div>
 </div>
+
+<div class="row g-4">
+
+  {# Main story #}
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h2 class="h5 fw-bold mb-3">
+          {% trans "قصتنا ورؤيتنا" %}
+        </h2>
+
+        <div class="small text-muted" style="line-height: 1.9;">
+          <p>
+            {% blocktrans trimmed %}
+              بدأت مزون المنيوم من واقع تجربة ميدانية في تنفيذ النوافذ والأبواب في السوق العماني، حيث لاحظنا حاجة واضحة إلى أنظمة ألمنيوم أكثر ملاءمة للبيئة المحلية وأعلى أداء في العزل الحراري والصوتي. ومن هذه الحاجة، انطلقت فكرة تطوير أنظمة خاصة بنا تجمع بين الأداء الهندسي، والجمال المعماري، وسهولة التصنيع والتركيب.
+            {% endblocktrans %}
+          </p>
+          <p>
+            {% blocktrans trimmed %}
+              منذ عام 2016، مرّت الشركة بعدة مراحل من التطوير، وصولاً إلى مرحلة تصميم أنظمة مزون بشكل مستقل في 2021، بما يشمل الأنظمة المفصلية والعازلة للحرارة، مع توحيد أكبر قدر ممكن من قطع الربل، والإكسسوارات، وحلول الهاردوير، لتقليل التعقيد ورفع جودة التنفيذ في الورش.
+            {% endblocktrans %}
+          </p>
+          <p>
+            {% blocktrans trimmed %}
+              رؤيتنا أن تكون مزون المنيوم المرجع الأول في سلطنة عمان والمنطقة لأنظمة الألمنيوم عالية الجودة، عبر منظومة متكاملة تشمل التصميم، والبحث والتطوير، والاختبارات المعتمدة، والشراكة الوثيقة مع المعماريين، والورش، وأصحاب المنازل.
+            {% endblocktrans %}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    {# Timeline / Journey #}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h2 class="h5 fw-bold mb-3">
+          {% trans "رحلة مزون المنيوم" %}
+        </h2>
+
+        <div class="small text-muted" style="line-height: 1.9;">
+          <div class="border-end border-2 pe-3">
+            <div class="mb-3">
+              <div class="fw-semibold">
+                {% trans "2016 – مرحلة التأسيس والانطلاق" %}
+              </div>
+              <p class="mb-0">
+                {% blocktrans trimmed %}
+                  انطلقت مزون المنيوم كمشروع عُماني يركز على تقديم حلول نوافذ وأبواب بمعايير جودة أعلى، مع فهم عميق لطبيعة المشاريع السكنية والتجارية في السوق المحلي.
+                {% endblocktrans %}
+              </p>
+            </div>
+
+            <div class="mb-3">
+              <div class="fw-semibold">
+                {% trans "2021 – تطوير الأنظمة الخاصة" %}
+              </div>
+              <p class="mb-0">
+                {% blocktrans trimmed %}
+                  مع تطور الخبرة، انتقلت الشركة إلى تصميم أنظمتها الخاصة للنوافذ والأبواب، بما في ذلك الأنظمة العازلة حرارياً، مع اعتماد معايير تصميم واختبارات أكثر صرامة.
+                {% endblocktrans %}
+              </p>
+            </div>
+
+            <div>
+              <div class="fw-semibold">
+                {% trans "2025 – بحث وتطوير مستمر" %}
+              </div>
+              <p class="mb-0">
+                {% blocktrans trimmed %}
+                  تستمر مزون المنيوم في تطوير نماذج جديدة للسحاب والمفصلي، وتوحيد الإكسسوارات، وبناء منصات اختبار متقدمة، إلى جانب توثيق تقني ثنائي اللغة لضمان ريادة مستدامة في الابتكار والجودة.
+                {% endblocktrans %}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {# Sidebar: pillars, partners, operator #}
+  <div class="col-lg-4">
+
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body small text-muted">
+        <h2 class="h6 fw-bold mb-3">
+          {% trans "محاور التميز في مزون المنيوم" %}
+        </h2>
+        <ul class="mb-0 list-unstyled">
+          <li class="mb-2">
+            <span class="fw-semibold">
+              {% trans "أنظمة مزون" %}
+            </span>
+            <br>
+            <span class="text-muted">
+              {% blocktrans trimmed %}
+                مزون 45 · مزون 46 · مزون 56 العازل حرارياً – أنظمة مصممة بعناية لتلائم المشاريع السكنية والتجارية الحديثة.
+              {% endblocktrans %}
+            </span>
+          </li>
+          <li class="mb-2">
+            <span class="fw-semibold">
+              {% trans "أداء مُعتمد" %}
+            </span>
+            <br>
+            <span class="text-muted">
+              {% blocktrans trimmed %}
+                تركيز على الاختبارات المتعلقة بعزل الهواء والماء والرياح والعزل الحراري والصوتي لضمان أداء مستقر على المدى الطويل.
+              {% endblocktrans %}
+            </span>
+          </li>
+          <li class="mb-2">
+            <span class="fw-semibold">
+              {% trans "البحث والتطوير والنماذج الأولية" %}
+            </span>
+            <br>
+            <span class="text-muted">
+              {% blocktrans trimmed %}
+                من التصميم الرقمي إلى النماذج الواقعية والاختبارات الميدانية في مختبر مزون المنيوم، لضمان أن كل نظام يمر بدورة تطوير مكتملة.
+              {% endblocktrans %}
+            </span>
+          </li>
+          <li>
+            <span class="fw-semibold">
+              {% trans "المشاريع والشركاء" %}
+            </span>
+            <br>
+            <span class="text-muted">
+              {% blocktrans trimmed %}
+                تعاون وثيق مع المعماريين، والورش، وأصحاب المنازل لتقديم حلول عملية تحقق التوازن بين الجمال والوظيفة.
+              {% endblocktrans %}
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body small text-muted">
+        <h2 class="h6 fw-bold mb-3">
+          {% trans "شركاؤنا المحليون الموثوقون" %}
+        </h2>
+        <ul class="mb-0 list-unstyled">
+          <li class="mb-2">
+            <span class="fw-semibold">
+              {% trans "نابكو عمان لسحب مقاطع الألمنيوم" %}
+            </span><br>
+            <span class="text-muted">
+              {% blocktrans trimmed %}
+                شريكنا في سحب المقاطع وفق معايير جودة معتمدة.
+              {% endblocktrans %}
+            </span>
+          </li>
+          <li class="mb-2">
+            <span class="fw-semibold">
+              {% trans "مصنع التسنيم لمعالجة الزجاج" %}
+            </span><br>
+            <span class="text-muted">
+              {% blocktrans trimmed %}
+                لتوريد ومعالجة وتقسية الزجاج لمشاريعنا.
+              {% endblocktrans %}
+            </span>
+          </li>
+          <li class="mb-2">
+            <span class="fw-semibold">
+              {% trans "بهوان لهندسة المعادن والزجاج" %}
+            </span><br>
+            <span class="text-muted">
+              {% blocktrans trimmed %}
+                لدعم حلول الزجاج والمعادن المتقدمة.
+              {% endblocktrans %}
+            </span>
+          </li>
+          <li class="mb-2">
+            <span class="fw-semibold">
+              {% trans "الموثوق العالمية" %}
+            </span><br>
+            <span class="text-muted">
+              {% blocktrans trimmed %}
+                لتوريد أجهزة وإكسسوارات النوافذ وتقديم الدعم الفني.
+              {% endblocktrans %}
+            </span>
+          </li>
+          <li>
+            <span class="fw-semibold">
+              {% trans "مجموعة تاول – بودرة صبغ جوتن" %}
+            </span><br>
+            <span class="text-muted">
+              {% blocktrans trimmed %}
+                الوكيل الرسمي لمساحيق الصبغ (Powder Coating) من جوتن عمان.
+              {% endblocktrans %}
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body small text-muted">
+        <h2 class="h6 fw-bold mb-2">
+          {% trans "مشغل بواسطة مؤسسة استثمار" %}
+        </h2>
+        <p class="mb-0" style="line-height: 1.9;">
+          {% blocktrans trimmed %}
+            مزون المنيوم هي علامة تجارية مملوكة ومشغلة من قبل مؤسسة استثمار، مع تركيز على بناء علامة عُمانية متخصصة في أنظمة الألمنيوم للنوافذ والأبواب، تجمع بين الخبرة الفنية والإدارة المستدامة للمشاريع.
+          {% endblocktrans %}
+        </p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 {% endblock %}
