@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}الدفعات{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 fw-bold mb-1">الدفعات</h1>
+    <p class="text-muted small mb-0">
+      عرض جميع الدفعات الواردة والصادرة.
+    </p>
+  </div>
+
+  <a href="{% url 'payments:payment_create' %}" class="btn btn-primary btn-sm">
+    + إضافة دفعة
+  </a>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body border-bottom">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-md-4">
+        <input type="text"
+               name="q"
+               value="{{ q }}"
+               class="form-control form-control-sm"
+               placeholder="بحث برقم الدفعة أو العميل...">
+      </div>
+
+      <div class="col-md-3">
+        <select name="direction" class="form-select form-select-sm">
+          <option value="">كل الأنواع</option>
+          <option value="in" {% if direction_filter == "in" %}selected{% endif %}>قبض</option>
+          <option value="out" {% if direction_filter == "out" %}selected{% endif %}>صرف</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <button class="btn btn-dark btn-sm w-100">بحث</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card-body">
+    <table class="table table-sm align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>الرقم</th>
+          <th>العميل</th>
+          <th>النوع</th>
+          <th>المبلغ</th>
+          <th>التاريخ</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in payments %}
+        <tr>
+          <td class="fw-bold">{{ p.number|default:"—" }}</td>
+          <td>{{ p.contact }}</td>
+
+          <td>
+            {% if p.direction == "in" %}
+              <span class="badge bg-success">قبض</span>
+            {% else %}
+              <span class="badge bg-danger">صرف</span>
+            {% endif %}
+          </td>
+
+          <td>{{ p.amount }} {{ p.currency }}</td>
+          <td>{{ p.date }}</td>
+
+          <td>
+            <a href="{% url 'payments:payment_detail' p.pk %}" class="btn btn-sm btn-light border">
+              عرض
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">لا توجد بيانات.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if is_paginated %}
+      <div class="mt-3">
+        {% include "partials/pagination.html" %}
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="card-footer small text-muted d-flex justify-content-between">
+    <span>إجمالي القبض: <strong>{{ total_in }}</strong></span>
+    <span>إجمالي الصرف: <strong>{{ total_out }}</strong></span>
+  </div>
+</div>
+
+{% endblock %}

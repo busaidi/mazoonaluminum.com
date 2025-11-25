@@ -33,7 +33,7 @@
       <a href="{% url 'accounting:invoice_create' %}" class="btn btn-sm btn-primary">
         + {% trans "إنشاء فاتورة جديدة" %}
       </a>
-      <a href="{% url 'accounting:payment_create' %}" class="btn btn-sm btn-outline-primary">
+      <a href="{% url 'payments:payment_create' %}" class="btn btn-sm btn-outline-primary">
         + {% trans "تسجيل دفعة جديدة" %}
       </a>
     </div>
@@ -179,10 +179,10 @@
             {% trans "تسجيل دفعات العملاء وتسويتها على الفواتير أو كدفعات عامة." %}
           </p>
           <div class="mt-auto d-flex flex-wrap gap-2">
-            <a href="{% url 'accounting:payment_list' %}" class="btn btn-outline-primary btn-sm">
+            <a href="{% url 'payments:payment_list' %}" class="btn btn-outline-primary btn-sm">
               {% trans "عرض كل الدفعات" %}
             </a>
-            <a href="{% url 'accounting:payment_create' %}" class="btn btn-primary btn-sm">
+            <a href="{% url 'payments:payment_create' %}" class="btn btn-primary btn-sm">
               + {% trans "تسجيل دفعة" %}
             </a>
           </div>
@@ -301,7 +301,7 @@
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="card-title mb-0">{% trans "آخر الدفعات" %}</h5>
-            <a href="{% url 'accounting:payment_list' %}" class="small text-decoration-none">
+            <a href="{% url 'payments:payment_list' %}" class="small text-decoration-none">
               {% trans "عرض الكل" %}
             </a>
           </div>

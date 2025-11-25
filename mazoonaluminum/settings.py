@@ -50,6 +50,8 @@ INSTALLED_APPS = [
     "ledger.apps.LedgerConfig",
     "inventory.apps.InventoryConfig",
     "uom.apps.UomConfig",
+    "payments.apps.PaymentsConfig",
+    "sales.apps.SalesConfig"
 ]
 
 MIDDLEWARE = [

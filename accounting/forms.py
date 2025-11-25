@@ -6,8 +6,9 @@ from django.forms import inlineformset_factory
 from django.utils.translation import gettext_lazy as _
 from modeltranslation.forms import TranslationModelForm
 
+from payments.models import Payment
 from website.models import Product
-from .models import Invoice, Payment, InvoiceItem, Order, OrderItem, Settings
+from .models import Invoice, InvoiceItem, Order, OrderItem, Settings
 from contacts.models import Contact
 
 
@@ -129,37 +130,7 @@ class PaymentForInvoiceForm(forms.ModelForm):
 
 
 
-class PaymentForm(forms.ModelForm):
-    """
-    نموذج عام لإضافة دفعة:
-    - اختيار العميل
-    - (اختياري) ربطها بفاتورة
-    """
 
-    class Meta:
-        model = Payment
-        fields = ["customer", "invoice", "date", "amount", "method", "notes"]
-        widgets = {
-            "date": forms.DateInput(attrs={"type": "date"}),
-            "notes": forms.Textarea(attrs={"rows": 2}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Bootstrap styling (select vs input)
-        for name, field in self.fields.items():
-            css = field.widget.attrs.get("class", "")
-            if name in ("customer", "invoice", "method"):
-                field.widget.attrs["class"] = (css + " form-select").strip()
-            else:
-                field.widget.attrs["class"] = (css + " form-control").strip()
-
-    def clean_amount(self):
-        amount = self.cleaned_data.get("amount")
-        if amount is not None and amount <= 0:
-            raise forms.ValidationError(_("Amount must be greater than zero."))
-        return amount
 
 
 class CustomerProfileForm(forms.ModelForm):

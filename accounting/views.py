@@ -34,6 +34,8 @@ from core.services.audit import log_event
 from core.services.notifications import create_notification
 from core.views.attachments import  AttachmentPanelMixin
 from inventory.models import Product
+from payments.forms import PaymentForm
+from payments.models import Payment
 from .forms import (
     InvoiceForm,
     PaymentForInvoiceForm,
@@ -41,11 +43,10 @@ from .forms import (
     ApplyPaymentForm,
     OrderItemFormSet,
     OrderForm,
-    PaymentForm,
     SettingsForm,
 )
 from .mixins import ProductJsonMixin
-from .models import Invoice, Payment, Order, InvoiceItem, Settings
+from .models import Invoice, Order, InvoiceItem, Settings
 from .services import convert_order_to_invoice, allocate_general_payment
 
 # ============================================================
@@ -364,10 +365,17 @@ class AccountingDashboardView(AccountingSectionMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
 
-        invoices = Invoice.objects.select_related("customer").all()
+        # الفواتير + الطلبات كما هي
+        invoices = Invoice.objects.select_related("customer")
         customers = Contact.objects.all()
-        payments = Payment.objects.select_related("customer", "invoice").all()
-        orders = Order.objects.select_related("customer").all()
+        orders = Order.objects.select_related("customer")
+
+        # الدفعات من تطبيق payments (موديل جديد)
+        payments = (
+            Payment.objects
+            .select_related("contact", "method")  # ما عندنا customer ولا invoice
+            .prefetch_related("allocations__invoice")  # لو تبي تعرض الفواتير المرتبطة
+        )
 
         total_amount = invoices.aggregate(s=Sum("total_amount"))["s"] or Decimal("0")
         total_paid = invoices.aggregate(s=Sum("paid_amount"))["s"] or Decimal("0")
@@ -390,15 +398,6 @@ class AccountingDashboardView(AccountingSectionMixin, TemplateView):
             orders
             .filter(invoice__isnull=True)
             .order_by("-created_at", "-id")[:5]
-        )
-
-        # Unpaid invoices (not fully paid or cancelled)
-        ctx["unpaid_invoices"] = (
-            invoices
-            .exclude(status=Invoice.Status.PAID)
-            .exclude(status=Invoice.Status.CANCELLED)
-            .filter(total_amount__gt=F("paid_amount"))
-            .order_by("-issued_at", "-id")[:5]
         )
 
         return ctx

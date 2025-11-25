@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+
+<h1 class="h4 fw-bold mb-3">{{ title }}</h1>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="row g-3">
+
+        {% for field in form %}
+        <div class="col-md-6">
+          <label class="form-label small fw-bold">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}
+            <div class="form-text">{{ field.help_text }}</div>
+          {% endif %}
+          {% for e in field.errors %}
+            <div class="text-danger small">{{ e }}</div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="mt-4 d-flex justify-content-end">
+        <button class="btn btn-primary btn-sm px-4">حفظ</button>
+      </div>
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

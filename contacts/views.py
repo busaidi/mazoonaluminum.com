@@ -1,3 +1,6 @@
+from decimal import Decimal
+
+from django.db.models import Sum
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Q
@@ -14,6 +17,7 @@ from django.views.generic import (
     DeleteView,
 )
 
+from payments.models import Payment
 from .forms import ContactForm, ContactAddressFormSet
 from .models import Contact
 from .services import save_contact_with_addresses
@@ -124,6 +128,8 @@ class ContactListView(ContactsStaffRequiredMixin, ListView):
         return ctx
 
 
+
+
 class ContactDetailView(ContactsStaffRequiredMixin, DetailView):
     model = Contact
     template_name = "contacts/detail.html"
@@ -140,22 +146,56 @@ class ContactDetailView(ContactsStaffRequiredMixin, DetailView):
         ctx = super().get_context_data(**kwargs)
         contact = self.object
 
-        # العناوين (تُعرض كبطاقات في القالب)
+        # -----------------------------
+        # العناوين (كما هي سابقاً)
+        # -----------------------------
         addresses = contact.addresses.all().order_by(
             "-is_primary",
             "address_type",
             "id",
         )
         ctx["addresses"] = addresses
-        ctx["section"] = self.section
-        ctx["subsection"] = "contacts"
 
-        # ملخص مالي بسيط (لو فيه فواتير/مدفوعات مربوطة من تطبيق آخر)
+        # -----------------------------
+        # ملخص مالي (كما هو)
+        # -----------------------------
         ctx["total_invoiced"] = contact.total_invoiced
         ctx["total_paid"] = contact.total_paid
         ctx["balance"] = contact.balance
 
+        # -----------------------------
+        # الدفعات المرتبطة بهذا الكونتاكت
+        # -----------------------------
+        payments_qs = (
+            Payment.objects
+            .filter(contact=contact)
+            .select_related("method")
+            .order_by("-date", "-id")
+        )
+
+        total_in = (
+            payments_qs.filter(direction=Payment.Direction.IN)
+            .aggregate(total=Sum("amount"))["total"]
+            or Decimal("0.000")
+        )
+        total_out = (
+            payments_qs.filter(direction=Payment.Direction.OUT)
+            .aggregate(total=Sum("amount"))["total"]
+            or Decimal("0.000")
+        )
+
+        ctx["payments"] = payments_qs
+        ctx["payments_total_in"] = total_in
+        ctx["payments_total_out"] = total_out
+
+        # -----------------------------
+        # section / subsection (كما هي)
+        # -----------------------------
+        ctx["section"] = self.section
+        ctx["subsection"] = "contacts"
+
         return ctx
+
 
 
 # ============================================================

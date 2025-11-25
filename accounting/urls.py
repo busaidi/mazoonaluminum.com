@@ -25,15 +25,6 @@ urlpatterns = [
 
 
     # --------------------------------------------------
-    # Payments (staff)
-    # --------------------------------------------------
-    path("payments/", views.PaymentListView.as_view(), name="payment_list"),
-    path("payments/new/", views.PaymentCreateView.as_view(), name="payment_create"),
-    path("payments/<int:pk>/edit/",views.PaymentUpdateView.as_view(),name="payment_update",),
-    path("payments/<int:pk>/apply/",views.apply_general_payment,name="payment_apply",),
-    path("payments/<int:pk>/print/",views.PaymentPrintView.as_view(),name="payment_print",),
-
-    # --------------------------------------------------
     # Orders (staff)
     # --------------------------------------------------
     path("orders/", views.OrderListView.as_view(), name="order_list"),

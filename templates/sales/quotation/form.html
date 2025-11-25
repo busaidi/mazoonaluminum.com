@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{{ form_title }}{% endblock %}
+
+{% block content %}
+
+<!-- ============================ -->
+<!-- HEADER -->
+<!-- ============================ -->
+<div class="mb-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="badge bg-dark-subtle text-dark-emphasis small">
+          {% trans "المبيعات" %}
+        </span>
+        <span class="badge bg-warning-subtle text-warning-emphasis small">
+          {% trans "عرض سعر" %}
+        </span>
+      </div>
+
+      <h1 class="h4 fw-bold mb-1">{{ form_title }}</h1>
+      <p class="text-muted small mb-0">
+        {% trans "قم بتعبئة البيانات بدقة — وسيقوم النظام بالاحتساب والترقيم تلقائياً." %}
+      </p>
+    </div>
+
+    <div class="mt-3 mt-md-0">
+      <a href="{% url 'sales:quotation_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-right"></i>
+        {% trans "رجوع للقائمة" %}
+      </a>
+    </div>
+  </div>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger small mb-3">
+      {% for error in form.non_field_errors %}
+        <div>{{ error }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {# hidden fields إن وجدت #}
+  {% for hidden in form.hidden_fields %}
+    {{ hidden }}
+  {% endfor %}
+
+  <!-- ============================ -->
+  <!-- SECTION 1: GENERAL INFO + ملاحظات العميل -->
+  <!-- ============================ -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <h2 class="h6 fw-bold mb-3">{% trans "البيانات العامة" %}</h2>
+
+      <div class="row g-4">
+        {# بقية الحقول (ما عدا ملاحظات العميل والملاحظات الداخلية) #}
+        {% for field in form.visible_fields %}
+          {% if field.name != "customer_note" and field.name != "internal_note" %}
+            <div class="col-md-6 col-xl-4">
+              <label class="form-label form-label-sm fw-semibold small mb-1" for="{{ field.id_for_label }}">
+                {{ field.label }}
+                {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+              </label>
+
+              {{ field }}
+
+              {% if field.help_text %}
+                <div class="form-text small text-muted">{{ field.help_text }}</div>
+              {% endif %}
+
+              {% if field.errors %}
+                <div class="small text-danger mt-1">
+                  {% for error in field.errors %}
+                    <div>{{ error }}</div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      {# ملاحظات العميل كاملة العرض تحت البيانات #}
+      {% if form.customer_note %}
+        <hr class="my-3">
+        <div class="mb-1">
+          <label class="form-label form-label-sm fw-semibold small mb-1" for="{{ form.customer_note.id_for_label }}">
+            {% if form.customer_note.label %}{{ form.customer_note.label }}{% else %}{% trans "ملاحظات العميل" %}{% endif %}
+          </label>
+          {{ form.customer_note }}
+          {% if form.customer_note.help_text %}
+            <div class="form-text small text-muted">{{ form.customer_note.help_text }}</div>
+          {% endif %}
+          {% if form.customer_note.errors %}
+            <div class="small text-danger mt-1">
+              {% for error in form.customer_note.errors %}
+                <div>{{ error }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ============================ -->
+  <!-- SECTION 2: LINES TABLE -->
+  <!-- ============================ -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <h2 class="h6 fw-bold mb-3">{% trans "بنود المستند" %}</h2>
+
+      {{ line_formset.management_form }}
+
+      {% if line_formset.non_form_errors %}
+        <div class="alert alert-danger small mb-3">
+          {% for error in line_formset.non_form_errors %}
+            <div>{{ error }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="text-muted small" style="min-width: 180px;">{% trans "المنتج" %}</th>
+              <th class="text-muted small" style="min-width: 240px;">{% trans "الوصف" %}</th>
+              <th class="text-muted small text-center" style="width: 110px;">{% trans "الكمية" %}</th>
+              <th class="text-muted small text-center" style="width: 130px;">{% trans "سعر الوحدة" %}</th>
+              <th class="text-muted small text-center" style="width: 100px;">{% trans "الخصم %" %}</th>
+              <th class="text-muted small text-center" style="width: 80px;">{% trans "حذف" %}</th>
+            </tr>
+          </thead>
+
+          <tbody>
+          {% for line in line_formset %}
+            <tr>
+              <td>
+                {{ line.product }}
+                {% if line.product.errors %}
+                  <div class="small text-danger mt-1">
+                    {% for error in line.product.errors %}
+                      <div>{{ error }}</div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </td>
+
+              <td>
+                {{ line.description }}
+                {% if line.description.errors %}
+                  <div class="small text-danger.mt-1">
+                    {% for error in line.description.errors %}
+                      <div>{{ error }}</div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </td>
+
+              <td class="text-center">
+                {{ line.quantity }}
+              </td>
+
+              <td class="text-center">
+                {{ line.unit_price }}
+              </td>
+
+              <td class="text-center">
+                {{ line.discount_percent }}
+              </td>
+
+              <td class="text-center">
+                {% if line.instance.pk %}
+                  {{ line.DELETE }}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+            </tr>
+
+            {% for hidden in line.hidden_fields %}
+              {{ hidden }}
+            {% endfor %}
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <p class="text-muted small mt-2">
+        {% trans "يمكنك ترك بعض الصفوف فارغة، وسيتم تجاهلها عند الحفظ." %}
+      </p>
+    </div>
+  </div>
+
+  <!-- ============================ -->
+  <!-- SECTION 3: SUMMARY -->
+  <!-- ============================ -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <h2 class="h6 fw-bold mb-3">{% trans "الملخص المالي" %}</h2>
+
+      <div class="row g-4 small">
+        <div class="col-md-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted">{% trans "المجموع الفرعي" %}</span>
+            <span class="fw-semibold">{{ subtotal|default:"0.000" }} OMR</span>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted">{% trans "إجمالي الخصم" %}</span>
+            <span class="fw-semibold">{{ total_discount|default:"0.000" }} OMR</span>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted">{% trans "الضريبة" %}</span>
+            <span class="fw-semibold">{{ tax_amount|default:"0.000" }} OMR</span>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted">{% trans "الإجمالي النهائي" %}</span>
+            <span class="fw-bold">{{ total_amount|default:"0.000" }} OMR</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="text-muted small mt-2 mb-0">
+        {% trans "يتم احتساب هذه الأرقام عبر السيرفر. لاحقاً يمكن جعلها لحظية باستخدام JavaScript إذا رغبت." %}
+      </p>
+    </div>
+  </div>
+
+  <!-- ============================ -->
+  <!-- SECTION 4: INTERNAL NOTES (آخر شي) -->
+  <!-- ============================ -->
+  {% if form.internal_note %}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <h2 class="h6 fw-bold mb-3">{% trans "ملاحظات داخلية" %}</h2>
+        <div class="mb-1">
+          <label class="form-label form-label-sm fw-semibold small mb-1" for="{{ form.internal_note.id_for_label }}">
+            {{ form.internal_note.label|default:_("ملاحظات داخلية (لا تظهر للعميل)") }}
+          </label>
+          {{ form.internal_note }}
+          {% if form.internal_note.help_text %}
+            <div class="form-text small text-muted">{{ form.internal_note.help_text }}</div>
+          {% endif %}
+          {% if form.internal_note.errors %}
+            <div class="small text-danger mt-1">
+              {% for error in form.internal_note.errors %}
+                <div>{{ error }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+        <p class="text-muted small mb-0">
+          {% trans "هذه الملاحظات للاستخدام الداخلي فقط، ولا تظهر في المستندات المرسلة للعميل." %}
+        </p>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- ============================ -->
+  <!-- ACTION BUTTONS -->
+  <!-- ============================ -->
+  <div class="d-flex justify-content-end gap-2">
+    <button type="submit" name="_save_draft" class="btn btn-outline-secondary">
+      <i class="bi bi-save"></i> {% trans "حفظ كمسودة" %}
+    </button>
+
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check2-circle"></i> {% trans "حفظ" %}
+    </button>
+  </div>
+</form>
+
+{% endblock %}

@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "عروض الأسعار" %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 fw-bold mb-1">
+      {% trans "عروض الأسعار" %}
+    </h1>
+    <p class="text-muted small mb-0">
+      {% trans "إدارة عروض الأسعار المرسلة إلى العملاء." %}
+    </p>
+  </div>
+  <div>
+    <a href="{% url 'sales:quotation_create' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus"></i>
+      {% trans "عرض سعر جديد" %}
+    </a>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body border-bottom">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-md-4">
+        <input type="text"
+               name="q"
+               value="{{ q }}"
+               class="form-control form-control-sm"
+               placeholder="{% trans 'بحث بالرقم أو العميل...' %}">
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-outline-secondary btn-sm">
+          {% trans "بحث" %}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="small text-muted">{% trans "الرقم" %}</th>
+          <th class="small text-muted">{% trans "التاريخ" %}</th>
+          <th class="small text-muted">{% trans "العميل" %}</th>
+          <th class="small text-muted text-end">{% trans "الإجمالي" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for doc in object_list %}
+          <tr>
+            <td>
+              <a href="{% url 'sales:quotation_detail' doc.pk %}"
+                 class="text-decoration-none">
+                {{ doc.number|default:doc.pk }}
+              </a>
+            </td>
+            <td class="text-nowrap">
+              {{ doc.date|date:"Y-m-d" }}
+            </td>
+            <td>
+              {{ doc.contact.name }}
+            </td>
+            <td class="text-end text-nowrap">
+              {{ doc.total_amount }} {{ doc.currency }}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="4" class="text-center text-muted py-3">
+              {% trans "لا توجد عروض أسعار مسجلة." %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if is_paginated %}
+    <div class="card-footer border-0">
+      <nav aria-label="Pagination">
+        <ul class="pagination pagination-sm mb-0 justify-content-center">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}">&laquo;</a>
+            </li>
+          {% endif %}
+          <li class="page-item disabled">
+            <span class="page-link">
+              {{ page_obj.number }} / {{ paginator.num_pages }}
+            </span>
+          </li>
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}">&raquo;</a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

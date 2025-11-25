@@ -42,317 +42,419 @@
 <div class="row g-3">
   <div class="col-lg-8">
 
-    {# معلومات أساسية #}
     <div class="card border-0 shadow-sm mb-3">
-      <div class="card-body">
-        <h2 class="h6 fw-semibold mb-3">{% trans "معلومات جهة الاتصال" %}</h2>
-
-        <div class="row g-3">
-          <div class="col-md-6">
-            <div class="small text-muted mb-1">{% trans "الاسم" %}</div>
-            <div class="fw-semibold">{{ contact.name }}</div>
-          </div>
-
-          <div class="col-md-6">
-            <div class="small text-muted mb-1">{% trans "نوع جهة الاتصال" %}</div>
-            {% if contact.kind %}
-              <div class="fw-semibold">{{ contact.get_kind_display }}</div>
-            {% else %}
-              <div class="text-muted small">—</div>
+      <div class="card-header border-0 pb-0">
+        <ul class="nav nav-tabs card-header-tabs">
+          <li class="nav-item">
+            <button class="nav-link active"
+                    data-bs-toggle="tab"
+                    data-bs-target="#tab-basic"
+                    type="button">
+              {% trans "البيانات" %}
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link"
+                    data-bs-toggle="tab"
+                    data-bs-target="#tab-payments"
+                    type="button">
+              {% trans "الدفعات" %}
+            </button>
+          </li>
+          {% with people=contact.people.all %}
+            {% if contact.is_company and people %}
+              <li class="nav-item">
+                <button class="nav-link"
+                        data-bs-toggle="tab"
+                        data-bs-target="#tab-people"
+                        type="button">
+                  {% trans "الأشخاص المرتبطون" %}
+                </button>
+              </li>
             {% endif %}
-          </div>
+          {% endwith %}
+        </ul>
+      </div>
 
-          <div class="col-md-6">
-            <div class="small text-muted mb-1">{% trans "الشركة (جهة اتصال)" %}</div>
-            {% if contact.company %}
-              <div class="fw-semibold">
-                <a href="{% url 'contacts:contact_detail' contact.company_id %}"
-                   class="text-decoration-none">
-                  {{ contact.company.name }}
+      <div class="card-body">
+        <div class="tab-content">
+
+          {# تبويب البيانات الأساسية + العناوين #}
+          <div class="tab-pane fade show active" id="tab-basic">
+            {# معلومات أساسية #}
+            <div class="mb-3">
+              <h2 class="h6 fw-semibold mb-3">{% trans "معلومات جهة الاتصال" %}</h2>
+
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="small text-muted mb-1">{% trans "الاسم" %}</div>
+                  <div class="fw-semibold">{{ contact.name }}</div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="small text-muted mb-1">{% trans "نوع جهة الاتصال" %}</div>
+                  {% if contact.kind %}
+                    <div class="fw-semibold">{{ contact.get_kind_display }}</div>
+                  {% else %}
+                    <div class="text-muted small">—</div>
+                  {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                  <div class="small text-muted mb-1">{% trans "الشركة (جهة اتصال)" %}</div>
+                  {% if contact.company %}
+                    <div class="fw-semibold">
+                      <a href="{% url 'contacts:contact_detail' contact.company_id %}"
+                         class="text-decoration-none">
+                        {{ contact.company.name }}
+                      </a>
+                    </div>
+                  {% else %}
+                    <div class="text-muted small">—</div>
+                  {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                  <div class="small text-muted mb-1">{% trans "اسم الشركة (نص حر)" %}</div>
+                  {% if contact.company_name %}
+                    <div class="fw-semibold">{{ contact.company_name }}</div>
+                  {% else %}
+                    <div class="text-muted small">—</div>
+                  {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                  <div class="small text-muted mb-1">{% trans "الأدوار" %}</div>
+                  <div class="d-flex flex-wrap gap-1">
+                    {% if contact.is_customer %}
+                      <span class="badge bg-dark-subtle text-dark-emphasis small">{% trans "زبون" %}</span>
+                    {% endif %}
+                    {% if contact.is_supplier %}
+                      <span class="badge bg-warning-subtle text-warning-emphasis small">{% trans "مورد / شريك" %}</span>
+                    {% endif %}
+                    {% if contact.is_owner %}
+                      <span class="badge bg-info-subtle text-info-emphasis small">{% trans "مالك" %}</span>
+                    {% endif %}
+                    {% if contact.is_employee %}
+                      <span class="badge bg-success-subtle text-success-emphasis small">{% trans "موظف" %}</span>
+                    {% endif %}
+                    {% if not contact.is_customer and not contact.is_supplier and not contact.is_owner and not contact.is_employee %}
+                      <span class="text-muted small">—</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="small text-muted mb-1">{% trans "الهاتف" %}</div>
+                  {% if contact.phone %}
+                    <div class="fw-semibold">{{ contact.phone }}</div>
+                  {% else %}
+                    <div class="text-muted small">—</div>
+                  {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                  <div class="small text-muted mb-1">{% trans "البريد الإلكتروني" %}</div>
+                  {% if contact.email %}
+                    <div class="fw-semibold">{{ contact.email }}</div>
+                  {% else %}
+                    <div class="text-muted small">—</div>
+                  {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                  <div class="small text-muted mb-1">{% trans "الرقم الضريبي / VAT" %}</div>
+                  {% if contact.tax_number %}
+                    <div class="fw-semibold">{{ contact.tax_number }}</div>
+                  {% else %}
+                    <div class="text-muted small">—</div>
+                  {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                  <div class="small text-muted mb-1">{% trans "الحالة" %}</div>
+                  {% if contact.is_active %}
+                    <span class="badge bg-success-subtle text-success-emphasis small">
+                      {% trans "نشط" %}
+                    </span>
+                  {% else %}
+                    <span class="badge bg-secondary-subtle text-secondary-emphasis small">
+                      {% trans "غير نشط" %}
+                    </span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            {# العنوان الرئيسي #}
+            <div class="mb-3">
+              <h2 class="h6 fw-semibold mb-3">{% trans "العنوان الرئيسي" %}</h2>
+
+              {% if contact.address or contact.country or contact.governorate or contact.wilaya or contact.village or contact.po_box or contact.postal_code %}
+                {% if contact.address %}
+                  <p class="mb-2 small">
+                    {{ contact.address|linebreaksbr }}
+                  </p>
+                {% endif %}
+
+                <p class="text-muted small mb-1">
+                  {% if contact.village %}
+                    {{ contact.village }}
+                  {% endif %}
+                  {% if contact.village and contact.wilaya %}, {% endif %}
+                  {% if contact.wilaya %}
+                    {{ contact.wilaya }}
+                  {% endif %}
+                  {% if contact.governorate %}
+                    <br>{{ contact.governorate }}
+                  {% endif %}
+                  {% if contact.country %}
+                    {% if contact.governorate %}, {% else %}<br>{% endif %}
+                    {{ contact.country }}
+                  {% endif %}
+                </p>
+
+                {% if contact.po_box or contact.postal_code %}
+                  <p class="text-muted small mb-0">
+                    {% if contact.po_box %}
+                      {% trans "ص.ب" %} {{ contact.po_box }}
+                    {% endif %}
+                    {% if contact.po_box and contact.postal_code %} · {% endif %}
+                    {% if contact.postal_code %}
+                      {% trans "الرمز البريدي" %} {{ contact.postal_code }}
+                    {% endif %}
+                  </p>
+                {% endif %}
+              {% else %}
+                <p class="text-muted small mb-0">
+                  {% trans "لا يوجد عنوان رئيسي مسجل لهذه الجهة." %}
+                </p>
+              {% endif %}
+            </div>
+
+            {# العناوين الإضافية #}
+            <div class="mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h2 class="h6 fw-semibold mb-0">{% trans "العناوين الإضافية" %}</h2>
+                <a href="{% url 'contacts:contact_edit' contact.pk %}" class="btn btn-outline-secondary btn-sm">
+                  <i class="bi bi-pencil"></i>
+                  {% trans "إدارة العناوين" %}
                 </a>
               </div>
-            {% else %}
-              <div class="text-muted small">—</div>
-            {% endif %}
-          </div>
 
-          <div class="col-md-6">
-            <div class="small text-muted mb-1">{% trans "اسم الشركة (نص حر)" %}</div>
-            {% if contact.company_name %}
-              <div class="fw-semibold">{{ contact.company_name }}</div>
-            {% else %}
-              <div class="text-muted small">—</div>
-            {% endif %}
-          </div>
+              {% if addresses %}
+                <div class="vstack gap-2">
+                  {% for addr in addresses %}
+                    <div class="card border-0 shadow-sm">
+                      <div class="card-body p-2">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                          <div>
+                            {% if addr.label %}
+                              <div class="small fw-semibold">
+                                {{ addr.label }}
+                              </div>
+                            {% endif %}
+                            <div class="text-muted small">
+                              {{ addr.get_address_type_display }}
+                            </div>
+                          </div>
+                          <div class="text-end">
+                            {% if addr.is_primary %}
+                              <span class="badge bg-dark-subtle text-dark-emphasis small mb-1 d-inline-block">
+                                {% trans "رئيسي" %}
+                              </span><br>
+                            {% endif %}
+                            {% if addr.is_active %}
+                              <span class="badge bg-success-subtle text-success-emphasis small">
+                                {% trans "نشط" %}
+                              </span>
+                            {% else %}
+                              <span class="badge bg-secondary-subtle text-secondary-emphasis small">
+                                {% trans "غير نشط" %}
+                              </span>
+                            {% endif %}
+                          </div>
+                        </div>
 
-          <div class="col-md-6">
-            <div class="small text-muted mb-1">{% trans "الأدوار" %}</div>
-            <div class="d-flex flex-wrap gap-1">
-              {% if contact.is_customer %}
-                <span class="badge bg-dark-subtle text-dark-emphasis small">{% trans "زبون" %}</span>
-              {% endif %}
-              {% if contact.is_supplier %}
-                <span class="badge bg-warning-subtle text-warning-emphasis small">{% trans "مورد / شريك" %}</span>
-              {% endif %}
-              {% if contact.is_owner %}
-                <span class="badge bg-info-subtle text-info-emphasis small">{% trans "مالك" %}</span>
-              {% endif %}
-              {% if contact.is_employee %}
-                <span class="badge bg-success-subtle text-success-emphasis small">{% trans "موظف" %}</span>
-              {% endif %}
-              {% if not contact.is_customer and not contact.is_supplier and not contact.is_owner and not contact.is_employee %}
-                <span class="text-muted small">—</span>
+                        {% if addr.address %}
+                          <div class="small mb-1">
+                            {{ addr.address|linebreaksbr }}
+                          </div>
+                        {% endif %}
+
+                        <p class="text-muted small mb-0">
+                          {% if addr.village %}
+                            {{ addr.village }}
+                          {% endif %}
+                          {% if addr.village and addr.wilaya %}, {% endif %}
+                          {% if addr.wilaya %}
+                            {{ addr.wilaya }}
+                          {% endif %}
+                          {% if addr.governorate %}
+                            <br>{{ addr.governorate }}
+                          {% endif %}
+                          {% if addr.country %}
+                            {% if addr.governorate %}, {% else %}<br>{% endif %}
+                            {{ addr.country }}
+                          {% endif %}
+                        </p>
+
+                        {% if addr.po_box or addr.postal_code %}
+                          <p class="text-muted small mb-0 mt-1">
+                            {% if addr.po_box %}
+                              {% trans "ص.ب" %} {{ addr.po_box }}
+                            {% endif %}
+                            {% if addr.po_box and addr.postal_code %} · {% endif %}
+                            {% if addr.postal_code %}
+                              {% trans "الرمز البريدي" %} {{ addr.postal_code }}
+                            {% endif %}
+                          </p>
+                        {% endif %}
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <p class="text-muted small mb-0">
+                  {% trans "لا توجد عناوين إضافية مسجلة لهذه الجهة." %}
+                </p>
               {% endif %}
             </div>
           </div>
 
-          <div class="col-md-6">
-            <div class="small text-muted mb-1">{% trans "الهاتف" %}</div>
-            {% if contact.phone %}
-              <div class="fw-semibold">{{ contact.phone }}</div>
-            {% else %}
-              <div class="text-muted small">—</div>
-            {% endif %}
-          </div>
+          {# تبويب الدفعات #}
+          <div class="tab-pane fade" id="tab-payments">
 
-          <div class="col-md-6">
-            <div class="small text-muted mb-1">{% trans "البريد الإلكتروني" %}</div>
-            {% if contact.email %}
-              <div class="fw-semibold">{{ contact.email }}</div>
-            {% else %}
-              <div class="text-muted small">—</div>
-            {% endif %}
-          </div>
-
-          <div class="col-md-6">
-            <div class="small text-muted mb-1">{% trans "الرقم الضريبي / VAT" %}</div>
-            {% if contact.tax_number %}
-              <div class="fw-semibold">{{ contact.tax_number }}</div>
-            {% else %}
-              <div class="text-muted small">—</div>
-            {% endif %}
-          </div>
-
-          <div class="col-md-6">
-            <div class="small text-muted mb-1">{% trans "الحالة" %}</div>
-            {% if contact.is_active %}
-              <span class="badge bg-success-subtle text-success-emphasis small">
-                {% trans "نشط" %}
-              </span>
-            {% else %}
-              <span class="badge bg-secondary-subtle text-secondary-emphasis small">
-                {% trans "غير نشط" %}
-              </span>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    {# العنوان الرئيسي #}
-    <div class="card border-0 shadow-sm mb-3">
-      <div class="card-body">
-        <h2 class="h6 fw-semibold mb-3">{% trans "العنوان الرئيسي" %}</h2>
-
-        {% if contact.address or contact.country or contact.governorate or contact.wilaya or contact.village or contact.po_box or contact.postal_code %}
-          {% if contact.address %}
-            <p class="mb-2 small">
-              {{ contact.address|linebreaksbr }}
-            </p>
-          {% endif %}
-
-          <p class="text-muted small mb-1">
-            {% if contact.village %}
-              {{ contact.village }}
-            {% endif %}
-            {% if contact.village and contact.wilaya %}, {% endif %}
-            {% if contact.wilaya %}
-              {{ contact.wilaya }}
-            {% endif %}
-            {% if contact.governorate %}
-              <br>{{ contact.governorate }}
-            {% endif %}
-            {% if contact.country %}
-              {% if contact.governorate %}, {% else %}<br>{% endif %}
-              {{ contact.country }}
-            {% endif %}
-          </p>
-
-          {% if contact.po_box or contact.postal_code %}
-            <p class="text-muted small mb-0">
-              {% if contact.po_box %}
-                {% trans "ص.ب" %} {{ contact.po_box }}
-              {% endif %}
-              {% if contact.po_box and contact.postal_code %} · {% endif %}
-              {% if contact.postal_code %}
-                {% trans "الرمز البريدي" %} {{ contact.postal_code }}
-              {% endif %}
-            </p>
-          {% endif %}
-        {% else %}
-          <p class="text-muted small mb-0">
-            {% trans "لا يوجد عنوان رئيسي مسجل لهذه الجهة." %}
-          </p>
-        {% endif %}
-      </div>
-    </div>
-
-    {# العناوين الإضافية #}
-    <div class="card border-0 shadow-sm mb-3">
-      <div class="card-body">
-        <div class="d-flex justify-content-between.align-items-center mb-2">
-          <h2 class="h6 fw-semibold mb-0">{% trans "العناوين الإضافية" %}</h2>
-          <a href="{% url 'contacts:contact_edit' contact.pk %}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-pencil"></i>
-            {% trans "إدارة العناوين" %}
-          </a>
-        </div>
-
-        {% if addresses %}
-          <div class="vstack gap-2">
-            {% for addr in addresses %}
-              <div class="card border-0 shadow-sm">
-                <div class="card-body p-2">
-                  <div class="d-flex justify-content-between align-items-start mb-1">
-                    <div>
-                      {% if addr.label %}
-                        <div class="small fw-semibold">
-                          {{ addr.label }}
-                        </div>
-                      {% endif %}
-                      <div class="text-muted small">
-                        {{ addr.get_address_type_display }}
-                      </div>
-                    </div>
-                    <div class="text-end">
-                      {% if addr.is_primary %}
-                        <span class="badge bg-dark-subtle text-dark-emphasis small mb-1 d-inline-block">
-                          {% trans "رئيسي" %}
-                        </span><br>
-                      {% endif %}
-                      {% if addr.is_active %}
-                        <span class="badge bg-success-subtle text-success-emphasis small">
-                          {% trans "نشط" %}
-                        </span>
-                      {% else %}
-                        <span class="badge bg-secondary-subtle text-secondary-emphasis small">
-                          {% trans "غير نشط" %}
-                        </span>
-                      {% endif %}
-                    </div>
-                  </div>
-
-                  {% if addr.address %}
-                    <div class="small mb-1">
-                      {{ addr.address|linebreaksbr }}
-                    </div>
-                  {% endif %}
-
-                  <p class="text-muted small mb-0">
-                    {% if addr.village %}
-                      {{ addr.village }}
-                    {% endif %}
-                    {% if addr.village and addr.wilaya %}, {% endif %}
-                    {% if addr.wilaya %}
-                      {{ addr.wilaya }}
-                    {% endif %}
-                    {% if addr.governorate %}
-                      <br>{{ addr.governorate }}
-                    {% endif %}
-                    {% if addr.country %}
-                      {% if addr.governorate %}, {% else %}<br>{% endif %}
-                      {{ addr.country }}
-                    {% endif %}
-                  </p>
-
-                  {% if addr.po_box or addr.postal_code %}
-                    <p class="text-muted small mb-0 mt-1">
-                      {% if addr.po_box %}
-                        {% trans "ص.ب" %} {{ addr.po_box }}
-                      {% endif %}
-                      {% if addr.po_box and addr.postal_code %} · {% endif %}
-                      {% if addr.postal_code %}
-                        {% trans "الرمز البريدي" %} {{ addr.postal_code }}
-                      {% endif %}
-                    </p>
-                  {% endif %}
-                </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="small text-muted">
+                {% trans "إجمالي القبض" %}:
+                <span class="fw-bold">{{ payments_total_in }}</span>
+                &nbsp;|&nbsp;
+                {% trans "إجمالي الصرف" %}:
+                <span class="fw-bold">{{ payments_total_out }}</span>
               </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <p class="text-muted small.mb-0">
-            {% trans "لا توجد عناوين إضافية مسجلة لهذه الجهة." %}
-          </p>
-        {% endif %}
-      </div>
-    </div>
 
-    {# في حالة كانت شركة: عرض الأشخاص المرتبطين بها #}
-    {% with people=contact.people.all %}
-      {% if contact.is_company and people %}
-        <div class="card border-0 shadow-sm mb-3">
-          <div class="card-body">
-            <h2 class="h6 fw-semibold mb-3">
-              {% trans "الأشخاص المرتبطون بهذه الشركة" %}
-            </h2>
+              <a href="{% url 'payments:payment_create' %}?contact={{ contact.pk }}"
+                 class="btn btn-sm btn-primary">
+                {% trans "إضافة دفعة جديدة" %}
+              </a>
+            </div>
+
             <div class="table-responsive">
-              <table class="table table-sm table-hover mb-0 align-middle">
-                <thead>
+              <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
                   <tr>
-                    <th class="small text-muted">{% trans "الاسم" %}</th>
-                    <th class="small text-muted">{% trans "الهاتف / البريد" %}</th>
-                    <th class="small text-muted">{% trans "الأدوار" %}</th>
+                    <th>{% trans "الرقم" %}</th>
+                    <th>{% trans "النوع" %}</th>
+                    <th>{% trans "المبلغ" %}</th>
+                    <th>{% trans "التاريخ" %}</th>
+                    <th>{% trans "طريقة الدفع" %}</th>
+                    <th>{% trans "مرجع" %}</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {% for person in people %}
-                    <tr>
-                      <td class="small">
-                        <a href="{% url 'contacts:contact_detail' person.pk %}"
-                           class="text-mazoon text-decoration-none">
-                          {{ person.name }}
-                        </a>
-                      </td>
-                      <td class="small">
-                        {% if person.phone %}
-                          <div>{{ person.phone }}</div>
-                        {% endif %}
-                        {% if person.email %}
-                          <div class="text-muted">{{ person.email }}</div>
-                        {% endif %}
-                        {% if not person.phone and not person.email %}
-                          <span class="text-muted">—</span>
-                        {% endif %}
-                      </td>
-                      <td class="small">
-                        <div class="d-flex flex-wrap gap-1">
-                          {% if person.is_customer %}
-                            <span class="badge bg-dark-subtle text-dark-emphasis small">{% trans "زبون" %}</span>
-                          {% endif %}
-                          {% if person.is_supplier %}
-                            <span class="badge bg-warning-subtle text-warning-emphasis small">{% trans "مورد / شريك" %}</span>
-                          {% endif %}
-                          {% if person.is_owner %}
-                            <span class="badge bg-info-subtle text-info-emphasis small">{% trans "مالك" %}</span>
-                          {% endif %}
-                          {% if person.is_employee %}
-                            <span class="badge bg-success-subtle text-success-emphasis small">{% trans "موظف" %}</span>
-                          {% endif %}
-                          {% if not person.is_customer and not person.is_supplier and not person.is_owner and not person.is_employee %}
-                            <span class="text-muted small">—</span>
-                          {% endif %}
-                        </div>
-                      </td>
-                    </tr>
+                  {% for p in payments %}
+                  <tr>
+                    <td class="fw-bold">{{ p.number|default:"—" }}</td>
+                    <td>
+                      {% if p.direction == "in" %}
+                        <span class="badge bg-success">{% trans "قبض" %}</span>
+                      {% else %}
+                        <span class="badge bg-danger">{% trans "صرف" %}</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ p.amount }} {{ p.currency }}</td>
+                    <td>{{ p.date }}</td>
+                    <td>{{ p.method }}</td>
+                    <td>{{ p.reference|default:"—" }}</td>
+                    <td class="text-end">
+                      <a href="{% url 'payments:payment_detail' p.pk %}"
+                         class="btn btn-sm btn-light border">
+                        {% trans "عرض" %}
+                      </a>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="7" class="text-center text-muted py-3">
+                      {% trans "لا توجد دفعات مسجلة لهذه الجهة." %}
+                    </td>
+                  </tr>
                   {% endfor %}
                 </tbody>
               </table>
             </div>
+
           </div>
+
+          {# تبويب الأشخاص المرتبطين (لو شركة) #}
+          {% with people=contact.people.all %}
+            {% if contact.is_company and people %}
+              <div class="tab-pane fade" id="tab-people">
+                <h2 class="h6 fw-semibold mb-3">
+                  {% trans "الأشخاص المرتبطون بهذه الشركة" %}
+                </h2>
+                <div class="table-responsive">
+                  <table class="table table-sm table-hover mb-0 align-middle">
+                    <thead>
+                      <tr>
+                        <th class="small text-muted">{% trans "الاسم" %}</th>
+                        <th class="small text-muted">{% trans "الهاتف / البريد" %}</th>
+                        <th class="small text-muted">{% trans "الأدوار" %}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for person in people %}
+                        <tr>
+                          <td class="small">
+                            <a href="{% url 'contacts:contact_detail' person.pk %}"
+                               class="text-mazoon text-decoration-none">
+                              {{ person.name }}
+                            </a>
+                          </td>
+                          <td class="small">
+                            {% if person.phone %}
+                              <div>{{ person.phone }}</div>
+                            {% endif %}
+                            {% if person.email %}
+                              <div class="text-muted">{{ person.email }}</div>
+                            {% endif %}
+                            {% if not person.phone and not person.email %}
+                              <span class="text-muted">—</span>
+                            {% endif %}
+                          </td>
+                          <td class="small">
+                            <div class="d-flex flex-wrap gap-1">
+                              {% if person.is_customer %}
+                                <span class="badge bg-dark-subtle text-dark-emphasis small">{% trans "زبون" %}</span>
+                              {% endif %}
+                              {% if person.is_supplier %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis small">{% trans "مورد / شريك" %}</span>
+                              {% endif %}
+                              {% if person.is_owner %}
+                                <span class="badge bg-info-subtle text-info-emphasis small">{% trans "مالك" %}</span>
+                              {% endif %}
+                              {% if person.is_employee %}
+                                <span class="badge bg-success-subtle text-success-emphasis small">{% trans "موظف" %}</span>
+                              {% endif %}
+                              {% if not person.is_customer and not person.is_supplier and not person.is_owner and not person.is_employee %}
+                                <span class="text-muted small">—</span>
+                              {% endif %}
+                            </div>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            {% endif %}
+          {% endwith %}
+
         </div>
-      {% endif %}
-    {% endwith %}
+      </div>
+    </div>
 
   </div>
 
