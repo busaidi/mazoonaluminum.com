@@ -3,229 +3,281 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _
 
+from .managers import ContactManager
 
-class Customer(models.Model):
+
+class Contact(models.Model):
     """
-    ملف الزبون العالمي (تطبيق contacts).
-
-    - مشترك بين المحاسبة، الطلبات، البوابة، وغيرها.
-    - يحتفظ بعنوان أساسي (للتوافق مع الكود القديم).
-    - العناوين الإضافية تُخزَّن في CustomerAddress.
+    كيان اتصال عام (Contact):
+    ممكن يكون:
+      - زبون
+      - مورد / شريك
+      - مالك
+      - موظف
+      - أو أكثر من دور في نفس الوقت.
     """
 
+    class ContactKind(models.TextChoices):
+        PERSON = "person", _("فرد")
+        COMPANY = "company", _("شركة")
+
+    # ربط اختياري مع مستخدم Django (بوابة عملاء / موظفين)
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="customer_profile",
-        help_text=_("اختياري: ربط الزبون بحساب مستخدم للدخول إلى البوابة."),
-        verbose_name=_("المستخدم المرتبط"),
+        related_name="contact_profile",
+        verbose_name=_("المستخدم (اختياري)"),
+        help_text=_("ربط الكونتاكت بحساب مستخدم (بوابة العملاء/الموظفين)."),
     )
 
-    # --------- بيانات أساسية ---------
+    # نوع الكيان (فرد / شركة)
+    kind = models.CharField(
+        max_length=20,
+        choices=ContactKind.choices,
+        default=ContactKind.PERSON,
+        verbose_name=_("نوع الكونتاكت"),
+    )
+
+    # --------- معلومات أساسية (ستكون مترجمة عبر modeltranslation) ---------
     name = models.CharField(
-        _("اسم الزبون"),
         max_length=255,
-    )
-    phone = models.CharField(
-        _("رقم الهاتف"),
-        max_length=50,
-        blank=True,
-    )
-    email = models.EmailField(
-        _("البريد الإلكتروني"),
-        blank=True,
-    )
-    company_name = models.CharField(
-        _("اسم الشركة"),
-        max_length=255,
-        blank=True,
-    )
-    tax_number = models.CharField(
-        _("الرقم الضريبي / ضريبة القيمة المضافة"),
-        max_length=50,
-        blank=True,
-        help_text=_("اختياري: رقم ضريبة القيمة المضافة أو الرقم الضريبي إن وجد."),
+        verbose_name=_("الاسم"),
+        help_text=_("اسم الشخص أو اسم الشركة."),
     )
 
-    # --------- العنوان الأساسي (محفوظ للتوافق) ---------
-    country = models.CharField(
-        _("الدولة"),
+    company_name = models.CharField(
         max_length=255,
         blank=True,
-        help_text=_("اسم الدولة (يمكن ترجمته)."),
+        verbose_name=_("اسم الشركة (إن وجد)"),
+    )
+
+    # --------- بيانات الاتصال ---------
+    phone = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_("رقم الهاتف"),
+    )
+
+    email = models.EmailField(
+        blank=True,
+        verbose_name=_("البريد الإلكتروني"),
+    )
+
+    tax_number = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_("الرقم الضريبي / VAT"),
+    )
+
+    # --------- أدوار الكونتاكت (يمكن يجمع أكثر من دور) ---------
+    is_customer = models.BooleanField(
+        default=False,
+        verbose_name=_("زبون"),
+    )
+    is_supplier = models.BooleanField(
+        default=False,
+        verbose_name=_("مورد / شريك"),
+    )
+    is_owner = models.BooleanField(
+        default=False,
+        verbose_name=_("مالك"),
+    )
+    is_employee = models.BooleanField(
+        default=False,
+        verbose_name=_("موظف"),
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_("نشط"),
+    )
+
+    # --------- العنوان الرئيسي (حقول بسيطة – ستُترجم) ---------
+    country = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("الدولة"),
     )
     governorate = models.CharField(
-        _("المحافظة"),
         max_length=255,
         blank=True,
-        help_text=_("اسم المحافظة (يمكن ترجمته)."),
+        verbose_name=_("المحافظة"),
     )
     wilaya = models.CharField(
-        _("الولاية"),
         max_length=255,
         blank=True,
-        help_text=_("اسم الولاية (يمكن ترجمته)."),
+        verbose_name=_("الولاية"),
     )
     village = models.CharField(
-        _("القرية / الحي"),
         max_length=255,
         blank=True,
-        help_text=_("اسم القرية أو الحي (يمكن ترجمته)."),
+        verbose_name=_("القرية / المنطقة"),
     )
     postal_code = models.CharField(
-        _("الرمز البريدي"),
         max_length=20,
         blank=True,
-        help_text=_("الرمز البريدي (يمكن ترجمته عند الحاجة)."),
+        verbose_name=_("الرمز البريدي"),
     )
     po_box = models.CharField(
-        _("صندوق البريد"),
         max_length=20,
         blank=True,
-        help_text=_("رقم صندوق البريد (يمكن ترجمته عند الحاجة)."),
+        verbose_name=_("صندوق البريد"),
     )
 
-    # عنوان حر (نصي)
     address = models.TextField(
-        _("العنوان الكامل (نصي)"),
         blank=True,
+        verbose_name=_("عنوان تفصيلي (حر)"),
     )
 
     created_at = models.DateTimeField(
-        _("تاريخ الإنشاء"),
         auto_now_add=True,
+        verbose_name=_("تاريخ الإنشاء"),
     )
+
+    # المانجر الافتراضي المخصص
+    objects = ContactManager()
 
     class Meta:
         ordering = ("name", "id")
-        verbose_name = _("الزبون")
-        verbose_name_plural = _("الزبائن")
+        verbose_name = _("جهة اتصال")
+        verbose_name_plural = _("جهات الاتصال")
 
     def __str__(self) -> str:
+        # مستقبلاً ممكن نعدلها حسب kind (شخص / شركة)
         return self.name
 
-    # ---------- بيانات مُجمَّعة (من المحاسبة) ----------
+    # ---------- خصائص تجميعية (مفيدة لو هو زبون) ----------
 
     @property
     def total_invoiced(self) -> Decimal:
         """
-        إجمالي قيمة الفواتير الصادرة لهذا الزبون.
-        يعتمد على العلاقة العكسية من accounting.Invoice.customer.
+        مجموع الفواتير لهذا الكونتاكت لو كان زبون.
+        يعتمد على related_name='invoices' في Invoice.contact.
         """
-        total = self.invoices.aggregate(s=models.Sum("total_amount")).get("s")
-        return total or Decimal("0")
+        related = getattr(self, "invoices", None)
+        if related is None:
+            return Decimal("0")
+        value = self.invoices.aggregate(s=Sum("total_amount")).get("s")
+        return value or Decimal("0")
 
     @property
     def total_paid(self) -> Decimal:
         """
-        إجمالي الدفعات المستلمة من هذا الزبون.
+        مجموع المدفوعات لهذا الكونتاكت لو كان زبون.
+        يعتمد على related_name='payments' في Payment.contact.
         """
-        total = self.payments.aggregate(s=models.Sum("amount")).get("s")
-        return total or Decimal("0")
+        related = getattr(self, "payments", None)
+        if related is None:
+            return Decimal("0")
+        value = self.payments.aggregate(s=Sum("amount")).get("s")
+        return value or Decimal("0")
 
     @property
     def balance(self) -> Decimal:
         """
-        رصيد الزبون = إجمالي الفواتير - إجمالي الدفعات.
+        رصيد الكونتاكت (كزبون) = الفواتير - المدفوعات.
         """
         return self.total_invoiced - self.total_paid
 
 
-class CustomerAddress(models.Model):
+class ContactAddress(models.Model):
     """
-    عناوين متعددة لكل زبون.
-
-    يمكن استخدام نوع العنوان + حقل (is_primary)
-    لاختيار عنوان الفوترة أو الشحن في الفواتير والطلبات.
+    عناوين متعددة لكل كونتاكت.
+    ممكن تستخدم:
+      - عنوان فوترة
+      - عنوان شحن
+      - عنوان مقر رئيسي
+      - ...الخ
     """
 
     class AddressType(models.TextChoices):
-        BILLING = "billing", _("عنوان الفوترة")
-        SHIPPING = "shipping", _("عنوان الشحن")
+        BILLING = "billing", _("عنوان فوترة")
+        SHIPPING = "shipping", _("عنوان شحن")
+        OFFICE = "office", _("مكتب / مقر")
         OTHER = "other", _("عنوان آخر")
 
-    customer = models.ForeignKey(
-        Customer,
+    contact = models.ForeignKey(
+        Contact,
         on_delete=models.CASCADE,
         related_name="addresses",
-        verbose_name=_("الزبون"),
+        verbose_name=_("الكونتاكت"),
     )
 
-    # مثال: "المكتب الرئيسي"، "المخزن"، "الموقع 1"
+    # سيكون مترجم عبر modeltranslation
     label = models.CharField(
-        _("وصف العنوان"),
         max_length=100,
-        help_text=_("اسم قصير للتمييز بين العناوين: المكتب الرئيسي، المخزن، الموقع 1..."),
+        verbose_name=_("وصف العنوان"),
+        help_text=_("مثال: المكتب الرئيسي، المخزن، موقع المشروع 1..."),
     )
 
-    type = models.CharField(
-        _("نوع العنوان"),
+    address_type = models.CharField(
         max_length=20,
         choices=AddressType.choices,
-        default=AddressType.BILLING,
+        default=AddressType.OTHER,
+        verbose_name=_("نوع العنوان"),
     )
 
-    # تفاصيل العنوان (ستُترجم عبر modeltranslation)
+    # سيكون مترجم (أو على الأقل address)
     address = models.TextField(
-        _("العنوان التفصيلي"),
         blank=True,
+        verbose_name=_("العنوان التفصيلي"),
     )
 
     country = models.CharField(
-        _("الدولة"),
         max_length=255,
         blank=True,
+        verbose_name=_("الدولة"),
     )
     governorate = models.CharField(
-        _("المحافظة"),
         max_length=255,
         blank=True,
+        verbose_name=_("المحافظة"),
     )
     wilaya = models.CharField(
-        _("الولاية"),
         max_length=255,
         blank=True,
+        verbose_name=_("الولاية"),
     )
     village = models.CharField(
-        _("القرية / الحي"),
         max_length=255,
         blank=True,
+        verbose_name=_("القرية / المنطقة"),
     )
     postal_code = models.CharField(
-        _("الرمز البريدي"),
         max_length=20,
         blank=True,
+        verbose_name=_("الرمز البريدي"),
     )
     po_box = models.CharField(
-        _("صندوق البريد"),
         max_length=20,
         blank=True,
+        verbose_name=_("صندوق البريد"),
     )
 
     is_primary = models.BooleanField(
-        _("عنوان أساسي"),
         default=False,
-        help_text=_("إذا كان مفعّلًا، يُعتبر العنوان الأساسي لهذا النوع (فوترة / شحن)."),
+        verbose_name=_("العنوان الرئيسي لهذا النوع"),
     )
 
     is_active = models.BooleanField(
-        _("نشط"),
         default=True,
+        verbose_name=_("نشط"),
     )
 
     created_at = models.DateTimeField(
-        _("تاريخ الإضافة"),
         auto_now_add=True,
+        verbose_name=_("تاريخ الإنشاء"),
     )
 
     class Meta:
-        ordering = ("customer", "type", "-is_primary", "id")
-        verbose_name = _("عنوان زبون")
-        verbose_name_plural = _("عناوين الزبائن")
+        ordering = ("contact", "address_type", "-is_primary", "id")
+        verbose_name = _("عنوان جهة اتصال")
+        verbose_name_plural = _("عناوين جهات الاتصال")
 
     def __str__(self) -> str:
-        return f"{self.customer} – {self.label}"
+        return f"{self.contact} – {self.label}"

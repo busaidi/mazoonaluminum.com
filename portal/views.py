@@ -22,7 +22,7 @@ from django.utils.translation import gettext_lazy as _
 from accounting.forms import CustomerProfileForm, CustomerOrderForm
 from accounting.models import  Invoice, Payment, Order, OrderItem
 from cart.cart import Cart
-from contacts.models import Customer
+from contacts.models import Contact
 from core.services.notifications import create_notification
 from website.models import Product
 
@@ -31,7 +31,7 @@ from website.models import Product
 # Helpers
 # ------------------------------------------------------------------------------
 
-def get_portal_customer_or_403(user) -> Customer:
+def get_portal_customer_or_403(user) -> Contact:
     """
     Central helper to fetch the Customer linked to the given user.
 
@@ -46,8 +46,8 @@ def get_portal_customer_or_403(user) -> Customer:
         raise PermissionDenied(_("يجب تسجيل الدخول للوصول إلى بوابة الزبون."))
 
     try:
-        return Customer.objects.select_related("user").get(user=user)
-    except Customer.DoesNotExist:
+        return Contact.objects.select_related("user").get(user=user)
+    except Contact.DoesNotExist:
         # Logged-in user but no customer profile linked → forbidden.
         raise PermissionDenied(_("لا يوجد حساب زبون مرتبط بهذا المستخدم."))
 
@@ -67,7 +67,7 @@ class CustomerPortalMixin:
     - If no related Customer → raise PermissionDenied (403).
     """
 
-    customer: Customer | None = None
+    customer: Contact | None = None
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -169,7 +169,7 @@ class PortalProfileUpdateView(CustomerPortalMixin, UpdateView):
     """
     Allow the current portal customer to update their profile information.
     """
-    model = Customer
+    model = Contact
     form_class = CustomerProfileForm
     template_name = "portal/profile/form.html"
     context_object_name = "customer"

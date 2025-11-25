@@ -1,10 +1,19 @@
 # contacts/translation.py
-from modeltranslation.translator import TranslationOptions, register
-from .models import Customer, CustomerAddress
+from modeltranslation.translator import register, TranslationOptions
+
+from .models import Contact, ContactAddress
 
 
-@register(Customer)
-class CustomerTranslationOptions(TranslationOptions):
+@register(Contact)
+class ContactTranslationOptions(TranslationOptions):
+    """
+    الحقول المترجمة في Contact:
+    - الاسم
+    - اسم الشركة
+    - العنوان الحر
+    - تفاصيل الموقع (دولة، محافظة، ولاية، قرية)
+    - الرمز البريدي وصندوق البريد
+    """
     fields = (
         "name",
         "company_name",
@@ -18,9 +27,17 @@ class CustomerTranslationOptions(TranslationOptions):
     )
 
 
-@register(CustomerAddress)
-class CustomerAddressTranslationOptions(TranslationOptions):
+@register(ContactAddress)
+class ContactAddressTranslationOptions(TranslationOptions):
+    """
+    الحقول المترجمة في ContactAddress:
+    - وصف العنوان (label)
+    - العنوان التفصيلي
+    - تفاصيل الموقع (دولة، محافظة، ولاية، قرية)
+    - الرمز البريدي وصندوق البريد
+    """
     fields = (
+        "label",
         "address",
         "country",
         "governorate",

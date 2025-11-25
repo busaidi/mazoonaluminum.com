@@ -8,7 +8,7 @@ from modeltranslation.forms import TranslationModelForm
 
 from website.models import Product
 from .models import Invoice, Payment, InvoiceItem, Order, OrderItem, Settings
-from contacts.models import Customer
+from contacts.models import Contact
 
 
 # ============================================================
@@ -161,53 +161,6 @@ class PaymentForm(forms.ModelForm):
             raise forms.ValidationError(_("Amount must be greater than zero."))
         return amount
 
-# ============================================================
-# Customer forms
-# ============================================================
-
-class CustomerForm(forms.ModelForm):
-    class Meta:
-        model = Customer
-        fields = [
-            # ==== الحقول المترجمة ====
-            "name_ar",
-            "name_en",
-            "company_name_ar",
-            "company_name_en",
-            "address_ar",
-            "address_en",
-            "country_ar",
-            "country_en",
-            "governorate_ar",
-            "governorate_en",
-            "wilaya_ar",
-            "wilaya_en",
-            "village_ar",
-            "village_en",
-            "postal_code_ar",
-            "postal_code_en",
-            "po_box_ar",
-            "po_box_en",
-
-            # ==== الحقول غير المترجمة ====
-            "phone",
-            "email",
-            "tax_number",
-        ]
-        widgets = {
-            "address_ar": forms.Textarea(attrs={"rows": 3}),
-            "address_en": forms.Textarea(attrs={"rows": 3}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Add Bootstrap on all fields
-        for name, field in self.fields.items():
-            css = field.widget.attrs.get("class", "")
-            field.widget.attrs["class"] = (css + " form-control").strip()
-
-
 
 class CustomerProfileForm(forms.ModelForm):
     """
@@ -215,7 +168,7 @@ class CustomerProfileForm(forms.ModelForm):
     """
 
     class Meta:
-        model = Customer
+        model = Contact
         fields = [
             "name",
             "company_name",
@@ -268,7 +221,7 @@ class StaffOrderForm(forms.Form):
     Quick staff form: choose customer + product + quantity.
     """
     customer = forms.ModelChoiceField(
-        queryset=Customer.objects.all(),
+        queryset=Contact.objects.all(),
         label=_("الزبون"),
     )
     product = forms.ModelChoiceField(

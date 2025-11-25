@@ -40,7 +40,7 @@ class Invoice(NumberedModel, StatefulDomainModel):
         CANCELLED = "cancelled", "Cancelled"
 
     customer = models.ForeignKey(
-        "contacts.Customer",
+        "contacts.Contact",
         on_delete=models.PROTECT,
         related_name="invoices",
     )
@@ -229,7 +229,7 @@ class Payment(NumberedModel):
         OTHER = "other", "Other"
 
     customer = models.ForeignKey(
-        "contacts.Customer",
+        "contacts.Contact",
         on_delete=models.PROTECT,
         related_name="payments",
     )
@@ -339,7 +339,7 @@ class Order(NumberedModel, DomainEventsMixin):
     ]
 
     customer = models.ForeignKey(
-        "contacts.Customer",
+        "contacts.Contact",
         on_delete=models.PROTECT,
         related_name="orders",
         verbose_name="الزبون",

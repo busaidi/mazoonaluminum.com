@@ -27,6 +27,7 @@ from django.views.generic import (
     DeleteView,
 )
 
+from contacts.forms import ContactForm, ContactAddressFormSet
 from core.models import AuditLog
 from core.services.audit import log_event
 from core.services.notifications import create_notification
@@ -35,7 +36,6 @@ from inventory.models import Product
 from .forms import (
     InvoiceForm,
     PaymentForInvoiceForm,
-    CustomerForm,
     InvoiceItemFormSet,
     ApplyPaymentForm,
     OrderItemFormSet,
@@ -45,7 +45,6 @@ from .forms import (
 )
 from .mixins import ProductJsonMixin
 from .models import Invoice, Payment, Order, InvoiceItem, Settings
-from contacts.models import Customer
 from .services import convert_order_to_invoice, allocate_general_payment
 
 # ============================================================
@@ -407,215 +406,6 @@ class AccountingDashboardView(AccountingSectionMixin, TemplateView):
 # ============================================================
 # Customers
 # ============================================================
-
-@method_decorator(accounting_staff_required, name="dispatch")
-class CustomerListView(AccountingSectionMixin, ListView):
-    """
-    Staff list of customers, with simple search by name/company/phone/email
-    in both Arabic and English.
-    """
-    section = "customers"
-    model = Customer
-    template_name = "accounting/customer/list.html"
-    context_object_name = "customers"
-    paginate_by = 20
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        q = self.request.GET.get("q", "").strip()
-
-        if q:
-            qs = qs.filter(
-                Q(name__icontains=q)
-                | Q(name_ar__icontains=q)
-                | Q(name_en__icontains=q)
-                | Q(company_name__icontains=q)
-                | Q(company_name_ar__icontains=q)
-                | Q(company_name_en__icontains=q)
-                | Q(phone__icontains=q)
-                | Q(email__icontains=q)
-            )
-
-        return qs
-
-class CustomerAutocompleteView(View):
-    def get(self, request, *args, **kwargs):
-        q = request.GET.get("q", "").strip()
-        results = []
-
-        if q:
-            qs = (
-                Customer.objects.filter(
-                    Q(name__icontains=q)
-                    | Q(name_ar__icontains=q)
-                    | Q(name_en__icontains=q)
-                    | Q(company_name__icontains=q)
-                    | Q(company_name_ar__icontains=q)
-                    | Q(company_name_en__icontains=q)
-                    | Q(phone__icontains=q)
-                    | Q(email__icontains=q)
-                )
-                .order_by("name")[:15]
-            )
-
-            for c in qs:
-                results.append(
-                    {
-                        "id": c.pk,
-                        "name": c.name,  # حسب لغة الواجهة
-                        "company_name": c.company_name or "",
-                        "phone": c.phone or "",
-                        "email": c.email or "",
-                    }
-                )
-
-        return JsonResponse({"results": results})
-
-@method_decorator(accounting_staff_required, name="dispatch")
-class CustomerCreateView(AccountingSectionMixin, CreateView):
-    """
-    Create a new customer.
-    """
-    section = "customer"
-    model = Customer
-    form_class = CustomerForm
-    template_name = "accounting/customer/form.html"
-
-    def get_success_url(self):
-        return reverse("accounting:customer_list")
-
-
-@method_decorator(accounting_staff_required, name="dispatch")
-class CustomerUpdateView(AccountingSectionMixin, UpdateView):
-    """
-    Update an existing customer.
-    """
-    section = "customer"
-    model = Customer
-    form_class = CustomerForm
-    template_name = "accounting/customer/form.html"
-
-    def get_success_url(self):
-        return reverse("accounting:customer_list")
-
-
-@method_decorator(accounting_staff_required, name="dispatch")
-class CustomerDeleteView(AccountingSectionMixin, DeleteView):
-    """
-    Delete a customer if no protected relations exist.
-    If ProtectedError is raised, show a friendly message instead of 500.
-    """
-    section = "customer"
-    model = Customer
-    template_name = "accounting/customer/delete.html"
-    success_url = reverse_lazy("accounting:customer_list")
-
-    def post(self, request, *args, **kwargs):
-        """
-        Custom delete to catch ProtectedError and display a message instead.
-        """
-        self.object = self.get_object()
-        try:
-            self.object.delete()
-        except ProtectedError:
-            messages.error(
-                request,
-                "لا يمكن حذف هذا الزبون لأنه مرتبط بفواتير أو دفعات أو طلبات قائمة. "
-                "يمكنك تعديل بياناته أو إبقاءه كما هو للسجلات المحاسبية."
-            )
-            return redirect("accounting:customer_detail", pk=self.object.pk)
-        else:
-            messages.success(request, "تم حذف الزبون بنجاح.")
-            return redirect(self.success_url)
-
-
-@method_decorator(accounting_staff_required, name="dispatch")
-class CustomerDetailView(AttachmentPanelMixin, AccountingSectionMixin, DetailView):
-    """
-    Customer full profile:
-    - Invoices
-    - Orders
-    - Payments
-    - Balance summary
-    """
-    section = "customers"  # عشان التاب في الناف بار يشتغل صح
-    model = Customer
-    template_name = "accounting/customer/detail.html"
-    context_object_name = "customer"
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-
-        # إضافة لوحة المرفقات للزبون الحالي
-        ctx = self.inject_attachment_panel_context(ctx)
-
-        customer = self.object
-
-        # Invoices
-        invoices = (
-            customer.invoices.all()
-            .order_by("-issued_at", "-id")
-        )
-
-        # Payments
-        payments = (
-            customer.payments.all()
-            .select_related("invoice")
-            .order_by("-date", "-id")
-        )
-
-        # Orders
-        orders = (
-            customer.orders.all()
-            .prefetch_related("items__product")
-            .order_by("-created_at", "id")
-        )
-
-        # Summary
-        total_invoices = invoices.aggregate(s=Sum("total_amount"))["s"] or Decimal("0")
-        total_paid = payments.aggregate(s=Sum("amount"))["s"] or Decimal("0")
-
-        ctx["invoices"] = invoices
-        ctx["payments"] = payments
-        ctx["orders"] = orders
-        ctx["total_invoices"] = total_invoices
-        ctx["total_paid"] = total_paid
-        ctx["balance"] = total_invoices - total_paid
-
-        return ctx
-
-
-@method_decorator(accounting_staff_required, name="dispatch")
-class CustomerPaymentCreateView(AccountingSectionMixin, TodayInitialDateMixin, FormView):
-    """
-    Create a general payment for a customer (not bound to a specific invoice).
-    URL: /accounting/customer/<pk>/payments/new/
-    """
-    section = "payments"
-    template_name = "accounting/customer/payment.html"
-    form_class = PaymentForInvoiceForm
-
-    def dispatch(self, request, *args, **kwargs):
-        self.customer = get_object_or_404(Customer, pk=kwargs.get("pk"))
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx["customer"] = self.customer
-        return ctx
-
-    # get_initial from TodayInitialDateMixin
-
-    def form_valid(self, form):
-        payment = form.save(commit=False)
-        payment.customer = self.customer
-        payment.invoice = None  # General payment, not tied to invoice
-        payment.save()
-        return super().form_valid(form)
-
-    def get_success_url(self):
-        return reverse("accounting:customer_detail", kwargs={"pk": self.customer.pk})
-
 
 # =====================================================================
 # General payment allocation

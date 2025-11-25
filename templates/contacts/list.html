@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "جهات الاتصال" %} – Mazoon Aluminum{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 fw-bold mb-1">
+      {% trans "جهات الاتصال" %}
+    </h1>
+    <p class="text-muted small mb-0">
+      {% trans "إدارة الزبائن، الموردين، الملاك والموظفين في سجل موحد." %}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'contacts:contact_create' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg"></i>
+      {% trans "إضافة جهة اتصال" %}
+    </a>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label for="id_q" class="form-label small mb-1">
+          {% trans "بحث" %}
+        </label>
+        <input type="text"
+               name="q"
+               id="id_q"
+               value="{{ q }}"
+               class="form-control form-control-sm"
+               placeholder="{% trans 'بحث بالاسم، الشركة، الهاتف أو البريد...' %}">
+      </div>
+
+      <div class="col-md-2">
+        <label for="id_role" class="form-label small mb-1">
+          {% trans "الدور" %}
+        </label>
+        <select name="role" id="id_role" class="form-select form-select-sm">
+          <option value="">{% trans "الكل" %}</option>
+          <option value="customer" {% if role == 'customer' %}selected{% endif %}>
+            {% trans "زبائن" %}
+          </option>
+          <option value="supplier" {% if role == 'supplier' %}selected{% endif %}>
+            {% trans "موردون / شركاء" %}
+          </option>
+          <option value="owner" {% if role == 'owner' %}selected{% endif %}>
+            {% trans "ملاك" %}
+          </option>
+          <option value="employee" {% if role == 'employee' %}selected{% endif %}>
+            {% trans "موظفون" %}
+          </option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label for="id_kind" class="form-label small mb-1">
+          {% trans "نوع جهة الاتصال" %}
+        </label>
+        <select name="kind" id="id_kind" class="form-select form-select-sm">
+          <option value="">{% trans "الكل" %}</option>
+          <option value="person" {% if kind == 'person' %}selected{% endif %}>
+            {% trans "أفراد" %}
+          </option>
+          <option value="company" {% if kind == 'company' %}selected{% endif %}>
+            {% trans "شركات" %}
+          </option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label for="id_status" class="form-label small mb-1">
+          {% trans "الحالة" %}
+        </label>
+        <select name="status" id="id_status" class="form-select form-select-sm">
+          <option value="active" {% if status == 'active' %}selected{% endif %}>
+            {% trans "نشط فقط" %}
+          </option>
+          <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>
+            {% trans "غير نشط فقط" %}
+          </option>
+          <option value="all" {% if status == 'all' %}selected{% endif %}>
+            {% trans "الكل" %}
+          </option>
+        </select>
+      </div>
+
+      <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-outline-primary btn-sm w-100">
+          <i class="bi bi-search"></i>
+          {% trans "تصفية" %}
+        </button>
+        <a href="{% url 'contacts:contact_list' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-x-lg"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead>
+          <tr>
+            <th class="small text-muted">{% trans "الاسم" %}</th>
+            <th class="small text-muted">{% trans "الشركة" %}</th>
+            <th class="small text-muted">{% trans "الدور" %}</th>
+            <th class="small text-muted">{% trans "نوع الجهة" %}</th>
+            <th class="small text-muted">{% trans "الهاتف / البريد" %}</th>
+            <th class="small text-muted text-center">{% trans "الحالة" %}</th>
+            <th class="small text-muted text-end">{% trans "إجراءات" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% if contacts %}
+          {% for contact in contacts %}
+            <tr>
+              <td>
+                <a href="{% url 'contacts:contact_detail' contact.pk %}" class="fw-semibold text-mazoon">
+                  {{ contact.name }}
+                </a>
+              </td>
+              <td class="small">
+                {% if contact.company_name %}
+                  {{ contact.company_name }}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td class="small">
+                <div class="d-flex flex-wrap gap-1">
+                  {% if contact.is_customer %}
+                    <span class="badge bg-dark-subtle text-dark-emphasis small">{% trans "زبون" %}</span>
+                  {% endif %}
+                  {% if contact.is_supplier %}
+                    <span class="badge bg-warning-subtle text-warning-emphasis small">{% trans "مورد / شريك" %}</span>
+                  {% endif %}
+                  {% if contact.is_owner %}
+                    <span class="badge bg-info-subtle text-info-emphasis small">{% trans "مالك" %}</span>
+                  {% endif %}
+                  {% if contact.is_employee %}
+                    <span class="badge bg-success-subtle text-success-emphasis small">{% trans "موظف" %}</span>
+                  {% endif %}
+                  {% if not contact.is_customer and not contact.is_supplier and not contact.is_owner and not contact.is_employee %}
+                    <span class="text-muted small">—</span>
+                  {% endif %}
+                </div>
+              </td>
+              <td class="small">
+                {% if contact.kind %}
+                  {{ contact.get_kind_display }}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td class="small">
+                {% if contact.phone %}
+                  <div>{{ contact.phone }}</div>
+                {% endif %}
+                {% if contact.email %}
+                  <div class="text-muted">{{ contact.email }}</div>
+                {% endif %}
+                {% if not contact.phone and not contact.email %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td class="small text-center">
+                {% if contact.is_active %}
+                  <span class="badge bg-success-subtle text-success-emphasis small">
+                    {% trans "نشط" %}
+                  </span>
+                {% else %}
+                  <span class="badge bg-secondary-subtle text-secondary-emphasis small">
+                    {% trans "غير نشط" %}
+                  </span>
+                {% endif %}
+              </td>
+              <td class="small text-end">
+                <div class="btn-group btn-group-sm" role="group">
+                  <a href="{% url 'contacts:contact_detail' contact.pk %}"
+                     class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  <a href="{% url 'contacts:contact_edit' contact.pk %}"
+                     class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" class="text-center text-muted small py-4">
+              {% trans "لا توجد جهات اتصال مطابقة حالياً." %}
+            </td>
+          </tr>
+        {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if is_paginated %}
+    <div class="card-footer bg-white border-top-0">
+      <nav aria-label="{% trans 'ترقيم الصفحات' %}">
+        <ul class="pagination pagination-sm mb-0 justify-content-center">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link"
+                 href="?page={{ page_obj.previous_page_number }}&q={{ q }}&role={{ role }}&kind={{ kind }}&status={{ status }}">
+                {% trans "السابق" %}
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">{% trans "السابق" %}</span>
+            </li>
+          {% endif %}
+
+          <li class="page-item disabled">
+            <span class="page-link">
+              {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+            </span>
+          </li>
+
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link"
+                 href="?page={{ page_obj.next_page_number }}&q={{ q }}&role={{ role }}&kind={{ kind }}&status={{ status }}">
+                {% trans "التالي" %}
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">{% trans "التالي" %}</span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

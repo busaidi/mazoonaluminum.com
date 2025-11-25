@@ -275,6 +275,102 @@
           </div>
         </div>
 
+              <hr class="my-4">
+
+        {# ======================= عناوين إضافية للزبون ======================= #}
+        <h5 class="text-mazoon mb-3">{% trans "عناوين إضافية للزبون" %}</h5>
+
+        {# أخطاء عامة للفورمست #}
+        {% if address_formset.non_form_errors %}
+          <div class="alert alert-danger">
+            {% for error in address_formset.non_form_errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {{ address_formset.management_form }}
+
+        <div class="table-responsive mb-3">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>{% trans "الوصف (عربي)" %}</th>
+                <th>{% trans "الوصف (إنجليزي)" %}</th>
+                <th style="width: 140px;">{% trans "النوع" %}</th>
+                <th>{% trans "العنوان (عربي)" %}</th>
+                <th>{% trans "العنوان (إنجليزي)" %}</th>
+                <th class="text-center">{% trans "رئيسي" %}</th>
+                <th class="text-center">{% trans "نشط" %}</th>
+                <th class="text-center">{% trans "حذف" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for af in address_formset %}
+                <tr>
+                  {# حقل id مخفي لو كان العنوان قديم #}
+                  {{ af.id }}
+
+                  <td>
+                    {{ af.label_ar }}
+                    {% for error in af.label_ar.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+
+                  <td>
+                    {{ af.label_en }}
+                    {% for error in af.label_en.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+
+                  <td>
+                    {{ af.type }}
+                    {% for error in af.type.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+
+                  <td style="min-width: 180px;">
+                    {{ af.address_ar }}
+                    {% for error in af.address_ar.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+
+                  <td style="min-width: 180px;">
+                    {{ af.address_en }}
+                    {% for error in af.address_en.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+
+                  <td class="text-center">
+                    {{ af.is_primary }}
+                    {% for error in af.is_primary.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+
+                  <td class="text-center">
+                    {{ af.is_active }}
+                    {% for error in af.is_active.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+
+                  <td class="text-center">
+                    {% if af.DELETE %}
+                      {{ af.DELETE }} {% trans "حذف" %}
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
         <div class="d-flex gap-2 mt-4">
           <button type="submit" class="btn btn-primary">
             {% trans "حفظ" %}
