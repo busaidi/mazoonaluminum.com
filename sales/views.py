@@ -66,7 +66,10 @@ class BaseSalesDocumentMixin(SalesStaffRequiredMixin):
     # ---------- kind helpers ----------
 
     def get_document_kind(self) -> str:
-        if not self.document_kind:
+        """
+        Return current document kind; raise if not set.
+        """
+        if self.document_kind is None:
             raise ValueError("document_kind must be set on view subclass.")
         return self.document_kind
 
@@ -103,6 +106,7 @@ class BaseSalesDocumentMixin(SalesStaffRequiredMixin):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+
         ctx["section"] = self.section
 
         # subsection & page title per kind
@@ -202,14 +206,8 @@ class BaseSalesDocumentCreateView(BaseSalesDocumentMixin, CreateView):
             line_formset.instance = doc
             line_formset.save()
 
-            # simple totals recompute from lines
-            total_before_tax = doc.lines.aggregate(
-                s=Sum("line_total")
-            )["s"] or Decimal("0.000")
-            doc.total_before_tax = total_before_tax
-            doc.total_tax = Decimal("0.000")  # tax later
-            doc.total_amount = total_before_tax
-            doc.save()
+            # إعادة حساب الإجماليات باستخدام منطق الموديل
+            doc.recompute_totals()
 
         messages.success(self.request, _("تم حفظ مستند المبيعات بنجاح."))
         self.object = doc
@@ -271,13 +269,8 @@ class QuotationUpdateView(BaseSalesDocumentMixin, UpdateView):
             line_formset.instance = doc
             line_formset.save()
 
-            total_before_tax = doc.lines.aggregate(
-                s=Sum("line_total")
-            )["s"] or Decimal("0.000")
-            doc.total_before_tax = total_before_tax
-            doc.total_tax = Decimal("0.000")
-            doc.total_amount = total_before_tax
-            doc.save()
+            # إعادة حساب الإجماليات باستخدام منطق الموديل
+            doc.recompute_totals()
 
         messages.success(self.request, _("تم تحديث عرض السعر بنجاح."))
         self.object = doc
@@ -290,15 +283,10 @@ class QuotationUpdateView(BaseSalesDocumentMixin, UpdateView):
 
 class BaseSalesDocumentDetailView(BaseSalesDocumentMixin, DetailView):
     """
-    Simple detail view to show document header + lines.
+    Detail view مع نفس الـ context (section, subsection, page_title).
     """
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        doc: SalesDocument = self.object
-
-        ctx["lines"] = doc.lines.select_related("product").all()
-        return ctx
+    # يستخدم نفس الـ template_name من subclass
+    pass
 
 
 class QuotationDetailView(BaseSalesDocumentDetailView):
@@ -356,7 +344,7 @@ class OrderToDeliveryView(SalesStaffRequiredMixin, View):
 
         messages.success(
             request,
-            _("تم إنشاء مذكرة تسليم من طلب البيع (المعرف: %(pk)s).")
+            _("تم تحويل طلب البيع إلى مذكرة تسليم (المعرف: %(pk)s).")
             % {"pk": delivery.pk},
         )
         return redirect("sales:delivery_detail", pk=delivery.pk)
@@ -364,7 +352,7 @@ class OrderToDeliveryView(SalesStaffRequiredMixin, View):
 
 class BaseSalesToInvoiceView(SalesStaffRequiredMixin, View):
     """
-    تحويل طلب بيع أو مذكرة تسليم إلى فاتورة في نظام المحاسبة.
+    Base view لتحويل (طلب / مذكرة) إلى فاتورة.
     """
     allowed_kind: str | None = None
 
@@ -398,10 +386,19 @@ class BaseSalesToInvoiceView(SalesStaffRequiredMixin, View):
         serial = getattr(invoice, "serial", None) or invoice.pk
         messages.success(
             request,
-            _("تم إنشاء فاتورة من هذا المستند (المعرف: %(pk)s).")
-            % {"pk": serial},
+            _("تم إنشاء الفاتورة (رقم: %(serial)s) لهذا المستند.")
+            % {"serial": serial},
         )
-        return redirect("accounting:invoice_detail", serial=serial)
+
+        # نحاول توجيه المستخدم لصفحة الفاتورة لو فيه get_absolute_url
+        if hasattr(invoice, "get_absolute_url"):
+            return redirect(invoice.get_absolute_url())
+
+        # fallback: نرجع لتفاصيل المستند
+        if self.allowed_kind == SalesDocument.Kind.ORDER:
+            return redirect("sales:order_detail", pk=doc.pk)
+        else:
+            return redirect("sales:delivery_detail", pk=doc.pk)
 
 
 class OrderToInvoiceView(BaseSalesToInvoiceView):

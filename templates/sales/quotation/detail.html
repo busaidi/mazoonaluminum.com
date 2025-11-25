@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "عرض سعر" %} #{{ document.pk }}{% endblock %}
+{% block title %}{% trans "عرض سعر" %} {{ document.number|default:document.pk }}{% endblock %}
 
 {% block content %}
 
@@ -16,22 +16,12 @@
         {% trans "عرض سعر" %}
       </span>
       <span class="badge bg-light border small">
-        {% if document.status == "draft" %}
-          {% trans "مسودة" %}
-        {% elif document.status == "confirmed" %}
-          {% trans "مؤكد" %}
-        {% elif document.status == "delivered" %}
-          {% trans "تم التسليم" %}
-        {% elif document.status == "invoiced" %}
-          {% trans "مفوتر" %}
-        {% else %}
-          {{ document.get_status_display|default:_("غير محدد") }}
-        {% endif %}
+        {{ document.status_label|default:_("غير محدد") }}
       </span>
     </div>
 
     <h1 class="h4 fw-bold mb-1">
-      {% trans "عرض سعر" %} #{{ document.pk }}
+      {% trans "عرض سعر" %} {{ document.number|default:document.pk }}
     </h1>
 
     <p class="text-muted small mb-0">
@@ -45,7 +35,7 @@
 
   <div class="d-flex flex-wrap gap-2 mt-2 mt-md-0">
     <a href="{% url 'sales:quotation_list' %}"
-       class="btn btn-outline-secondary btn-sm">
+       class="btn btn-outline-secondary.btn-sm">
       <i class="bi bi-arrow-right"></i>
       {% trans "رجوع للقائمة" %}
     </a>
@@ -57,16 +47,18 @@
       {% trans "تعديل" %}
     </a>
 
-    {# تحويل إلى طلب بيع #}
-    <form method="post"
-          action="{% url 'sales:quotation_convert_to_order' document.pk %}"
-          class="d-inline">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-success btn-sm">
-        <i class="bi bi-arrow-left-right"></i>
-        {% trans "تحويل إلى طلب بيع" %}
-      </button>
-    </form>
+    {# تحويل إلى طلب بيع (فقط لو ممكن التحويل) #}
+    {% if document.can_be_converted_to_order %}
+      <form method="post"
+            action="{% url 'sales:quotation_convert_to_order' document.pk %}"
+            class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success btn-sm">
+          <i class="bi bi-arrow-left-right"></i>
+          {% trans "تحويل إلى طلب بيع" %}
+        </button>
+      </form>
+    {% endif %}
   </div>
 </div>
 
@@ -81,7 +73,9 @@
         <div class="row g-3 small">
           <div class="col-md-6">
             <div class="text-muted mb-1">{% trans "رقم المستند" %}</div>
-            <div class="fw-semibold">#{{ document.pk }}</div>
+            <div class="fw-semibold">
+              {{ document.number|default:document.pk }}
+            </div>
           </div>
 
           <div class="col-md-6">
@@ -103,7 +97,7 @@
           </div>
 
           <div class="col-md-6">
-            <div class="text-muted.mb-1">{% trans "العملة" %}</div>
+            <div class="text-muted mb-1">{% trans "العملة" %}</div>
             <div class="fw-semibold">
               {{ document.currency|default:"OMR" }}
             </div>
@@ -115,9 +109,9 @@
         <div class="row g-3 small">
           <div class="col-12">
             <div class="text-muted mb-1">{% trans "ملاحظات للعميل" %}</div>
-            {% if document.customer_note %}
+            {% if document.customer_notes %}
               <div class="small">
-                {{ document.customer_note|linebreaksbr }}
+                {{ document.customer_notes|linebreaksbr }}
               </div>
             {% else %}
               <div class="text-muted small">—</div>
@@ -181,13 +175,13 @@
       </div>
     </div>
 
-    <!-- ========== ملاحظات داخلية (أسفل اليسار) ========== -->
+    <!-- ========== ملاحظات داخلية ========== -->
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-body">
         <h2 class="h6 fw-semibold mb-3">{% trans "ملاحظات داخلية" %}</h2>
-        {% if document.internal_note %}
+        {% if document.notes %}
           <div class="small">
-            {{ document.internal_note|linebreaksbr }}
+            {{ document.notes|linebreaksbr }}
           </div>
         {% else %}
           <p class="text-muted small mb-0">
@@ -207,7 +201,7 @@
     <!-- ========== تفاصيل العميل ========== -->
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-body">
-        <h2 class="h6 fw-semibold mb-3">{% trans "تفاصيل العميل" %}</h2>
+        <h2 class="h6 fw-semibold.mb-3">{% trans "تفاصيل العميل" %}</h2>
         {% if document.contact %}
           <div class="small mb-2">
             <span class="text-muted d-block mb-1">{% trans "الاسم" %}</span>
@@ -226,7 +220,7 @@
             </span>
           </div>
 
-          <div class="small.mb-2">
+          <div class="small mb-2">
             <span class="text-muted d-block mb-1">{% trans "البريد الإلكتروني" %}</span>
             <span class="fw-semibold">
               {{ document.contact.email|default:"—" }}
@@ -252,7 +246,7 @@
       <div class="card-body">
         <h2 class="h6 fw-semibold mb-3">{% trans "ملخص مالي" %}</h2>
 
-        <div class="d-flex.flex-column gap-2 small">
+        <div class="d-flex flex-column gap-2 small">
           <div class="d-flex justify-content-between">
             <span class="text-muted">{% trans "الإجمالي قبل الضريبة" %}</span>
             <span class="fw-semibold">

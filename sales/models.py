@@ -10,6 +10,8 @@ from inventory.models import Product
 
 
 class SalesDocumentQuerySet(models.QuerySet):
+    """QuerySet مخصص لمستندات المبيعات مع فلاتر جاهزة."""
+
     def quotations(self):
         return self.filter(kind=SalesDocument.Kind.QUOTATION)
 
@@ -19,13 +21,23 @@ class SalesDocumentQuerySet(models.QuerySet):
     def deliveries(self):
         return self.filter(kind=SalesDocument.Kind.DELIVERY_NOTE)
 
+    def for_contact(self, contact: Contact | int):
+        """فلتر بحسب جهة الاتصال (كائن أو id)."""
+        contact_id = contact.pk if isinstance(contact, Contact) else contact
+        return self.filter(contact_id=contact_id)
+
 
 class SalesDocument(NumberedModel):
-    """
-    مستند مبيعات عام:
-    - يمكن أن يكون عرض سعر QUOTATION
-    - أو طلب بيع ORDER
-    - أو مذكرة تسليم DELIVERY_NOTE
+    """مستند مبيعات عام.
+
+    يمكن أن يكون:
+    - عرض سعر QUOTATION
+    - طلب بيع ORDER
+    - مذكرة تسليم DELIVERY_NOTE
+
+    المنطق الخاص بالتحويل بين الأنواع (عرض → طلب → مذكرة → فاتورة)
+    موجود في طبقة الخدمات (sales.services) وليس هنا، للحفاظ على
+    نظافة طبقة الموديل.
     """
 
     class Kind(models.TextChoices):
@@ -41,11 +53,14 @@ class SalesDocument(NumberedModel):
         CANCELLED = "cancelled", _("ملغي")
         INVOICED = "invoiced", _("مفوتر")
 
+    # ====== تعريف الحقول الأساسية ======
+
     kind = models.CharField(
         max_length=20,
         choices=Kind.choices,
         default=Kind.QUOTATION,
         verbose_name=_("نوع المستند"),
+        db_index=True,
     )
 
     status = models.CharField(
@@ -53,7 +68,9 @@ class SalesDocument(NumberedModel):
         choices=Status.choices,
         default=Status.DRAFT,
         verbose_name=_("الحالة"),
+        db_index=True,
     )
+
     source_document = models.ForeignKey(
         "self",
         on_delete=models.SET_NULL,
@@ -71,7 +88,11 @@ class SalesDocument(NumberedModel):
         verbose_name=_("العميل / جهة الاتصال"),
     )
 
-    date = models.DateField(default=timezone.localdate, verbose_name=_("التاريخ"))
+    date = models.DateField(
+        default=timezone.localdate,
+        verbose_name=_("التاريخ"),
+        db_index=True,
+    )
     due_date = models.DateField(
         null=True,
         blank=True,
@@ -79,7 +100,8 @@ class SalesDocument(NumberedModel):
         help_text=_("اختياري: تاريخ صلاحية عرض السعر أو تاريخ الاستحقاق."),
     )
 
-    # الحقول المالية الأساسية (ممكن تحسب تلقائياً من الأسطر)
+    # ====== الحقول المالية الأساسية ======
+    # يمكن حسابها تلقائياً من الأسطر عبر recompute_totals()
     total_before_tax = models.DecimalField(
         max_digits=14,
         decimal_places=3,
@@ -105,14 +127,23 @@ class SalesDocument(NumberedModel):
         verbose_name=_("العملة"),
     )
 
-    notes = models.TextField(blank=True, verbose_name=_("ملاحظات داخلية"))
+    notes = models.TextField(
+        blank=True,
+        verbose_name=_("ملاحظات داخلية"),
+    )
     customer_notes = models.TextField(
         blank=True,
         verbose_name=_("ملاحظات تظهر للعميل في المستند"),
     )
 
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("تاريخ الإنشاء"))
-    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("آخر تحديث"))
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("تاريخ الإنشاء"),
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("آخر تحديث"),
+    )
 
     objects = SalesDocumentQuerySet.as_manager()
 
@@ -121,11 +152,14 @@ class SalesDocument(NumberedModel):
         verbose_name = _("مستند مبيعات")
         verbose_name_plural = _("مستندات المبيعات")
 
-    def __str__(self) -> str:
+    # ====== تمثيل نصي ======
+
+    def __str__(self) -> str:  # pragma: no cover - تمثيل نصي بسيط
         label = self.number or f"#{self.pk}"
         return f"{self.get_kind_display()} {label} - {self.contact.name}"
 
     # ====== خصائص مساعدة للـ UI ======
+
     @property
     def is_quotation(self) -> bool:
         return self.kind == self.Kind.QUOTATION
@@ -138,16 +172,73 @@ class SalesDocument(NumberedModel):
     def is_delivery_note(self) -> bool:
         return self.kind == self.Kind.DELIVERY_NOTE
 
-    # هنا لاحقاً نضيف منطق التحويل:
-    # - من عرض سعر → طلب
-    # - من طلب → مذكرة تسليم
-    # - ومن طلب/مذكرة → فاتورة
+    @property
+    def kind_label(self) -> str:
+        """النص المعروض لنوع المستند (استخدامه في التمبلت أسهل)."""
+        return self.get_kind_display()
+
+    @property
+    def status_label(self) -> str:
+        return self.get_status_display()
+
+    # ====== منطق الأعمال الخفيف على مستوى الموديل ======
+
+    def recompute_totals(self, save: bool = True) -> None:
+        """يعيد حساب الإجماليات من بنود المبيعات المرتبطة.
+
+        هذه الدالة لا تتعامل مع الضرائب المعقدة حالياً:
+        - الإجمالي قبل الضريبة = مجموع line_total
+        - الضريبة = 0
+        - الإجمالي النهائي = الإجمالي قبل الضريبة
+        """
+        agg = self.lines.aggregate(s=models.Sum("line_total"))
+        total_before_tax = agg["s"] or Decimal("0.000")
+
+        self.total_before_tax = total_before_tax
+        self.total_tax = Decimal("0.000")
+        self.total_amount = total_before_tax
+
+        if save:
+            self.save(
+                update_fields=["total_before_tax", "total_tax", "total_amount"]
+            )
+
+    def can_be_converted_to_order(self) -> bool:
+        """هل يمكن تحويل هذا المستند إلى طلب بيع؟"""
+        return self.is_quotation and self.status != self.Status.CANCELLED
+
+    def can_be_converted_to_delivery(self) -> bool:
+        """هل يمكن تحويل هذا المستند إلى مذكرة تسليم؟"""
+        return self.is_order and self.status not in {
+            self.Status.CANCELLED,
+            self.Status.DELIVERED,
+        }
+
+    def can_be_converted_to_invoice(self) -> bool:
+        """هل يمكن تحويل هذا المستند إلى فاتورة؟ (يستخدم في الأزرار)."""
+        return (
+            self.kind in {self.Kind.ORDER, self.Kind.DELIVERY_NOTE}
+            and self.status not in {self.Status.CANCELLED, self.Status.INVOICED}
+        )
+
+    # ====== URL helper ======
+
+    def get_absolute_url(self):
+        """يعيد رابط التفاصيل المناسب حسب نوع المستند."""
+        from django.urls import reverse  # import داخلي لتجنب الدوائر
+
+        if self.is_quotation:
+            name = "sales:quotation_detail"
+        elif self.is_order:
+            name = "sales:order_detail"
+        else:
+            name = "sales:delivery_detail"
+
+        return reverse(name, kwargs={"pk": self.pk})
 
 
 class SalesLine(models.Model):
-    """
-    سطر بنود لمستند المبيعات (عرض سعر/طلب/مذكرة تسليم).
-    """
+    """بند مبيعات (سطر) مرتبط بمستند مبيعات واحد."""
 
     document = models.ForeignKey(
         SalesDocument,
@@ -206,11 +297,12 @@ class SalesLine(models.Model):
         verbose_name = _("بند مبيعات")
         verbose_name_plural = _("بنود المبيعات")
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # pragma: no cover - تمثيل نصي بسيط
         return f"{self.document} - {self.display_name}"
 
     @property
     def display_name(self) -> str:
+        """اسم مناسب للعرض في الجداول والتقارير."""
         if self.description:
             return self.description
         if self.product_id:
@@ -218,12 +310,17 @@ class SalesLine(models.Model):
         return f"Line #{self.pk}"
 
     def compute_line_total(self) -> Decimal:
-        base = (self.quantity or 0) * (self.unit_price or 0)
+        """حساب إجمالي السطر مع أخذ الخصم في الاعتبار."""
+        qty = self.quantity or Decimal("0")
+        price = self.unit_price or Decimal("0")
+        base = qty * price
+
         if self.discount_percent:
             return base * (Decimal("1.00") - self.discount_percent / Decimal("100"))
+
         return base
 
     def save(self, *args, **kwargs):
-        # نحسب إجمالي السطر تلقائياً
+        """حساب line_total تلقائياً في كل عملية حفظ."""
         self.line_total = self.compute_line_total()
         super().save(*args, **kwargs)

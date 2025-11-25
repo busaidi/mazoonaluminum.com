@@ -9,14 +9,14 @@
 <!-- HEADER -->
 <!-- ============================ -->
 <div class="mb-4">
-  <div class="d-flex justify-content-between align-items-center flex-wrap">
+  <div class="d-flex justify-content-between.align-items-center flex-wrap">
     <div>
       <div class="d-flex align-items-center gap-2 mb-2">
         <span class="badge bg-dark-subtle text-dark-emphasis small">
           {% trans "المبيعات" %}
         </span>
         <span class="badge bg-warning-subtle text-warning-emphasis small">
-          {% trans "عرض سعر" %}
+          {{ kind_label|default:_("عرض سعر") }}
         </span>
       </div>
 
@@ -27,7 +27,7 @@
     </div>
 
     <div class="mt-3 mt-md-0">
-      <a href="{% url 'sales:quotation_list' %}" class="btn btn-outline-secondary btn-sm">
+      <a href="{% url 'sales:dashboard' %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-right"></i>
         {% trans "رجوع للقائمة" %}
       </a>
@@ -61,7 +61,7 @@
       <div class="row g-4">
         {# بقية الحقول (ما عدا ملاحظات العميل والملاحظات الداخلية) #}
         {% for field in form.visible_fields %}
-          {% if field.name != "customer_note" and field.name != "internal_note" %}
+          {% if field.name != "customer_notes" and field.name != "notes" %}
             <div class="col-md-6 col-xl-4">
               <label class="form-label form-label-sm fw-semibold small mb-1" for="{{ field.id_for_label }}">
                 {{ field.label }}
@@ -87,19 +87,19 @@
       </div>
 
       {# ملاحظات العميل كاملة العرض تحت البيانات #}
-      {% if form.customer_note %}
+      {% if form.customer_notes %}
         <hr class="my-3">
         <div class="mb-1">
-          <label class="form-label form-label-sm fw-semibold small mb-1" for="{{ form.customer_note.id_for_label }}">
-            {% if form.customer_note.label %}{{ form.customer_note.label }}{% else %}{% trans "ملاحظات العميل" %}{% endif %}
+          <label class="form-label form-label-sm fw-semibold small mb-1" for="{{ form.customer_notes.id_for_label }}">
+            {{ form.customer_notes.label|default:_("ملاحظات للعميل") }}
           </label>
-          {{ form.customer_note }}
-          {% if form.customer_note.help_text %}
-            <div class="form-text small text-muted">{{ form.customer_note.help_text }}</div>
+          {{ form.customer_notes }}
+          {% if form.customer_notes.help_text %}
+            <div class="form-text small text-muted">{{ form.customer_notes.help_text }}</div>
           {% endif %}
-          {% if form.customer_note.errors %}
+          {% if form.customer_notes.errors %}
             <div class="small text-danger mt-1">
-              {% for error in form.customer_note.errors %}
+              {% for error in form.customer_notes.errors %}
                 <div>{{ error }}</div>
               {% endfor %}
             </div>
@@ -156,7 +156,7 @@
               <td>
                 {{ line.description }}
                 {% if line.description.errors %}
-                  <div class="small text-danger.mt-1">
+                  <div class="small text-danger mt-1">
                     {% for error in line.description.errors %}
                       <div>{{ error }}</div>
                     {% endfor %}
@@ -215,7 +215,7 @@
         </div>
 
         <div class="col-md-3">
-          <div class="d-flex justify-content-between align-items-center">
+          <div class="d-flex justify-content-between.align-items-center">
             <span class="text-muted">{% trans "إجمالي الخصم" %}</span>
             <span class="fw-semibold">{{ total_discount|default:"0.000" }} OMR</span>
           </div>
@@ -229,14 +229,14 @@
         </div>
 
         <div class="col-md-3">
-          <div class="d-flex justify-content-between align-items-center">
+          <div class="d-flex justify-content-between.align-items-center">
             <span class="text-muted">{% trans "الإجمالي النهائي" %}</span>
             <span class="fw-bold">{{ total_amount|default:"0.000" }} OMR</span>
           </div>
         </div>
       </div>
 
-      <p class="text-muted small mt-2 mb-0">
+      <p class="text-muted small mt-2.mb-0">
         {% trans "يتم احتساب هذه الأرقام عبر السيرفر. لاحقاً يمكن جعلها لحظية باستخدام JavaScript إذا رغبت." %}
       </p>
     </div>
@@ -245,21 +245,21 @@
   <!-- ============================ -->
   <!-- SECTION 4: INTERNAL NOTES (آخر شي) -->
   <!-- ============================ -->
-  {% if form.internal_note %}
+  {% if form.notes %}
     <div class="card border-0 shadow-sm mb-4">
       <div class="card-body">
         <h2 class="h6 fw-bold mb-3">{% trans "ملاحظات داخلية" %}</h2>
         <div class="mb-1">
-          <label class="form-label form-label-sm fw-semibold small mb-1" for="{{ form.internal_note.id_for_label }}">
-            {{ form.internal_note.label|default:_("ملاحظات داخلية (لا تظهر للعميل)") }}
+          <label class="form-label form-label-sm fw-semibold small mb-1" for="{{ form.notes.id_for_label }}">
+            {{ form.notes.label|default:_("ملاحظات داخلية (لا تظهر للعميل)") }}
           </label>
-          {{ form.internal_note }}
-          {% if form.internal_note.help_text %}
-            <div class="form-text small text-muted">{{ form.internal_note.help_text }}</div>
+          {{ form.notes }}
+          {% if form.notes.help_text %}
+            <div class="form-text small text-muted">{{ form.notes.help_text }}</div>
           {% endif %}
-          {% if form.internal_note.errors %}
+          {% if form.notes.errors %}
             <div class="small text-danger mt-1">
-              {% for error in form.internal_note.errors %}
+              {% for error in form.notes.errors %}
                 <div>{{ error }}</div>
               {% endfor %}
             </div>
