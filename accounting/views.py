@@ -1,5 +1,4 @@
 # accounting/views.py
-import json
 from decimal import Decimal
 
 from django.contrib import messages
@@ -16,7 +15,6 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.decorators import method_decorator
-from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _
 from django.views import View
 from django.views.generic import (
@@ -33,7 +31,7 @@ from core.models import AuditLog
 from core.services.audit import log_event
 from core.services.notifications import create_notification
 from core.views.attachments import  AttachmentPanelMixin
-from website.models import Product
+from inventory.models import Product
 from .forms import (
     InvoiceForm,
     PaymentForInvoiceForm,
@@ -45,6 +43,7 @@ from .forms import (
     PaymentForm,
     SettingsForm,
 )
+from .mixins import ProductJsonMixin
 from .models import Invoice, Payment, Customer, Order, InvoiceItem, Settings
 from .services import convert_order_to_invoice, allocate_general_payment
 
@@ -95,26 +94,6 @@ class TodayInitialDateMixin:
         initial.setdefault("date", timezone.now().date())
         return initial
 
-
-class ProductJsonMixin:
-    """
-    Provides products_json (id → description, price) for JS autocomplete.
-    Used in invoice and order forms.
-    """
-    def get_products_json(self):
-        products = Product.objects.filter(is_active=True)
-        data = {
-            str(p.id): {
-                "description": p.description or "",
-                "price": str(p.price),
-            }
-            for p in products
-        }
-        return mark_safe(json.dumps(data))
-
-    def inject_products_json(self, ctx):
-        ctx["products_json"] = self.get_products_json()
-        return ctx
 
 
 # ============================================================
@@ -804,15 +783,16 @@ class OrderUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        order = self.object
 
         if self.request.POST:
-            ctx["item_formset"] = OrderItemFormSet(self.request.POST, instance=order)
+            ctx["item_formset"] = OrderItemFormSet(self.request.POST)
         else:
-            ctx["item_formset"] = OrderItemFormSet(instance=order)
+            ctx["item_formset"] = OrderItemFormSet()
 
+        # Products JSON for JS
         ctx = self.inject_products_json(ctx)
         return ctx
+
 
     def form_valid(self, form):
         context = self.get_context_data()

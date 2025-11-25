@@ -140,6 +140,22 @@ class Product(TimeStampedModel):
         verbose_name=_("اسم المنتج"),
     )
 
+    default_sale_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=0,
+        verbose_name="سعر البيع الافتراضي (لكل وحدة أساس)",
+        help_text="سعر البيع الداخلي الافتراضي لكل وحدة القياس الأساسية للمنتج.",
+    )
+
+    default_cost_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=0,
+        verbose_name="سعر التكلفة التقريبي",
+        help_text="يستخدم للتقارير الداخلية وتقدير تكلفة المخزون (اختياري).",
+    )
+
     short_description = models.CharField(
         max_length=255,
         blank=True,

@@ -13,8 +13,7 @@
     <div>
       <h1 class="h5 mb-1">
         {% if object %}
-          <!-- كان id=object.id وصار serial=object.serial -->
-          {% blocktrans with serial=object.serial %}تعديل طلب #{{ serial }}{% endblocktrans %} <!-- CHANGED -->
+          {% blocktrans with serial=object.serial %}تعديل طلب #{{ serial }}{% endblocktrans %}
         {% else %}
           {% trans "طلب جديد" %}
         {% endif %}
@@ -85,6 +84,7 @@
             <thead class="table-light">
               <tr>
                 <th class="product-col small text-muted">{% trans "المنتج" %}</th>
+                <th class="small text-muted">{% trans "وحدة القياس" %}</th>
                 <th class="desc-col small text-muted">{% trans "الوصف الحر" %}</th>
                 <th class="qty-col small text-muted">{% trans "الكمية" %}</th>
                 <th class="price-col small text-muted">{% trans "سعر الوحدة" %}</th>
@@ -106,27 +106,39 @@
                       <div class="text-danger small">{{ error }}</div>
                     {% endfor %}
                   </td>
+
+                  <td style="max-width: 140px;">
+                    {{ formset_form.uom }}
+                    {% for error in formset_form.uom.errors %}
+                      <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                  </td>
+
                   <td>
                     {{ formset_form.description }}
                     {% for error in formset_form.description.errors %}
                       <div class="text-danger small">{{ error }}</div>
                     {% endfor %}
                   </td>
+
                   <td class="qty-col" style="max-width: 110px;">
                     {{ formset_form.quantity }}
                     {% for error in formset_form.quantity.errors %}
                       <div class="text-danger small">{{ error }}</div>
                     {% endfor %}
                   </td>
+
                   <td class="price-col" style="max-width: 130px;">
                     {{ formset_form.unit_price }}
                     {% for error in formset_form.unit_price.errors %}
                       <div class="text-danger small">{{ error }}</div>
                     {% endfor %}
                   </td>
+
                   <td class="total-col text-nowrap">
                     <span class="invoice-line-total">0.000</span>
                   </td>
+
                   <td class="text-center">
                     {% if formset_form.instance.pk %}
                       <label class="small text-danger d-inline-flex align-items-center gap-1">
@@ -166,12 +178,20 @@
 </div>
 
 <script>
+  // PRODUCTS is a mapping from product id → config:
+  // {
+  //   "1": { price, description, uom_id, allowed_uoms: [base_uom, alt_uom?] },
+  //   "2": { ... },
+  // }
   const PRODUCTS = {{ products_json|default:"{}"|safe }};
+
   const itemsBody = document.getElementById("order-items-body");
   const addRowBtn = document.getElementById("add-row-btn");
   const totalPreviewEl = document.getElementById("order-total-preview");
 
   function updateLineTotals() {
+    if (!itemsBody) return;
+
     let grandTotal = 0.0;
 
     itemsBody.querySelectorAll("tr.order-item-row").forEach(row => {
@@ -184,7 +204,7 @@
       const total = qty * price;
 
       if (totalSpan) {
-        totalSpan.textContent = total.toFixed(3);
+        totalSpan.textContent = isNaN(total) ? "0.000" : total.toFixed(3);
       }
       if (!isNaN(total)) {
         grandTotal += total;
@@ -197,36 +217,117 @@
   }
 
   if (itemsBody) {
+    // Live totals
     itemsBody.addEventListener("input", function (e) {
+      if (!e.target.name) return;
+
       if (
-        e.target.name &&
-        (e.target.name.endsWith("quantity") || e.target.name.endsWith("unit_price"))
+        e.target.name.endsWith("quantity") ||
+        e.target.name.endsWith("unit_price")
       ) {
         updateLineTotals();
       }
     });
 
+    // Product change → fill price/description/UoM and filter UoMs
     itemsBody.addEventListener("change", function (e) {
-      if (e.target.tagName === "SELECT" && e.target.name.endsWith("-product")) {
-        const productId = e.target.value;
-        const row = e.target.closest("tr");
+      const target = e.target;
+
+      // User cleared product (empty option)
+      if (target.tagName === "SELECT" && target.name.endsWith("-product") && !target.value) {
+        const row = target.closest("tr");
         if (!row) return;
 
-        if (PRODUCTS[productId]) {
-          const priceInput = row.querySelector('input[name$="-unit_price"]');
-          const descInput = row.querySelector('input[name$="-description"]');
-          if (priceInput && PRODUCTS[productId].price) {
-            priceInput.value = PRODUCTS[productId].price;
-          }
-          if (descInput && !descInput.value) {
-            descInput.value = PRODUCTS[productId].description || "";
-          }
-          updateLineTotals();
+        const priceInput = row.querySelector('input[name$="-unit_price"]');
+        const descInput = row.querySelector('input[name$="-description"]');
+        const uomSelect = row.querySelector('select[name$="-uom"]');
+
+        if (priceInput) priceInput.value = "";
+        if (descInput) descInput.value = "";
+        if (uomSelect) {
+          // Show all UoMs again
+          Array.from(uomSelect.options).forEach(opt => {
+            opt.hidden = false;
+          });
+          uomSelect.selectedIndex = 0;
         }
+
+        updateLineTotals();
+        return;
+      }
+
+      // Product selected → auto-fill
+      if (target.tagName === "SELECT" && target.name.endsWith("-product")) {
+        const productId = target.value;
+        const row = target.closest("tr");
+        if (!row) return;
+
+        const productData = PRODUCTS[String(productId)];
+        if (!productData) {
+          updateLineTotals();
+          return;
+        }
+
+        const priceInput = row.querySelector('input[name$="-unit_price"]');
+        const descInput = row.querySelector('input[name$="-description"]');
+        const uomSelect = row.querySelector('select[name$="-uom"]');
+
+        // 1) price from default_sale_price
+        if (priceInput) {
+          const p = parseFloat(productData.price);
+          priceInput.value = isNaN(p) ? "" : p.toFixed(3);
+        }
+
+        // 2) description (only if empty so user override is respected)
+        if (descInput && !descInput.value) {
+          descInput.value = productData.description || "";
+        }
+
+        // 3) filter UoM options: base_uom + alt_uom only
+        if (uomSelect) {
+          const allowedRaw = Array.isArray(productData.allowed_uoms)
+            ? productData.allowed_uoms
+            : [];
+
+          const allowedSet = new Set(allowedRaw.map(v => String(v)));
+
+          Array.from(uomSelect.options).forEach(opt => {
+            if (!opt.value) {
+              // Keep the empty option always visible
+              opt.hidden = false;
+              return;
+            }
+            // Hide everything not in allowed list
+            opt.hidden = !allowedSet.has(opt.value);
+          });
+
+          // 4) select default UoM (base_uom)
+          if (productData.uom_id) {
+            const targetValue = String(productData.uom_id);
+            if (allowedSet.has(targetValue)) {
+              uomSelect.value = targetValue;
+            } else {
+              // Fallback: first visible option
+              const firstVisible = Array.from(uomSelect.options).find(opt => !opt.hidden);
+              if (firstVisible) {
+                uomSelect.value = firstVisible.value;
+              }
+            }
+          } else {
+            // No default: pick first visible
+            const firstVisible = Array.from(uomSelect.options).find(opt => !opt.hidden);
+            if (firstVisible) {
+              uomSelect.value = firstVisible.value;
+            }
+          }
+        }
+
+        updateLineTotals();
       }
     });
   }
 
+  // Add new row from formset template
   if (addRowBtn && itemsBody) {
     addRowBtn.addEventListener("click", function (e) {
       e.preventDefault();
@@ -269,6 +370,10 @@
     });
   }
 
+  // Initial totals on page load
   updateLineTotals();
 </script>
+
+
+
 {% endblock %}

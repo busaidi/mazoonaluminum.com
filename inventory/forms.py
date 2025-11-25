@@ -232,6 +232,9 @@ class ProductForm(forms.ModelForm):
             "code",
             "name",
             "short_description",
+            # NEW: prices
+            "default_sale_price",
+            "default_cost_price",
             "description",
             # UoM fields
             "base_uom",
@@ -248,12 +251,15 @@ class ProductForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Arabic labels & help texts for UI
+        # Arabic labels
         self.fields["category"].label = "التصنيف"
         self.fields["code"].label = "كود المنتج"
         self.fields["name"].label = "اسم المنتج"
         self.fields["short_description"].label = "وصف مختصر"
         self.fields["description"].label = "وصف تفصيلي"
+
+        self.fields["default_sale_price"].label = "سعر البيع الافتراضي"
+        self.fields["default_cost_price"].label = "سعر التكلفة التقريبي"
 
         self.fields["base_uom"].label = "وحدة القياس الأساسية"
         self.fields["alt_uom"].label = "وحدة بديلة"
@@ -265,9 +271,17 @@ class ProductForm(forms.ModelForm):
         self.fields["is_active"].label = "نشط"
         self.fields["is_published"].label = "منشور على الموقع/البوابة"
 
+        # Help texts
         self.fields["code"].help_text = "كود داخلي فريد، مثل: MZN-46-FRAME"
         self.fields["short_description"].help_text = "سطر واحد يظهر في القوائم والجداول."
         self.fields["description"].help_text = "وصف كامل للمنتج يمكن استخدامه في الموقع أو العروض."
+
+        self.fields["default_sale_price"].help_text = (
+            "سعر البيع الداخلي الافتراضي لكل وحدة القياس الأساسية."
+        )
+        self.fields["default_cost_price"].help_text = (
+            "سعر التكلفة التقريبي يستخدم للتقارير الداخلية وتقدير تكلفة المخزون."
+        )
 
         self.fields["base_uom"].help_text = "الوحدة الأساسية للمخزون، مثل: M للمتر، PCS للقطعة."
         self.fields["alt_uom"].help_text = "وحدة أخرى للبيع أو الشراء (مثل: لفة، كرتون)."
@@ -298,13 +312,19 @@ class ProductForm(forms.ModelForm):
         for name, field in self.fields.items():
             widget = field.widget
             css = widget.attrs.get("class", "")
-            # Keep checkboxes as form-check-input
             if isinstance(widget, forms.CheckboxInput):
                 widget.attrs["class"] = (css + " form-check-input").strip()
             else:
                 widget.attrs["class"] = (css + " form-control").strip()
 
-        # Optional: numeric field tuning
+        # Numeric field tuning
+        if "default_sale_price" in self.fields:
+            self.fields["default_sale_price"].widget.attrs.setdefault("step", "0.001")
+            self.fields["default_sale_price"].widget.attrs.setdefault("min", "0")
+        if "default_cost_price" in self.fields:
+            self.fields["default_cost_price"].widget.attrs.setdefault("step", "0.001")
+            self.fields["default_cost_price"].widget.attrs.setdefault("min", "0")
+
         if "alt_factor" in self.fields:
             self.fields["alt_factor"].widget.attrs.setdefault("step", "0.000001")
             self.fields["alt_factor"].widget.attrs.setdefault("min", "0")
@@ -334,6 +354,19 @@ class ProductForm(forms.ModelForm):
         if alt_factor and not alt_uom:
             raise forms.ValidationError("لا يمكن تعيين عامل تحويل بدون وحدة بديلة.")
         return alt_factor
+
+    def clean_default_sale_price(self):
+        value = self.cleaned_data.get("default_sale_price") or 0
+        if value < 0:
+            raise forms.ValidationError("لا يمكن أن يكون سعر البيع سالباً.")
+        return value
+
+    def clean_default_cost_price(self):
+        value = self.cleaned_data.get("default_cost_price") or 0
+        if value < 0:
+            raise forms.ValidationError("لا يمكن أن يكون سعر التكلفة سالباً.")
+        return value
+
 
 
 

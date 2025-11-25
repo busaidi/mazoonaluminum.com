@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.db.models import Sum
+from django.forms.models import inlineformset_factory
 from django.utils.translation import gettext as _
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
@@ -571,12 +572,23 @@ class OrderItem(models.Model):
         related_name="items",
         verbose_name="الطلب",
     )
+    # Use inventory.Product instead of website.Product
     product = models.ForeignKey(
-        "website.Product",
+        "inventory.Product",
         on_delete=models.PROTECT,
         verbose_name="المنتج",
+        related_name="order_items",
         null=True,
         blank=True,
+    )
+    # UoM field (adjust app/model string if your UoM model lives in another app)
+    uom = models.ForeignKey(
+        "uom.UnitOfMeasure",
+        on_delete=models.PROTECT,
+        verbose_name="وحدة القياس",
+        null=True,
+        blank=True,
+        related_name="order_items",
     )
     description = models.CharField(
         max_length=255,
@@ -587,9 +599,24 @@ class OrderItem(models.Model):
     quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1)
     unit_price = models.DecimalField(max_digits=10, decimal_places=3)
 
+    class Meta:
+        verbose_name = "بند طلب"
+        verbose_name_plural = "بنود الطلبات"
+
+    def __str__(self) -> str:
+        label = self.description or (str(self.product) if self.product else "")
+        return f"{label} x {self.quantity}"
+
     @property
     def subtotal(self) -> Decimal:
+        """
+        Subtotal = quantity * unit_price.
+        Unit price is assumed "per selected UoM".
+        """
         return self.quantity * self.unit_price
+
+
+
 
 
 
