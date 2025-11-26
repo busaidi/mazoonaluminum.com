@@ -33,7 +33,7 @@ urlpatterns += i18n_patterns(
     path("", include("website.urls")),
     path("accounting/", include("accounting.urls")),
     path("", include("core.urls", namespace="core")),
-    path("ledger/", include("ledger.urls", namespace="ledger")),
+    # path("ledger/", include("ledger.urls", namespace="ledger")),
     path("portal/", include("portal.urls")),
     path("cart/", include("cart.urls", namespace="cart")),
     path("accounts/", include("django.contrib.auth.urls")),

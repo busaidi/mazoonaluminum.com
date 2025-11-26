@@ -1,9 +1,10 @@
-{% extends "base.html" %}
+{# templates/sales/dashboard.html #}
+{% extends "sales/base_sales.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "لوحة مبيعات Mazoon" %}{% endblock %}
+{% block meta_title %}{% trans "لوحة مبيعات Mazoon" %}{% endblock %}
 
-{% block content %}
+{% block sales_content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
     <h1 class="h4 fw-bold mb-1">
@@ -91,7 +92,7 @@
     <div class="card border-0 shadow-sm h-100">
       <div class="card-body">
         <div class="small text-muted mb-1">{% trans "مؤكد" %}</div>
-        <div class="h5 fw-bold.mb-0">{{ confirmed_count }}</div>
+        <div class="h5 fw-bold mb-0">{{ confirmed_count }}</div>
       </div>
     </div>
   </div>
@@ -129,7 +130,7 @@
         </div>
 
         <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0">
+          <table class="table table-sm align-middle.mb-0">
             <thead class="table-light">
               <tr>
                 <th class="small text-muted">{% trans "التاريخ" %}</th>
@@ -176,7 +177,7 @@
   <div class="col-lg-4">
     <div class="card border-0 shadow-sm h-100">
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="d-flex justify-content-between.align-items-center mb-2">
           <h2 class="h6 fw-semibold mb-0">
             {% trans "آخر أوامر البيع" %}
           </h2>
@@ -192,7 +193,7 @@
               <tr>
                 <th class="small text-muted">{% trans "التاريخ" %}</th>
                 <th class="small text-muted">{% trans "العميل" %}</th>
-                <th class="small.text-muted text-end">{% trans "الإجمالي" %}</th>
+                <th class="small text-muted text-end">{% trans "الإجمالي" %}</th>
               </tr>
             </thead>
             <tbody>
@@ -232,9 +233,9 @@
 
   <!-- آخر مذكرات التسليم + أفضل العملاء -->
   <div class="col-lg-4">
-    <div class="card border-0 shadow-sm mb-3">
+    <div class="card border-0 shadow-sm.mb-3">
       <div class="card-body">
-        <div class="d-flex justify-content-between.align-items-center mb-2">
+        <div class="d-flex justify-content-between align-items-center mb-2">
           <h2 class="h6 fw-semibold mb-0">
             {% trans "آخر مذكرات التسليم" %}
           </h2>
@@ -294,7 +295,7 @@
         </h2>
 
         <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0">
+          <table class="table table-sm.align-middle mb-0">
             <thead class="table-light">
               <tr>
                 <th class="small text-muted">{% trans "العميل" %}</th>

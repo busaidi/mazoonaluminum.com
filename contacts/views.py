@@ -1,3 +1,4 @@
+# contacts/views.py
 from decimal import Decimal
 
 from django.db.models import Sum
@@ -123,11 +124,15 @@ class ContactListView(ContactsStaffRequiredMixin, ListView):
         ctx["kind"] = getattr(self, "kind_filter", "")
         ctx["status"] = getattr(self, "status_filter", "active")
         ctx["company_id"] = getattr(self, "company_filter", "")
+
+        # السياق القديم
         ctx["section"] = self.section
         ctx["subsection"] = "contacts"
+
+        # 🔹 هذا عشان accounting/_nav.html
+        ctx["accounting_section"] = "customers"
+
         return ctx
-
-
 
 
 class ContactDetailView(ContactsStaffRequiredMixin, DetailView):
@@ -147,7 +152,7 @@ class ContactDetailView(ContactsStaffRequiredMixin, DetailView):
         contact = self.object
 
         # -----------------------------
-        # العناوين (كما هي سابقاً)
+        # العناوين
         # -----------------------------
         addresses = contact.addresses.all().order_by(
             "-is_primary",
@@ -157,7 +162,7 @@ class ContactDetailView(ContactsStaffRequiredMixin, DetailView):
         ctx["addresses"] = addresses
 
         # -----------------------------
-        # ملخص مالي (كما هو)
+        # ملخص مالي
         # -----------------------------
         ctx["total_invoiced"] = contact.total_invoiced
         ctx["total_paid"] = contact.total_paid
@@ -188,14 +193,14 @@ class ContactDetailView(ContactsStaffRequiredMixin, DetailView):
         ctx["payments_total_in"] = total_in
         ctx["payments_total_out"] = total_out
 
-        # -----------------------------
-        # section / subsection (كما هي)
-        # -----------------------------
+        # سياق الأقسام
         ctx["section"] = self.section
         ctx["subsection"] = "contacts"
 
-        return ctx
+        # 🔹 عشان ناف المحاسبة
+        ctx["accounting_section"] = "customers"
 
+        return ctx
 
 
 # ============================================================
@@ -230,6 +235,8 @@ class ContactCreateView(ContactsStaffRequiredMixin, CreateView):
 
         ctx["section"] = self.section
         ctx["subsection"] = "contacts"
+        # 🔹 عشان ناف المحاسبة
+        ctx["accounting_section"] = "customers"
         return ctx
 
     def form_valid(self, form):
@@ -274,6 +281,8 @@ class ContactUpdateView(ContactsStaffRequiredMixin, UpdateView):
 
         ctx["section"] = self.section
         ctx["subsection"] = "contacts"
+        # 🔹 عشان ناف المحاسبة
+        ctx["accounting_section"] = "customers"
         return ctx
 
     def form_valid(self, form):
@@ -294,6 +303,14 @@ class ContactDeleteView(ContactsStaffRequiredMixin, DeleteView):
     model = Contact
     template_name = "contacts/confirm_delete.html"
     success_url = reverse_lazy("contacts:contact_list")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["section"] = self.section
+        ctx["subsection"] = "contacts"
+        # 🔹 لو حاب تحذف من داخل سياق المحاسبة برضه يظل التبويب نشط
+        ctx["accounting_section"] = "customers"
+        return ctx
 
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()

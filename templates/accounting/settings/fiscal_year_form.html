@@ -1,0 +1,127 @@
+{% extends "accounting/base_accounting.html" %}
+{% load i18n %}
+
+{% block accounting_content %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <div>
+    <h2 class="h5 mb-1">
+      {% if form.instance.pk %}
+        {% trans "تعديل السنة المالية" %}
+      {% else %}
+        {% trans "إنشاء سنة مالية جديدة" %}
+      {% endif %}
+    </h2>
+    <p class="text-muted small mb-0">
+      {% trans "تحدد السنة المالية الفترة الزمنية التي تُسجَّل فيها القيود المحاسبية والتقارير." %}
+    </p>
+  </div>
+</div>
+
+<form method="post" class="card shadow-sm">
+  {% csrf_token %}
+  <div class="card-body">
+    {{ form.non_field_errors }}
+
+    <div class="row g-4">
+      <!-- الحقول الأساسية -->
+      <div class="col-lg-8">
+        <div class="row g-3">
+
+          <div class="col-md-4">
+            <label class="form-label" for="{{ form.year.id_for_label }}">
+              {% trans "السنة" %}
+            </label>
+            {{ form.year }}
+            <div class="form-text">
+              {% trans "مثال: 2025" %}
+            </div>
+            {{ form.year.errors }}
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label" for="{{ form.start_date.id_for_label }}">
+              {% trans "تاريخ البداية" %}
+            </label>
+            {{ form.start_date }}
+            <div class="form-text">
+              {% trans "عادةً يكون أول يوم في السنة أو بداية نشاطك." %}
+            </div>
+            {{ form.start_date.errors }}
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label" for="{{ form.end_date.id_for_label }}">
+              {% trans "تاريخ النهاية" %}
+            </label>
+            {{ form.end_date }}
+            <div class="form-text">
+              {% trans "تأكد أن تاريخ النهاية بعد تاريخ البداية ولا يتداخل مع سنوات أخرى." %}
+            </div>
+            {{ form.end_date.errors }}
+          </div>
+
+            <div class="col-12 mt-3">
+                <div class="form-check">
+                    {{ form.is_default }}
+                    <label class="form-check-label ms-1" for="{{ form.is_default.id_for_label }}">
+                        {% trans "اعتبار هذه السنة هي الافتراضية للتقارير" %}
+                    </label>
+                    <div class="form-text text-muted">
+                        {% trans "سيتم استخدام هذه السنة تلقائيًا في التقارير عند عدم اختيار سنة معينة." %}
+                    </div>
+                    {{ form.is_default.errors }}
+                </div>
+            </div>
+
+        </div>
+      </div>
+
+      <!-- بطاقة توضيحية -->
+      <div class="col-lg-4">
+        <div class="border rounded-3 p-3 bg-light h-100">
+          <h3 class="h6 mb-2">
+            {% trans "ملاحظات مهمة" %}
+          </h3>
+          <ul class="small text-muted mb-2 ps-3">
+            <li>
+              {% trans "لا يُنصح بتعديل تواريخ سنة مالية بعد بدء تسجيل القيود إلا عند الضرورة." %}
+            </li>
+            <li>
+              {% trans "إقفال السنة المالية يعني منع تعديل أو ترحيل القيود داخلها." %}
+            </li>
+            <li>
+              {% trans "تجنّب تداخل التواريخ بين سنة مالية وأخرى لضمان دقة التقارير." %}
+            </li>
+          </ul>
+
+          {% if form.instance.pk %}
+            {% if form.instance.is_closed %}
+              <div class="alert alert-danger py-2 px-3 small mb-0">
+                {% trans "هذه السنة مقفلة حاليًا. لا يمكن تعديل القيود داخلها، ويمكن فقط استعراض التقارير." %}
+              </div>
+            {% else %}
+              <div class="alert alert-warning py-2 px-3 small mb-0">
+                {% trans "يمكن تعديل هذه السنة لأنها مفتوحة، ولكن أي تغيير في التواريخ سيؤثر على ترحيل القيود." %}
+              </div>
+            {% endif %}
+          {% else %}
+            <div class="alert alert-info py-2 px-3 small mb-0">
+              {% trans "عند إنشاء سنة جديدة، تأكد من أن الفترة لا تتداخل مع سنة أخرى، خاصة لو عندك بيانات سابقة." %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+    <a href="{% url 'accounting:fiscal_year_list' %}" class="btn btn-sm btn-outline-secondary">
+      {% trans "رجوع إلى قائمة السنوات" %}
+    </a>
+    <button class="btn btn-primary">
+      {% trans "حفظ" %}
+    </button>
+  </div>
+</form>
+{% endblock %}

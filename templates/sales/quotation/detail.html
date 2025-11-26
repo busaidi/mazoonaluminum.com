@@ -1,9 +1,9 @@
-{% extends "base.html" %}
+{% extends "sales/base_sales.html" %}
 {% load i18n %}
 
 {% block title %}{% trans "عرض سعر" %} {{ document.number|default:document.pk }}{% endblock %}
 
-{% block content %}
+{% block sales_content %}
 
 <!-- ================= HEADER ================= -->
 <div class="d-flex justify-content-between align-items-center mb-3">

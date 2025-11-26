@@ -4,26 +4,34 @@ from decimal import Decimal
 from django import forms
 from django.forms import inlineformset_factory
 from django.utils.translation import gettext_lazy as _
-from modeltranslation.forms import TranslationModelForm
 
-from payments.models import Payment
-from website.models import Product
-from .models import Invoice, InvoiceItem, Order, OrderItem, Settings
 from contacts.models import Contact
+
+from .models import (
+    Invoice,
+    InvoiceItem,
+    Settings,
+    Journal,
+    LedgerSettings,
+    FiscalYear,
+    Account,
+    JournalEntry,
+)
 
 
 # ============================================================
 # Invoice forms
 # ============================================================
 
+
 class InvoiceForm(forms.ModelForm):
     """
-    Main staff invoice form (without number / total_amount fields).
+    Main staff invoice form (header fields only).
+    total_amount يُحسب من البنود، لذلك غير موجود في الفورم.
     """
 
     class Meta:
         model = Invoice
-        # NOTE: number & total_amount are excluded on purpose
         fields = [
             "customer",
             "issued_at",
@@ -52,6 +60,15 @@ class InvoiceForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # حقل الزبون → نربطه بكونتاكت الزبائن (إذا عندك Manager customers())
+        if "customer" in self.fields:
+            # لو ما عندك Contact.objects.customers() خله all()
+            qs = getattr(Contact.objects, "customers", None)
+            self.fields["customer"].queryset = (
+                qs() if callable(qs) else Contact.objects.all()
+            )
+            self.fields["customer"].label = _("الزبون")
+
         # Bootstrap classes: select vs input
         for name, field in self.fields.items():
             css = field.widget.attrs.get("class", "")
@@ -67,9 +84,7 @@ class InvoiceForm(forms.ModelForm):
     def clean(self):
         """
         Basic business validation:
-
         - due_date cannot be before issued_at
-        (total_amount is computed from items, so no check here)
         """
         cleaned = super().clean()
 
@@ -91,250 +106,22 @@ InvoiceItemFormSet = inlineformset_factory(
 
 
 # ============================================================
-# Payment forms
+# Sales / Invoice Settings (بدون ترقيم الآن)
 # ============================================================
-
-class PaymentForInvoiceForm(forms.ModelForm):
-    """
-    Simple form to add a payment from the invoice screen.
-    We do NOT expose customer/invoice fields; they are set in the view.
-    """
-
-    class Meta:
-        model = Payment
-        fields = ["date", "amount", "method", "notes"]
-        widgets = {
-            "date": forms.DateInput(attrs={"type": "date"}),
-            "notes": forms.Textarea(attrs={"rows": 2}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Add Bootstrap classes
-        for name, field in self.fields.items():
-            css = field.widget.attrs.get("class", "")
-            if name == "method":
-                field.widget.attrs["class"] = (css + " form-select").strip()
-            else:
-                field.widget.attrs["class"] = (css + " form-control").strip()
-
-    def clean_amount(self):
-        """
-        Ensure payment amount is strictly positive.
-        """
-        amount = self.cleaned_data.get("amount")
-        if amount is not None and amount <= 0:
-            raise forms.ValidationError(_("Amount must be greater than zero."))
-        return amount
-
-
-
-
-
-
-class CustomerProfileForm(forms.ModelForm):
-    """
-    Form used in the customer customer to edit basic profile data (without user field).
-    """
-
-    class Meta:
-        model = Contact
-        fields = [
-            "name",
-            "company_name",
-            "phone",
-            "email",
-            "tax_number",
-            "address",
-        ]
-        widgets = {
-            "name": forms.TextInput(attrs={"class": "form-control"}),
-            "company_name": forms.TextInput(attrs={"class": "form-control"}),
-            "phone": forms.TextInput(attrs={"class": "form-control"}),
-            "email": forms.EmailInput(attrs={"class": "form-control"}),
-            "tax_number": forms.TextInput(attrs={"class": "form-control"}),
-            "address": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
-        }
-
-
-# ============================================================
-# Simple order forms (customer + quick staff)
-# ============================================================
-
-class CustomerOrderForm(forms.Form):
-    """
-    Simple one-product order form from the customer customer.
-    """
-    quantity = forms.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        min_value=0.01,
-        label=_("الكمية المطلوبة"),
-    )
-    notes = forms.CharField(
-        label=_("ملاحظات إضافية (اختياري)"),
-        widget=forms.Textarea(attrs={"rows": 3}),
-        required=False,
-    )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Bootstrap styling
-        for name, field in self.fields.items():
-            css = field.widget.attrs.get("class", "")
-            field.widget.attrs["class"] = (css + " form-control").strip()
-
-
-class StaffOrderForm(forms.Form):
-    """
-    Quick staff form: choose customer + product + quantity.
-    """
-    customer = forms.ModelChoiceField(
-        queryset=Contact.objects.all(),
-        label=_("الزبون"),
-    )
-    product = forms.ModelChoiceField(
-        queryset=Product.objects.filter(is_active=True),
-        label=_("المنتج"),
-    )
-    quantity = forms.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        min_value=0.01,
-        label=_("الكمية"),
-    )
-    notes = forms.CharField(
-        label=_("ملاحظات (اختياري)"),
-        widget=forms.Textarea(attrs={"rows": 3}),
-        required=False,
-    )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Bootstrap styling: selects vs inputs
-        for name, field in self.fields.items():
-            css = field.widget.attrs.get("class", "")
-            if name in ("customer", "product"):
-                field.widget.attrs["class"] = (css + " form-select").strip()
-            else:
-                field.widget.attrs["class"] = (css + " form-control").strip()
-
-
-# ============================================================
-# Order (staff) ModelForm + inline formset
-# ============================================================
-
-class OrderForm(forms.ModelForm):
-    """
-    Main staff order form (header fields only; items via formset).
-    """
-
-    class Meta:
-        model = Order
-        fields = ["customer", "status", "notes"]
-        widgets = {
-            "notes": forms.Textarea(attrs={"rows": 3}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        for name, field in self.fields.items():
-            css = field.widget.attrs.get("class", "")
-            if name in ("customer", "status"):
-                field.widget.attrs["class"] = (css + " form-select").strip()
-            else:
-                field.widget.attrs["class"] = (css + " form-control").strip()
-
-
-OrderItemFormSet = inlineformset_factory(
-    Order,
-    OrderItem,
-    fields=["product", "uom", "description", "quantity", "unit_price"],
-    extra=1,
-    can_delete=True,
-)
-
-
-# ============================================================
-# Payment allocation (general payment → specific invoice)
-# ============================================================
-
-class ApplyPaymentForm(forms.Form):
-    """
-    Form to allocate a general payment to a specific invoice
-    (full or partial amount).
-    """
-    invoice = forms.ModelChoiceField(
-        queryset=Invoice.objects.none(),
-        label=_("اختر الفاتورة"),
-        widget=forms.Select(
-            attrs={
-                "class": "form-select",
-            }
-        ),
-    )
-    amount = forms.DecimalField(
-        max_digits=12,
-        decimal_places=3,
-        label=_("المبلغ المراد تسويته"),
-        widget=forms.NumberInput(
-            attrs={
-                "class": "form-control",
-                "placeholder": _("أدخل المبلغ"),
-            }
-        ),
-    )
-
-    def __init__(self, customer, max_amount: Decimal, *args, **kwargs):
-        """
-        customer   → filter invoices for this customer only.
-        max_amount → available amount from the original general payment.
-        """
-        super().__init__(*args, **kwargs)
-
-        # Invoices of this customer only
-        self.fields["invoice"].queryset = Invoice.objects.filter(customer=customer)
-        self.max_amount = max_amount
-
-    def clean_amount(self):
-        amount = self.cleaned_data["amount"]
-        if amount <= 0:
-            raise forms.ValidationError(_("المبلغ يجب أن يكون أكبر من صفر."))
-        if amount > self.max_amount:
-            raise forms.ValidationError(_("المبلغ أكبر من المبلغ المتاح في الدفعة."))
-        return amount
-
 
 
 class SettingsForm(forms.ModelForm):
+    """
+    إعدادات الفواتير/المبيعات:
+    - أيام الاستحقاق
+    - سلوك الترحيل التلقائي
+    - الضريبة
+    - النصوص الافتراضية
+    """
+
     class Meta:
         model = Settings
         fields = [
-            # ---------- Order numbering ----------
-            "order_prefix",
-            "order_padding",
-            "order_start_value",
-            "order_reset_policy",
-            "order_custom_pattern",
-
-            # ---------- Invoice numbering ----------
-            "invoice_prefix",
-            "invoice_padding",
-            "invoice_start_value",
-            "invoice_reset_policy",
-            "invoice_custom_pattern",
-
-            # ---------- Payment numbering ----------
-            "payment_prefix",
-            "payment_padding",
-            "payment_start_value",
-            "payment_reset_policy",
-            "payment_custom_pattern",
-
             # ---------- Invoice behavior ----------
             "default_due_days",
             "auto_confirm_invoice",
@@ -350,57 +137,6 @@ class SettingsForm(forms.ModelForm):
         ]
 
         widgets = {
-            # ====== Order numbering ======
-            "order_prefix": forms.TextInput(
-                attrs={"class": "form-control", "dir": "ltr"}
-            ),
-            "order_padding": forms.NumberInput(
-                attrs={"class": "form-control", "min": 1, "max": 10}
-            ),
-            "order_start_value": forms.NumberInput(
-                attrs={"class": "form-control", "min": 1}
-            ),
-            "order_reset_policy": forms.Select(
-                attrs={"class": "form-select"}
-            ),
-            "order_custom_pattern": forms.TextInput(
-                attrs={"class": "form-control", "dir": "ltr"}
-            ),
-
-            # ====== Invoice numbering ======
-            "invoice_prefix": forms.TextInput(
-                attrs={"class": "form-control", "dir": "ltr"}
-            ),
-            "invoice_padding": forms.NumberInput(
-                attrs={"class": "form-control", "min": 1, "max": 10}
-            ),
-            "invoice_start_value": forms.NumberInput(
-                attrs={"class": "form-control", "min": 1}
-            ),
-            "invoice_reset_policy": forms.Select(
-                attrs={"class": "form-select"}
-            ),
-            "invoice_custom_pattern": forms.TextInput(
-                attrs={"class": "form-control", "dir": "ltr"}
-            ),
-
-            # ====== Payment numbering ======
-            "payment_prefix": forms.TextInput(
-                attrs={"class": "form-control", "dir": "ltr"}
-            ),
-            "payment_padding": forms.NumberInput(
-                attrs={"class": "form-control", "min": 1, "max": 10}
-            ),
-            "payment_start_value": forms.NumberInput(
-                attrs={"class": "form-control", "min": 1}
-            ),
-            "payment_reset_policy": forms.Select(
-                attrs={"class": "form-select"}
-            ),
-            "payment_custom_pattern": forms.TextInput(
-                attrs={"class": "form-control", "dir": "ltr"}
-            ),
-
             # ====== Invoice behavior ======
             "default_due_days": forms.NumberInput(
                 attrs={"class": "form-control", "min": 0, "max": 365}
@@ -430,27 +166,6 @@ class SettingsForm(forms.ModelForm):
         }
 
         labels = {
-            # ----- Order numbering -----
-            "order_prefix": _("بادئة أرقام الطلبات"),
-            "order_padding": _("عدد الخانات الرقمية للطلبات"),
-            "order_start_value": _("قيمة البداية لتسلسل الطلبات"),
-            "order_reset_policy": _("سياسة إعادة الترقيم للطلبات"),
-            "order_custom_pattern": _("نمط ترقيم الطلبات (اختياري)"),
-
-            # ----- Invoice numbering -----
-            "invoice_prefix": _("بادئة أرقام الفواتير"),
-            "invoice_padding": _("عدد الخانات الرقمية للفواتير"),
-            "invoice_start_value": _("قيمة البداية لتسلسل الفواتير"),
-            "invoice_reset_policy": _("سياسة إعادة الترقيم للفواتير"),
-            "invoice_custom_pattern": _("نمط الترقيم المخصص (اختياري)"),
-
-            # ----- Payment numbering -----
-            "payment_prefix": _("بادئة أرقام الدفعات"),
-            "payment_padding": _("عدد الخانات الرقمية للدفعات"),
-            "payment_start_value": _("قيمة البداية لتسلسل الدفعات"),
-            "payment_reset_policy": _("سياسة إعادة الترقيم للدفعات"),
-            "payment_custom_pattern": _("نمط ترقيم الدفعات (اختياري)"),
-
             # ----- Invoice behavior -----
             "default_due_days": _("أيام الاستحقاق الافتراضية"),
             "auto_confirm_invoice": _("اعتماد الفاتورة تلقائيًا بعد الحفظ"),
@@ -465,20 +180,6 @@ class SettingsForm(forms.ModelForm):
             "footer_notes": _("ملاحظات أسفل الفاتورة"),
         }
 
-    # ====== Prefix cleaning ======
-    def clean_order_prefix(self):
-        prefix = self.cleaned_data.get("order_prefix", "") or ""
-        return prefix.strip().upper()
-
-    def clean_invoice_prefix(self):
-        prefix = self.cleaned_data.get("invoice_prefix", "") or ""
-        return prefix.strip().upper()
-
-    def clean_payment_prefix(self):
-        prefix = self.cleaned_data.get("payment_prefix", "") or ""
-        return prefix.strip().upper()
-
-    # ====== VAT ======
     def clean_default_vat_rate(self):
         rate = self.cleaned_data.get("default_vat_rate")
         if rate is None:
@@ -487,21 +188,459 @@ class SettingsForm(forms.ModelForm):
             raise forms.ValidationError(_("نسبة الضريبة يجب أن تكون بين 0 و 100٪."))
         return rate
 
-    # ====== Pattern validation ======
-    def clean_order_custom_pattern(self):
-        pattern = self.cleaned_data.get("order_custom_pattern", "") or ""
-        if pattern and "{seq" not in pattern:
-            raise forms.ValidationError(_("نمط ترقيم الطلبات يجب أن يحتوي على {seq}."))
-        return pattern
 
-    def clean_invoice_custom_pattern(self):
-        pattern = self.cleaned_data.get("invoice_custom_pattern", "") or ""
-        if pattern and "{seq" not in pattern:
-            raise forms.ValidationError(_("نمط الترقيم المخصص يجب أن يحتوي على {seq}."))
-        return pattern
+# ============================================================
+# Accounts
+# ============================================================
 
-    def clean_payment_custom_pattern(self):
-        pattern = self.cleaned_data.get("payment_custom_pattern", "") or ""
-        if pattern and "{seq" not in pattern:
-            raise forms.ValidationError(_("نمط ترقيم الدفعات يجب أن يحتوي على {seq}."))
-        return pattern
+
+class AccountForm(forms.ModelForm):
+    class Meta:
+        model = Account
+        fields = [
+            "code",
+            "name",
+            "type",
+            "parent",
+            "is_active",
+            "allow_settlement",
+        ]
+        labels = {
+            "code": _("الكود"),
+            "name": _("اسم الحساب"),
+            "type": _("النوع"),
+            "parent": _("الحساب الأب"),
+            "is_active": _("نشط؟"),
+            "allow_settlement": _("يُستخدم في التسويات؟"),
+        }
+        widgets = {
+            "code": forms.TextInput(attrs={"class": "form-control"}),
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "type": forms.Select(attrs={"class": "form-select"}),
+            "parent": forms.Select(attrs={"class": "form-select"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "allow_settlement": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+        }
+
+
+# ============================================================
+# Journal Entry / Lines
+# ============================================================
+
+
+class JournalEntryForm(forms.ModelForm):
+    class Meta:
+        model = JournalEntry
+        # ما نخلي المستخدم يختار السنة المالية يدوياً الآن، نعيّنها من التاريخ تلقائياً
+        fields = ["date", "reference", "description", "journal"]
+        labels = {
+            "date": _("التاريخ"),
+            "reference": _("المرجع"),
+            "description": _("الوصف"),
+            "journal": _("دفتر اليومية"),
+        }
+        widgets = {
+            "date": forms.DateInput(
+                attrs={
+                    "type": "date",
+                    "class": "form-control form-control-sm",
+                }
+            ),
+            "reference": forms.TextInput(
+                attrs={"class": "form-control form-control-sm"}
+            ),
+            "description": forms.Textarea(
+                attrs={"class": "form-control form-control-sm", "rows": 2}
+            ),
+            "journal": forms.Select(
+                attrs={"class": "form-select form-select-sm"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        """
+        ضبط QuerySet للدفاتر:
+        - فقط الدفاتر النشطة
+        - مرتبة بالكود
+        """
+        super().__init__(*args, **kwargs)
+        self.fields["journal"].queryset = (
+            Journal.objects.active().order_by("code")
+        )
+        self.fields["journal"].label = _("دفتر اليومية")
+        self.fields["journal"].empty_label = _("اختر دفتر اليومية")
+
+
+class JournalLineForm(forms.Form):
+    account = forms.ModelChoiceField(
+        queryset=Account.objects.none(),
+        required=False,
+        label=_("الحساب"),
+        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
+    )
+    description = forms.CharField(
+        max_length=255,
+        required=False,
+        label=_("الوصف"),
+        widget=forms.TextInput(attrs={"class": "form-control form-control-sm"}),
+    )
+    debit = forms.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        required=False,
+        min_value=0,
+        label=_("مدين"),
+        widget=forms.NumberInput(
+            attrs={"class": "form-control form-control-sm"}
+        ),
+    )
+    credit = forms.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        required=False,
+        min_value=0,
+        label=_("دائن"),
+        widget=forms.NumberInput(
+            attrs={"class": "form-control form-control-sm"}
+        ),
+    )
+
+    DELETE = forms.BooleanField(
+        required=False,
+        label=_("حذف؟"),
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["account"].queryset = Account.objects.active()
+
+    def clean(self):
+        """
+        تحقق مخصص للسطر:
+        - لا يسمح بالقيم السالبة
+        - لا يمكن أن يكون مدينًا ودائنًا في نفس الوقت
+        - إذا في مبلغ لازم يكون في حساب
+        """
+        cleaned_data = super().clean()
+        debit = cleaned_data.get("debit") or Decimal("0")
+        credit = cleaned_data.get("credit") or Decimal("0")
+        account = cleaned_data.get("account")
+
+        # لا يسمح بالقيم السالبة
+        if debit < 0:
+            self.add_error("debit", _("قيمة المدين لا يمكن أن تكون سالبة."))
+
+        if credit < 0:
+            self.add_error("credit", _("قيمة الدائن لا يمكن أن تكون سالبة."))
+
+        # لا يسمح أن يكون السطر مدينًا ودائنًا معاً
+        if debit > 0 and credit > 0:
+            raise forms.ValidationError(
+                _("لا يمكن أن يكون السطر مدينًا ودائنًا في نفس الوقت.")
+            )
+
+        # تحقق من وجود حساب إذا كان هناك مبلغ
+        if (debit > 0 or credit > 0) and not account:
+            raise forms.ValidationError(
+                _("يجب اختيار حساب للسطر الذي يحتوي على مبلغ مدين أو دائن.")
+            )
+
+        return cleaned_data
+
+
+JournalLineFormSet = forms.formset_factory(
+    JournalLineForm,
+    extra=2,
+    can_delete=True,
+)
+
+
+# ============================================================
+# Reports Forms
+# ============================================================
+
+
+class TrialBalanceFilterForm(forms.Form):
+    fiscal_year = forms.ModelChoiceField(
+        queryset=FiscalYear.objects.order_by("-year"),
+        required=False,
+        label=_("السنة المالية"),
+        empty_label=_("كل السنوات"),
+        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
+    )
+    date_from = forms.DateField(
+        required=False,
+        label=_("من تاريخ"),
+        widget=forms.DateInput(
+            attrs={"type": "date", "class": "form-control form-control-sm"}
+        ),
+    )
+    date_to = forms.DateField(
+        required=False,
+        label=_("إلى تاريخ"),
+        widget=forms.DateInput(
+            attrs={"type": "date", "class": "form-control form-control-sm"}
+        ),
+    )
+
+
+class AccountLedgerFilterForm(forms.Form):
+    account = forms.ModelChoiceField(
+        queryset=Account.objects.none(),
+        required=False,
+        label=_("الحساب"),
+        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
+    )
+    fiscal_year = forms.ModelChoiceField(
+        queryset=FiscalYear.objects.order_by("-year"),
+        required=False,
+        label=_("السنة المالية"),
+        empty_label=_("كل السنوات"),
+        widget=forms.Select(attrs={"class": "form-select form-select-sm"}),
+    )
+    date_from = forms.DateField(
+        required=False,
+        label=_("من تاريخ"),
+        widget=forms.DateInput(
+            attrs={"type": "date", "class": "form-control form-control-sm"}
+        ),
+    )
+    date_to = forms.DateField(
+        required=False,
+        label=_("إلى تاريخ"),
+        widget=forms.DateInput(
+            attrs={"type": "date", "class": "form-control form-control-sm"})
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["account"].queryset = Account.objects.active()
+
+
+class FiscalYearForm(forms.ModelForm):
+    class Meta:
+        model = FiscalYear
+        fields = ["year", "start_date", "end_date", "is_closed", "is_default"]
+        labels = {
+            "year": _("السنة"),
+            "start_date": _("تاريخ البداية"),
+            "end_date": _("تاريخ النهاية"),
+            "is_closed": _("مقفلة؟"),
+            "is_default": _("سنة افتراضية للتقارير؟"),
+        }
+        widgets = {
+            "year": forms.NumberInput(
+                attrs={"class": "form-control form-control-sm"}
+            ),
+            "start_date": forms.DateInput(
+                attrs={"type": "date", "class": "form-control form-control-sm"}
+            ),
+            "end_date": forms.DateInput(
+                attrs={"type": "date", "class": "form-control form-control-sm"}
+            ),
+            "is_closed": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+            "is_default": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start = cleaned_data.get("start_date")
+        end = cleaned_data.get("end_date")
+
+        if start and end and start > end:
+            raise forms.ValidationError(
+                _("تاريخ البداية لا يمكن أن يكون بعد تاريخ النهاية.")
+            )
+        return cleaned_data
+
+
+class JournalEntryFilterForm(forms.Form):
+    """
+    Simple filter form for journal entries list:
+    - Text search (reference/description)
+    - Date range
+    - Posted status
+    - Journal
+    """
+
+    POSTED_CHOICES = (
+        ("", _("الكل")),
+        ("posted", _("مُرحّل")),
+        ("draft", _("مسودة")),
+    )
+
+    q = forms.CharField(
+        required=False,
+        label=_("بحث"),
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control form-control-sm",
+                "placeholder": _("بحث بالمرجع أو الوصف"),
+            }
+        ),
+    )
+    date_from = forms.DateField(
+        required=False,
+        label=_("من تاريخ"),
+        widget=forms.DateInput(
+            attrs={"type": "date", "class": "form-control form-control-sm"}
+        ),
+    )
+    date_to = forms.DateField(
+        required=False,
+        label=_("إلى تاريخ"),
+        widget=forms.DateInput(
+            attrs={"type": "date", "class": "form-control form-control-sm"}
+        ),
+    )
+    posted = forms.ChoiceField(
+        required=False,
+        label=_("الحالة"),
+        choices=POSTED_CHOICES,
+        widget=forms.Select(
+            attrs={"class": "form-select form-select-sm"},
+        ),
+    )
+    journal = forms.ModelChoiceField(
+        required=False,
+        label=_("دفتر اليومية"),
+        queryset=Journal.objects.active().order_by("code"),
+        widget=forms.Select(
+            attrs={"class": "form-select form-select-sm"},
+        ),
+    )
+
+
+# ============================================================
+# Chart of accounts import
+# ============================================================
+
+
+class ChartOfAccountsImportForm(forms.Form):
+    file = forms.FileField(
+        label=_("ملف إكسل لشجرة الحسابات"),
+        help_text=_(
+            "ملف بصيغة .xlsx يحتوي في الصف الأول على الأعمدة: "
+            "code, name, type, parent_code, allow_settlement, is_active, "
+            "opening_debit, opening_credit."
+        ),
+        widget=forms.ClearableFileInput(
+            attrs={"class": "form-control"}
+        ),
+    )
+    replace_existing = forms.BooleanField(
+        required=False,
+        label=_("تعطيل الحسابات غير الموجودة في الملف"),
+        help_text=_(
+            "سيتم تعيين is_active=False لأي حساب ليس موجودًا في الملف المستورد."
+        ),
+        widget=forms.CheckboxInput(
+            attrs={"class": "form-check-input"}
+        ),
+    )
+    fiscal_year = forms.ModelChoiceField(
+        queryset=FiscalYear.objects.order_by("-year"),
+        required=False,
+        label=_("السنة المالية للرصد الافتتاحي"),
+        help_text=_(
+            "اختياري: إذا اخترت سنة مالية، سيتم إنشاء قيد رصيد افتتاحي بهذه الأرصدة."
+        ),
+        widget=forms.Select(
+            attrs={"class": "form-select"}
+        ),
+    )
+
+
+# ============================================================
+# Ledger settings & Journals
+# ============================================================
+
+
+class LedgerSettingsForm(forms.ModelForm):
+    class Meta:
+        model = LedgerSettings
+        fields = [
+            # دفاتر اليومية
+            "default_manual_journal",
+            "sales_journal",
+            "purchase_journal",
+            "cash_journal",
+            "bank_journal",
+            "opening_balance_journal",
+            "closing_journal",
+
+            # الحسابات الافتراضية للمبيعات
+            "sales_receivable_account",
+            "sales_revenue_0_account",
+            "sales_vat_output_account",
+            "sales_advance_account",
+        ]
+
+        widgets = {
+            field: forms.Select(attrs={"class": "form-select"})
+            for field in fields
+        }
+
+        labels = {
+            # دفاتر اليومية
+            "default_manual_journal": _("دفتر القيود اليدوية"),
+            "sales_journal": _("دفتر المبيعات"),
+            "purchase_journal": _("دفتر المشتريات"),
+            "cash_journal": _("دفتر الكاش"),
+            "bank_journal": _("دفتر البنك"),
+            "opening_balance_journal": _("دفتر الرصيد الافتتاحي"),
+            "closing_journal": _("دفتر إقفال السنة المالية"),
+
+            # الحسابات (من LedgerSettings الجديدة)
+            "sales_receivable_account": _("حساب العملاء (ذمم مدينة)"),
+            "sales_revenue_0_account": _("حساب المبيعات 0٪ / صادرات"),
+            "sales_vat_output_account": _("حساب ضريبة القيمة المضافة (مخرجات)"),
+            "sales_advance_account": _("حساب الدفعات المقدّمة من العملاء"),
+        }
+
+
+class JournalForm(forms.ModelForm):
+    class Meta:
+        model = Journal
+        fields = ["code", "name", "type", "is_default", "is_active"]
+        widgets = {
+            "code": forms.TextInput(attrs={"class": "form-control"}),
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "type": forms.Select(attrs={"class": "form-select"}),
+            "is_default": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+        labels = {
+            "code": _("كود الدفتر"),
+            "name": _("اسم الدفتر"),
+            "type": _("نوع الدفتر"),
+            "is_default": _("دفتر افتراضي"),
+            "is_active": _("نشط"),
+        }
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        is_default = self.cleaned_data.get("is_default")
+
+        if commit:
+            instance.save()
+
+        if is_default:
+            # عطّل الافتراضية عن غيره
+            Journal.objects.exclude(pk=instance.pk).update(is_default=False)
+
+            # لو ما عندنا LedgerSettings، ننشئه تلقائيًا
+            settings_obj = LedgerSettings.get_solo()
+            if settings_obj.default_manual_journal is None:
+                settings_obj.default_manual_journal = instance
+                settings_obj.save()
+
+        return instance

@@ -1,0 +1,88 @@
+{% extends "accounting/base_accounting.html" %}
+{% load i18n %}
+
+{% block accounting_content %}
+
+<h2 class="h5 mb-3">
+  {{ title|default:_("دفتر اليومية") }}
+</h2>
+
+<form method="post" class="card card-body shadow-sm border-0">
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger small">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  <div class="row g-3">
+
+    <div class="col-md-3">
+      <label class="form-label" for="{{ form.code.id_for_label }}">
+        {{ form.code.label }}
+      </label>
+      {{ form.code }}
+      {% for error in form.code.errors %}
+        <div class="text-danger small">{{ error }}</div>
+      {% endfor %}
+    </div>
+
+    <div class="col-md-5">
+      <label class="form-label" for="{{ form.name.id_for_label }}">
+        {{ form.name.label }}
+      </label>
+      {{ form.name }}
+      {% for error in form.name.errors %}
+        <div class="text-danger small">{{ error }}</div>
+      {% endfor %}
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label" for="{{ form.type.id_for_label }}">
+        {{ form.type.label }}
+      </label>
+      {{ form.type }}
+      {% for error in form.type.errors %}
+        <div class="text-danger small">{{ error }}</div>
+      {% endfor %}
+    </div>
+
+    <div class="col-md-3 d-flex align-items-center">
+      <div class="form-check mt-3">
+        {{ form.is_default }}
+        <label class="form-check-label ms-1" for="{{ form.is_default.id_for_label }}">
+          {{ form.is_default.label }}
+        </label>
+      </div>
+      {% for error in form.is_default.errors %}
+        <div class="text-danger small w-100">{{ error }}</div>
+      {% endfor %}
+    </div>
+
+    <div class="col-md-3 d-flex align-items-center">
+      <div class="form-check mt-3">
+        {{ form.is_active }}
+        <label class="form-check-label ms-1" for="{{ form.is_active.id_for_label }}">
+          {{ form.is_active.label }}
+        </label>
+      </div>
+      {% for error in form.is_active.errors %}
+        <div class="text-danger small w-100">{{ error }}</div>
+      {% endfor %}
+    </div>
+
+  </div>
+
+  <div class="mt-4 d-flex gap-2">
+    <button type="submit" class="btn btn-primary btn-sm">
+      {% trans "حفظ" %}
+    </button>
+    <a href="{% url 'accounting:journal_list' %}" class="btn btn-light btn-sm">
+      {% trans "إلغاء" %}
+    </a>
+  </div>
+
+</form>
+
+{% endblock %}

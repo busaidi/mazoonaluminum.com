@@ -1,11 +1,12 @@
-{% extends "base.html" %}
+{% extends "accounting/base_accounting.html" %}
+{% load i18n %}
 
 {% block meta_title %}إضافة دفعة للفاتورة {{ invoice.number }} | Mazoon Aluminum{% endblock %}
 {% block meta_description %}
 إضافة دفعة جديدة للفاتورة رقم {{ invoice.number }} للعميل {{ invoice.customer.name }} في نظام المحاسبة.
 {% endblock %}
 
-{% block content %}
+{% block accounting_content %}
 <div class="py-4">
   {# شريط تنقّل المحاسبة #}
   {% include "accounting/_nav.html" %}

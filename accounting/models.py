@@ -1,121 +1,181 @@
-# accounting/models.py
-
 from datetime import timedelta
 from decimal import Decimal
 
-from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
-from django.db.models import Sum
-from django.forms.models import inlineformset_factory
-from django.utils.translation import gettext as _
-from django.db.models.signals import post_delete
-from django.dispatch import receiver
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
-from accounting.domain import InvoiceCreated, InvoiceSent, OrderCreated
-from core.domain.hooks import on_lifecycle, on_transition
-from core.models.base import BaseModel, NumberedModel
-from core.models.domain import (
-    StatefulDomainModel, DomainEventsMixin,
+from accounting.domain import InvoiceCreated, InvoiceSent
+from accounting.managers import (
+    FiscalYearManager,
+    AccountManager,
+    JournalManager,
+    JournalEntryManager,
+    JournalLineManager,
+    InvoiceManager,
 )
+from core.domain.hooks import on_lifecycle, on_transition
+from core.models.domain import StatefulDomainModel
+
+User = get_user_model()
 
 
 # ============================================================
 # Invoice & InvoiceItem
 # ============================================================
 
-class Invoice(NumberedModel, StatefulDomainModel):
+
+class Invoice(StatefulDomainModel):
     """
-    Simple invoice model.
-    'serial' is used in URLs: /accounting/invoices/<serial>/
+    فاتورة مبيعات/خدمات (بدون تفاصيل ضريبية معقدة حالياً).
+
+    حالياً لا يوجد ترقيم منفصل:
+    - رقم العرض يعتمد على الـ PK (display_number).
     """
 
     class Status(models.TextChoices):
-        DRAFT = "draft", "Draft"
-        SENT = "sent", "Sent"
-        PARTIALLY_PAID = "partially_paid", "Partially Paid"
-        PAID = "paid", "Paid"
-        CANCELLED = "cancelled", "Cancelled"
+        DRAFT = "draft", _("مسودة")
+        SENT = "sent", _("تم الإرسال")
+        PARTIALLY_PAID = "partially_paid", _("مدفوعة جزئياً")
+        PAID = "paid", _("مدفوعة بالكامل")
+        CANCELLED = "cancelled", _("ملغاة")
 
     customer = models.ForeignKey(
         "contacts.Contact",
         on_delete=models.PROTECT,
         related_name="invoices",
+        verbose_name=_("الزبون"),
     )
-    issued_at = models.DateField(default=timezone.now)
-    due_date = models.DateField(null=True, blank=True)
+    issued_at = models.DateField(
+        default=timezone.now,
+        verbose_name=_("تاريخ الفاتورة"),
+    )
+    due_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name=_("تاريخ الاستحقاق"),
+    )
 
-    description = models.TextField(blank=True)
+    description = models.TextField(
+        blank=True,
+        verbose_name=_("وصف عام"),
+    )
 
     terms = models.TextField(
         blank=True,
-        help_text="Terms and conditions shown on the invoice.",
+        verbose_name=_("الشروط والأحكام"),
+        help_text=_("تظهر في الفاتورة للعميل."),
     )
 
-    total_amount = models.DecimalField(max_digits=12, decimal_places=3)
+    total_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        verbose_name=_("الإجمالي"),
+    )
     paid_amount = models.DecimalField(
         max_digits=12,
         decimal_places=3,
-        default=0,
-        help_text="Cached sum of related payments for quick display.",
+        default=Decimal("0.000"),
+        verbose_name=_("المبلغ المدفوع"),
+        help_text=_("مجموع الدفعات المرتبطة (لأغراض السرعة فقط)."),
     )
 
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
         default=Status.DRAFT,
+        verbose_name=_("الحالة"),
+        db_index=True,
     )
 
     ledger_entry = models.OneToOneField(
-        "ledger.JournalEntry",
+        "JournalEntry",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
         related_name="invoice",
-        help_text="Linked ledger journal entry for this invoice, if posted.",
+        verbose_name=_("قيد اليومية المرتبط"),
+        help_text=_("قيد الترحيل في دفتر الأستاذ إن وُجد."),
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("تاريخ الإنشاء"),
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("آخر تحديث"),
+    )
+
+    objects = InvoiceManager()
 
     class Meta:
         ordering = ("-issued_at", "-id")
         indexes = [
-            models.Index(fields=["serial"]),
             models.Index(fields=["status"]),
             models.Index(fields=["issued_at"]),
         ]
+        verbose_name = _("فاتورة")
+        verbose_name_plural = _("الفواتير")
+
+    # ---------- Helpers ----------
+
+    @property
+    def display_number(self) -> str:
+        """
+        رقم عرض بسيط يعتمد على الـ PK.
+        يمكن تغييره لاحقاً عند إضافة منطق ترقيم مستقل.
+        """
+        if self.pk:
+            return f"INV-{self.pk}"
+        return _("فاتورة (غير محفوظة)")
+
+    @property
+    def balance(self) -> Decimal:
+        """
+        الرصيد المتبقي = الإجمالي - المدفوع.
+        """
+        return (self.total_amount or Decimal("0")) - (
+            self.paid_amount or Decimal("0")
+        )
 
     def __str__(self) -> str:
-        return f"Invoice {self.serial} - {self.customer.name}"
+        return f"{self.display_number} - {self.customer.name}"
+
+    # ---------- Validation ----------
+
+    def clean(self):
+        super().clean()
+        if self.total_amount is not None and self.paid_amount is not None:
+            if self.paid_amount > self.total_amount:
+                raise ValidationError(
+                    {"paid_amount": _("المبلغ المدفوع لا يمكن أن يتجاوز إجمالي الفاتورة.")}
+                )
 
     # ---------- Core logic ----------
 
     def save(self, *args, **kwargs):
         """
-        On first save:
-        - Apply due_date / terms defaults from Settings if not set.
-        - Let NumberedModel handle serial generation if needed.
-        - Domain events (InvoiceCreated, transitions, ...) are handled
-          by StatefulDomainModel / DomainEventsMixin via lifecycle hooks.
+        على أول حفظ:
+        - تطبيق default_due_days / default_terms من Settings لو غير محددة.
+        - لا يوجد أي منطق ترقيم هنا حالياً.
         """
-        from accounting.models import Settings  # to avoid circular imports
-
-        # استخدم _state.adding بدل pk is None (أدق مع Django)
         is_new = self._state.adding
 
         if is_new:
-            settings = Settings.get_solo()
+            settings_obj = Settings.get_solo()
 
-            if not self.due_date and settings.default_due_days:
-                self.due_date = self.issued_at + timedelta(days=settings.default_due_days)
+            if not self.due_date and settings_obj.default_due_days:
+                self.due_date = self.issued_at + timedelta(
+                    days=settings_obj.default_due_days
+                )
 
-            if not self.terms and settings.default_terms:
-                self.terms = settings.default_terms
+            if not self.terms and settings_obj.default_terms:
+                self.terms = settings_obj.default_terms
 
-        # NumberedModel + StatefulDomainModel will do their job in MRO
         super().save(*args, **kwargs)
 
     # ---------- Domain event hooks ----------
@@ -123,48 +183,27 @@ class Invoice(NumberedModel, StatefulDomainModel):
     @on_lifecycle("created")
     def _on_created(self) -> None:
         """
-        This hook is called automatically after the first save()
-        when the DB transaction is committed.
-
-        It emits an InvoiceCreated event for further processing
-        (notifications, integrations, etc.).
+        يُستدعى بعد أول save() ناجح وبعد commit للـ transaction.
+        نمرر display_number كسيريال مؤقت.
         """
         self.emit(
             InvoiceCreated(
                 invoice_id=self.pk,
-                serial=self.serial,
+                serial=self.display_number,
             )
         )
 
     @on_transition(Status.DRAFT, Status.SENT)
     def _on_sent(self) -> None:
         """
-        This hook is called automatically when the invoice status
-        changes from DRAFT -> SENT (after DB commit).
-
-        It emits an InvoiceSent event so that other parts of the system
-        (e.g. notifications, emails, integrations) can react.
+        يُستدعى عند الانتقال من DRAFT → SENT.
         """
         self.emit(
             InvoiceSent(
                 invoice_id=self.pk,
-                serial=self.serial,
+                serial=self.display_number,
             )
         )
-
-
-    # لاحقًا لو حبيت:
-    # from core.domain.hooks import on_transition
-    # from accounting.domain import InvoiceSent
-    #
-    # @on_transition(Status.DRAFT, Status.SENT)
-    # def _on_sent(self) -> None:
-    #     self.emit(
-    #         InvoiceSent(
-    #             invoice_id=self.pk,
-    #             serial=self.serial,
-    #         )
-    #     )
 
 
 class InvoiceItem(models.Model):
@@ -172,424 +211,81 @@ class InvoiceItem(models.Model):
         Invoice,
         related_name="items",
         on_delete=models.CASCADE,
-        verbose_name="الفاتورة",
+        verbose_name=_("الفاتورة"),
     )
-    product = models.ForeignKey(
-        "website.Product",
-        on_delete=models.PROTECT,
-        verbose_name="المنتج",
-        null=True,
-        blank=True,  # اختياري
-    )
-    description = models.CharField(
-        max_length=255,
-        blank=True,
-        verbose_name="الوصف",
-    )
-    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1)
-    unit_price = models.DecimalField(max_digits=10, decimal_places=3)
-
-    @property
-    def subtotal(self) -> Decimal:
-        return self.quantity * self.unit_price
-
-    def clean(self):
-        """
-        سطر الفاتورة يكون صالح إذا:
-        - product موجود، أو
-        - description مكتوب
-        """
-        if not self.product and not self.description:
-            raise ValidationError("يجب اختيار منتج أو كتابة وصف للبند.")
-
-    def __str__(self) -> str:
-        if self.product:
-            return f"{self.product} × {self.quantity}"
-        return f"{self.description or 'Item'} × {self.quantity}"
-
-
-# ============================================================
-# Payment + signal
-# ============================================================
-
-
-
-# ============================================================
-# Orders (header + items)
-# ============================================================
-
-class Order(NumberedModel, DomainEventsMixin):
-    """
-    Sales/online order header.
-
-    - يرث من NumberedModel → يحصل على number + serial بنفس محرك الترقيم.
-    - DomainEventsMixin ما زال مسؤول عن تجميع/إطلاق الـ Domain Events.
-    """
-
-    STATUS_DRAFT = "draft"
-    STATUS_PENDING = "pending"      # طلب أونلاين ينتظر تأكيد موظف
-    STATUS_CONFIRMED = "confirmed"  # تم التأكيد
-    STATUS_CANCELLED = "cancelled"
-
-    STATUS_CHOICES = [
-        (STATUS_DRAFT, "مسودة"),
-        (STATUS_PENDING, "بانتظار التأكيد"),
-        (STATUS_CONFIRMED, "مؤكد"),
-        (STATUS_CANCELLED, "ملغي"),
-    ]
-
-    customer = models.ForeignKey(
-        "contacts.Contact",
-        on_delete=models.PROTECT,
-        related_name="orders",
-        verbose_name="الزبون",
-    )
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="orders_created",
-        verbose_name="تم إدخاله بواسطة",
-    )
-    invoice = models.OneToOneField(
-        "Invoice",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="order",
-        verbose_name="الفاتورة الناتجة",
-    )
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default=STATUS_PENDING,
-    )
-    is_online = models.BooleanField(
-        default=False,
-        help_text="صحيح إذا كان الطلب تم من بوابة الزبون.",
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    confirmed_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="confirmed_orders",
-        verbose_name="تم تأكيده بواسطة",
-    )
-    confirmed_at = models.DateTimeField(null=True, blank=True)
-    notes = models.TextField(blank=True, verbose_name="ملاحظات داخلية")
-
-    class Meta:
-        ordering = ("-created_at", "id")
-        indexes = [
-            models.Index(fields=["created_at"]),
-            models.Index(fields=["status"]),
-            models.Index(fields=["serial"]),  # من NumberedModel
-        ]
-
-    def __str__(self) -> str:
-        """
-        نعرض رقم الطلب لو موجود (number)، وإلا نرجع للـ pk مثل السابق.
-        """
-        label = self.number or f"#{self.pk}"
-        return f"طلب {label} - {self.customer}"
-
-    @property
-    def total_amount(self) -> Decimal:
-        """
-        Sum of item.quantity * item.unit_price for this order.
-        """
-        return sum((item.subtotal for item in self.items.all()), Decimal("0"))
-
-    # ---------- UI helpers (Mazoon badges) ----------
-
-    @property
-    def status_badge(self) -> str:
-        """
-        CSS classes for Mazoon theme badge based on order status.
-        مثال في القالب:
-        <span class="{{ order.status_badge }}">{{ order.get_status_display }}</span>
-        """
-        mapping = {
-            self.STATUS_DRAFT: "badge-mazoon badge-draft",
-            self.STATUS_PENDING: "badge-mazoon badge-pending",
-            self.STATUS_CONFIRMED: "badge-mazoon badge-confirmed",
-            self.STATUS_CANCELLED: "badge-mazoon badge-cancelled",
-        }
-        return mapping.get(self.status, "badge-mazoon badge-draft")
-
-    @property
-    def type_label(self) -> str:
-        """
-        نص نوع الطلب حسب اللغة الحالية:
-        - أونلاين
-        - موظف
-        تُستخدم في القالب:
-        {{ order.type_label }}
-        """
-        return _("أونلاين") if self.is_online else _("موظف")
-
-    @property
-    def type_badge(self) -> str:
-        """
-        CSS classes for Mazoon theme badge based on order type.
-        تُستخدم في القالب:
-        <span class="{{ order.type_badge }}">{{ order.type_label }}</span>
-        """
-        if self.is_online:
-            # نفس فكرة bg-mazoon-accent text-dark اللي كنت تستخدمها
-            return "badge-mazoon badge-online"
-        return "badge-mazoon badge-staff"
-
-    # ---------- Domain events ----------
-
-    @on_lifecycle("created")
-    def _on_created(self) -> None:
-        """
-        يتم استدعاؤها تلقائياً بعد إنشاء الطلب أول مرة
-        (بعد حفظه في قاعدة البيانات ونجاح الـ transaction).
-
-        نطلق هذا الإيفنت فقط للطلبات الأونلاين (is_online=True).
-        """
-        if not self.is_online:
-            return
-
-        self.emit(
-            OrderCreated(
-                order_id=self.pk,
-            )
-        )
-
-
-
-
-class OrderItem(models.Model):
-    order = models.ForeignKey(
-        Order,
-        on_delete=models.CASCADE,
-        related_name="items",
-        verbose_name="الطلب",
-    )
-    # Use inventory.Product instead of website.Product
+    # توحيداً مع بقية النظام: نستخدم inventory.Product
     product = models.ForeignKey(
         "inventory.Product",
         on_delete=models.PROTECT,
-        verbose_name="المنتج",
-        related_name="order_items",
+        verbose_name=_("المنتج"),
         null=True,
         blank=True,
-    )
-    # UoM field (adjust app/model string if your UoM model lives in another app)
-    uom = models.ForeignKey(
-        "uom.UnitOfMeasure",
-        on_delete=models.PROTECT,
-        verbose_name="وحدة القياس",
-        null=True,
-        blank=True,
-        related_name="order_items",
     )
     description = models.CharField(
         max_length=255,
         blank=True,
-        default="",
-        verbose_name="الوصف",
+        verbose_name=_("الوصف"),
     )
-    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1)
-    unit_price = models.DecimalField(max_digits=10, decimal_places=3)
+    quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("1.00"),
+        verbose_name=_("الكمية"),
+    )
+    unit_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        verbose_name=_("سعر الوحدة"),
+    )
 
     class Meta:
-        verbose_name = "بند طلب"
-        verbose_name_plural = "بنود الطلبات"
-
-    def __str__(self) -> str:
-        label = self.description or (str(self.product) if self.product else "")
-        return f"{label} x {self.quantity}"
+        verbose_name = _("بند فاتورة")
+        verbose_name_plural = _("بنود الفاتورة")
 
     @property
     def subtotal(self) -> Decimal:
+        return (self.quantity or Decimal("0")) * (self.unit_price or Decimal("0"))
+
+    def clean(self):
         """
-        Subtotal = quantity * unit_price.
-        Unit price is assumed "per selected UoM".
+        السطر صالح إذا:
+        - product موجود، أو
+        - description مكتوب.
         """
-        return self.quantity * self.unit_price
+        if not self.product and not self.description:
+            raise ValidationError(_("يجب اختيار منتج أو كتابة وصف للبند."))
+
+    def __str__(self) -> str:
+        label = self.product or self.description or _("بند")
+        return f"{label} × {self.quantity}"
 
 
-
-
+# ============================================================
+# Settings (سلوك الفواتير والضريبة والنصوص فقط – بدون ترقيم)
+# ============================================================
 
 
 class Settings(models.Model):
     """
-    Global sales/invoice settings:
-    - Invoice numbering (linked to core.NumberingScheme for accounting.Invoice)
-    - Default due days
-    - Default VAT behavior
-    - Default terms
+    إعدادات الفواتير داخل تطبيق accounting.
 
-    هذا موديل "singleton" (صف واحد فقط) مثل LedgerSettings.
+    ملاحظة:
+    - لا تحتوي على أي إعدادات خاصة بالترقيم.
     """
 
-    class InvoiceResetPolicy(models.TextChoices):
-        NEVER = "never", _("لا يتم إعادة الترقيم")
-        YEAR = "year", _("يُعاد سنويًا")
-        MONTH = "month", _("يُعاد شهريًا")
-
-    # ---------- Invoice numbering ----------
-    invoice_number_active = models.BooleanField(
-        default=True,
-        verbose_name=_("تفعيل ترقيم الفواتير؟"),
-        help_text=_("إذا تم تعطيله، لن يتم توليد أرقام تلقائية للفواتير."),
-    )
-
-    invoice_prefix = models.CharField(
-        max_length=20,
-        default="INV",
-        verbose_name=_("بادئة أرقام الفواتير"),
-        help_text=_("تظهر في بداية رقم الفاتورة مثل INV-2025-0001."),
-    )
-
-    invoice_padding = models.PositiveSmallIntegerField(
-        default=4,
-        validators=[MinValueValidator(1), MaxValueValidator(10)],
-        verbose_name=_("عدد الخانات الرقمية"),
-        help_text=_("مثلاً 4 تعني 0001، 0002، ..."),
-    )
-
-    invoice_start_value = models.PositiveIntegerField(
-        default=1,
-        validators=[MinValueValidator(1)],
-        verbose_name=_("قيمة البداية للتسلسل"),
-        help_text=_("مثلاً 1 تعني أن أول فاتورة ستكون 0001، ويمكن البدء من رقم أكبر عند الحاجة."),
-    )
-
-    invoice_reset_policy = models.CharField(
-        max_length=10,
-        choices=InvoiceResetPolicy.choices,
-        default=InvoiceResetPolicy.YEAR,
-        verbose_name=_("سياسة إعادة الترقيم"),
-        help_text=_("تحدد متى يبدأ التسلسل من جديد: لا يعاد، أو سنويًا، أو شهريًا."),
-    )
-
-    invoice_custom_pattern = models.CharField(
-        max_length=100,
-        blank=True,
-        verbose_name=_("نمط الترقيم المخصص (اختياري)"),
-        help_text=_(
-            "اتركه فارغًا لاستخدام البادئة وعدد الخانات. "
-            "يمكنك استخدام المتغيرات {year}، {month}، {day}، و {seq:04d}. "
-            "يجب أن يحتوي النمط على {seq}."
-        ),
-    )
-
-    # ---------- Payment numbering ----------
-    payment_number_active = models.BooleanField(
-        default=True,
-        verbose_name=_("تفعيل ترقيم الدفعات؟"),
-        help_text=_("إذا تم تعطيله، لن يتم توليد أرقام تلقائية للدفعات."),
-    )
-
-    payment_prefix = models.CharField(
-        max_length=20,
-        default="PAY",
-        verbose_name=_("بادئة أرقام الدفعات"),
-        help_text=_("تظهر في بداية رقم الدفع مثل PAY-2025-0001."),
-    )
-
-    payment_padding = models.PositiveSmallIntegerField(
-        default=4,
-        validators=[MinValueValidator(1), MaxValueValidator(10)],
-        verbose_name=_("عدد الخانات الرقمية للدفعات"),
-        help_text=_("مثلاً 4 تعني 0001، 0002، ... للدفعات."),
-    )
-
-    payment_start_value = models.PositiveIntegerField(
-        default=1,
-        validators=[MinValueValidator(1)],
-        verbose_name=_("قيمة البداية لتسلسل الدفعات"),
-        help_text=_("مثلاً 1 تعني أن أول دفعة ستكون 0001."),
-    )
-
-    payment_reset_policy = models.CharField(
-        max_length=10,
-        choices=InvoiceResetPolicy.choices,  # نعيد استخدام نفس الاختيارات
-        default=InvoiceResetPolicy.YEAR,
-        verbose_name=_("سياسة إعادة الترقيم للدفعات"),
-        help_text=_("تحدد متى يبدأ تسلسل الدفعات من جديد."),
-    )
-
-    payment_custom_pattern = models.CharField(
-        max_length=100,
-        blank=True,
-        verbose_name=_("نمط الترقيم المخصص للدفعات (اختياري)"),
-        help_text=_(
-            "اتركه فارغًا لاستخدام البادئة وعدد الخانات. "
-            "يمكنك استخدام المتغيرات {year}، {month}، {day}، و {seq:04d}. "
-            "يجب أن يحتوي النمط على {seq}."
-        ),
-    )
-    # ---------- Order numbering ----------
-    order_number_active = models.BooleanField(
-        default=True,
-        verbose_name=_("تفعيل ترقيم الطلبات؟"),
-        help_text=_("إذا تم تعطيله، لن يتم توليد أرقام تلقائية للطلبات."),
-    )
-
-    order_prefix = models.CharField(
-        max_length=20,
-        default="ORD",
-        verbose_name=_("بادئة أرقام الطلبات"),
-        help_text=_("تظهر في بداية رقم الطلب مثل ORD-2025-0001."),
-    )
-
-    order_padding = models.PositiveSmallIntegerField(
-        default=4,
-        validators=[MinValueValidator(1), MaxValueValidator(10)],
-        verbose_name=_("عدد الخانات الرقمية للطلبات"),
-        help_text=_("مثلاً 4 تعني 0001، 0002، ... للطلبات."),
-    )
-
-    order_start_value = models.PositiveIntegerField(
-        default=1,
-        validators=[MinValueValidator(1)],
-        verbose_name=_("قيمة البداية لتسلسل الطلبات"),
-        help_text=_("مثلاً 1 تعني أن أول طلب سيكون 0001."),
-    )
-
-    order_reset_policy = models.CharField(
-        max_length=10,
-        choices=InvoiceResetPolicy.choices,
-        default=InvoiceResetPolicy.YEAR,
-        verbose_name=_("سياسة إعادة الترقيم للطلبات"),
-        help_text=_("تحدد متى يبدأ تسلسل الطلبات من جديد."),
-    )
-
-    order_custom_pattern = models.CharField(
-        max_length=100,
-        blank=True,
-        verbose_name=_("نمط الترقيم المخصص للطلبات (اختياري)"),
-        help_text=_(
-            "اتركه فارغًا لاستخدام البادئة وعدد الخانات. "
-            "يمكنك استخدام المتغيرات {year}، {month}، {day}، و {seq:04d}. "
-            "يجب أن يحتوي النمط على {seq}."
-        ),
-    )
-
     # ---------- Default invoice behavior ----------
+
     default_due_days = models.PositiveSmallIntegerField(
         default=30,
         validators=[MinValueValidator(0), MaxValueValidator(365)],
         verbose_name=_("عدد أيام الاستحقاق الافتراضي"),
         help_text=_("يُستخدم لحساب تاريخ الاستحقاق من تاريخ الفاتورة."),
     )
-
     auto_confirm_invoice = models.BooleanField(
         default=False,
         verbose_name=_("اعتماد الفاتورة تلقائيًا بعد الحفظ؟"),
-        help_text=_("إذا كان مفعلًا، تنتقل الفاتورة من Draft إلى Sent تلقائيًا."),
+        help_text=_("إذا كان مفعلًا، تنتقل الفاتورة من مسودة إلى مُرسلة تلقائيًا."),
     )
-
     auto_post_to_ledger = models.BooleanField(
         default=False,
         verbose_name=_("ترحيل تلقائي إلى دفتر الأستاذ بعد الاعتماد؟"),
@@ -599,34 +295,28 @@ class Settings(models.Model):
     )
 
     # ---------- VAT behavior ----------
+
     default_vat_rate = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         default=Decimal("5.00"),
         verbose_name=_("نسبة ضريبة القيمة المضافة الافتراضية (%)"),
-        help_text=_(
-            "تُستخدم للفواتير التي تحتوي على ضريبة "
-            "(يمكن تجاهلها إذا لم تُفعّل VAT)."
-        ),
+        help_text=_("يمكن تجاهلها إن لم تُفعّل ضريبة VAT في النظام."),
     )
-
     prices_include_vat = models.BooleanField(
         default=False,
         verbose_name=_("الأسعار شاملة للضريبة؟"),
-        help_text=_("إذا كان مفعلًا، تعتبر أسعار البنود شاملة للضريبة."),
     )
 
     # ---------- Text templates ----------
+
     default_terms = models.TextField(
         blank=True,
         verbose_name=_("الشروط والأحكام الافتراضية"),
-        help_text=_("يتم نسخها تلقائيًا في حقل الشروط داخل الفاتورة الجديدة."),
     )
-
     footer_notes = models.TextField(
         blank=True,
         verbose_name=_("ملاحظات أسفل الفاتورة"),
-        help_text=_("نص يظهر في أسفل الفاتورة المطبوعة (اختياري)."),
     )
 
     updated_at = models.DateTimeField(
@@ -635,97 +325,492 @@ class Settings(models.Model):
     )
 
     class Meta:
-        verbose_name = _("إعدادات المبيعات")
-        verbose_name_plural = _("إعدادات المبيعات")
+        verbose_name = _("إعدادات الفواتير")
+        verbose_name_plural = _("إعدادات الفواتير")
 
     def __str__(self) -> str:
-        return _("إعدادات المبيعات")
+        return _("إعدادات الفواتير")
 
     # ---------- Singleton helper ----------
+
     @classmethod
     def get_solo(cls) -> "Settings":
-        """
-        يعيد صف الإعدادات الوحيد، وينشئ واحد إذا غير موجود.
-        """
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
 
-    # ---------- NumberingScheme sync ----------
+
+# ==============================================================================
+# Fiscal Year
+# ==============================================================================
+
+
+class FiscalYear(models.Model):
+    year = models.PositiveIntegerField(unique=True, verbose_name=_("السنة"))
+    start_date = models.DateField(verbose_name=_("تاريخ البداية"))
+    end_date = models.DateField(verbose_name=_("تاريخ النهاية"))
+    is_closed = models.BooleanField(default=False, verbose_name=_("مقفلة؟"))
+    is_default = models.BooleanField(
+        default=False,
+        verbose_name=_("سنة افتراضية للتقارير؟"),
+        help_text=_("تُستخدم كسنة افتراضية في التقارير."),
+    )
+
+    objects = FiscalYearManager()
+
+    class Meta:
+        ordering = ["-year"]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(start_date__lte=models.F("end_date")),
+                name="fiscalyear_start_before_end",
+            )
+        ]
+        verbose_name = _("سنة مالية")
+        verbose_name_plural = _("السنوات المالية")
+
+    def __str__(self) -> str:
+        return str(self.year)
+
+    @classmethod
+    def for_date(cls, date):
+        """
+        يجد السنة المالية التي تحتوي التاريخ (مفوض للـ Manager).
+        """
+        return cls.objects.for_date(date)
+
     def save(self, *args, **kwargs):
         """
-        نحفظ إعدادات المبيعات + نزامن سكيم الترقيم في core.NumberingScheme
-        للموديلات:
-        - accounting.Invoice
-        - accounting.Payment
-        - accounting.Order
-        كل واحد بإعداداته الخاصة.
+        ضمان أن سنة واحدة فقط تحمل is_default=True.
         """
         super().save(*args, **kwargs)
+        if self.is_default:
+            FiscalYear.objects.exclude(pk=self.pk).update(is_default=False)
 
-        from core.models.numbering import NumberingScheme
 
-        # ----------------- invoice pattern -----------------
-        if self.invoice_custom_pattern:
-            invoice_pattern = self.invoice_custom_pattern
-        else:
-            inv_seq_format = f"0{self.invoice_padding}d"
-            invoice_pattern = (
-                f"{self.invoice_prefix}-"
-                "{year}-"
-                "{seq:" + inv_seq_format + "}"
+# ==============================================================================
+# Account
+# ==============================================================================
+
+
+class Account(models.Model):
+    class Type(models.TextChoices):
+        ASSET = "asset", _("أصل")
+        LIABILITY = "liability", _("التزامات")
+        EQUITY = "equity", _("حقوق ملكية")
+        REVENUE = "revenue", _("إيرادات")
+        EXPENSE = "expense", _("مصروفات")
+
+    code = models.CharField(
+        max_length=20,
+        unique=True,
+        db_index=True,
+        verbose_name=_("كود الحساب"),
+    )
+    name = models.CharField(
+        max_length=255,
+        verbose_name=_("اسم الحساب"),
+    )
+    type = models.CharField(
+        max_length=20,
+        choices=Type.choices,
+        verbose_name=_("نوع الحساب"),
+    )
+    parent = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="children",
+        verbose_name=_("الحساب الأب"),
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_("نشط"),
+    )
+
+    allow_settlement = models.BooleanField(
+        default=True,
+        help_text=_("السماح باستخدام الحساب في التسويات (عملاء/موردين)."),
+    )
+
+    objects = AccountManager()
+
+    class Meta:
+        ordering = ["code"]
+        verbose_name = _("حساب")
+        verbose_name_plural = _("الحسابات")
+
+    def __str__(self) -> str:
+        return f"{self.code} - {self.name}"
+
+
+# ==============================================================================
+# Journal
+# ==============================================================================
+
+
+class Journal(models.Model):
+    class Type(models.TextChoices):
+        GENERAL = "general", _("دفتر عام")
+        CASH = "cash", _("دفتر الكاش")
+        BANK = "bank", _("دفتر البنك")
+        SALES = "sales", _("دفتر المبيعات")
+        PURCHASE = "purchase", _("دفتر المشتريات")
+
+    code = models.CharField(
+        max_length=20,
+        unique=True,
+        verbose_name=_("كود الدفتر"),
+    )
+    name = models.CharField(
+        max_length=100,
+        verbose_name=_("اسم الدفتر"),
+    )
+    type = models.CharField(
+        max_length=20,
+        choices=Type.choices,
+        default=Type.GENERAL,
+        verbose_name=_("نوع الدفتر"),
+    )
+    is_default = models.BooleanField(
+        default=False,
+        verbose_name=_("دفتر افتراضي"),
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_("نشط"),
+    )
+
+    objects = JournalManager()
+
+    class Meta:
+        ordering = ["code"]
+        verbose_name = _("دفتر اليومية")
+        verbose_name_plural = _("دفاتر اليومية")
+
+    def __str__(self) -> str:
+        return f"{self.code} - {self.name}"
+
+
+# ==============================================================================
+# Journal Entry / Lines
+# ==============================================================================
+
+
+class JournalEntry(models.Model):
+    fiscal_year = models.ForeignKey(
+        FiscalYear,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="entries",
+        verbose_name=_("السنة المالية"),
+    )
+    journal = models.ForeignKey(
+        Journal,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="entries",
+        verbose_name=_("دفتر اليومية"),
+    )
+    date = models.DateField(
+        default=timezone.now,
+        verbose_name=_("التاريخ"),
+    )
+    reference = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_("المرجع"),
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name=_("الوصف"),
+    )
+
+    posted = models.BooleanField(
+        default=False,
+        verbose_name=_("مرحّل"),
+    )
+    posted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("تاريخ الترحيل"),
+    )
+    posted_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="posted_journal_entries",
+        verbose_name=_("مُرحّل بواسطة"),
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("أنشئ في"),
+    )
+    created_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        verbose_name=_("أنشئ بواسطة"),
+        related_name="created_journal_entries",
+    )
+
+    objects = JournalEntryManager()
+
+    class Meta:
+        ordering = ["-date", "-id"]
+        verbose_name = _("قيد يومية")
+        verbose_name_plural = _("قيود اليومية")
+
+    # ---------- Helpers ----------
+
+    @property
+    def display_number(self) -> str:
+        """
+        رقم عرض بسيط يعتمد على الـ PK.
+        """
+        if self.pk:
+            return f"JE-{self.pk}"
+        return _("قيد (غير محفوظ)")
+
+    def __str__(self) -> str:
+        return f"{self.display_number} ({self.date})"
+
+    @property
+    def total_debit(self) -> Decimal:
+        return self.lines.aggregate(s=models.Sum("debit"))["s"] or Decimal("0")
+
+    @property
+    def total_credit(self) -> Decimal:
+        return self.lines.aggregate(s=models.Sum("credit"))["s"] or Decimal("0")
+
+    @property
+    def is_balanced(self) -> bool:
+        return self.total_debit == self.total_credit
+
+    def save(self, *args, **kwargs):
+        """
+        - تعيين السنة المالية من التاريخ تلقائياً إذا لم تُحدّد.
+        - لا يوجد أي منطق ترقيم مستقل، نعتمد على الـ PK.
+        """
+        if self.date:
+            fy = FiscalYear.for_date(self.date)
+            if fy is not None:
+                self.fiscal_year = fy
+
+        super().save(*args, **kwargs)
+
+
+class JournalLine(models.Model):
+    entry = models.ForeignKey(
+        JournalEntry,
+        related_name="lines",
+        on_delete=models.CASCADE,
+        verbose_name=_("قيد اليومية"),
+    )
+    account = models.ForeignKey(
+        Account,
+        on_delete=models.PROTECT,
+        verbose_name=_("الحساب"),
+    )
+    description = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("الوصف"),
+    )
+    debit = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=Decimal("0.000"),
+        verbose_name=_("مدين"),
+    )
+    credit = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=Decimal("0.000"),
+        verbose_name=_("دائن"),
+    )
+    order = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("ترتيب السطر"),
+    )
+
+    objects = JournalLineManager()
+
+    class Meta:
+        ordering = ["order", "id"]
+        constraints = [
+            models.CheckConstraint(
+                check=~(models.Q(debit__gt=0) & models.Q(credit__gt=0)),
+                name="journalline_not_both_debit_credit",
             )
+        ]
+        verbose_name = _("سطر قيد")
+        verbose_name_plural = _("سطور القيود")
 
-        NumberingScheme.objects.update_or_create(
-            model_label="accounting.Invoice",
-            defaults={
-                "field_name": "number",
-                "pattern": invoice_pattern,
-                "start": self.invoice_start_value,
-                "reset": self.invoice_reset_policy,
-                "is_active": self.invoice_number_active,
-            },
-        )
+    def __str__(self) -> str:
+        return f"{self.entry_id} - {self.account}"
 
-        # ----------------- payment pattern -----------------
-        if self.payment_custom_pattern:
-            payment_pattern = self.payment_custom_pattern
-        else:
-            pay_seq_format = f"0{self.payment_padding}d"
-            payment_pattern = (
-                f"{self.payment_prefix}-"
-                "{year}-"
-                "{seq:" + pay_seq_format + "}"
-            )
 
-        NumberingScheme.objects.update_or_create(
-            model_label="accounting.Payment",
-            defaults={
-                "field_name": "number",
-                "pattern": payment_pattern,
-                "start": self.payment_start_value,
-                "reset": self.payment_reset_policy,
-                "is_active": self.payment_number_active,
-            },
-        )
+# ==============================================================================
+# Helpers: default journals
+# ==============================================================================
 
-        # ----------------- order pattern -----------------
-        if self.order_custom_pattern:
-            order_pattern = self.order_custom_pattern
-        else:
-            ord_seq_format = f"0{self.order_padding}d"
-            order_pattern = (
-                f"{self.order_prefix}-"
-                "{year}-"
-                "{seq:" + ord_seq_format + "}"
-            )
 
-        NumberingScheme.objects.update_or_create(
-            model_label="accounting.Order",
-            defaults={
-                "field_name": "number",
-                "pattern": order_pattern,
-                "start": self.order_start_value,
-                "reset": self.order_reset_policy,
-                "is_active": self.order_number_active,
-            },
-        )
+def get_default_journal_for_manual_entry():
+    return Journal.objects.get_default_for_manual_entry()
+
+
+def get_default_journal_for_sales_invoice():
+    return Journal.objects.get_default_for_sales_invoice()
+
+
+def get_default_journal_for_customer_payment():
+    return Journal.objects.get_default_for_customer_payment()
+
+
+# ==============================================================================
+# LedgerSettings
+# ==============================================================================
+
+
+class LedgerSettings(models.Model):
+    """
+    إعدادات دفتر الأستاذ:
+    - ربط دفاتر اليومية بوظائف النظام (مبيعات، مشتريات، بنك، كاش، ...).
+    - ربط الحسابات الافتراضية لعمليات المبيعات (عملاء، مبيعات، ضريبة، دفعات مقدمة).
+    """
+
+    default_manual_journal = models.ForeignKey(
+        Journal,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_default_manual_journal",
+        limit_choices_to={"is_active": True},
+        verbose_name=_("دفتر القيود اليدوية"),
+    )
+    sales_journal = models.ForeignKey(
+        Journal,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_sales_journal",
+        limit_choices_to={"is_active": True},
+        verbose_name=_("دفتر المبيعات"),
+    )
+    purchase_journal = models.ForeignKey(
+        Journal,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_purchase_journal",
+        limit_choices_to={"is_active": True},
+        verbose_name=_("دفتر المشتريات"),
+    )
+    cash_journal = models.ForeignKey(
+        Journal,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_cash_journal",
+        limit_choices_to={"is_active": True},
+        verbose_name=_("دفتر الكاش"),
+    )
+    bank_journal = models.ForeignKey(
+        Journal,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_bank_journal",
+        limit_choices_to={"is_active": True},
+        verbose_name=_("دفتر البنك"),
+    )
+    opening_balance_journal = models.ForeignKey(
+        Journal,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_opening_balance_journal",
+        limit_choices_to={"is_active": True},
+        verbose_name=_("دفتر الرصيد الافتتاحي"),
+    )
+    closing_journal = models.ForeignKey(
+        Journal,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_closing_journal",
+        limit_choices_to={"is_active": True},
+        verbose_name=_("دفتر إقفال السنة"),
+    )
+
+    sales_receivable_account = models.ForeignKey(
+        Account,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_sales_receivable_account",
+        verbose_name=_("حساب العملاء (ذمم مدينة)"),
+        limit_choices_to={"is_active": True},
+    )
+    sales_revenue_0_account = models.ForeignKey(
+        Account,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_sales_revenue_0_account",
+        verbose_name=_("حساب المبيعات 0٪"),
+        limit_choices_to={"is_active": True},
+    )
+    sales_vat_output_account = models.ForeignKey(
+        Account,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_sales_vat_output_account",
+        verbose_name=_("حساب ضريبة القيمة المضافة المستحقة (مخرجات)"),
+        limit_choices_to={"is_active": True},
+    )
+    sales_advance_account = models.ForeignKey(
+        Account,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="as_sales_advance_account",
+        verbose_name=_("حساب دفعات مقدّمة من العملاء"),
+        limit_choices_to={"is_active": True},
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("تاريخ آخر تعديل"),
+    )
+
+    class Meta:
+        verbose_name = _("إعدادات دفتر الأستاذ")
+        verbose_name_plural = _("إعدادات دفتر الأستاذ")
+
+    def __str__(self) -> str:
+        return _("إعدادات دفتر الأستاذ")
+
+    @classmethod
+    def get_solo(cls) -> "LedgerSettings":
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    @property
+    def as_mapping(self):
+        return {
+            "default_manual": self.default_manual_journal,
+            "sales": self.sales_journal,
+            "purchase": self.purchase_journal,
+            "cash": self.cash_journal,
+            "bank": self.bank_journal,
+            "opening": self.opening_balance_journal,
+            "closing": self.closing_journal,
+        }

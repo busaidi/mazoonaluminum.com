@@ -1,20 +1,18 @@
-{% extends "base.html" %}
+{% extends "accounting/base_accounting.html" %}
 {% load i18n %}
 
 {% block meta_title %}
-    {% blocktrans with serial=invoice.serial %}فاتورة {{ serial }} | Mazoon Aluminum{% endblocktrans %}
+  {% blocktrans with serial=invoice.serial %}فاتورة {{ serial }} | Mazoon Aluminum{% endblocktrans %}
 {% endblock %}
 
 {% block meta_description %}
-    {% blocktrans with serial=invoice.serial customer=invoice.customer.name %}
-        تفاصيل الفاتورة رقم {{ serial }} للعميل {{ customer }}، مع عرض البنود والدفعات المرتبطة والمبلغ المتبقي.
-    {% endblocktrans %}
+  {% blocktrans with serial=invoice.serial customer=invoice.customer.name %}
+    تفاصيل الفاتورة رقم {{ serial }} للعميل {{ customer }}، مع عرض البنود والمبالغ.
+  {% endblocktrans %}
 {% endblock %}
 
-{% block content %}
+{% block accounting_content %}
 <div class="py-4">
-  {# شريط تنقّل المحاسبة #}
-  {% include "accounting/_nav.html" %}
 
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
@@ -28,13 +26,13 @@
 
     <div class="d-flex flex-wrap gap-2">
 
-      {# تعديل الفاتورة #}
-      <a href="{% url 'accounting:invoice_update' serial=invoice.serial %}"
+      {# تعديل الفاتورة - بالـ pk حسب urls.py #}
+      <a href="{% url 'accounting:invoice_update' invoice.pk %}"
          class="btn btn-primary btn-sm">
         {% trans "تعديل الفاتورة" %}
       </a>
 
-      {# اعتماد وترحيل للدفتر - فقط إذا مسودة #}
+      {# اعتماد وترحيل - لو حاب تبقيه، يعتمد على منطقك في الـ view #}
       {% if invoice.status == 'draft' %}
         <a href="{% url 'accounting:invoice_confirm' invoice.pk %}"
            class="btn btn-outline-primary btn-sm">
@@ -42,38 +40,24 @@
         </a>
       {% endif %}
 
-      {# إلغاء الترحيل - إذا مقيّدة وما عليها دفعات #}
-      {% if invoice.ledger_entry and invoice.paid_amount == 0 %}
+      {# إلغاء الترحيل - إذا فيه قيد مرتبط #}
+      {% if invoice.ledger_entry %}
         <a href="{% url 'accounting:invoice_unpost' invoice.pk %}"
            class="btn btn-warning btn-sm">
           {% trans "إلغاء الترحيل" %}
         </a>
       {% endif %}
 
-      {# عرض قيد اليومية في دفتر الأستاذ - إذا الفاتورة مقيّدة #}
+      {# عرض قيد اليومية المرتبط بالفاتورة في نفس تطبيق accounting #}
       {% if invoice.ledger_entry %}
-        <a href="{% url 'ledger:journalentry_detail' invoice.ledger_entry.pk %}"
+        <a href="{% url 'accounting:journal_entry_detail' invoice.ledger_entry.pk %}"
            class="btn btn-outline-secondary btn-sm">
           {% trans "عرض قيد اليومية" %}
         </a>
       {% endif %}
 
-      {# عرض الطلب المرتبط (إن وجد) #}
-      {% if invoice.order %}
-        <a href="{% url 'accounting:order_detail' pk=invoice.order.pk %}"
-           class="btn btn-outline-primary btn-sm">
-          {% trans "عرض الطلب" %}
-        </a>
-      {% endif %}
-
-      {# إضافة دفعة #}
-      <a href="{% url 'accounting:invoice_add_payment' serial=invoice.serial %}"
-         class="btn btn-success btn-sm">
-        {% trans "+ إضافة دفعة" %}
-      </a>
-
-      {# طباعة / PDF #}
-      <a href="{% url 'accounting:invoice_print' serial=invoice.serial %}"
+      {# طباعة / PDF - بالـ pk حسب urls.py #}
+      <a href="{% url 'accounting:invoice_print' invoice.pk %}"
          class="btn btn-outline-secondary btn-sm"
          target="_blank">
         {% trans "طباعة / PDF" %}
@@ -174,50 +158,50 @@
       <div class="table-responsive">
         <table class="table table-sm align-middle invoice-items-table mb-0">
           <thead class="table-light">
-          <tr>
-            <th class="product-col">{% trans "المنتج" %}</th>
-            <th class="desc-col">{% trans "الوصف" %}</th>
-            <th class="qty-col text-center">{% trans "الكمية" %}</th>
-            <th class="price-col text-center">{% trans "سعر الوحدة" %}</th>
-            <th class="total-col text-end">{% trans "الإجمالي" %}</th>
-          </tr>
+            <tr>
+              <th class="product-col">{% trans "المنتج" %}</th>
+              <th class="desc-col">{% trans "الوصف" %}</th>
+              <th class="qty-col text-center">{% trans "الكمية" %}</th>
+              <th class="price-col text-center">{% trans "سعر الوحدة" %}</th>
+              <th class="total-col text-end">{% trans "الإجمالي" %}</th>
+            </tr>
           </thead>
           <tbody>
-          {% for item in invoice.items.all %}
-            <tr>
-              <td class="product-col">
-                {% if item.product %}
-                  {{ item.product.name }}
-                {% else %}
-                  <span class="text-muted small">—</span>
-                {% endif %}
-              </td>
-              <td class="desc-col small">
-                {% if item.description %}
-                  {{ item.description }}
-                {% elif item.product %}
-                  {{ item.product.description }}
-                {% else %}
-                  <span class="text-muted">—</span>
-                {% endif %}
-              </td>
-              <td class="qty-col text-center">
-                {{ item.quantity }}
-              </td>
-              <td class="price-col text-center">
-                {{ item.unit_price }}
-              </td>
-              <td class="total-col text-end">
-                <span class="invoice-line-total">{{ item.subtotal }}</span>
-              </td>
-            </tr>
-          {% empty %}
-            <tr>
-              <td colspan="5" class="text-center text-muted small py-3">
-                {% trans "لا توجد بنود في هذه الفاتورة." %}
-              </td>
-            </tr>
-          {% endfor %}
+            {% for item in invoice.items.all %}
+              <tr>
+                <td class="product-col">
+                  {% if item.product %}
+                    {{ item.product.name }}
+                  {% else %}
+                    <span class="text-muted small">—</span>
+                  {% endif %}
+                </td>
+                <td class="desc-col small">
+                  {% if item.description %}
+                    {{ item.description }}
+                  {% elif item.product %}
+                    {{ item.product.description }}
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+                <td class="qty-col text-center">
+                  {{ item.quantity }}
+                </td>
+                <td class="price-col text-center">
+                  {{ item.unit_price }}
+                </td>
+                <td class="total-col text-end">
+                  <span class="invoice-line-total">{{ item.subtotal }}</span>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="text-center text-muted small py-3">
+                  {% trans "لا توجد بنود في هذه الفاتورة." %}
+                </td>
+              </tr>
+            {% endfor %}
           </tbody>
         </table>
       </div>
@@ -245,56 +229,8 @@
     </div>
   {% endif %}
 
-  {# ===================== المرفقات ===================== #}
- {% include "core/attachments/_panel.html" %}
-
-  <!-- الدفعات -->
-  <div class="card border-0 shadow-sm">
-    <div class="card-body">
-      <h5 class="card-title mb-3">{% trans "الدفعات المرتبطة" %}</h5>
-      <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
-          <thead>
-          <tr>
-            <th>{% trans "التاريخ" %}</th>
-            <th>{% trans "المبلغ" %}</th>
-            <th>{% trans "طريقة الدفع" %}</th>
-            <th>{% trans "الفاتورة" %}</th>
-            <th>{% trans "إجراءات" %}</th>
-          </tr>
-          </thead>
-          <tbody>
-          {% for payment in invoice.payments.all %}
-            <tr>
-              <td>{{ payment.date }}</td>
-              <td>{{ payment.amount }}</td>
-              <td>{{ payment.get_method_display }}</td>
-              <td>
-                {% if payment.invoice %}
-                  {{ payment.invoice.serial }}
-                {% else %}
-                  <span class="text-muted">{% trans "دفعة عامة" %}</span>
-                {% endif %}
-              </td>
-              <td>
-                <a href="{% url 'accounting:payment_print' pk=payment.pk %}"
-                   class="btn btn-outline-primary btn-sm">
-                  🖨️ {% trans "طباعة الإيصال" %}
-                </a>
-              </td>
-            </tr>
-          {% empty %}
-            <tr>
-              <td colspan="5" class="text-muted text-center">
-                {% trans "لا توجد دفعات لهذه الفاتورة بعد." %}
-              </td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+  {# المرفقات لو عندك مكسين الأتيتشمنت جاهز #}
+  {% include "core/attachments/_panel.html" %}
 
 </div>
 {% endblock %}

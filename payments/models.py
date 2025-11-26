@@ -125,7 +125,7 @@ class Payment(NumberedModel):
     )
 
     journal_entry = models.ForeignKey(
-        "ledger.JournalEntry",
+        "accounting.JournalEntry",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

@@ -47,7 +47,6 @@ INSTALLED_APPS = [
     "accounting.apps.AccountingConfig",
     "portal.apps.PortalConfig",
     "cart.apps.CartConfig",
-    "ledger.apps.LedgerConfig",
     "inventory.apps.InventoryConfig",
     "uom.apps.UomConfig",
     "payments.apps.PaymentsConfig",

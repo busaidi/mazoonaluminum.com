@@ -1,37 +1,52 @@
-# accounting/url.py
-
 from django.urls import path
-
 from . import views
 
 app_name = "accounting"
 
 urlpatterns = [
-    # --------------------------------------------------
-    # Accounting
-    # --------------------------------------------------
+    # Dashboard
     path("", views.AccountingDashboardView.as_view(), name="dashboard"),
+
+    # Invoices
     path("invoices/", views.InvoiceListView.as_view(), name="invoice_list"),
     path("invoices/new/", views.InvoiceCreateView.as_view(), name="invoice_create"),
-    path("invoices/<str:serial>/edit/",views.InvoiceUpdateView.as_view(),name="invoice_update",),
-    path("invoices/<str:serial>/",views.InvoiceDetailView.as_view(),name="invoice_detail",),
-    path("invoices/<str:serial>/payments/new/",views.InvoicePaymentCreateView.as_view(),name="invoice_add_payment",),
-    path("invoices/<str:serial>/print/",views.InvoicePrintView.as_view(),name="invoice_print",),
-    path("invoices/<int:pk>/confirm/",views.invoice_confirm_view,name="invoice_confirm",),
-    path("invoices/<int:pk>/unpost/",views.invoice_unpost_view,name="invoice_unpost",),
+    path("invoices/<int:pk>/", views.InvoiceDetailView.as_view(), name="invoice_detail"),
+    path("invoices/<int:pk>/edit/", views.InvoiceUpdateView.as_view(), name="invoice_update"),
+    path("invoices/<int:pk>/print/", views.InvoicePrintView.as_view(), name="invoice_print"),
+    path("invoices/<int:pk>/confirm/", views.invoice_confirm_view, name="invoice_confirm"),
+    path("invoices/<int:pk>/unpost/", views.invoice_unpost_view, name="invoice_unpost"),
 
-    #Setting
-    path("settings/",views.accounting_settings_view,name="sales_settings",),
+    # Accounts
+    path("accounts/", views.AccountListView.as_view(), name="account_list"),
+    path("accounts/new/", views.AccountCreateView.as_view(), name="account_create"),
+    path("accounts/<int:pk>/edit/", views.AccountUpdateView.as_view(), name="account_edit"),
 
+    # Journals
+    path("journals/", views.journal_list_view, name="journal_list"),
+    path("journals/new/", views.journal_create_view, name="journal_create"),
+    path("journals/<int:pk>/edit/", views.journal_update_view, name="journal_edit"),
 
-    # --------------------------------------------------
-    # Orders (staff)
-    # --------------------------------------------------
-    path("orders/", views.OrderListView.as_view(), name="order_list"),
-    path("orders/new/", views.OrderCreateView.as_view(), name="order_create"),
-    path("orders/<int:pk>/", views.OrderDetailView.as_view(), name="order_detail"),
-    path("orders/<int:pk>/edit/", views.OrderUpdateView.as_view(), name="order_update"),
-    path("orders/<int:pk>/confirm/",views.staff_order_confirm, name="order_confirm",),
-    path("orders/<int:pk>/to-invoice/",views.order_to_invoice,name="order_to_invoice",),
-    path("orders/<int:pk>/print/",views.OrderPrintView.as_view(),name="order_print",),
+    # Journal entries
+    path("entries/", views.JournalEntryListView.as_view(), name="journal_entry_list"),
+    path("entries/new/", views.JournalEntryCreateView.as_view(), name="journal_entry_create"),
+    path("entries/<int:pk>/", views.JournalEntryDetailView.as_view(), name="journal_entry_detail"),
+    path("entries/<int:pk>/edit/", views.JournalEntryUpdateView.as_view(), name="journal_entry_update"),
+    path("entries/<int:pk>/post/", views.journalentry_post_view, name="journal_entry_post"),
+    path("entries/<int:pk>/unpost/", views.journalentry_unpost_view, name="journal_entry_unpost"),
+
+    # Reports
+    path("reports/trial-balance/", views.trial_balance_view, name="trial_balance"),
+    path("reports/account-ledger/", views.account_ledger_view, name="account_ledger"),
+
+    # Fiscal year & settings
+    path("setup/fiscal-year/", views.fiscal_year_setup_view, name="fiscal_year_setup"),
+    path("settings/fiscal-years/", views.FiscalYearListView.as_view(), name="fiscal_year_list"),
+    path("settings/fiscal-years/new/", views.FiscalYearCreateView.as_view(), name="fiscal_year_create"),
+    path("settings/fiscal-years/<int:pk>/edit/", views.FiscalYearUpdateView.as_view(), name="fiscal_year_edit"),
+    path("settings/fiscal-years/<int:pk>/close/", views.FiscalYearCloseView.as_view(), name="fiscal_year_close"),
+    path("settings/chart-of-accounts/bootstrap/", views.chart_of_accounts_bootstrap_view, name="chart_of_accounts_bootstrap"),
+    path("settings/chart-of-accounts/import/", views.chart_of_accounts_import_view, name="chart_of_accounts_import"),
+    path("settings/chart-of-accounts/export/", views.chart_of_accounts_export_view, name="chart_of_accounts_export"),
+    path("settings/journals/", views.ledger_settings_view, name="ledger_settings"),
+    path("settings/", views.accounting_settings_view, name="accounting_settings"),
 ]
