@@ -2,9 +2,24 @@
 {% load i18n %}
 
 {# عنوان الصفحة في التبويب + SEO #}
-{% block meta_title %}{% trans "فواتير العملاء" %} | Mazoon Aluminum{% endblock %}
+{% block meta_title %}
+  {% if invoice_type == 'purchase' %}
+    {% trans "فواتير المشتريات" %} | Mazoon Aluminum
+  {% elif invoice_type == 'sales' %}
+    {% trans "فواتير المبيعات" %} | Mazoon Aluminum
+  {% else %}
+    {% trans "الفواتير" %} | Mazoon Aluminum
+  {% endif %}
+{% endblock %}
+
 {% block meta_description %}
-{% trans "قائمة فواتير العملاء مع إمكانية التصفية حسب حالة الفاتورة وعرض الرصيد المتبقي لكل فاتورة." %}
+  {% if invoice_type == 'purchase' %}
+    {% trans "قائمة فواتير المشتريات مع إمكانية التصفية حسب حالة الفاتورة وعرض الرصيد المتبقي لكل فاتورة." %}
+  {% elif invoice_type == 'sales' %}
+    {% trans "قائمة فواتير المبيعات مع إمكانية التصفية حسب حالة الفاتورة وعرض الرصيد المتبقي لكل فاتورة." %}
+  {% else %}
+    {% trans "قائمة الفواتير مع إمكانية التصفية حسب حالة الفاتورة وعرض الرصيد المتبقي لكل فاتورة." %}
+  {% endif %}
 {% endblock %}
 
 {% block accounting_content %}
@@ -13,16 +28,44 @@
   {# رأس الصفحة #}
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
-      <h1 class="h4 mb-1 text-mazoon">📄 {% trans "الفواتير" %}</h1>
+      <h1 class="h4 mb-1 text-mazoon">
+        📄
+        {% if invoice_type == 'purchase' %}
+          {% trans "فواتير المشتريات" %}
+        {% elif invoice_type == 'sales' %}
+          {% trans "فواتير المبيعات" %}
+        {% else %}
+          {% trans "الفواتير" %}
+        {% endif %}
+      </h1>
       <p class="text-muted small mb-0">
-        {% trans "عرض وإدارة فواتير العملاء، ومتابعة المبالغ المدفوعة والمتبقية لكل فاتورة." %}
+        {% if invoice_type == 'purchase' %}
+          {% trans "عرض وإدارة فواتير المشتريات، ومتابعة المبالغ المدفوعة والمتبقية لكل فاتورة." %}
+        {% elif invoice_type == 'sales' %}
+          {% trans "عرض وإدارة فواتير المبيعات، ومتابعة المبالغ المدفوعة والمتبقية لكل فاتورة." %}
+        {% else %}
+          {% trans "عرض وإدارة الفواتير، ومتابعة المبالغ المدفوعة والمتبقية لكل فاتورة." %}
+        {% endif %}
       </p>
     </div>
 
-    <a href="{% url 'accounting:invoice_create' %}"
-       class="btn btn-primary btn-sm d-flex align-items-center gap-1">
-      <span class="fw-semibold">+ {% trans "فاتورة جديدة" %}</span>
-    </a>
+    {# زر إنشاء فاتورة جديدة حسب النوع #}
+    {% if invoice_type == 'purchase' %}
+      <a href="{% url 'accounting:purchase_invoice_create' %}"
+         class="btn btn-primary btn-sm d-flex align-items-center gap-1">
+        <span class="fw-semibold">+ {% trans "فاتورة مشتريات جديدة" %}</span>
+      </a>
+    {% elif invoice_type == 'sales' %}
+      <a href="{% url 'accounting:sales_invoice_create' %}"
+         class="btn btn-primary btn-sm d-flex align-items-center gap-1">
+        <span class="fw-semibold">+ {% trans "فاتورة مبيعات جديدة" %}</span>
+      </a>
+    {% else %}
+      <a href="{% url 'accounting:invoice_create' %}"
+         class="btn btn-primary btn-sm d-flex align-items-center gap-1">
+        <span class="fw-semibold">+ {% trans "فاتورة جديدة" %}</span>
+      </a>
+    {% endif %}
   </div>
 
   {# فلتر الحالة داخل كرت نظيف #}
@@ -56,7 +99,13 @@
           <thead class="table-light small">
             <tr>
               <th>{% trans "رقم الفاتورة" %}</th>
-              <th>{% trans "العميل" %}</th>
+              <th>
+                {% if invoice_type == 'purchase' %}
+                  {% trans "المورد" %}
+                {% else %}
+                  {% trans "العميل" %}
+                {% endif %}
+              </th>
               <th>{% trans "التاريخ" %}</th>
               <th class="text-end">{% trans "الإجمالي" %}</th>
               <th class="text-end">{% trans "المدفوع" %}</th>
@@ -68,13 +117,22 @@
             {% for inv in invoices %}
               <tr>
                 <td>
+                  {# نحدد رابط التفاصيل حسب نوع الفاتورة الفعلي #}
+                  {% if inv.type == 'purchase' %}
+                    {% url 'accounting:purchase_invoice_detail' inv.pk as inv_detail_url %}
+                  {% elif inv.type == 'sales' %}
+                    {% url 'accounting:sales_invoice_detail' inv.pk as inv_detail_url %}
+                  {% else %}
+                    {% url 'accounting:invoice_detail' inv.pk as inv_detail_url %}
+                  {% endif %}
+
                   {% if inv.number %}
-                    <a href="{% url 'accounting:invoice_detail' inv.pk %}"
+                    <a href="{{ inv_detail_url }}"
                        class="text-decoration-none text-mazoon fw-semibold">
                       {{ inv.number }}
                     </a>
                   {% else %}
-                    <a href="{% url 'accounting:invoice_detail' inv.pk %}"
+                    <a href="{{ inv_detail_url }}"
                        class="text-decoration-none text-muted small">
                       {% trans "بدون رقم" %} (ID: {{ inv.id }})
                     </a>
@@ -82,11 +140,11 @@
                 </td>
 
                 <td>
-                  {{ inv.contact|default:"-" }}
+                  {{ inv.customer|default:"-" }}
                 </td>
 
                 <td>
-                  {{ inv.invoice_date|date:"d/m/Y" }}
+                  {{ inv.issued_at|date:"d/m/Y" }}
                 </td>
 
                 <td class="text-end fw-semibold">
@@ -94,11 +152,11 @@
                 </td>
 
                 <td class="text-end">
-                  {{ inv.amount_paid }}
+                  {{ inv.paid_amount }}
                 </td>
 
                 <td class="text-end">
-                  {{ inv.balance_amount }}
+                  {{ inv.balance }}
                 </td>
 
                 <td>
@@ -121,7 +179,13 @@
             {% empty %}
               <tr>
                 <td colspan="7" class="text-center text-muted py-4">
-                  {% trans "لا توجد فواتير حتى الآن." %}
+                  {% if invoice_type == 'purchase' %}
+                    {% trans "لا توجد فواتير مشتريات حتى الآن." %}
+                  {% elif invoice_type == 'sales' %}
+                    {% trans "لا توجد فواتير مبيعات حتى الآن." %}
+                  {% else %}
+                    {% trans "لا توجد فواتير حتى الآن." %}
+                  {% endif %}
                 </td>
               </tr>
             {% endfor %}

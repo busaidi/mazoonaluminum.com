@@ -1,61 +1,135 @@
 {% extends "accounting/base_accounting.html" %}
 {% load i18n %}
 
+{# ================= META TAGS ================= #}
 {% block meta_title %}
   {% if form.instance.pk %}
-    {% blocktrans with serial=form.instance.serial %}تعديل فاتورة {{ serial }} | Mazoon Aluminum{% endblocktrans %}
+    {% with serial=form.instance.display_number %}
+      {% if invoice_type == 'purchase' %}
+        {% blocktrans with serial=serial %}تعديل فاتورة مشتريات {{ serial }} | Mazoon Aluminum{% endblocktrans %}
+      {% elif invoice_type == 'sales' %}
+        {% blocktrans with serial=serial %}تعديل فاتورة مبيعات {{ serial }} | Mazoon Aluminum{% endblocktrans %}
+      {% else %}
+        {% blocktrans with serial=serial %}تعديل فاتورة {{ serial }} | Mazoon Aluminum{% endblocktrans %}
+      {% endif %}
+    {% endwith %}
   {% else %}
-    {% trans "فاتورة جديدة | Mazoon Aluminum" %}
+    {% if invoice_type == 'purchase' %}
+      {% trans "فاتورة مشتريات جديدة | Mazoon Aluminum" %}
+    {% elif invoice_type == 'sales' %}
+      {% trans "فاتورة مبيعات جديدة | Mazoon Aluminum" %}
+    {% else %}
+      {% trans "فاتورة جديدة | Mazoon Aluminum" %}
+    {% endif %}
   {% endif %}
 {% endblock %}
 
 {% block meta_description %}
   {% if form.instance.pk %}
-    {% blocktrans with serial=form.instance.serial %}تعديل بيانات الفاتورة رقم {{ serial }} في نظام المحاسبة.{% endblocktrans %}
+    {% with serial=form.instance.display_number %}
+      {% if invoice_type == 'purchase' %}
+        {% blocktrans with serial=serial %}تعديل بيانات فاتورة المشتريات رقم {{ serial }} في نظام المحاسبة.{% endblocktrans %}
+      {% elif invoice_type == 'sales' %}
+        {% blocktrans with serial=serial %}تعديل بيانات فاتورة المبيعات رقم {{ serial }} في نظام المحاسبة.{% endblocktrans %}
+      {% else %}
+        {% blocktrans with serial=serial %}تعديل بيانات الفاتورة رقم {{ serial }} في نظام المحاسبة.{% endblocktrans %}
+      {% endif %}
+    {% endwith %}
   {% else %}
-    {% trans "إنشاء فاتورة جديدة لعميل في نظام المحاسبة الخاص بمزون ألمنيوم." %}
+    {% if invoice_type == 'purchase' %}
+      {% trans "إنشاء فاتورة مشتريات جديدة في نظام المحاسبة الخاص بمزون ألمنيوم." %}
+    {% elif invoice_type == 'sales' %}
+      {% trans "إنشاء فاتورة مبيعات جديدة لعميل في نظام المحاسبة الخاص بمزون ألمنيوم." %}
+    {% else %}
+      {% trans "إنشاء فاتورة جديدة في نظام المحاسبة الخاص بمزون ألمنيوم." %}
+    {% endif %}
   {% endif %}
 {% endblock %}
 
 {% block accounting_content %}
 <div class="py-4">
-  {# شريط تنقّل المحاسبة #}
-  <!-- العنوان وأزرار الأعلى -->
+
+  {# نحدد رابط الرجوع حسب النوع #}
+  {% if invoice_type == 'purchase' %}
+    {% url 'accounting:purchase_invoice_list' as back_url %}
+  {% elif invoice_type == 'sales' %}
+    {% url 'accounting:sales_invoice_list' as back_url %}
+  {% else %}
+    {% url 'accounting:dashboard' as back_url %}
+  {% endif %}
+
+  {# ================= HEADER ================= #}
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
       {% if form.instance.pk %}
         <div class="d-flex align-items-center gap-2 mb-1">
-          <h1 class="h3 mb-0">
-            {% blocktrans with serial=form.instance.serial %}تعديل فاتورة {{ serial }}{% endblocktrans %}
-          </h1>
+          {% with serial=form.instance.display_number %}
+            <h1 class="h3 mb-0">
+              {% if invoice_type == 'purchase' %}
+                {% blocktrans with serial=serial %}تعديل فاتورة مشتريات {{ serial }}{% endblocktrans %}
+              {% elif invoice_type == 'sales' %}
+                {% blocktrans with serial=serial %}تعديل فاتورة مبيعات {{ serial }}{% endblocktrans %}
+              {% else %}
+                {% blocktrans with serial=serial %}تعديل فاتورة {{ serial }}{% endblocktrans %}
+              {% endif %}
+            </h1>
+          {% endwith %}
           <span class="badge bg-light text-mazoon border">
             {% trans "وضع التحرير" %}
           </span>
+          {% if invoice_type_label %}
+            <span class="badge bg-body-secondary text-muted border">
+              {{ invoice_type_label }}
+            </span>
+          {% endif %}
         </div>
         <p class="text-muted small mb-0">
           {% trans "قم بتحديث بيانات الفاتورة بدقة، وسيتم حفظ التغييرات في السجلات المحاسبية." %}
         </p>
       {% else %}
         <div class="d-flex align-items-center gap-2 mb-1">
-          <h1 class="h3 mb-0">{% trans "فاتورة جديدة" %}</h1>
+          <h1 class="h3 mb-0">
+            {% if invoice_type == 'purchase' %}
+              {% trans "فاتورة مشتريات جديدة" %}
+            {% elif invoice_type == 'sales' %}
+              {% trans "فاتورة مبيعات جديدة" %}
+            {% else %}
+              {% trans "فاتورة جديدة" %}
+            {% endif %}
+          </h1>
           <span class="badge bg-light text-mazoon border">
             {% trans "فاتورة يدوية" %}
           </span>
+          {% if invoice_type_label %}
+            <span class="badge bg-body-secondary text-muted border">
+              {{ invoice_type_label }}
+            </span>
+          {% endif %}
         </div>
         <p class="text-muted small mb-0">
-          {% trans "املأ بيانات الفاتورة، خصوصًا العميل، تاريخ الإصدار، بنود الفاتورة، والشروط." %}
+          {% if invoice_type == 'purchase' %}
+            {% trans "املأ بيانات فاتورة المشتريات، خصوصًا المورد، تاريخ الفاتورة، وبنود الشراء." %}
+          {% else %}
+            {% trans "املأ بيانات الفاتورة، خصوصًا العميل، تاريخ الإصدار، بنود الفاتورة، والشروط." %}
+          {% endif %}
         </p>
       {% endif %}
     </div>
 
     <div class="d-flex flex-wrap gap-2">
-      <a href="{% url 'accounting:invoice_list' %}" class="btn btn-outline-secondary btn-sm">
-        {% trans "رجوع إلى قائمة الفواتير" %}
+      <a href="{{ back_url }}" class="btn btn-outline-secondary btn-sm">
+        {% if invoice_type == 'purchase' %}
+          {% trans "رجوع إلى فواتير المشتريات" %}
+        {% elif invoice_type == 'sales' %}
+          {% trans "رجوع إلى فواتير المبيعات" %}
+        {% else %}
+          {% trans "رجوع إلى لوحة المحاسبة" %}
+        {% endif %}
       </a>
     </div>
   </div>
 
-  <!-- كرت الفورم -->
+  {# ================= FORM CARD ================= #}
   <div class="card border-0 shadow-sm">
     <div class="card-body">
 
@@ -71,18 +145,23 @@
           </div>
         {% endif %}
 
-        <!-- عنوان صغير فوق الحقول -->
         <div class="mb-3">
           <div class="small text-muted">
             {% trans "بيانات الفاتورة" %}
           </div>
         </div>
 
-        {# --- رأس الفاتورة: العميل + التواريخ + الحالة --- #}
+        {# --- رأس الفاتورة: العميل/المورد + التواريخ + الحالة --- #}
         <div class="row">
           <div class="col-md-6 mb-3">
             <label class="form-label d-flex justify-content-between align-items-center" for="{{ form.customer.id_for_label }}">
-              <span>{{ form.customer.label }}</span>
+              <span>
+                {% if invoice_type == 'purchase' %}
+                  {% trans "المورد" %}
+                {% else %}
+                  {{ form.customer.label }}
+                {% endif %}
+              </span>
               {% if form.customer.field.required %}
                 <span class="small text-muted">*</span>
               {% endif %}
@@ -134,7 +213,7 @@
 
         <hr class="my-4">
 
-        <!-- بنود الفاتورة (InvoiceItem formset) -->
+        {# ================= ITEMS (FORMSET) ================= #}
         <div class="mb-3 d-flex justify-content-between align-items-center">
           <div class="small text-muted">
             {% trans "بنود الفاتورة (منتجات أو بنود حرة)" %}
@@ -200,7 +279,6 @@
                     {% endfor %}
                   </td>
                   <td class="total-col text-end">
-                    {# نعرض قيمة مبدئية لو البند محفوظ، وإلا نخليها صفر #}
                     <span class="invoice-line-total">
                       {% if f.instance.pk %}
                         {{ f.instance.subtotal }}
@@ -266,7 +344,7 @@
               {% trans "حفظ الفاتورة" %}
             {% endif %}
           </button>
-          <a href="{% url 'accounting:invoice_list' %}" class="btn btn-secondary">
+          <a href="{{ back_url }}" class="btn btn-secondary">
             {% trans "إلغاء" %}
           </a>
         </div>
@@ -277,7 +355,7 @@
 
 </div>
 
-{# ---------------- JS: تعبئة السعر/الوصف + إضافة بنود ديناميكيًا ---------------- #}
+{# ================= JS: PRODUCTS & DYNAMIC ROWS ================= #}
 <script>
   // بيانات المنتجات من الـ View
   window.INVOICE_PRODUCTS = {{ products_json|default:"{}"|safe }};
@@ -294,7 +372,6 @@
     const price = parseFloat(priceInput.value || "0");
     const total = qty * price;
 
-    // ثلاث منازل عشرية
     totalSpan.textContent = total.toFixed(3);
   }
 
@@ -317,7 +394,6 @@
         if (priceInput && (!priceInput.value || priceInput.value === "0" || priceInput.value === "0.000")) {
           priceInput.value = p.price;
         }
-        // بعد ما نحدّث السعر، نعيد حساب الإجمالي
         recalcRowTotal(row);
       }
     });
@@ -343,7 +419,7 @@
       attachProductListener(selectEl);
     }
     attachQtyPriceListeners(row);
-    recalcRowTotal(row); // حساب مبدئي
+    recalcRowTotal(row);
   });
 
   // إضافة صف جديد ديناميكيًا
@@ -358,15 +434,12 @@
       const currentCount = parseInt(totalFormsInput.value, 10);
       const newIndex = currentCount;
 
-      // ناخذ آخر صف كقالب
       const lastRow = tableBody.querySelector("tr.invoice-item-row:last-child");
       if (!lastRow) return;
 
       const newRow = lastRow.cloneNode(true);
 
-      // تنظيف القيم القديمة وتحديث أسماء الحقول
       newRow.querySelectorAll("input, select, textarea").forEach(function (el) {
-        // تحديث name / id من -0- إلى -newIndex-
         if (el.name) {
           el.name = el.name.replace(/\-(\d+)\-/, "-" + newIndex + "-");
         }
@@ -374,7 +447,6 @@
           el.id = el.id.replace(/\_(\d+)\_/, "_" + newIndex + "_");
         }
 
-        // تفريغ القيم
         if (el.type === "checkbox" || el.type === "radio") {
           el.checked = false;
         } else {
@@ -382,7 +454,6 @@
         }
       });
 
-      // الإجمالي في الصف الجديد يرجع 0.000
       const totalSpan = newRow.querySelector(".invoice-line-total");
       if (totalSpan) {
         totalSpan.textContent = "0.000";
@@ -390,10 +461,8 @@
 
       tableBody.appendChild(newRow);
 
-      // زيادة عدّاد الفورمات
       totalFormsInput.value = newIndex + 1;
 
-      // ربط الليسنرات للصف الجديد
       const newSelect = newRow.querySelector('select[name$="-product"]');
       if (newSelect) {
         attachProductListener(newSelect);

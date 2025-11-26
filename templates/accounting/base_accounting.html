@@ -19,27 +19,19 @@
           </a>
         </li>
 
-        {# Invoices #}
+        {# Sales Invoices - فواتير المبيعات #}
         <li class="nav-item">
-          <a class="nav-link px-3 py-1 {% if accounting_section == 'invoices' %}active{% endif %}"
-             href="{% url 'accounting:invoice_list' %}">
-            {% trans "الفواتير" %}
+          <a class="nav-link px-3 py-1 {% if accounting_section == 'sales_invoices' %}active{% endif %}"
+             href="{% url 'accounting:sales_invoice_list' %}">
+            {% trans "فواتير المبيعات" %}
           </a>
         </li>
 
-        {# Accounts #}
+        {# Purchase Invoices - فواتير المشتريات #}
         <li class="nav-item">
-          <a class="nav-link px-3 py-1 {% if accounting_section == 'accounts' %}active{% endif %}"
-             href="{% url 'accounting:account_list' %}">
-            {% trans "الحسابات" %}
-          </a>
-        </li>
-
-        {# Journals #}
-        <li class="nav-item">
-          <a class="nav-link px-3 py-1 {% if accounting_section == 'journals' %}active{% endif %}"
-             href="{% url 'accounting:journal_list' %}">
-            {% trans "دفاتر اليومية" %}
+          <a class="nav-link px-3 py-1 {% if accounting_section == 'purchase_invoices' %}active{% endif %}"
+             href="{% url 'accounting:purchase_invoice_list' %}">
+            {% trans "فواتير المشتريات" %}
           </a>
         </li>
 
@@ -78,6 +70,21 @@
             {% trans "الضبط" %}
           </a>
           <ul class="dropdown-menu dropdown-menu-end">
+
+            {# ===== الحسابات ودفاتر اليومية ===== #}
+            <li class="dropdown-header">{% trans "الحسابات ودفاتر اليومية" %}</li>
+            <li>
+              <a class="dropdown-item" href="{% url 'accounting:account_list' %}">
+                {% trans "الحسابات" %}
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="{% url 'accounting:journal_list' %}">
+                {% trans "دفاتر اليومية" %}
+              </a>
+            </li>
+
+            <li><hr class="dropdown-divider"></li>
 
             <li class="dropdown-header">{% trans "السنة المالية" %}</li>
             <li>

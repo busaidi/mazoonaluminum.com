@@ -1,54 +1,111 @@
 {% extends "accounting/base_accounting.html" %}
 {% load i18n %}
 
+{# ================= META TAGS ================= #}
 {% block meta_title %}
-  {% blocktrans with serial=invoice.serial %}فاتورة {{ serial }} | Mazoon Aluminum{% endblocktrans %}
+  {% with serial=invoice.display_number %}
+    {% if invoice_type == 'purchase' %}
+      {% blocktrans with serial=serial %}فاتورة مشتريات {{ serial }} | Mazoon Aluminum{% endblocktrans %}
+    {% elif invoice_type == 'sales' %}
+      {% blocktrans with serial=serial %}فاتورة مبيعات {{ serial }} | Mazoon Aluminum{% endblocktrans %}
+    {% else %}
+      {% blocktrans with serial=serial %}فاتورة {{ serial }} | Mazoon Aluminum{% endblocktrans %}
+    {% endif %}
+  {% endwith %}
 {% endblock %}
 
 {% block meta_description %}
-  {% blocktrans with serial=invoice.serial customer=invoice.customer.name %}
-    تفاصيل الفاتورة رقم {{ serial }} للعميل {{ customer }}، مع عرض البنود والمبالغ.
-  {% endblocktrans %}
+  {% with serial=invoice.display_number customer=invoice.customer.name %}
+    {% if invoice_type == 'purchase' %}
+      {% blocktrans with serial=serial customer=customer %}
+        تفاصيل فاتورة المشتريات رقم {{ serial }} للمورد {{ customer }}، مع عرض البنود والمبالغ.
+      {% endblocktrans %}
+    {% elif invoice_type == 'sales' %}
+      {% blocktrans with serial=serial customer=customer %}
+        تفاصيل فاتورة المبيعات رقم {{ serial }} للعميل {{ customer }}، مع عرض البنود والمبالغ.
+      {% endblocktrans %}
+    {% else %}
+      {% blocktrans with serial=serial customer=customer %}
+        تفاصيل الفاتورة رقم {{ serial }} للطرف {{ customer }}، مع عرض البنود والمبالغ.
+      {% endblocktrans %}
+    {% endif %}
+  {% endwith %}
 {% endblock %}
 
 {% block accounting_content %}
 <div class="py-4">
 
+  {# نحدد رابط الرجوع حسب نوع الفاتورة #}
+  {% if invoice_type == 'purchase' %}
+    {% url 'accounting:purchase_invoice_list' as back_url %}
+  {% elif invoice_type == 'sales' %}
+    {% url 'accounting:sales_invoice_list' as back_url %}
+  {% else %}
+    {% url 'accounting:dashboard' as back_url %}
+  {% endif %}
+
+  {# ================= HEADER ================= #}
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
-      <h1 class="h3 mb-1">
-        {% blocktrans with serial=invoice.serial %}فاتورة {{ serial }}{% endblocktrans %}
-      </h1>
+      {% with serial=invoice.display_number %}
+        <h1 class="h3 mb-1">
+          {% if invoice_type == 'purchase' %}
+            {% blocktrans with serial=serial %}فاتورة مشتريات {{ serial }}{% endblocktrans %}
+          {% elif invoice_type == 'sales' %}
+            {% blocktrans with serial=serial %}فاتورة مبيعات {{ serial }}{% endblocktrans %}
+          {% else %}
+            {% blocktrans with serial=serial %}فاتورة {{ serial }}{% endblocktrans %}
+          {% endif %}
+        </h1>
+      {% endwith %}
+
       <p class="text-muted small mb-0">
-        {% blocktrans with name=invoice.customer.name %}عميل: {{ name }}{% endblocktrans %}
+        {% if invoice_type == 'purchase' %}
+          {% blocktrans with name=invoice.customer.name %}مورد: {{ name }}{% endblocktrans %}
+        {% else %}
+          {% blocktrans with name=invoice.customer.name %}عميل: {{ name }}{% endblocktrans %}
+        {% endif %}
       </p>
     </div>
 
     <div class="d-flex flex-wrap gap-2">
+      {# نحدد روابط التعديل / الاعتماد / إلغاء الترحيل / الطباعة حسب نوع الفاتورة #}
+      {% if invoice_type == 'purchase' %}
+        {% url 'accounting:purchase_invoice_edit' invoice.pk as edit_url %}
+        {% url 'accounting:purchase_invoice_confirm' invoice.pk as confirm_url %}
+        {% url 'accounting:purchase_invoice_unpost' invoice.pk as unpost_url %}
+        {% url 'accounting:purchase_invoice_print' invoice.pk as print_url %}
+      {% else %}
+        {# نعتبر الباقي = مبيعات #}
+        {% url 'accounting:sales_invoice_edit' invoice.pk as edit_url %}
+        {% url 'accounting:sales_invoice_confirm' invoice.pk as confirm_url %}
+        {% url 'accounting:sales_invoice_unpost' invoice.pk as unpost_url %}
+        {% url 'accounting:sales_invoice_print' invoice.pk as print_url %}
+      {% endif %}
 
-      {# تعديل الفاتورة - بالـ pk حسب urls.py #}
-      <a href="{% url 'accounting:invoice_update' invoice.pk %}"
+      {# تعديل الفاتورة #}
+      <a href="{{ edit_url }}"
          class="btn btn-primary btn-sm">
         {% trans "تعديل الفاتورة" %}
       </a>
 
-      {# اعتماد وترحيل - لو حاب تبقيه، يعتمد على منطقك في الـ view #}
+      {# اعتماد وترحيل - فقط لو مسودة #}
       {% if invoice.status == 'draft' %}
-        <a href="{% url 'accounting:invoice_confirm' invoice.pk %}"
+        <a href="{{ confirm_url }}"
            class="btn btn-outline-primary btn-sm">
           {% trans "اعتماد وترحيل إلى دفتر الأستاذ" %}
         </a>
       {% endif %}
 
-      {# إلغاء الترحيل - إذا فيه قيد مرتبط #}
-      {% if invoice.ledger_entry %}
-        <a href="{% url 'accounting:invoice_unpost' invoice.pk %}"
-           class="btn btn-warning btn-sm">
+      {# إلغاء الترحيل - لو ليست مسودة ويوجد قيد مرتبط #}
+      {% if invoice.status != 'draft' and invoice.ledger_entry %}
+        <a href="{{ unpost_url }}"
+           class="btn btn-outline-warning btn-sm">
           {% trans "إلغاء الترحيل" %}
         </a>
       {% endif %}
 
-      {# عرض قيد اليومية المرتبط بالفاتورة في نفس تطبيق accounting #}
+      {# عرض قيد اليومية المرتبط بالفاتورة #}
       {% if invoice.ledger_entry %}
         <a href="{% url 'accounting:journal_entry_detail' invoice.ledger_entry.pk %}"
            class="btn btn-outline-secondary btn-sm">
@@ -56,26 +113,38 @@
         </a>
       {% endif %}
 
-      {# طباعة / PDF - بالـ pk حسب urls.py #}
-      <a href="{% url 'accounting:invoice_print' invoice.pk %}"
+      {# طباعة / PDF #}
+      <a href="{{ print_url }}"
          class="btn btn-outline-secondary btn-sm"
          target="_blank">
         {% trans "طباعة / PDF" %}
       </a>
 
-      {# رجوع للقائمة #}
-      <a href="{% url 'accounting:invoice_list' %}" class="btn btn-secondary btn-sm">
-        {% trans "رجوع إلى القائمة" %}
+      {# رجوع للقائمة الصحيحة #}
+      <a href="{{ back_url }}" class="btn btn-secondary btn-sm">
+        {% if invoice_type == 'purchase' %}
+          {% trans "رجوع إلى فواتير المشتريات" %}
+        {% elif invoice_type == 'sales' %}
+          {% trans "رجوع إلى فواتير المبيعات" %}
+        {% else %}
+          {% trans "رجوع إلى لوحة المحاسبة" %}
+        {% endif %}
       </a>
     </div>
   </div>
 
   <div class="row g-3 mb-3">
-    <!-- بيانات العميل -->
+    <!-- بيانات العميل/المورد -->
     <div class="col-md-6">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-body">
-          <h5 class="card-title mb-3">{% trans "بيانات العميل" %}</h5>
+          <h5 class="card-title mb-3">
+            {% if invoice_type == 'purchase' %}
+              {% trans "بيانات المورد" %}
+            {% else %}
+              {% trans "بيانات العميل" %}
+            {% endif %}
+          </h5>
           <p class="mb-1 fw-semibold">{{ invoice.customer.name }}</p>
 
           {% if invoice.customer.company_name %}
@@ -229,7 +298,7 @@
     </div>
   {% endif %}
 
-  {# المرفقات لو عندك مكسين الأتيتشمنت جاهز #}
+  {# المرفقات من الـ AttachmentPanelMixin #}
   {% include "core/attachments/_panel.html" %}
 
 </div>

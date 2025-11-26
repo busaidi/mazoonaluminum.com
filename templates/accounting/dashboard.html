@@ -10,83 +10,91 @@
   <div>
     <h1 class="h4 mb-1">{% trans "لوحة المحاسبة" %}</h1>
     <p class="text-muted small mb-0">
-      {% trans "نظرة سريعة على وضع الحسابات، الفواتير، والحركة المالية." %}
+      {% trans "نظرة سريعة على وضع الحسابات، فواتير المبيعات، وفواتير المشتريات." %}
     </p>
   </div>
 </div>
 
-{# ====== KPIs أساسية ====== #}
+{# ====== KPIs أساسية (مبيعات + مشتريات) ====== #}
 <div class="row g-3 mb-3">
+
+  {# عدد فواتير المبيعات #}
   <div class="col-12 col-md-3">
     <div class="card border-0 shadow-sm h-100">
       <div class="card-body py-3">
-        <div class="text-muted small mb-1">{% trans "عدد الفواتير" %}</div>
+        <div class="text-muted small mb-1">{% trans "فواتير المبيعات" %}</div>
         <div class="fs-4 fw-bold">
-          {{ invoice_count|default:0 }}
+          {{ sales_invoice_count|default:0 }}
         </div>
         <div class="small text-muted">
-          {% trans "إجمالي الفواتير المسجَّلة" %}
+          {% trans "عدد فواتير المبيعات المسجَّلة" %}
         </div>
       </div>
     </div>
   </div>
 
+  {# عدد فواتير المشتريات #}
+  <div class="col-12 col-md-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body py-3">
+        <div class="text-muted small mb-1">{% trans "فواتير المشتريات" %}</div>
+        <div class="fs-4 fw-bold">
+          {{ purchase_invoice_count|default:0 }}
+        </div>
+        <div class="small text-muted">
+          {% trans "عدد فواتير المشتريات المسجَّلة" %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# إجمالي المبيعات #}
   <div class="col-12 col-md-3">
     <div class="card border-0 shadow-sm h-100">
       <div class="card-body py-3">
         <div class="text-muted small mb-1">{% trans "إجمالي المبيعات" %}</div>
         <div class="fs-4 fw-bold">
-          {{ total_amount|default:"0.000" }}
+          {{ sales_total_amount|default:"0.000" }}
         </div>
         <div class="small text-muted">
-          {% trans "قيمة الفواتير (كل الحالات أو حسب ما تضبطه في الـ view)" %}
+          {% trans "قيمة فواتير المبيعات" %}
         </div>
       </div>
     </div>
   </div>
 
+  {# إجمالي المشتريات #}
   <div class="col-12 col-md-3">
     <div class="card border-0 shadow-sm h-100">
       <div class="card-body py-3">
-        <div class="text-muted small mb-1">{% trans "الرصيد المستحق" %}</div>
+        <div class="text-muted small mb-1">{% trans "إجمالي المشتريات" %}</div>
         <div class="fs-4 fw-bold text-danger">
-          {{ total_balance|default:"0.000" }}
+          {{ purchase_total_amount|default:"0.000" }}
         </div>
         <div class="small text-muted">
-          {% trans "إجمالي الذمم المدينة (المتبقي على العملاء)" %}
+          {% trans "قيمة فواتير المشتريات" %}
         </div>
       </div>
     </div>
   </div>
 
-  <div class="col-12 col-md-3">
-    <div class="card border-0 shadow-sm h-100">
-      <div class="card-body py-3">
-        <div class="text-muted small mb-1">{% trans "عدد الحسابات" %}</div>
-        <div class="fs-4 fw-bold">
-          {{ accounts_count|default:0 }}
-        </div>
-        <div class="small text-muted">
-          {% trans "الحسابات في دليل الحسابات" %}
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 
-{# ====== آخر الفواتير ====== #}
+{# ====== آخر فواتير المبيعات + المشتريات ====== #}
 <div class="row g-3">
   <div class="col-12 col-lg-7">
     <div class="card border-0 shadow-sm h-100">
       <div class="card-body">
+
+        {# ---- مبيعات ---- #}
         <div class="d-flex justify-content-between align-items-center mb-2">
-          <h2 class="h6 mb-0">{% trans "آخر الفواتير" %}</h2>
-          <a href="{% url 'accounting:invoice_list' %}" class="small">
-            {% trans "عرض الكل" %}
+          <h2 class="h6 mb-0">{% trans "آخر فواتير المبيعات" %}</h2>
+          <a href="{% url 'accounting:sales_invoice_list' %}" class="small">
+            {% trans "عرض كل فواتير المبيعات" %}
           </a>
         </div>
 
-        <div class="table-responsive">
+        <div class="table-responsive mb-3">
           <table class="table table-sm align-middle mb-0">
             <thead class="table-light">
               <tr>
@@ -97,31 +105,82 @@
               </tr>
             </thead>
             <tbody>
-           {% for inv in recent_invoices %}
-  <tr>
-    <td class="text-nowrap">
-      <a href="{% url 'accounting:invoice_detail' inv.pk %}">
-        {{ inv.serial|default:inv.pk }}
-      </a>
-    </td>
-    <td class="text-truncate" style="max-width: 180px;">
-      {{ inv.customer|default:"-" }}
-    </td>
-    <td class="small text-muted">
-      {{ inv.issued_at|date:"Y-m-d" }}
-    </td>
-    <td class="text-end small">
-      {{ inv.total_amount }}
-    </td>
-  </tr>
-{% empty %}
-  <tr>
-    <td colspan="4" class="text-center text-muted small py-3">
-      {% trans "لا توجد فواتير حتى الآن." %}
-    </td>
-  </tr>
-{% endfor %}
+              {% for inv in recent_sales_invoices %}
+                <tr>
+                  <td class="text-nowrap">
+                    <a href="{% url 'accounting:sales_invoice_detail' inv.pk %}"
+                       class="text-decoration-none text-mazoon fw-semibold">
+                      {{ inv.serial|default:inv.pk }}
+                    </a>
+                  </td>
+                  <td class="text-truncate small" style="max-width: 180px;">
+                    {{ inv.customer|default:"-" }}
+                  </td>
+                  <td class="small text-muted">
+                    {{ inv.issued_at|date:"Y-m-d" }}
+                  </td>
+                  <td class="text-end small">
+                    {{ inv.total_amount }}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center text-muted small py-3">
+                    {% trans "لا توجد فواتير مبيعات حتى الآن." %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
 
+        <hr class="my-3">
+
+        {# ---- مشتريات ---- #}
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h2 class="h6 mb-0">{% trans "آخر فواتير المشتريات" %}</h2>
+          <a href="{% url 'accounting:purchase_invoice_list' %}" class="small">
+            {% trans "عرض كل فواتير المشتريات" %}
+          </a>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>{% trans "الرقم" %}</th>
+                <th>{% trans "المورد" %}</th>
+                <th>{% trans "التاريخ" %}</th>
+                <th class="text-end">{% trans "الإجمالي" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for inv in recent_purchase_invoices %}
+                <tr>
+                  <td class="text-nowrap">
+                    <a href="{% url 'accounting:purchase_invoice_detail' inv.pk %}"
+                       class="text-decoration-none text-mazoon fw-semibold">
+                      {{ inv.serial|default:inv.pk }}
+
+                    </a>
+                  </td>
+                  <td class="text-truncate small" style="max-width: 180px;">
+                    {{ inv.customer|default:"-" }}
+                  </td>
+                  <td class="small text-muted">
+                    {{ inv.issued_at|date:"Y-m-d" }}
+                  </td>
+                  <td class="text-end small">
+                    {{ inv.total_amount }}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center text-muted small py-3">
+                    {% trans "لا توجد فواتير مشتريات حتى الآن." %}
+                  </td>
+                </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
@@ -130,7 +189,7 @@
     </div>
   </div>
 
-  {# ====== ملخص سريع للحسابات أو ميزان مبسط ====== #}
+  {# ====== ملخص الحسابات الرئيسية ====== #}
   <div class="col-12 col-lg-5">
     <div class="card border-0 shadow-sm h-100">
       <div class="card-body">

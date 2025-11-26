@@ -27,14 +27,15 @@ User = get_user_model()
 # Invoice & InvoiceItem
 # ============================================================
 
-
 class Invoice(StatefulDomainModel):
     """
-    فاتورة مبيعات/خدمات (بدون تفاصيل ضريبية معقدة حالياً).
-
-    حالياً لا يوجد ترقيم منفصل:
-    - رقم العرض يعتمد على الـ PK (display_number).
+    فاتورة مبيعات/مشتريات/خدمات (بدون تفاصيل ضريبية معقدة حالياً).
     """
+
+    # 🔹 نوع الفاتورة: مبيعات / مشتريات
+    class InvoiceType(models.TextChoices):
+        SALES = "sales", _("فاتورة مبيعات")
+        PURCHASE = "purchase", _("فاتورة مشتريات")
 
     class Status(models.TextChoices):
         DRAFT = "draft", _("مسودة")
@@ -43,12 +44,24 @@ class Invoice(StatefulDomainModel):
         PAID = "paid", _("مدفوعة بالكامل")
         CANCELLED = "cancelled", _("ملغاة")
 
+    # نوع الفاتورة
+    type = models.CharField(
+        max_length=20,
+        choices=InvoiceType.choices,
+        default=InvoiceType.SALES,  # كل الفواتير القديمة = مبيعات
+        verbose_name=_("نوع الفاتورة"),
+        db_index=True,
+    )
+
+    # نفس العلاقة لكن بتسمية أعم
     customer = models.ForeignKey(
         "contacts.Contact",
         on_delete=models.PROTECT,
         related_name="invoices",
-        verbose_name=_("الزبون"),
+        verbose_name=_("الطرف"),
+        help_text=_("زبون في حالة المبيعات، ومورد في حالة المشتريات."),
     )
+
     issued_at = models.DateField(
         default=timezone.now,
         verbose_name=_("تاريخ الفاتورة"),
@@ -67,7 +80,7 @@ class Invoice(StatefulDomainModel):
     terms = models.TextField(
         blank=True,
         verbose_name=_("الشروط والأحكام"),
-        help_text=_("تظهر في الفاتورة للعميل."),
+        help_text=_("تظهر في الفاتورة للطرف."),
     )
 
     total_amount = models.DecimalField(
@@ -117,6 +130,7 @@ class Invoice(StatefulDomainModel):
         indexes = [
             models.Index(fields=["status"]),
             models.Index(fields=["issued_at"]),
+            models.Index(fields=["type", "status", "issued_at"]),  # للفلترة في الليست
         ]
         verbose_name = _("فاتورة")
         verbose_name_plural = _("الفواتير")
@@ -143,7 +157,8 @@ class Invoice(StatefulDomainModel):
         )
 
     def __str__(self) -> str:
-        return f"{self.display_number} - {self.customer.name}"
+        # يوضح نوع الفاتورة في الستـرنج
+        return f"{self.get_type_display()} - {self.display_number} - {self.customer.name}"
 
     # ---------- Validation ----------
 

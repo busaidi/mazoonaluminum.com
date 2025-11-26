@@ -292,11 +292,9 @@ def ensure_open_fiscal_year_for_date(date):
 @method_decorator(accounting_staff_required, name="dispatch")
 class AccountingDashboardView(AccountingSectionMixin, TemplateView):
     """
-    لوحة تحكم المحاسبة (جانب المبيعات):
-    - عدد الفواتير / الزبائن
-    - إجمالي المبالغ، الرصيد المتبقي
-    - أحدث الفواتير
-    (بدون أي اعتماد على payments أو orders)
+    لوحة تحكم المحاسبة:
+    - تفصل بين فواتير المبيعات والمشتريات حسب الحقل Invoice.type
+    - تعرض KPIs + آخر فواتير مبيعات + آخر فواتير مشتريات + ملخص حسابات
     """
     section = "dashboard"
     template_name = "accounting/dashboard.html"
@@ -305,31 +303,69 @@ class AccountingDashboardView(AccountingSectionMixin, TemplateView):
         ctx = super().get_context_data(**kwargs)
 
         invoices = Invoice.objects.select_related("customer")
-        customers = Contact.objects.all()
 
-        total_amount = invoices.aggregate(s=Sum("total_amount"))["s"] or Decimal("0")
-        total_paid = invoices.aggregate(s=Sum("paid_amount"))["s"] or Decimal("0")
-        total_balance = total_amount - total_paid
+        # 🔹 فصل المبيعات عن المشتريات حسب الحقل: type = Invoice.InvoiceType.*
+        sales_invoices = invoices.filter(type=Invoice.InvoiceType.SALES)
+        purchase_invoices = invoices.filter(type=Invoice.InvoiceType.PURCHASE)
 
-        ctx["invoice_count"] = invoices.count()
-        ctx["customer_count"] = customers.count()
+        # --------- أرقام أساسية ---------
+        def agg(qs, field):
+            return qs.aggregate(s=Sum(field))["s"] or Decimal("0")
 
-        # ما عندنا payments حالياً → نخليهم صفر/فاضي عشان القالب لو يستخدمهم ما يطيح
-        ctx["payment_count"] = 0
-        ctx["recent_payments"] = []
+        sales_invoice_count = sales_invoices.count()
+        purchase_invoice_count = purchase_invoices.count()
 
-        ctx["total_amount"] = total_amount
-        ctx["total_balance"] = total_balance
+        sales_total_amount = agg(sales_invoices, "total_amount")
+        sales_total_paid = agg(sales_invoices, "paid_amount")
+        sales_total_balance = sales_total_amount - sales_total_paid
 
-        ctx["recent_invoices"] = invoices.order_by("-issued_at", "-id")[:5]
+        purchase_total_amount = agg(purchase_invoices, "total_amount")
+        purchase_total_paid = agg(purchase_invoices, "paid_amount")
+        purchase_total_balance = purchase_total_amount - purchase_total_paid
 
-        # ما فعلنا orders في هذا الإصدار
-        ctx["order_count"] = 0
-        ctx["recent_orders"] = []
-        ctx["pending_orders"] = []
+        # لو حاب تحافظ على المتغيّرات القديمة:
+        invoice_count = sales_invoice_count + purchase_invoice_count
 
-        ctx["accounting_section"] = "dashboard"
+        # --------- آخر الفواتير ---------
+        recent_sales_invoices = sales_invoices.order_by("-issued_at", "-id")[:5]
+        recent_purchase_invoices = purchase_invoices.order_by("-issued_at", "-id")[:5]
+
+        # --------- الحسابات ---------
+        accounts_count = Account.objects.count()
+        key_accounts = (
+            Account.objects.filter(is_active=True, parent__isnull=True)
+            .order_by("code")[:5]
+        )
+
+        ctx.update(
+            {
+                # KPIs القديمة (للرجوع للخلف)
+                "invoice_count": invoice_count,
+                "total_amount": sales_total_amount,
+                "total_balance": sales_total_balance,
+
+                # KPIs مفصّلة
+                "sales_invoice_count": sales_invoice_count,
+                "purchase_invoice_count": purchase_invoice_count,
+                "sales_total_amount": sales_total_amount,
+                "sales_total_balance": sales_total_balance,
+                "purchase_total_amount": purchase_total_amount,
+                "purchase_total_balance": purchase_total_balance,
+
+                # جداول آخر الفواتير
+                "recent_sales_invoices": recent_sales_invoices,
+                "recent_purchase_invoices": recent_purchase_invoices,
+
+                # الحسابات
+                "accounts_count": accounts_count,
+                "key_accounts": key_accounts,
+
+                "accounting_section": "dashboard",
+            }
+        )
         return ctx
+
+
 
 
 class LedgerDashboardView(FiscalYearRequiredMixin, StaffRequiredMixin, TemplateView):
@@ -401,10 +437,15 @@ class LedgerDashboardView(FiscalYearRequiredMixin, StaffRequiredMixin, TemplateV
 # ============================================================
 
 
+# ============================================================
+# Invoices
+# ============================================================
+
 @method_decorator(accounting_staff_required, name="dispatch")
-class InvoiceListView(AccountingSectionMixin, ListView):
+class BaseInvoiceListView(AccountingSectionMixin, ListView):
     """
-    قائمة فواتير المبيعات للستاف مع فلتر للحالة.
+    قائمة فواتير مع إمكانية التصفية بالحالة + النوع (مبيعات/مشتريات).
+    تستخدم كـ base لكل القوائم.
     """
     section = "invoices"
     model = Invoice
@@ -412,27 +453,75 @@ class InvoiceListView(AccountingSectionMixin, ListView):
     context_object_name = "invoices"
     paginate_by = 20
 
+    # None = كل الأنواع، أو Invoice.InvoiceType.SALES / PURCHASE
+    invoice_type = None
+
     def get_queryset(self):
         qs = super().get_queryset().select_related("customer")
+
+        # تصفية بالنوع لو محدد
+        if self.invoice_type:
+            qs = qs.filter(type=self.invoice_type)
+
+        # تصفية بالحالة من الكويري سترنغ
         status = self.request.GET.get("status")
         if status:
             qs = qs.filter(status=status)
+
         return qs
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["status_filter"] = self.request.GET.get("status", "")
+        ctx["invoice_type"] = self.invoice_type
+        if self.invoice_type:
+            # يعطيك "فاتورة مبيعات" / "فاتورة مشتريات" حسب الترانسليشن
+            ctx["invoice_type_label"] = Invoice.InvoiceType(self.invoice_type).label
+        else:
+            ctx["invoice_type_label"] = _("كل الفواتير")
         return ctx
 
 
-class InvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
+@method_decorator(accounting_staff_required, name="dispatch")
+class SalesInvoiceListView(BaseInvoiceListView):
     """
-    إنشاء فاتورة جديدة مع فورمست للبنود.
+    قائمة فواتير المبيعات فقط.
+    URL: /accounting/sales/invoices/
+    """
+    invoice_type = Invoice.InvoiceType.SALES
+
+
+@method_decorator(accounting_staff_required, name="dispatch")
+class PurchaseInvoiceListView(BaseInvoiceListView):
+    """
+    قائمة فواتير المشتريات فقط.
+    URL: /accounting/purchases/invoices/
+    """
+    invoice_type = Invoice.InvoiceType.PURCHASE
+
+
+@method_decorator(accounting_staff_required, name="dispatch")
+class InvoiceListView(BaseInvoiceListView):
+    """
+    قائمة عامة (قديمة) لكل الفواتير بدون تصفية النوع.
+    URL: /accounting/invoices/
+    """
+    invoice_type = None
+
+
+class BaseInvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
+    """
+    Base لإنشاء الفاتورة، نستخدمه للمبيعات والمشتريات.
+    النوع يتحدد من الكلاس الفرعي.
     """
     section = "invoices"
     model = Invoice
     form_class = InvoiceForm
     template_name = "accounting/invoices/form.html"
+
+    # None = يترك الديفولت في الموديل (sales)،
+    # أو نحددها في الكلاسات الفرعية.
+    invoice_type = None
 
     def get_initial(self):
         initial = super().get_initial()
@@ -445,10 +534,8 @@ class InvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
 
         if customer_id:
             try:
-                # نفترض أن حقل الفورم اسمه "customer" ويرتبط بـ Contact
                 initial["customer"] = Contact.objects.get(pk=customer_id)
             except (ValueError, Contact.DoesNotExist):
-                # لو ID خربان أو ما فيه كونتاكت بهالرقم نتجاهله
                 pass
 
         # Pre-fill default terms from Settings
@@ -468,6 +555,14 @@ class InvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
             ctx["item_formset"] = InvoiceItemFormSet()
 
         ctx = self.inject_products_json(ctx)
+
+        # عشان الهيدر في القالب يعرف النوع
+        ctx["invoice_type"] = self.invoice_type or Invoice.InvoiceType.SALES
+        if self.invoice_type:
+            ctx["invoice_type_label"] = Invoice.InvoiceType(self.invoice_type).label
+        else:
+            ctx["invoice_type_label"] = _("فاتورة")
+
         return ctx
 
     def form_valid(self, form):
@@ -479,6 +574,11 @@ class InvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
 
         with transaction.atomic():
             invoice = form.save(commit=False)
+
+            # نثبّت النوع حسب الكلاس الفرعي
+            if self.invoice_type:
+                invoice.type = self.invoice_type
+
             invoice.total_amount = Decimal("0")
             invoice.save()
             self.object = invoice
@@ -496,14 +596,57 @@ class InvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
-        return reverse("accounting:invoice_list")
+        """
+        بعد الحفظ يودّي على صفحة التفاصيل حسب نوع الفاتورة.
+        """
+        inv_type = self.object.type
 
+        if inv_type == Invoice.InvoiceType.SALES:
+            return reverse(
+                "accounting:sales_invoice_detail",
+                kwargs={"pk": self.object.pk},
+            )
+        if inv_type == Invoice.InvoiceType.PURCHASE:
+            return reverse(
+                "accounting:purchase_invoice_detail",
+                kwargs={"pk": self.object.pk},
+            )
+        # مسار عام قديم
+        return reverse(
+            "accounting:invoice_detail",
+            kwargs={"pk": self.object.pk},
+        )
+
+
+class SalesInvoiceCreateView(BaseInvoiceCreateView):
+    """
+    إنشاء فاتورة مبيعات.
+    URL: /accounting/sales/invoices/new/
+    """
+    invoice_type = Invoice.InvoiceType.SALES
+
+
+class PurchaseInvoiceCreateView(BaseInvoiceCreateView):
+    """
+    إنشاء فاتورة مشتريات.
+    URL: /accounting/purchases/invoices/new/
+    """
+    invoice_type = Invoice.InvoiceType.PURCHASE
+
+
+class InvoiceCreateView(BaseInvoiceCreateView):
+    """
+    مسار عام (قديم) لو احتجناه من مكان آخر.
+    النوع هنا يعتمد على الديفولت في الموديل (sales).
+    """
+    invoice_type = None
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
 class InvoiceUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
     """
     تعديل فاتورة وبنودها.
+    (تعمل لكل الأنواع، وتعيد التوجيه حسب نوع الفاتورة).
     """
     section = "invoices"
     model = Invoice
@@ -523,6 +666,10 @@ class InvoiceUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
             ctx["item_formset"] = InvoiceItemFormSet(instance=invoice)
 
         ctx = self.inject_products_json(ctx)
+
+        ctx["invoice_type"] = invoice.type
+        ctx["invoice_type_label"] = invoice.get_type_display()
+
         return ctx
 
     def form_valid(self, form):
@@ -547,6 +694,21 @@ class InvoiceUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
+        """
+        نفس منطق الـ Create: نودّي المستخدم على ديتيل حسب النوع.
+        """
+        inv_type = self.object.type
+
+        if inv_type == Invoice.InvoiceType.SALES:
+            return reverse(
+                "accounting:sales_invoice_detail",
+                kwargs={"pk": self.object.pk},
+            )
+        if inv_type == Invoice.InvoiceType.PURCHASE:
+            return reverse(
+                "accounting:purchase_invoice_detail",
+                kwargs={"pk": self.object.pk},
+            )
         return reverse(
             "accounting:invoice_detail",
             kwargs={"pk": self.object.pk},
@@ -556,7 +718,7 @@ class InvoiceUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
 @method_decorator(accounting_staff_required, name="dispatch")
 class InvoiceDetailView(AttachmentPanelMixin, AccountingSectionMixin, DetailView):
     """
-    عرض تفاصيل فاتورة (مع مرفقات).
+    عرض تفاصيل فاتورة (مع مرفقات) لأي نوع.
     """
     section = "invoices"
     model = Invoice
@@ -566,159 +728,21 @@ class InvoiceDetailView(AttachmentPanelMixin, AccountingSectionMixin, DetailView
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx = self.inject_attachment_panel_context(ctx)
+        ctx["invoice_type"] = self.object.type
+        ctx["invoice_type_label"] = self.object.get_type_display()
         return ctx
 
 
 @method_decorator(accounting_staff_required, name="dispatch")
 class InvoicePrintView(AccountingSectionMixin, DetailView):
     """
-    صفحة الطباعة للفاتورة.
+    صفحة الطباعة للفاتورة (أي نوع).
     """
     section = "invoices"
     model = Invoice
     template_name = "accounting/invoices/print.html"
     context_object_name = "invoice"
 
-
-@login_required
-@permission_required("accounting.change_invoice", raise_exception=True)
-def invoice_confirm_view(request, pk):
-    """
-    اعتماد الفاتورة وترحيلها إلى دفتر الأستاذ.
-    """
-    invoice = get_object_or_404(Invoice, pk=pk)
-
-    if invoice.status != Invoice.Status.DRAFT:
-        messages.error(request, _("لا يمكن اعتماد إلا الفواتير في حالة مسودة."))
-        return redirect("accounting:invoice_detail", pk=invoice.pk)
-
-    old_status = invoice.status
-    invoice_number = invoice.display_number
-
-    invoice.status = Invoice.Status.SENT
-    invoice.save(update_fields=["status"])
-
-    try:
-        entry = invoice.post_to_ledger()
-    except Exception as e:
-        invoice.status = Invoice.Status.DRAFT
-        invoice.save(update_fields=["status"])
-        messages.error(
-            request,
-            _("تعذّر ترحيل الفاتورة إلى دفتر الأستاذ: %(error)s") % {"error": e},
-        )
-
-        log_event(
-            action=AuditLog.Action.OTHER,
-            message=_("فشل ترحيل الفاتورة %(serial)s إلى دفتر الأستاذ: %(error)s")
-            % {"serial": invoice_number, "error": e},
-            actor=request.user,
-            target=invoice,
-            extra={"error": str(e), "source": "invoice_confirm_view"},
-        )
-
-        return redirect("accounting:invoice_detail", pk=invoice.pk)
-
-    entry_number = entry.display_number
-
-    log_event(
-        action=AuditLog.Action.STATUS_CHANGE,
-        message=_(
-            "اعتماد الفاتورة %(serial)s وترحيلها إلى دفتر الأستاذ (قيد: %(entry)s)."
-        )
-        % {"serial": invoice_number, "entry": entry_number},
-        actor=request.user,
-        target=invoice,
-        extra={
-            "old_status": old_status,
-            "new_status": invoice.status,
-            "journal_entry_number": entry_number,
-            "source": "invoice_confirm_view",
-        },
-    )
-
-    customer_user = getattr(invoice.customer, "user", None)
-    if customer_user is not None:
-        create_notification(
-            recipient=customer_user,
-            verb=_(
-                "تم اعتماد فاتورتك رقم %(serial)s وترحيلها في النظام."
-            ) % {"serial": invoice_number},
-            target=invoice,
-        )
-
-    messages.success(
-        request,
-        _("تم اعتماد الفاتورة وترحيلها بنجاح (قيد: %(entry)s).")
-        % {"entry": entry_number},
-    )
-    return redirect("accounting:invoice_detail", pk=invoice.pk)
-
-
-@login_required
-@permission_required("accounting.change_invoice", raise_exception=True)
-def invoice_unpost_view(request, pk):
-    """
-    إلغاء ترحيل الفاتورة:
-    - إنشاء قيد عكسي
-    - فك الربط
-    - إعادة الحالة إلى مسودة
-    """
-    invoice = get_object_or_404(Invoice, pk=pk)
-
-    if invoice.ledger_entry is None:
-        messages.error(request, _("لا يوجد قيد مرحّل مرتبط بهذه الفاتورة."))
-        return redirect("accounting:invoice_detail", pk=invoice.pk)
-
-    if invoice.paid_amount and invoice.paid_amount > 0:
-        messages.error(request, _("لا يمكن إلغاء الترحيل لفاتورة عليها دفعات."))
-        return redirect("accounting:invoice_detail", pk=invoice.pk)
-
-    old_status = invoice.status
-    invoice_number = invoice.display_number
-
-    try:
-        reversal_entry = invoice.unpost_from_ledger(user=request.user)
-    except Exception as e:
-        messages.error(request, _("تعذّر إلغاء الترحيل: %(error)s") % {"error": e})
-
-        log_event(
-            action=AuditLog.Action.OTHER,
-            message=_("فشل إلغاء ترحيل الفاتورة %(serial)s: %(error)s")
-            % {"serial": invoice_number, "error": e},
-            actor=request.user,
-            target=invoice,
-            extra={"error": str(e), "source": "invoice_unpost_view"},
-        )
-
-        return redirect("accounting:invoice_detail", pk=invoice.pk)
-
-    reversal_number = reversal_entry.display_number
-
-    log_event(
-        action=AuditLog.Action.STATUS_CHANGE,
-        message=_(
-            "إلغاء ترحيل الفاتورة %(serial)s وإنشاء قيد عكسي %(reversal)s."
-        )
-        % {"serial": invoice_number, "reversal": reversal_number},
-        actor=request.user,
-        target=invoice,
-        extra={
-            "old_status": old_status,
-            "new_status": invoice.status,
-            "reversal_entry_number": reversal_number,
-            "source": "invoice_unpost_view",
-        },
-    )
-
-    messages.success(
-        request,
-        _(
-            "تم إنشاء قيد عكسي (%(reversal)s) وإعادة الفاتورة إلى حالة مسودة."
-        )
-        % {"reversal": reversal_number},
-    )
-    return redirect("accounting:invoice_detail", pk=invoice.pk)
 
 
 # ============================================================
@@ -1637,3 +1661,11 @@ def journal_update_view(request, pk):
             "journal": journal,
         },
     )
+
+
+def invoice_confirm_view(request):
+    return None
+
+
+def invoice_unpost_view(request):
+    return None
