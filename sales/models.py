@@ -27,7 +27,7 @@ class SalesDocumentQuerySet(models.QuerySet):
         return self.filter(contact_id=contact_id)
 
 
-class SalesDocument(NumberedModel):
+class SalesDocument(models.Model):
     """مستند مبيعات عام.
 
     يمكن أن يكون:
@@ -154,11 +154,35 @@ class SalesDocument(NumberedModel):
 
     # ====== تمثيل نصي ======
 
-    def __str__(self) -> str:  # pragma: no cover - تمثيل نصي بسيط
-        label = self.number or f"#{self.pk}"
-        return f"{self.get_kind_display()} {label} - {self.contact.name}"
+    def __str__(self) -> str:
+        """تمثيل نصي قياسي للمستند."""
+        contact_name = self.contact.name if self.contact else "—"
+        return f"{self.display_number} - {contact_name}"
 
     # ====== خصائص مساعدة للـ UI ======
+
+    @property
+    def display_number(self) -> str:
+        """
+        رقم عرض بسيط يعتمد على نوع المستند + الـ PK بصيغة ثابتة.
+
+        مثال:
+        - QUOTATION -> Q-0005
+        - ORDER -> SO-0012
+        - DELIVERY_NOTE -> DN-0003
+        """
+        prefix_map = {
+            self.Kind.QUOTATION: "Q",
+            self.Kind.ORDER: "SO",
+            self.Kind.DELIVERY_NOTE: "DN",
+        }
+
+        prefix = prefix_map.get(self.kind, "SD")  # SD = Sales Document افتراضي
+
+        # قبل الحفظ ما يكون فيه pk
+        if self.pk:
+            return f"{prefix}-{self.pk:04d}"  # تعبئة إلى 4 أرقام
+        return f"{prefix}-DRAFT"
 
     @property
     def is_quotation(self) -> bool:

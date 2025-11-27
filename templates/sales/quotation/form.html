@@ -1,3 +1,4 @@
+{# templates/sales/quotation/form.html #}
 {% extends "sales/base_sales.html" %}
 {% load i18n %}
 
@@ -5,31 +6,35 @@
 
 {% block sales_content %}
 
-<!-- ============================ -->
-<!-- HEADER -->
-<!-- ============================ -->
-<div class="mb-4">
-  <div class="d-flex justify-content-between.align-items-center flex-wrap">
+{# ================= HEADER CARD ================= #}
+<div class="card border-0 shadow-sm mb-4 bg-mazoon-card">
+  <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
     <div>
       <div class="d-flex align-items-center gap-2 mb-2">
-        <span class="badge bg-dark-subtle text-dark-emphasis small">
-          {% trans "المبيعات" %}
+        <span class="feature-icon">
+          <i class="bi bi-file-earmark-plus"></i>
         </span>
-        <span class="badge bg-warning-subtle text-warning-emphasis small">
-          {{ kind_label|default:_("عرض سعر") }}
-        </span>
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-dark-subtle text-dark-emphasis small">
+              {% trans "المبيعات" %}
+            </span>
+            <span class="badge bg-warning-subtle text-warning-emphasis small">
+              {{ kind_label|default:_("عرض سعر") }}
+            </span>
+          </div>
+          <h1 class="h4 fw-bold mb-0">{{ form_title }}</h1>
+          <p class="text-muted small mb-0 mt-1">
+            {% trans "قم بتعبئة البيانات بدقة — وسيقوم النظام بالاحتساب والترقيم تلقائياً." %}
+          </p>
+        </div>
       </div>
-
-      <h1 class="h4 fw-bold mb-1">{{ form_title }}</h1>
-      <p class="text-muted small mb-0">
-        {% trans "قم بتعبئة البيانات بدقة — وسيقوم النظام بالاحتساب والترقيم تلقائياً." %}
-      </p>
     </div>
 
-    <div class="mt-3 mt-md-0">
+    <div class="mt-2 mt-md-0">
       <a href="{% url 'sales:dashboard' %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-right"></i>
-        {% trans "رجوع للقائمة" %}
+        {% trans "رجوع لواجهة المبيعات" %}
       </a>
     </div>
   </div>
@@ -51,15 +56,12 @@
     {{ hidden }}
   {% endfor %}
 
-  <!-- ============================ -->
-  <!-- SECTION 1: GENERAL INFO + ملاحظات العميل -->
-  <!-- ============================ -->
+  {# ================= SECTION 1: GENERAL INFO ================= #}
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
       <h2 class="h6 fw-bold mb-3">{% trans "البيانات العامة" %}</h2>
 
       <div class="row g-4">
-        {# بقية الحقول (ما عدا ملاحظات العميل والملاحظات الداخلية) #}
         {% for field in form.visible_fields %}
           {% if field.name != "customer_notes" and field.name != "notes" %}
             <div class="col-md-6 col-xl-4">
@@ -86,7 +88,6 @@
         {% endfor %}
       </div>
 
-      {# ملاحظات العميل كاملة العرض تحت البيانات #}
       {% if form.customer_notes %}
         <hr class="my-3">
         <div class="mb-1">
@@ -109,9 +110,7 @@
     </div>
   </div>
 
-  <!-- ============================ -->
-  <!-- SECTION 2: LINES TABLE -->
-  <!-- ============================ -->
+  {# ================= SECTION 2: LINES TABLE ================= #}
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
       <h2 class="h6 fw-bold mb-3">{% trans "بنود المستند" %}</h2>
@@ -127,7 +126,7 @@
       {% endif %}
 
       <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
+        <table class="table table-sm align-middle.mb-0">
           <thead class="table-light">
             <tr>
               <th class="text-muted small" style="min-width: 180px;">{% trans "المنتج" %}</th>
@@ -199,9 +198,7 @@
     </div>
   </div>
 
-  <!-- ============================ -->
-  <!-- SECTION 3: SUMMARY -->
-  <!-- ============================ -->
+  {# ================= SECTION 3: SUMMARY ================= #}
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
       <h2 class="h6 fw-bold mb-3">{% trans "الملخص المالي" %}</h2>
@@ -215,14 +212,14 @@
         </div>
 
         <div class="col-md-3">
-          <div class="d-flex justify-content-between.align-items-center">
+          <div class="d-flex justify-content-between align-items-center">
             <span class="text-muted">{% trans "إجمالي الخصم" %}</span>
             <span class="fw-semibold">{{ total_discount|default:"0.000" }} OMR</span>
           </div>
         </div>
 
         <div class="col-md-3">
-          <div class="d-flex justify-content-between align-items-center">
+          <div class="d-flex justify-content-between.align-items-center">
             <span class="text-muted">{% trans "الضريبة" %}</span>
             <span class="fw-semibold">{{ tax_amount|default:"0.000" }} OMR</span>
           </div>
@@ -236,15 +233,13 @@
         </div>
       </div>
 
-      <p class="text-muted small mt-2.mb-0">
+      <p class="text-muted small mt-2 mb-0">
         {% trans "يتم احتساب هذه الأرقام عبر السيرفر. لاحقاً يمكن جعلها لحظية باستخدام JavaScript إذا رغبت." %}
       </p>
     </div>
   </div>
 
-  <!-- ============================ -->
-  <!-- SECTION 4: INTERNAL NOTES (آخر شي) -->
-  <!-- ============================ -->
+  {# ================= SECTION 4: INTERNAL NOTES ================= #}
   {% if form.notes %}
     <div class="card border-0 shadow-sm mb-4">
       <div class="card-body">
@@ -272,9 +267,7 @@
     </div>
   {% endif %}
 
-  <!-- ============================ -->
-  <!-- ACTION BUTTONS -->
-  <!-- ============================ -->
+  {# ================= ACTION BUTTONS ================= #}
   <div class="d-flex justify-content-end gap-2">
     <button type="submit" name="_save_draft" class="btn btn-outline-secondary">
       <i class="bi bi-save"></i> {% trans "حفظ كمسودة" %}

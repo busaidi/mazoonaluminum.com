@@ -2,58 +2,92 @@
 {% extends "base.html" %}
 {% load i18n %}
 
+{% block title %}{% trans "نظام إدارة المبيعات" %}{% endblock %}
+
 {% block content %}
+<div class="container-fluid">
 
-<div class="container">
-
-  {# ======================= NAVIGATION BAR (Sales) ======================= #}
+  {# === رأس قسم المبيعات + الناف === #}
   <div class="mb-3">
-    <div class="bg-mazoon-card border rounded-3 shadow-sm px-2 py-2">
-      <ul class="nav nav-pills flex-wrap small mazoon-nav gap-1">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <div>
+        <h1 class="h3 fw-bold mb-1 text-mazoon">
+          {% trans "نظام إدارة المبيعات" %}
+        </h1>
+        <p class="text-muted small mb-0">
+          {% trans "إدارة عروض الأسعار، أوامر البيع، ومذكرات التسليم ضمن منصة Mazoon ERP." %}
+        </p>
+      </div>
+    </div>
 
-        {# Dashboard #}
-        <li class="nav-item">
-          <a class="nav-link px-3 py-1 {% if sales_section == 'dashboard' %}active{% endif %}"
-             href="{% url 'sales:dashboard' %}">
-            {% trans "لوحة المبيعات" %}
-          </a>
-        </li>
+    <ul class="nav nav-pills mazoon-nav bg-mazoon-card p-2 rounded-3 shadow-sm mb-2">
 
-        {# Quotations #}
-        <li class="nav-item">
-          <a class="nav-link px-3 py-1 {% if sales_section == 'quotations' %}active{% endif %}"
-             href="{% url 'sales:quotation_list' %}">
-            {% trans "عروض الأسعار" %}
-          </a>
-        </li>
+      <li class="nav-item">
+        <a class="nav-link px-3 py-1 {% if sales_section == 'dashboard' %}active{% endif %}"
+           href="{% url 'sales:dashboard' %}">
+          <i class="bi bi-speedometer2 ms-1"></i>
+          <span>{% trans "لوحة التحكم" %}</span>
+        </a>
+      </li>
 
-        {# Orders #}
-        <li class="nav-item">
-          <a class="nav-link px-3 py-1 {% if sales_section == 'orders' %}active{% endif %}"
-             href="{% url 'sales:order_list' %}">
-            {% trans "أوامر البيع" %}
-          </a>
-        </li>
+      <li class="nav-item">
+        <a class="nav-link px-3 py-1 {% if sales_section == 'quotations' %}active{% endif %}"
+           href="{% url 'sales:quotation_list' %}">
+          <i class="bi bi-file-earmark-text ms-1"></i>
+          <span>{% trans "عروض الأسعار" %}</span>
+        </a>
+      </li>
 
-        {# Deliveries #}
-        <li class="nav-item">
-          <a class="nav-link px-3 py-1 {% if sales_section == 'deliveries' %}active{% endif %}"
-             href="{% url 'sales:delivery_list' %}">
-            {% trans "مذكرات التسليم" %}
-          </a>
-        </li>
+      <li class="nav-item">
+        <a class="nav-link px-3 py-1 {% if sales_section == 'orders' %}active{% endif %}"
+           href="{% url 'sales:order_list' %}">
+          <i class="bi bi-bag-check ms-1"></i>
+          <span>{% trans "أوامر البيع" %}</span>
+        </a>
+      </li>
 
-        {# ممكن لاحقاً تضيف إعدادات للمبيعات هنا #}
-      </ul>
+      <li class="nav-item">
+        <a class="nav-link px-3 py-1 {% if sales_section == 'deliveries' %}active{% endif %}"
+           href="{% url 'sales:delivery_list' %}">
+          <i class="bi bi-truck ms-1"></i>
+          <span>{% trans "مذكرات التسليم" %}</span>
+        </a>
+      </li>
+
+      {# مساحة لإعدادات المبيعات لاحقاً #}
+      <!--
+      <li class="nav-item">
+        <a class="nav-link px-3 py-1 {% if sales_section == 'settings' %}active{% endif %}"
+           href="#">
+          <i class="bi bi-sliders ms-1"></i>
+          <span>{% trans "الإعدادات" %}</span>
+        </a>
+      </li>
+      -->
+
+    </ul>
+
+    <div class="mb-3">
+      <p class="text-muted small mb-0">
+        {% if sales_section == 'dashboard' %}
+          {% trans "نظرة عامة على مستندات المبيعات وحالة سير العمل والعملاء الرئيسيين." %}
+        {% elif sales_section == 'quotations' %}
+          {% trans "إدارة عروض الأسعار المقدمة للعملاء وتحويلها إلى أوامر بيع." %}
+        {% elif sales_section == 'orders' %}
+          {% trans "متابعة أوامر البيع من التأكيد وحتى التسليم والفوترة." %}
+        {% elif sales_section == 'deliveries' %}
+          {% trans "إدارة مذكرات التسليم وربطها بأوامر البيع والفواتير." %}
+        {% else %}
+          {% trans "اختر إحدى الشاشات أعلاه لإدارة بيانات المبيعات." %}
+        {% endif %}
+      </p>
     </div>
   </div>
 
-  {# ======================= PAGE CONTENT ======================= #}
+  {# === هنا يتم حقن محتوى كل صفحة فرعية === #}
   <div class="mt-3">
-    {% block sales_content %}
-    {% endblock %}
+    {% block sales_content %}{% endblock %}
   </div>
 
 </div>
-
 {% endblock %}

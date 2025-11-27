@@ -45,7 +45,7 @@ class SalesStaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     @property
     def section(self) -> str:
         """
-        Used by layout to highlight 'Sales' section in the navbar.
+        Used by main layout (base.html) to highlight the 'Sales' app.
         """
         return "sales"
 
@@ -54,7 +54,7 @@ class BaseSalesDocumentMixin(SalesStaffRequiredMixin):
     """
     Common helpers for all SalesDocument views.
 
-    subclasses MUST set:
+    Subclasses MUST set:
         - document_kind (SalesDocument.Kind.QUOTATION / ORDER / DELIVERY_NOTE)
     """
 
@@ -76,6 +76,7 @@ class BaseSalesDocumentMixin(SalesStaffRequiredMixin):
     def _kind_name(self) -> str:
         """
         Small helper to map kind to url name prefix.
+        QUOTATION -> 'quotation', ORDER -> 'order', DELIVERY_NOTE -> 'delivery'
         """
         kind = self.get_document_kind()
         if kind == SalesDocument.Kind.QUOTATION:
@@ -107,19 +108,23 @@ class BaseSalesDocumentMixin(SalesStaffRequiredMixin):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
 
+        # للـ base.html (تحديد التطبيق في النافبار العام)
         ctx["section"] = self.section
 
-        # subsection & page title per kind
+        # للـ base_sales.html (تحديد التاب الفرعي: عروض / أوامر / مذكرات)
         kind = self.get_document_kind()
         if kind == SalesDocument.Kind.QUOTATION:
-            ctx["subsection"] = "quotations"
+            ctx["sales_section"] = "quotations"
             ctx["page_title"] = _("عروض الأسعار")
+            ctx["kind_label"] = _("عرض سعر")
         elif kind == SalesDocument.Kind.ORDER:
-            ctx["subsection"] = "orders"
+            ctx["sales_section"] = "orders"
             ctx["page_title"] = _("طلبات البيع")
+            ctx["kind_label"] = _("طلب بيع")
         else:
-            ctx["subsection"] = "delivery_notes"
+            ctx["sales_section"] = "deliveries"
             ctx["page_title"] = _("مذكرات التسليم")
+            ctx["kind_label"] = _("مذكرة تسليم")
 
         ctx["q"] = getattr(self, "search_query", "")
         return ctx
@@ -142,6 +147,7 @@ class QuotationListView(BaseSalesDocumentMixin, ListView):
     template_name = "sales/quotation/list.html"
     paginate_by = 25
     document_kind = SalesDocument.Kind.QUOTATION
+    # لا نحتاج أي context هنا؛ BaseSalesDocumentMixin يتكفل بـ sales_section
 
 
 class SalesOrderListView(BaseSalesDocumentMixin, ListView):
@@ -183,8 +189,10 @@ class BaseSalesDocumentCreateView(BaseSalesDocumentMixin, CreateView):
         kind = self.get_document_kind()
         if kind == SalesDocument.Kind.QUOTATION:
             ctx["form_title"] = _("إنشاء عرض سعر جديد")
+            # kind_label تم ضبطه في BaseSalesDocumentMixin = "عرض سعر"
         elif kind == SalesDocument.Kind.ORDER:
             ctx["form_title"] = _("إنشاء طلب بيع جديد")
+            # في حالة رغبتك، ممكن تغير kind_label هنا بشكل مخصص
         else:
             ctx["form_title"] = _("إنشاء مذكرة تسليم جديدة")
 
@@ -250,6 +258,7 @@ class QuotationUpdateView(BaseSalesDocumentMixin, UpdateView):
             ctx["line_formset"] = SalesLineFormSet(instance=doc)
 
         ctx["form_title"] = _("تعديل عرض السعر")
+        # kind_label جهزه BaseSalesDocumentMixin = "عرض سعر"
         return ctx
 
     def form_valid(self, form):
@@ -283,7 +292,7 @@ class QuotationUpdateView(BaseSalesDocumentMixin, UpdateView):
 
 class BaseSalesDocumentDetailView(BaseSalesDocumentMixin, DetailView):
     """
-    Detail view مع نفس الـ context (section, subsection, page_title).
+    Detail view مع نفس الـ context (section, sales_section, page_title, kind_label).
     """
     # يستخدم نفس الـ template_name من subclass
     pass
@@ -460,6 +469,9 @@ class SalesDashboardView(SalesStaffRequiredMixin, TemplateView):
         )
         ctx["top_customers"] = top_customers
 
+        # للـ base.html
         ctx["section"] = self.section
-        ctx["subsection"] = "dashboard"
+        # للـ base_sales.html (تحديد تبويب "لوحة المبيعات")
+        ctx["sales_section"] = "dashboard"
+
         return ctx
