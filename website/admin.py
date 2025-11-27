@@ -3,6 +3,8 @@ from django.utils.html import format_html
 
 from .models import BlogPost, Comment, Product, Category, Tag, ContactMessage
 
+from website.models import TimeStampedModel
+
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -95,3 +97,5 @@ class ContactMessageAdmin(admin.ModelAdmin):
             "fields": ("created_at",),
         }),
     )
+
+

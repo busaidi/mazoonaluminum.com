@@ -10,6 +10,8 @@ from .models import (
     HardwareItem,
 )
 
+from windowcad.models import Mullion, Panel
+
 
 # ============================================================
 # Profiles inside a system (inline)
@@ -159,3 +161,13 @@ class HardwareItemAdmin(admin.ModelAdmin):
         "depends_on_width",
     )
     search_fields = ("code", "name")
+
+
+@admin.register(Mullion)
+class PanelAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Panel)
+class PanelAdmin(admin.ModelAdmin):
+    pass

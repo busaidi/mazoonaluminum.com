@@ -24,6 +24,9 @@ from .models import (
 # ============================================================
 
 
+from contacts.models import Contact
+from django.utils.translation import gettext_lazy as _
+
 class InvoiceForm(forms.ModelForm):
     """
     Main staff invoice form (header fields only).
@@ -60,13 +63,12 @@ class InvoiceForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # حقل الزبون → نربطه بكونتاكت الزبائن (إذا عندك Manager customers())
+        # 🔹 ربط حقل الزبون بالـ Contact
         if "customer" in self.fields:
-            # لو ما عندك Contact.objects.customers() خله all()
-            qs = getattr(Contact.objects, "customers", None)
-            self.fields["customer"].queryset = (
-                qs() if callable(qs) else Contact.objects.all()
-            )
+            # لو عندك فلاج is_customer في الموديل:
+            # self.fields["customer"].queryset = Contact.objects.filter(is_customer=True).order_by("name")
+            # حالياً نخليها كل الكونتاكت عشان تتأكد أنها تشتغل:
+            self.fields["customer"].queryset = Contact.objects.order_by("name")
             self.fields["customer"].label = _("الزبون")
 
         # Bootstrap classes: select vs input
@@ -94,6 +96,7 @@ class InvoiceForm(forms.ModelForm):
             self.add_error("due_date", _("Due date cannot be before issue date."))
 
         return cleaned
+
 
 
 InvoiceItemFormSet = inlineformset_factory(
