@@ -40,7 +40,6 @@ urlpatterns += i18n_patterns(
     path("inventory/", include("inventory.urls", namespace="inventory")),
     path("contacts/", include("contacts.urls", namespace="contacts")),
     path("uom/", include("uom.urls", namespace="uom")),
-    path("payments/", include("payments.urls", namespace="payments")),
     path("sales/", include("sales.urls", namespace="sales")),
     path("windowcad/", include("windowcad.urls", namespace="windowcad")),
 

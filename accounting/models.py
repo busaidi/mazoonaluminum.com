@@ -829,3 +829,243 @@ class LedgerSettings(models.Model):
             "opening": self.opening_balance_journal,
             "closing": self.closing_journal,
         }
+
+
+# ==============================================================================
+# Payments (سندات قبض/صرف مرتبطة بالحسابات والفواتير)
+# ==============================================================================
+
+class PaymentMethod(models.Model):
+    """
+    تعريف طرق الدفع (نقدي، تحويل بنكي، شيك، بطاقة، ...).
+    هذه الطريقة يمكن إعادة استخدامها في كل النظام.
+    """
+
+    class MethodType(models.TextChoices):
+        CASH = "cash", _("نقدي")
+        BANK_TRANSFER = "bank_transfer", _("تحويل بنكي")
+        CHEQUE = "cheque", _("شيك")
+        CARD = "card", _("بطاقة")
+        OTHER = "other", _("أخرى")
+
+    name = models.CharField(
+        max_length=100,
+        verbose_name=_("اسم طريقة الدفع"),
+        help_text=_("مثال: نقدًا، تحويل بنكي، شيك..."),
+    )
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name=_("الكود"),
+        help_text=_("كود داخلي لتمييز طريقة الدفع (مثال: CASH, BANK_OMAN)."),
+    )
+    method_type = models.CharField(
+        max_length=20,
+        choices=MethodType.choices,
+        default=MethodType.CASH,
+        verbose_name=_("نوع الطريقة"),
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_("نشط؟"),
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("طريقة دفع")
+        verbose_name_plural = _("طرق الدفع")
+        ordering = ("name", "id")
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Payment(models.Model):
+    """
+    حركة دفع واحدة:
+    - سند قبض من عميل (Receipt)
+    - سند صرف لمورد أو جهة أخرى (Payment)
+    """
+
+    class Type(models.TextChoices):
+        RECEIPT = "receipt", _("سند قبض")
+        PAYMENT = "payment", _("سند صرف")
+
+    type = models.CharField(
+        max_length=20,
+        choices=Type.choices,
+        default=Type.RECEIPT,
+        verbose_name=_("نوع الحركة"),
+        db_index=True,
+    )
+
+    # الطرف (عميل / مورد / جهة أخرى) – موحَّد على contacts.Contact
+    contact = models.ForeignKey(
+        "contacts.Contact",
+        on_delete=models.PROTECT,
+        related_name="payments",
+        verbose_name=_("الطرف"),
+        help_text=_("العميل أو المورد المرتبط بهذه الحركة."),
+    )
+
+    method = models.ForeignKey(
+        PaymentMethod,
+        on_delete=models.PROTECT,
+        related_name="payments",
+        verbose_name=_("طريقة الدفع"),
+    )
+
+    date = models.DateField(
+        default=timezone.now,
+        verbose_name=_("تاريخ الدفع"),
+        db_index=True,
+    )
+
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        verbose_name=_("المبلغ"),
+        validators=[MinValueValidator(Decimal("0.000"))],
+    )
+
+    currency = models.CharField(
+        max_length=10,
+        default="OMR",
+        verbose_name=_("العملة"),
+    )
+
+    reference = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("مرجع خارجي"),
+        help_text=_("مثال: رقم شيك، رقم عملية بنكية، رقم إيصال..."),
+    )
+
+    notes = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("ملاحظات"),
+    )
+
+    # ربط مع قيد اليومية في دفتر الأستاذ
+    journal_entry = models.ForeignKey(
+        "JournalEntry",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payments",
+        verbose_name=_("قيد اليومية"),
+    )
+
+    is_posted = models.BooleanField(
+        default=False,
+        verbose_name=_("مرحَّل إلى الدفتر؟"),
+    )
+    posted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("تاريخ الترحيل"),
+    )
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payments_created",
+        verbose_name=_("أنشأها"),
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payments_updated",
+        verbose_name=_("آخر تعديل بواسطة"),
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("تاريخ الإنشاء"),
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("تاريخ التحديث"),
+    )
+
+    class Meta:
+        verbose_name = _("دفعة")
+        verbose_name_plural = _("دفعات")
+        ordering = ("-date", "-id")
+        indexes = [
+            models.Index(fields=["date"]),
+            models.Index(fields=["contact"]),
+        ]
+
+    # --------- Helpers ---------
+
+    @property
+    def display_number(self) -> str:
+        """
+        رقم عرض بسيط يعتمد على الـ PK (مثل الفواتير والقيود).
+        """
+        if self.pk:
+            return f"PAY-{self.pk}"
+        return _("دفعة (غير محفوظة)")
+
+    def __str__(self) -> str:
+        label = self.display_number
+        return f"{label} {self.amount} {self.currency} ({self.contact})"
+
+    @property
+    def signed_amount(self) -> Decimal:
+        """
+        تعيد المبلغ بإشارة موجبة لسند القبض، وسالبة لسند الصرف.
+        """
+        if self.type == self.Type.PAYMENT:
+            return -self.amount
+        return self.amount
+
+    def mark_posted(self):
+        """
+        تستدعى بعد إنشاء قيد اليومية في دفتر الأستاذ.
+        """
+        self.is_posted = True
+        self.posted_at = timezone.now()
+        self.save(update_fields=["is_posted", "posted_at"])
+
+
+class PaymentAllocation(models.Model):
+    """
+    ربط دفعة واحدة بعدة فواتير (Invoice).
+    """
+
+    payment = models.ForeignKey(
+        Payment,
+        on_delete=models.CASCADE,
+        related_name="allocations",
+        verbose_name=_("الدفعة"),
+    )
+    invoice = models.ForeignKey(
+        Invoice,
+        on_delete=models.PROTECT,
+        related_name="payment_allocations",
+        verbose_name=_("الفاتورة"),
+    )
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        verbose_name=_("المبلغ المخصص للفاتورة"),
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("تخصيص دفعة لفاتورة")
+        verbose_name_plural = _("تخصيصات الدفعات للفواتير")
+        unique_together = ("payment", "invoice")
+
+    def __str__(self) -> str:
+        return f"{self.payment.display_number} → {self.invoice.display_number} ({self.amount})"

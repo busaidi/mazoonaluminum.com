@@ -52,6 +52,7 @@ from .forms import (
     LedgerSettingsForm,
     SettingsForm,
     TrialBalanceFilterForm,
+    PaymentForm,
 )
 from .mixins import ProductJsonMixin
 from .models import (
@@ -62,6 +63,7 @@ from .models import (
     JournalEntry,
     JournalLine,
     LedgerSettings,
+    Payment,
     Settings,
     get_default_journal_for_manual_entry,
 )
@@ -73,54 +75,64 @@ from .services import (
 
 
 # ============================================================
-# Helper permissions
+# Helper permissions (unified)
 # ============================================================
+
+
+def user_has_accounting_access(user):
+    """
+    صلاحية موحدة لكل شاشات المحاسبة / الدفتر / البيمنت:
+
+    - مستخدم مسجل وفعّال
+    - و (is_staff أو is_superuser أو عضو في مجموعة 'accounting_staff')
+    """
+    if not (user.is_authenticated and user.is_active):
+        return False
+
+    if user.is_staff or user.is_superuser:
+        return True
+
+    return user.groups.filter(name="accounting_staff").exists()
 
 
 def is_accounting_staff(user):
     """
-    صلاحية بسيطة لموظفي المحاسبة:
-    - مستخدم مسجل وفعّال
-    - عضو في مجموعة 'accounting_staff'
+    اسم قديم متوافق مع user_passes_test، يستخدم نفس المنطق.
     """
-    return (
-        user.is_authenticated
-        and user.is_active
-        and user.groups.filter(name="accounting_staff").exists()
-    )
+    return user_has_accounting_access(user)
 
 
-accounting_staff_required = user_passes_test(is_accounting_staff)
+# Decorator جاهز لو حبيت تستخدمه مع CBV via method_decorator أو FBV
+accounting_staff_required = user_passes_test(user_has_accounting_access)
 
 
-class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+class AccountingStaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     """
-    مزيّن للمشاهد التي تحتاج مستخدم محاسبة/ستاف:
-    - يسمح لأي مستخدم is_staff أو is_superuser
-    - أو عضو في مجموعة accounting_staff
+    مكسين موحد لصلاحيات المحاسبة:
+
+    - يتأكد من تسجيل الدخول
+    - يسمح لـ staff / superuser / مجموعة accounting_staff
     """
+
+    raise_exception = True  # يرجع 403 بدل لفة ريديركت لا نهائية
 
     def test_func(self):
-        user = self.request.user
-        if not user.is_authenticated:
-            return False
-
-        if user.is_staff or user.is_superuser:
-            return True
-
-        return is_accounting_staff(user)
+        return user_has_accounting_access(self.request.user)
 
     def handle_no_permission(self):
-        if not self.request.user.is_authenticated:
+        user = self.request.user
+        if not user.is_authenticated:
+            # LoginRequiredMixin سيتكفل بالريديركت
             return super().handle_no_permission()
+
         messages.error(self.request, _("ليس لديك صلاحية للوصول إلى هذه الصفحة."))
         return redirect("login")
 
 
 def ledger_staff_required(view_func):
     """
-    Decorator بسيط ليتطلب مستخدم ستاف/سوبر يوزر/محاسبة.
-    نستخدمه في شاشات دفتر الأستاذ (داخل تطبيق accounting).
+    Decorator لواجهات دفتر الأستاذ function-based views
+    يستخدم نفس منطق user_has_accounting_access.
     """
 
     @wraps(view_func)
@@ -129,7 +141,7 @@ def ledger_staff_required(view_func):
         if not user.is_authenticated:
             return redirect("login")
 
-        if not (user.is_staff or user.is_superuser or is_accounting_staff(user)):
+        if not user_has_accounting_access(user):
             messages.error(
                 request,
                 _("ليس لديك صلاحية للوصول إلى هذه الصفحة."),
@@ -149,14 +161,15 @@ def ledger_staff_required(view_func):
 class AccountingSectionMixin:
     """
     يحقن 'accounting_section' في الكونتكست حتى تقدر القوالب
-    تميّز القسم الحالي (فواتير، إعدادات، ...).
+    تميّز القسم الحالي (فواتير، مدفوعات، إعدادات، ...).
     """
 
-    section = None  # override في الكلاسات
+    section = None  # يتم override في الكلاسات الفرعية
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["accounting_section"] = self.section
+        if self.section:
+            ctx["accounting_section"] = self.section
         return ctx
 
 
@@ -222,7 +235,6 @@ def fiscal_year_required(view_func):
     def _wrapped(request, *args, **kwargs):
         qs = FiscalYear.objects.all()
 
-        # 1) لا توجد أي سنة مالية
         if not qs.exists():
             messages.warning(
                 request,
@@ -232,7 +244,6 @@ def fiscal_year_required(view_func):
 
         open_years = qs.filter(is_closed=False)
 
-        # 2) كل السنوات مقفلة
         if not open_years.exists():
             messages.warning(
                 request,
@@ -243,7 +254,6 @@ def fiscal_year_required(view_func):
             )
             return view_func(request, *args, **kwargs)
 
-        # 3) سنة/سنوات مفتوحة لكن تاريخ اليوم خارج نطاقها
         today = timezone.now().date()
         if not open_years.filter(start_date__lte=today, end_date__gte=today).exists():
             messages.info(
@@ -289,12 +299,11 @@ def ensure_open_fiscal_year_for_date(date):
 # ============================================================
 
 
-@method_decorator(accounting_staff_required, name="dispatch")
-class AccountingDashboardView(AccountingSectionMixin, TemplateView):
+class AccountingDashboardView(AccountingStaffRequiredMixin, AccountingSectionMixin, TemplateView):
     """
     لوحة تحكم المحاسبة:
     - تفصل بين فواتير المبيعات والمشتريات حسب الحقل Invoice.type
-    - تعرض KPIs + آخر فواتير مبيعات + آخر فواتير مشتريات + ملخص حسابات
+    - تعرض KPIs + آخر فواتير مبيعات + آخر فواتير مشتريات + المدفوعات + ملخص حسابات
     """
     section = "dashboard"
     template_name = "accounting/dashboard.html"
@@ -304,33 +313,43 @@ class AccountingDashboardView(AccountingSectionMixin, TemplateView):
 
         invoices = Invoice.objects.select_related("customer")
 
-        # 🔹 فصل المبيعات عن المشتريات حسب الحقل: type = Invoice.InvoiceType.*
+        # مبيعات / مشتريات
         sales_invoices = invoices.filter(type=Invoice.InvoiceType.SALES)
         purchase_invoices = invoices.filter(type=Invoice.InvoiceType.PURCHASE)
 
-        # --------- أرقام أساسية ---------
         def agg(qs, field):
             return qs.aggregate(s=Sum(field))["s"] or Decimal("0")
 
+        # Sales KPIs
         sales_invoice_count = sales_invoices.count()
-        purchase_invoice_count = purchase_invoices.count()
-
         sales_total_amount = agg(sales_invoices, "total_amount")
         sales_total_paid = agg(sales_invoices, "paid_amount")
         sales_total_balance = sales_total_amount - sales_total_paid
 
+        # Purchase KPIs
+        purchase_invoice_count = purchase_invoices.count()
         purchase_total_amount = agg(purchase_invoices, "total_amount")
         purchase_total_paid = agg(purchase_invoices, "paid_amount")
         purchase_total_balance = purchase_total_amount - purchase_total_paid
 
-        # لو حاب تحافظ على المتغيّرات القديمة:
         invoice_count = sales_invoice_count + purchase_invoice_count
 
-        # --------- آخر الفواتير ---------
         recent_sales_invoices = sales_invoices.order_by("-issued_at", "-id")[:5]
         recent_purchase_invoices = purchase_invoices.order_by("-issued_at", "-id")[:5]
 
-        # --------- الحسابات ---------
+        # Payments (سندات قبض/صرف)
+        payments_qs = Payment.objects.select_related("contact").order_by("-date", "-id")
+        recent_payments = payments_qs[:5]
+
+        # على حسب الموديل الجديد: type = 'receipt' / 'payment'
+        payments_receipt_total = (
+            payments_qs.filter(type="receipt").aggregate(s=Sum("amount"))["s"] or Decimal("0")
+        )
+        payments_payment_total = (
+            payments_qs.filter(type="payment").aggregate(s=Sum("amount"))["s"] or Decimal("0")
+        )
+
+        # أهم الحسابات
         accounts_count = Account.objects.count()
         key_accounts = (
             Account.objects.filter(is_active=True, parent__isnull=True)
@@ -339,12 +358,12 @@ class AccountingDashboardView(AccountingSectionMixin, TemplateView):
 
         ctx.update(
             {
-                # KPIs القديمة (للرجوع للخلف)
+                # KPIs قديمة لو احتجتها
                 "invoice_count": invoice_count,
                 "total_amount": sales_total_amount,
                 "total_balance": sales_total_balance,
 
-                # KPIs مفصّلة
+                # KPIs مفصلة
                 "sales_invoice_count": sales_invoice_count,
                 "purchase_invoice_count": purchase_invoice_count,
                 "sales_total_amount": sales_total_amount,
@@ -352,26 +371,27 @@ class AccountingDashboardView(AccountingSectionMixin, TemplateView):
                 "purchase_total_amount": purchase_total_amount,
                 "purchase_total_balance": purchase_total_balance,
 
-                # جداول آخر الفواتير
+                # آخر الفواتير
                 "recent_sales_invoices": recent_sales_invoices,
                 "recent_purchase_invoices": recent_purchase_invoices,
+
+                # المدفوعات
+                "recent_payments": recent_payments,
+                "payments_receipt_total": payments_receipt_total,
+                "payments_payment_total": payments_payment_total,
 
                 # الحسابات
                 "accounts_count": accounts_count,
                 "key_accounts": key_accounts,
-
-                "accounting_section": "dashboard",
             }
         )
         return ctx
 
 
-
-
-class LedgerDashboardView(FiscalYearRequiredMixin, StaffRequiredMixin, TemplateView):
+class LedgerDashboardView(FiscalYearRequiredMixin, AccountingStaffRequiredMixin, TemplateView):
     """
     لوحة تحكم دفتر الأستاذ (الحسابات / القيود).
-    (حالياً ما لها URL، لو حبيت تضيفها لاحقاً).
+    (حالياً ما لها URL مستقل، يمكنك إضافته لاحقاً).
     """
     template_name = "accounting/dashboard.html"
 
@@ -437,12 +457,7 @@ class LedgerDashboardView(FiscalYearRequiredMixin, StaffRequiredMixin, TemplateV
 # ============================================================
 
 
-# ============================================================
-# Invoices
-# ============================================================
-
-@method_decorator(accounting_staff_required, name="dispatch")
-class BaseInvoiceListView(AccountingSectionMixin, ListView):
+class BaseInvoiceListView(AccountingStaffRequiredMixin, AccountingSectionMixin, ListView):
     """
     قائمة فواتير مع إمكانية التصفية بالحالة + النوع (مبيعات/مشتريات).
     تستخدم كـ base لكل القوائم.
@@ -475,14 +490,12 @@ class BaseInvoiceListView(AccountingSectionMixin, ListView):
         ctx["status_filter"] = self.request.GET.get("status", "")
         ctx["invoice_type"] = self.invoice_type
         if self.invoice_type:
-            # يعطيك "فاتورة مبيعات" / "فاتورة مشتريات" حسب الترانسليشن
             ctx["invoice_type_label"] = Invoice.InvoiceType(self.invoice_type).label
         else:
             ctx["invoice_type_label"] = _("كل الفواتير")
         return ctx
 
 
-@method_decorator(accounting_staff_required, name="dispatch")
 class SalesInvoiceListView(BaseInvoiceListView):
     """
     قائمة فواتير المبيعات فقط.
@@ -490,8 +503,13 @@ class SalesInvoiceListView(BaseInvoiceListView):
     """
     invoice_type = Invoice.InvoiceType.SALES
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        # للتوافق مع النافبار لو حاب تميز بين مبيعات/مشتريات
+        ctx["accounting_section"] = "sales_invoices"
+        return ctx
 
-@method_decorator(accounting_staff_required, name="dispatch")
+
 class PurchaseInvoiceListView(BaseInvoiceListView):
     """
     قائمة فواتير المشتريات فقط.
@@ -499,17 +517,23 @@ class PurchaseInvoiceListView(BaseInvoiceListView):
     """
     invoice_type = Invoice.InvoiceType.PURCHASE
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["accounting_section"] = "purchase_invoices"
+        return ctx
 
-@method_decorator(accounting_staff_required, name="dispatch")
+
 class InvoiceListView(BaseInvoiceListView):
     """
-    قائمة عامة (قديمة) لكل الفواتير بدون تصفية النوع.
+    قائمة عامة لكل الفواتير بدون تصفية النوع.
     URL: /accounting/invoices/
     """
     invoice_type = None
 
 
-class BaseInvoiceCreateView(AccountingSectionMixin, ProductJsonMixin, CreateView):
+class BaseInvoiceCreateView(
+    AccountingStaffRequiredMixin, AccountingSectionMixin, ProductJsonMixin, CreateView
+):
     """
     Base لإنشاء الفاتورة، نستخدمه للمبيعات والمشتريات.
     النوع يتحدد من الكلاس الفرعي.
@@ -625,6 +649,11 @@ class SalesInvoiceCreateView(BaseInvoiceCreateView):
     """
     invoice_type = Invoice.InvoiceType.SALES
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["accounting_section"] = "sales_invoices"
+        return ctx
+
 
 class PurchaseInvoiceCreateView(BaseInvoiceCreateView):
     """
@@ -633,17 +662,23 @@ class PurchaseInvoiceCreateView(BaseInvoiceCreateView):
     """
     invoice_type = Invoice.InvoiceType.PURCHASE
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["accounting_section"] = "purchase_invoices"
+        return ctx
+
 
 class InvoiceCreateView(BaseInvoiceCreateView):
     """
-    مسار عام (قديم) لو احتجناه من مكان آخر.
+    مسار عام لو احتجناه من مكان آخر.
     النوع هنا يعتمد على الديفولت في الموديل (sales).
     """
     invoice_type = None
 
 
-@method_decorator(accounting_staff_required, name="dispatch")
-class InvoiceUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
+class InvoiceUpdateView(
+    AccountingStaffRequiredMixin, AccountingSectionMixin, ProductJsonMixin, UpdateView
+):
     """
     تعديل فاتورة وبنودها.
     (تعمل لكل الأنواع، وتعيد التوجيه حسب نوع الفاتورة).
@@ -669,6 +704,12 @@ class InvoiceUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
 
         ctx["invoice_type"] = invoice.type
         ctx["invoice_type_label"] = invoice.get_type_display()
+
+        # تمييز تبويب المبيعات/المشتريات في النافبار
+        if invoice.type == Invoice.InvoiceType.SALES:
+            ctx["accounting_section"] = "sales_invoices"
+        elif invoice.type == Invoice.InvoiceType.PURCHASE:
+            ctx["accounting_section"] = "purchase_invoices"
 
         return ctx
 
@@ -715,8 +756,9 @@ class InvoiceUpdateView(AccountingSectionMixin, ProductJsonMixin, UpdateView):
         )
 
 
-@method_decorator(accounting_staff_required, name="dispatch")
-class InvoiceDetailView(AttachmentPanelMixin, AccountingSectionMixin, DetailView):
+class InvoiceDetailView(
+    AccountingStaffRequiredMixin, AttachmentPanelMixin, AccountingSectionMixin, DetailView
+):
     """
     عرض تفاصيل فاتورة (مع مرفقات) لأي نوع.
     """
@@ -730,11 +772,17 @@ class InvoiceDetailView(AttachmentPanelMixin, AccountingSectionMixin, DetailView
         ctx = self.inject_attachment_panel_context(ctx)
         ctx["invoice_type"] = self.object.type
         ctx["invoice_type_label"] = self.object.get_type_display()
+
+        # تمييز التبويب
+        if self.object.type == Invoice.InvoiceType.SALES:
+            ctx["accounting_section"] = "sales_invoices"
+        elif self.object.type == Invoice.InvoiceType.PURCHASE:
+            ctx["accounting_section"] = "purchase_invoices"
+
         return ctx
 
 
-@method_decorator(accounting_staff_required, name="dispatch")
-class InvoicePrintView(AccountingSectionMixin, DetailView):
+class InvoicePrintView(AccountingStaffRequiredMixin, AccountingSectionMixin, DetailView):
     """
     صفحة الطباعة للفاتورة (أي نوع).
     """
@@ -744,13 +792,22 @@ class InvoicePrintView(AccountingSectionMixin, DetailView):
     context_object_name = "invoice"
 
 
+def invoice_confirm_view(request):
+    # placeholder لاحقاً
+    return None
+
+
+def invoice_unpost_view(request):
+    # placeholder لاحقاً
+    return None
+
 
 # ============================================================
 # Sales / Invoice Settings
 # ============================================================
 
 
-@staff_member_required
+@ledger_staff_required
 def accounting_settings_view(request):
     """
     شاشة إعدادات المبيعات/الفواتير (أيام الاستحقاق، VAT، النصوص...).
@@ -763,7 +820,6 @@ def accounting_settings_view(request):
         if form.is_valid():
             form.save()
             messages.success(request, _("تم تحديث إعدادات المبيعات والفواتير بنجاح."))
-            # مطابق لاسم URL: path("settings/", views.accounting_settings_view, name="accounting_settings")
             return redirect("accounting:accounting_settings")
     else:
         form = SettingsForm(instance=settings_obj)
@@ -815,7 +871,7 @@ def fiscal_year_setup_view(request):
     )
 
 
-class FiscalYearListView(StaffRequiredMixin, ListView):
+class FiscalYearListView(AccountingStaffRequiredMixin, ListView):
     model = FiscalYear
     template_name = "accounting/settings/fiscal_year_list.html"
     context_object_name = "years"
@@ -824,7 +880,7 @@ class FiscalYearListView(StaffRequiredMixin, ListView):
         return FiscalYear.objects.all().order_by("-start_date")
 
 
-class FiscalYearCreateView(StaffRequiredMixin, CreateView):
+class FiscalYearCreateView(AccountingStaffRequiredMixin, CreateView):
     model = FiscalYear
     form_class = FiscalYearForm
     template_name = "accounting/settings/fiscal_year_form.html"
@@ -835,7 +891,7 @@ class FiscalYearCreateView(StaffRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class FiscalYearUpdateView(StaffRequiredMixin, UpdateView):
+class FiscalYearUpdateView(AccountingStaffRequiredMixin, UpdateView):
     model = FiscalYear
     form_class = FiscalYearForm
     template_name = "accounting/settings/fiscal_year_form.html"
@@ -850,7 +906,7 @@ class FiscalYearUpdateView(StaffRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class FiscalYearCloseView(StaffRequiredMixin, View):
+class FiscalYearCloseView(AccountingStaffRequiredMixin, View):
     def post(self, request, pk):
         fy = get_object_or_404(FiscalYear, pk=pk)
         fy.is_closed = True
@@ -864,7 +920,7 @@ class FiscalYearCloseView(StaffRequiredMixin, View):
 # ============================================================
 
 
-class AccountListView(FiscalYearRequiredMixin, StaffRequiredMixin, ListView):
+class AccountListView(FiscalYearRequiredMixin, AccountingStaffRequiredMixin, ListView):
     model = Account
     template_name = "accounting/accounts/list.html"
     context_object_name = "accounts"
@@ -875,7 +931,7 @@ class AccountListView(FiscalYearRequiredMixin, StaffRequiredMixin, ListView):
         return ctx
 
 
-class AccountCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, CreateView):
+class AccountCreateView(FiscalYearRequiredMixin, AccountingStaffRequiredMixin, CreateView):
     model = Account
     form_class = AccountForm
     template_name = "accounting/accounts/form.html"
@@ -885,7 +941,7 @@ class AccountCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, CreateView)
         return reverse("accounting:account_list")
 
 
-class AccountUpdateView(FiscalYearRequiredMixin, StaffRequiredMixin, UpdateView):
+class AccountUpdateView(FiscalYearRequiredMixin, AccountingStaffRequiredMixin, UpdateView):
     model = Account
     form_class = AccountForm
     template_name = "accounting/accounts/form.html"
@@ -1018,7 +1074,7 @@ def chart_of_accounts_export_view(request):
 # ============================================================
 
 
-class JournalEntryListView(FiscalYearRequiredMixin, StaffRequiredMixin, ListView):
+class JournalEntryListView(FiscalYearRequiredMixin, AccountingStaffRequiredMixin, ListView):
     """
     قائمة قيود اليومية مع فلاتر (نص، تاريخ، حالة، دفتر).
     """
@@ -1082,14 +1138,18 @@ class JournalEntryListView(FiscalYearRequiredMixin, StaffRequiredMixin, ListView
         return ctx
 
 
-class JournalEntryDetailView(FiscalYearRequiredMixin, StaffRequiredMixin, DetailView):
+class JournalEntryDetailView(
+    FiscalYearRequiredMixin, AccountingStaffRequiredMixin, DetailView
+):
     section = "entries"
     model = JournalEntry
     template_name = "accounting/journal/detail.html"
     context_object_name = "entry"
 
 
-class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
+class JournalEntryCreateView(
+    FiscalYearRequiredMixin, AccountingStaffRequiredMixin, View
+):
     """
     إنشاء قيد يومية يدوي:
     - يسبق التاريخ اليوم
@@ -1171,7 +1231,9 @@ class JournalEntryCreateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
         return redirect("accounting:journal_entry_detail", pk=entry.pk)
 
 
-class JournalEntryUpdateView(FiscalYearRequiredMixin, StaffRequiredMixin, View):
+class JournalEntryUpdateView(
+    FiscalYearRequiredMixin, AccountingStaffRequiredMixin, View
+):
     """
     تعديل قيد يومية غير مرحّل باستخدام نفس نموذج الإنشاء.
     """
@@ -1663,9 +1725,80 @@ def journal_update_view(request, pk):
     )
 
 
-def invoice_confirm_view(request):
-    return None
+# ==============================================================================
+# Payments Views (سندات قبض/صرف)
+# ==============================================================================
 
 
-def invoice_unpost_view(request):
-    return None
+class PaymentListView(AccountingStaffRequiredMixin, AccountingSectionMixin, ListView):
+    section = "payments"
+    model = Payment
+    template_name = "accounting/payment/list.html"
+    context_object_name = "object_list"
+    paginate_by = 25
+
+    def get_queryset(self):
+        qs = Payment.objects.select_related("contact", "method").order_by("-date", "-id")
+        q = self.request.GET.get("q", "").strip()
+        if q:
+            qs = qs.filter(
+                Q(contact__name__icontains=q)
+                | Q(reference__icontains=q)
+            )
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["q"] = self.request.GET.get("q", "").strip()
+        ctx["title"] = _("المدفوعات")
+        return ctx
+
+
+class PaymentDetailView(AccountingStaffRequiredMixin, AccountingSectionMixin, DetailView):
+    section = "payments"
+    model = Payment
+    template_name = "accounting/payment/detail.html"
+    context_object_name = "payment"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["title"] = _("تفاصيل الدفعة")
+        return ctx
+
+
+class PaymentCreateView(AccountingStaffRequiredMixin, AccountingSectionMixin, CreateView):
+    section = "payments"
+    model = Payment
+    form_class = PaymentForm
+    template_name = "accounting/payment/form.html"
+    success_url = reverse_lazy("accounting:payment_list")
+
+    def form_valid(self, form):
+        # تعبئة created_by من المستخدم الحالي
+        if self.request.user.is_authenticated:
+            form.instance.created_by = self.request.user
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["form_title"] = _("سند جديد")
+        return ctx
+
+
+class PaymentUpdateView(AccountingStaffRequiredMixin, AccountingSectionMixin, UpdateView):
+    section = "payments"
+    model = Payment
+    form_class = PaymentForm
+    template_name = "accounting/payment/form.html"
+    success_url = reverse_lazy("accounting:payment_list")
+
+    def form_valid(self, form):
+        # تعبئة updated_by من المستخدم الحالي
+        if self.request.user.is_authenticated:
+            form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["form_title"] = _("تعديل سند")
+        return ctx

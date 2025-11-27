@@ -1,0 +1,109 @@
+{% extends "accounting/base_accounting.html" %}
+{% load i18n %}
+
+{% block accounting_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h5 fw-bold mb-1">
+      {% if payment.type == "receipt" %}
+        {% trans "سند قبض" %}
+      {% else %}
+        {% trans "سند صرف" %}
+      {% endif %}
+      {{ payment.display_number }}
+    </h1>
+    <p class="text-muted small mb-0">
+      {{ payment.contact.name }} • {{ payment.date|date:"Y-m-d" }}
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{% url 'accounting:payment_list' %}"
+       class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-right"></i> {% trans "رجوع للقائمة" %}
+    </a>
+    <a href="{% url 'accounting:payment_update' payment.pk %}"
+       class="btn btn-primary btn-sm">
+      <i class="bi bi-pencil"></i> {% trans "تعديل" %}
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body small">
+        <h2 class="h6 fw-semibold mb-3">{% trans "بيانات السند" %}</h2>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="text-muted mb-1">{% trans "النوع" %}</div>
+            <div class="fw-semibold">
+              {% if payment.type == "receipt" %}
+                {% trans "سند قبض" %}
+              {% else %}
+                {% trans "سند صرف" %}
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted mb-1">{% trans "التاريخ" %}</div>
+            <div class="fw-semibold">
+              {{ payment.date|date:"Y-m-d" }}
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted mb-1">{% trans "طريقة الدفع" %}</div>
+            <div class="fw-semibold">
+              {{ payment.method.name }}
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted mb-1">{% trans "المبلغ" %}</div>
+            <div class="fw-semibold">
+              {{ payment.amount }} {{ payment.currency }}
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="text-muted mb-1">{% trans "مرجع خارجي" %}</div>
+            <div class="fw-semibold">
+              {{ payment.reference|default:"—" }}
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="text-muted mb-1">{% trans "ملاحظات" %}</div>
+            {% if payment.notes %}
+              <div>{{ payment.notes|linebreaksbr }}</div>
+            {% else %}
+              <div class="text-muted">—</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body small">
+        <h2 class="h6 fw-semibold mb-3">{% trans "تفاصيل الطرف" %}</h2>
+        <p class="mb-1">
+          <span class="text-muted d-block mb-1">{% trans "الاسم" %}</span>
+          <a href="{% url 'contacts:contact_detail' payment.contact.pk %}"
+             class="fw-semibold text-mazoon text-decoration-none">
+            {{ payment.contact.name }}
+          </a>
+        </p>
+        <p class="mb-1">
+          <span class="text-muted d-block mb-1">{% trans "الهاتف" %}</span>
+          <span class="fw-semibold">{{ payment.contact.phone|default:"—" }}</span>
+        </p>
+        <p class="mb-0">
+          <span class="text-muted d-block mb-1">{% trans "الرقم الضريبي" %}</span>
+          <span class="fw-semibold">{{ payment.contact.tax_number|default:"—" }}</span>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

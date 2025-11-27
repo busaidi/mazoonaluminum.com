@@ -31,6 +31,12 @@ urlpatterns = [
     path("accounts/new/", views.AccountCreateView.as_view(), name="account_create"),
     path("accounts/<int:pk>/edit/", views.AccountUpdateView.as_view(), name="account_edit"),
 
+    # Payments
+    path("payments/", views.PaymentListView.as_view(), name="payment_list"),
+    path("payments/new/", views.PaymentCreateView.as_view(), name="payment_create"),
+    path("payments/<int:pk>/", views.PaymentDetailView.as_view(), name="payment_detail"),
+    path("payments/<int:pk>/edit/", views.PaymentUpdateView.as_view(), name="payment_update"),
+
     # ---------------- Journals ----------------
     path("journals/", views.journal_list_view, name="journal_list"),
     path("journals/new/", views.journal_create_view, name="journal_create"),

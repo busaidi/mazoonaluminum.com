@@ -15,7 +15,7 @@ from .models import (
     LedgerSettings,
     FiscalYear,
     Account,
-    JournalEntry,
+    JournalEntry, Payment,
 )
 
 
@@ -644,3 +644,42 @@ class JournalForm(forms.ModelForm):
                 settings_obj.save()
 
         return instance
+
+
+class PaymentForm(forms.ModelForm):
+    class Meta:
+        model = Payment
+        fields = [
+            "type",
+            "contact",
+            "method",
+            "date",
+            "amount",
+            "currency",
+            "reference",
+            "notes",
+        ]
+        labels = {
+            "type": _("نوع الحركة"),
+            "contact": _("الطرف"),
+            "method": _("طريقة الدفع"),
+            "date": _("التاريخ"),
+            "amount": _("المبلغ"),
+            "currency": _("العملة"),
+            "reference": _("مرجع خارجي"),
+            "notes": _("ملاحظات"),
+        }
+        widgets = {
+            "date": forms.DateInput(attrs={"type": "date"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # ستايل Bootstrap خفيف
+        for name, field in self.fields.items():
+            css = "form-control form-control-sm"
+            if isinstance(field.widget, (forms.Select, forms.SelectMultiple)):
+                css = "form-select form-select-sm"
+            existing = field.widget.attrs.get("class", "")
+            field.widget.attrs["class"] = (existing + " " + css).strip()

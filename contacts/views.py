@@ -18,7 +18,7 @@ from django.views.generic import (
     DeleteView,
 )
 
-from payments.models import Payment
+from accounting.models import Payment
 from .forms import ContactForm, ContactAddressFormSet
 from .models import Contact
 from .services import save_contact_with_addresses

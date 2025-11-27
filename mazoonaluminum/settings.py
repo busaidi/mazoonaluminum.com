@@ -49,7 +49,6 @@ INSTALLED_APPS = [
     "cart.apps.CartConfig",
     "inventory.apps.InventoryConfig",
     "uom.apps.UomConfig",
-    "payments.apps.PaymentsConfig",
     "sales.apps.SalesConfig",
     "windowcad.apps.WindowcadConfig",
 ]
