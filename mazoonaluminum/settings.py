@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "inventory.apps.InventoryConfig",
     "uom.apps.UomConfig",
     "sales.apps.SalesConfig",
+    "banking.apps.BankingConfig",
     "windowcad.apps.WindowcadConfig",
 ]
 

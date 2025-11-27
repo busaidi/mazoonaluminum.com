@@ -1,7 +1,11 @@
 from django.core.management.base import BaseCommand
-from django.contrib.auth.models import User, Group
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 
 from contacts.models import Contact
+
+
+User = get_user_model()
 
 
 class Command(BaseCommand):
@@ -24,24 +28,42 @@ class Command(BaseCommand):
         return group
 
     # -------------------------------------------------------
-    # Create admin user
+    # Create / fix admin user as REAL superuser
     # -------------------------------------------------------
     def create_admin(self):
         username = "admin"
         password = "admin"
+        email = "admin@example.com"
 
-        user, created = User.objects.get_or_create(username=username)
+        # نحاول نحصل اليوزر أولاً
+        user = User.objects.filter(username=username).first()
 
-        user.set_password(password)
-        user.is_active = True
-        user.is_staff = True
-        user.is_superuser = True
-        user.save()
-
-        if created:
-            self.stdout.write(self.style.SUCCESS("Admin 'admin' created."))
+        if user is None:
+            # ننشئ سوبر يوزر حقيقي من دجانغو
+            user = User.objects.create_superuser(
+                username=username,
+                email=email,
+                password=password,
+            )
+            user.first_name = "Admin"
+            user.last_name = "User"
+            user.save()
+            self.stdout.write(self.style.SUCCESS("Superuser 'admin' created successfully."))
         else:
-            self.stdout.write(self.style.WARNING("Admin 'admin' exists. Password updated."))
+            # نضمن أن كل الفلاق صحيحة كسوبر يوزر
+            user.email = email
+            user.first_name = user.first_name or "Admin"
+            user.last_name = user.last_name or "User"
+            user.is_active = True
+            user.is_staff = True
+            user.is_superuser = True
+            user.set_password(password)
+            user.save()
+            self.stdout.write(
+                self.style.WARNING(
+                    "User 'admin' already exists. Ensured superuser flags & password updated."
+                )
+            )
 
     # -------------------------------------------------------
     # Create hamed user and add to group
@@ -54,8 +76,8 @@ class Command(BaseCommand):
 
         user.set_password(password)
         user.is_active = True
-        user.is_staff = True       # staff = True
-        user.is_superuser = False  # not a superuser
+        user.is_staff = True        # staff = True
+        user.is_superuser = False   # ليس سوبر يوزر
         user.first_name = "Hamed"
         user.last_name = "Al Busaidi"
         user.save()
@@ -69,7 +91,9 @@ class Command(BaseCommand):
             )
         else:
             self.stdout.write(
-                self.style.WARNING("User 'hamed' exists. Password updated & ensured in group.")
+                self.style.WARNING(
+                    "User 'hamed' exists. Password updated & ensured in group."
+                )
             )
 
     # -------------------------------------------------------
@@ -116,7 +140,7 @@ class Command(BaseCommand):
 
         user.set_password(password)
         user.is_active = True
-        user.is_staff = False     # customer user
+        user.is_staff = False      # customer user
         user.is_superuser = False
         user.first_name = "Ahmed Saif"
         user.last_name = "Al Busaidi"
@@ -129,7 +153,6 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("User 'agent' exists. Password updated."))
 
         # إنشاء أو تحديث العميل المرتبط
-        # نستخدم user كمفتاح أساسي للربط
         customer, c_created = Contact.objects.get_or_create(
             user=user,
             defaults={
@@ -160,7 +183,6 @@ class Command(BaseCommand):
             },
         )
 
-        # إذا كان العميل موجود من قبل، نحدّث بياناته عشان تتوافق مع الفورم الجديد
         updated = False
         if not c_created:
             # تأكد أن المستخدم مربوط

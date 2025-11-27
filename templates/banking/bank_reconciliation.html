@@ -1,0 +1,201 @@
+{% extends "accounting/base_accounting.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "التسوية البنكية" %}{% endblock %}
+
+{% block accounting_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h2 class="h5 mb-1">{% trans "التسوية البنكية" %}</h2>
+    <p class="text-muted small mb-0">
+      {% trans "قم بمطابقة كشوف البنك مع الحركات المسجلة في النظام." %}
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{{ banking_nav.bank_account_list_url }}" class="btn btn-sm btn-outline-secondary">
+      {% trans "الحسابات البنكية" %}
+    </a>
+    <a href="{{ banking_nav.statement_upload_url }}" class="btn btn-sm btn-primary">
+      {% trans "إضافة كشف بنك جديد" %}
+    </a>
+    <a href="{{ banking_nav.statement_list_url }}" class="btn btn-sm btn-outline-secondary">
+      {% trans "كشوف البنك" %}
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  {# ==== العمود الأيسر: اختيار كشف بنك ==== #}
+  <div class="col-12 col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h3 class="h6 mb-2">{% trans "اختيار كشف بنك" %}</h3>
+        <p class="text-muted small mb-3">
+          {% trans "اختر كشف البنك الذي تريد تسويته، أو أضف كشفًا جديدًا من الأعلى." %}
+        </p>
+
+        {% if recent_statements %}
+          <div class="list-group small">
+            {% for st in recent_statements %}
+              <a href="{% url 'banking:bank_reconciliation' %}?statement={{ st.pk }}"
+                 class="list-group-item list-group-item-action d-flex justify-content-between align-items-start {% if selected_statement and st.pk == selected_statement.pk %}active{% endif %}">
+                <div class="me-2">
+                  <div class="fw-semibold">
+                    {{ st.bank_account }}
+                  </div>
+                  <div class="text-muted">
+                    {{ st.date_from }} → {{ st.date_to }}
+                  </div>
+                  <div class="text-muted">
+                    {% trans "الرصيد الافتتاحي" %}: {{ st.opening_balance }} /
+                    {% trans "الختامي" %}: {{ st.closing_balance }}
+                  </div>
+                </div>
+                <span class="badge bg-light text-dark border small">
+                  {% if st.status == "draft" %}
+                    {% trans "مسودة" %}
+                  {% elif st.status == "in_progress" %}
+                    {% trans "قيد التسوية" %}
+                  {% elif st.status == "reconciled" %}
+                    {% trans "مُسوّى" %}
+                  {% else %}
+                    {{ st.status }}
+                  {% endif %}
+                </span>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-muted small mb-0">
+            {% trans "لا توجد كشوف بنك حديثة. ابدأ بإضافة كشف جديد." %}
+          </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ==== العمود الأيمن: تفاصيل الكشف المختار + أسطر الكشف ==== #}
+  <div class="col-12 col-lg-8">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        {% if selected_statement %}
+          <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+            <div>
+              <h3 class="h6 mb-1">
+                {% trans "تفاصيل كشف البنك المختار" %}
+              </h3>
+              <p class="text-muted small mb-1">
+                {{ selected_statement.bank_account }}
+              </p>
+              <p class="text-muted small mb-0">
+                {% trans "الفترة" %}: {{ selected_statement.date_from }} → {{ selected_statement.date_to }}
+              </p>
+            </div>
+            <div class="text-end small">
+              <div>
+                <span class="text-muted">{% trans "الرصيد الافتتاحي" %}:</span>
+                <span class="fw-semibold">{{ selected_statement.opening_balance }}</span>
+              </div>
+              <div>
+                <span class="text-muted">{% trans "الرصيد الختامي" %}:</span>
+                <span class="fw-semibold">{{ selected_statement.closing_balance }}</span>
+              </div>
+              <div class="mt-1">
+                <span class="badge bg-light text-dark border">
+                  {% if selected_statement.status == "draft" %}
+                    {% trans "مسودة" %}
+                  {% elif selected_statement.status == "in_progress" %}
+                    {% trans "قيد التسوية" %}
+                  {% elif selected_statement.status == "reconciled" %}
+                    {% trans "مُسوّى" %}
+                  {% else %}
+                    {{ selected_statement.status }}
+                  {% endif %}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <h4 class="h6 mb-2">{% trans "أسطر كشف البنك" %}</h4>
+          <p class="text-muted small mb-3">
+            {% trans "هذه الحركات كما تظهر في كشف البنك. لاحقاً سيتم ربطها بسندات القبض/الصرف وقيود اليومية." %}
+          </p>
+
+          <div class="table-responsive mb-2">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="text-nowrap">{% trans "التاريخ" %}</th>
+                  <th class="text-nowrap">{% trans "الوصف" %}</th>
+                  <th class="text-nowrap">{% trans "المرجع" %}</th>
+                  <th class="text-nowrap text-end">{% trans "المبلغ" %}</th>
+                  <th class="text-nowrap text-end">{% trans "الرصيد بعد الحركة" %}</th>
+                  <th class="text-nowrap text-center">{% trans "حالة التسوية" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+              {% for line in statement_lines %}
+                <tr>
+                  <td class="small text-nowrap">
+                    {{ line.date }}
+                  </td>
+                  <td class="small text-truncate" style="max-width: 220px;">
+                    {{ line.description }}
+                  </td>
+                  <td class="small text-nowrap">
+                    {{ line.reference|default:"-" }}
+                  </td>
+                  <td class="small text-end">
+                    {{ line.amount }}
+                  </td>
+                  <td class="small text-end">
+                    {{ line.balance_after|default:"-" }}
+                  </td>
+                  <td class="small text-center">
+                    <span class="badge bg-light text-dark border">
+                      {% if line.match_status == "unmatched" %}
+                        {% trans "غير مُسوّى" %}
+                      {% elif line.match_status == "partial" %}
+                        {% trans "مسوى جزئياً" %}
+                      {% elif line.match_status == "matched" %}
+                        {% trans "مسوى بالكامل" %}
+                      {% else %}
+                        {{ line.match_status }}
+                      {% endif %}
+                    </span>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center text-muted small py-3">
+                    {% trans "لا توجد أسطر مسجلة لهذا الكشف حتى الآن." %}
+                  </td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="alert alert-info small mb-0 mt-3">
+            {% trans "منطق المطابقة الآلية بين أسطر كشف البنك وحركات النظام سيتم تطويره في مرحلة لاحقة." %}
+          </div>
+        {% else %}
+          <h3 class="h6 mb-2">{% trans "لم يتم اختيار كشف بنك بعد" %}</h3>
+          <p class="text-muted small mb-3">
+            {% trans "اختر أحد كشوف البنك من العمود الأيسر لعرض تفاصيله وبدء التسوية." %}
+          </p>
+          <div class="alert alert-light border small mb-0">
+            {% trans "يمكنك أيضًا إضافة كشف بنك جديد من زر \"إضافة كشف بنك جديد\" في الأعلى." %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

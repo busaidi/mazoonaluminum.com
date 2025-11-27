@@ -17,147 +17,192 @@
   </div>
 
   {# ======================= NAVIGATION BAR ======================= #}
-  <div class="mb-3">
-    <div class="bg-mazoon-card border rounded-3 shadow-sm px-2 py-2">
-      <ul class="nav nav-pills flex-wrap small mazoon-nav gap-1">
+{# ======================= NAVIGATION BAR ======================= #}
+<div class="mb-3">
+  <div class="bg-mazoon-card border rounded-3 shadow-sm px-2 py-2">
+    <ul class="nav nav-pills flex-wrap small mazoon-nav gap-1">
 
-        {# Dashboard #}
-        <li class="nav-item">
-          <a class="nav-link px-3 py-1 {% if accounting_section == 'dashboard' %}active{% endif %}"
-             href="{% url 'accounting:dashboard' %}">
-            {% trans "لوحة المحاسبة" %}
-          </a>
-        </li>
+      {# Dashboard #}
+      <li class="nav-item">
+        <a class="nav-link px-3 py-1 {% if accounting_section == 'dashboard' %}active{% endif %}"
+           href="{% url 'accounting:dashboard' %}">
+          {% trans "لوحة المحاسبة" %}
+        </a>
+      </li>
 
-        {# Sales Invoices - فواتير المبيعات #}
-        <li class="nav-item">
-          <a class="nav-link px-3 py-1 {% if accounting_section == 'sales_invoices' %}active{% endif %}"
-             href="{% url 'accounting:sales_invoice_list' %}">
-            {% trans "فواتير المبيعات" %}
-          </a>
-        </li>
+      {# Sales Invoices - فواتير المبيعات #}
+      <li class="nav-item">
+        <a class="nav-link px-3 py-1 {% if accounting_section == 'sales_invoices' %}active{% endif %}"
+           href="{% url 'accounting:sales_invoice_list' %}">
+          {% trans "فواتير المبيعات" %}
+        </a>
+      </li>
 
-        {# Purchase Invoices - فواتير المشتريات #}
-        <li class="nav-item">
-          <a class="nav-link px-3 py-1 {% if accounting_section == 'purchase_invoices' %}active{% endif %}"
-             href="{% url 'accounting:purchase_invoice_list' %}">
-            {% trans "فواتير المشتريات" %}
-          </a>
-        </li>
+      {# Purchase Invoices - فواتير المشتريات #}
+      <li class="nav-item">
+        <a class="nav-link px-3 py-1 {% if accounting_section == 'purchase_invoices' %}active{% endif %}"
+           href="{% url 'accounting:purchase_invoice_list' %}">
+          {% trans "فواتير المشتريات" %}
+        </a>
+      </li>
 
-        {# Payments - المدفوعات (سندات قبض/صرف) #}
-        <li class="nav-item">
-          <a class="nav-link px-3 py-1 {% if accounting_section == 'payments' %}active{% endif %}"
-             href="{% url 'accounting:payment_list' %}">
-            {% trans "المدفوعات" %}
-          </a>
-        </li>
+      {# Payments - المدفوعات (سندات قبض/صرف) #}
+      <li class="nav-item">
+        <a class="nav-link px-3 py-1 {% if accounting_section == 'payments' %}active{% endif %}"
+           href="{% url 'accounting:payment_list' %}">
+          {% trans "المدفوعات" %}
+        </a>
+      </li>
 
-        {# Journal Entries #}
-        <li class="nav-item">
-          <a class="nav-link px-3 py-1 {% if accounting_section == 'entries' %}active{% endif %}"
-             href="{% url 'accounting:journal_entry_list' %}">
-            {% trans "قيود اليومية" %}
-          </a>
-        </li>
+      {# Journal Entries #}
+      <li class="nav-item">
+        <a class="nav-link px-3 py-1 {% if accounting_section == 'entries' %}active{% endif %}"
+           href="{% url 'accounting:journal_entry_list' %}">
+          {% trans "قيود اليومية" %}
+        </a>
+      </li>
 
-        {# Reports Dropdown #}
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle px-3 py-1 {% if accounting_section == 'reports' %}active{% endif %}"
-             data-bs-toggle="dropdown" href="#" role="button">
-            {% trans "التقارير" %}
-          </a>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li>
-              <a class="dropdown-item" href="{% url 'accounting:trial_balance' %}">
-                {% trans "ميزان المراجعة" %}
-              </a>
-            </li>
-            <li>
-              <a class="dropdown-item" href="{% url 'accounting:account_ledger' %}">
-                {% trans "كشف الحساب" %}
-              </a>
-            </li>
-          </ul>
-        </li>
+      {# Bank Menu - التسوية البنكية + خدمات البنك #}
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle px-3 py-1 {% if accounting_section == 'banking' %}active{% endif %}"
+           data-bs-toggle="dropdown" href="#" role="button">
+          {% trans "التسوية البنكية" %}
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end">
 
-        {# Settings Dropdown #}
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle px-3 py-1 {% if accounting_section == 'settings' %}active{% endif %}"
-             data-bs-toggle="dropdown" href="#" role="button">
-            {% trans "الضبط" %}
-          </a>
-          <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <a class="dropdown-item" href="{% url 'banking:bank_reconciliation' %}">
+              {% trans "التسوية البنكية" %}
+            </a>
+          </li>
 
-            {# ===== الحسابات ودفاتر اليومية ===== #}
-            <li class="dropdown-header">{% trans "الحسابات ودفاتر اليومية" %}</li>
-            <li>
-              <a class="dropdown-item" href="{% url 'accounting:account_list' %}">
-                {% trans "الحسابات" %}
-              </a>
-            </li>
-            <li>
-              <a class="dropdown-item" href="{% url 'accounting:journal_list' %}">
-                {% trans "دفاتر اليومية" %}
-              </a>
-            </li>
+          <li><hr class="dropdown-divider"></li>
 
-            <li><hr class="dropdown-divider"></li>
+          <li class="dropdown-header">
+            {% trans "خدمات البنك" %}
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'banking:bank_account_list' %}">
+              {% trans "الحسابات البنكية" %}
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'banking:bank_account_create' %}">
+              {% trans "إضافة حساب بنكي" %}
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'banking:bank_statement_list' %}">
+              {% trans "كشوف البنك" %}
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'banking:bank_statement_upload' %}">
+              {% trans "إضافة كشف بنك" %}
+            </a>
+          </li>
 
-            <li class="dropdown-header">{% trans "السنة المالية" %}</li>
-            <li>
-              <a class="dropdown-item" href="{% url 'accounting:fiscal_year_list' %}">
-                {% trans "عرض السنوات المالية" %}
-              </a>
-            </li>
-            <li>
-              <a class="dropdown-item" href="{% url 'accounting:fiscal_year_create' %}">
-                {% trans "سنة مالية جديدة" %}
-              </a>
-            </li>
+        </ul>
+      </li>
 
-            <li><hr class="dropdown-divider"></li>
+      {# Reports Dropdown #}
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle px-3 py-1 {% if accounting_section == 'reports' %}active{% endif %}"
+           data-bs-toggle="dropdown" href="#" role="button">
+          {% trans "التقارير" %}
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <a class="dropdown-item" href="{% url 'accounting:trial_balance' %}">
+              {% trans "ميزان المراجعة" %}
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'accounting:account_ledger' %}">
+              {% trans "كشف الحساب" %}
+            </a>
+          </li>
+        </ul>
+      </li>
 
-            <li class="dropdown-header">{% trans "دليل الحسابات" %}</li>
-            <li>
-              <a class="dropdown-item" href="{% url 'accounting:chart_of_accounts_bootstrap' %}">
-                {% trans "إنشاء دليل الحسابات" %}
-              </a>
-            </li>
-            <li>
-              <a class="dropdown-item" href="{% url 'accounting:chart_of_accounts_import' %}">
-                {% trans "استيراد" %}
-              </a>
-            </li>
-            <li>
-              <a class="dropdown-item" href="{% url 'accounting:chart_of_accounts_export' %}">
-                {% trans "تصدير" %}
-              </a>
-            </li>
+      {# Settings Dropdown #}
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle px-3 py-1 {% if accounting_section == 'settings' %}active{% endif %}"
+           data-bs-toggle="dropdown" href="#" role="button">
+          {% trans "الضبط" %}
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end">
 
-            <li><hr class="dropdown-divider"></li>
+          {# ===== الحسابات ودفاتر اليومية ===== #}
+          <li class="dropdown-header">{% trans "الحسابات ودفاتر اليومية" %}</li>
+          <li>
+            <a class="dropdown-item" href="{% url 'accounting:account_list' %}">
+              {% trans "الحسابات" %}
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'accounting:journal_list' %}">
+              {% trans "دفاتر اليومية" %}
+            </a>
+          </li>
 
-            <li class="dropdown-header">{% trans "دفاتر اليومية" %}</li>
-            <li>
-              <a class="dropdown-item" href="{% url 'accounting:ledger_settings' %}">
-                {% trans "ضبط الدفاتر" %}
-              </a>
-            </li>
+          <li><hr class="dropdown-divider"></li>
 
-            <li><hr class="dropdown-divider"></li>
+          <li class="dropdown-header">{% trans "السنة المالية" %}</li>
+          <li>
+            <a class="dropdown-item" href="{% url 'accounting:fiscal_year_list' %}">
+              {% trans "عرض السنوات المالية" %}
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'accounting:fiscal_year_create' %}">
+              {% trans "سنة مالية جديدة" %}
+            </a>
+          </li>
 
-            <li>
-              <a class="dropdown-item" href="{% url 'accounting:accounting_settings' %}">
-                {% trans "الضبط العام" %}
-              </a>
-            </li>
+          <li><hr class="dropdown-divider"></li>
 
-          </ul>
-        </li>
+          <li class="dropdown-header">{% trans "دليل الحسابات" %}</li>
+          <li>
+            <a class="dropdown-item" href="{% url 'accounting:chart_of_accounts_bootstrap' %}">
+              {% trans "إنشاء دليل الحسابات" %}
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'accounting:chart_of_accounts_import' %}">
+              {% trans "استيراد" %}
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'accounting:chart_of_accounts_export' %}">
+              {% trans "تصدير" %}
+            </a>
+          </li>
 
-      </ul>
-    </div>
+          <li><hr class="dropdown-divider"></li>
+
+          <li class="dropdown-header">{% trans "دفاتر اليومية" %}</li>
+          <li>
+            <a class="dropdown-item" href="{% url 'accounting:ledger_settings' %}">
+              {% trans "ضبط الدفاتر" %}
+            </a>
+          </li>
+
+          <li><hr class="dropdown-divider"></li>
+
+          <li>
+            <a class="dropdown-item" href="{% url 'accounting:accounting_settings' %}">
+              {% trans "الضبط العام" %}
+            </a>
+          </li>
+
+        </ul>
+      </li>
+
+    </ul>
   </div>
+</div>
+
 
   {# ======================= PAGE CONTENT ======================= #}
   <div class="mt-3">

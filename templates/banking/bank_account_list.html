@@ -1,0 +1,85 @@
+{% extends "accounting/base_accounting.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "الحسابات البنكية" %}{% endblock %}
+
+{% block accounting_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h2 class="h5 mb-1">{% trans "الحسابات البنكية" %}</h2>
+    <p class="text-muted small mb-0">
+      {% trans "قائمة الحسابات البنكية المرتبطة بدليل الحسابات." %}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ banking_nav.reconciliation_url }}" class="btn btn-sm btn-outline-secondary">
+      {% trans "التسوية البنكية" %}
+    </a>
+    <a href="{% url 'banking:bank_account_create' %}" class="btn btn-sm btn-primary">
+      {% trans "إضافة حساب بنكي" %}
+    </a>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="text-nowrap">{% trans "الاسم الداخلي" %}</th>
+            <th class="text-nowrap">{% trans "اسم البنك" %}</th>
+            <th class="text-nowrap">{% trans "رقم الحساب" %}</th>
+            <th class="text-nowrap">{% trans "الحساب المحاسبي" %}</th>
+            <th class="text-nowrap text-center">{% trans "الحالة" %}</th>
+            <th class="text-nowrap text-center">{% trans "إجراءات" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for acc in accounts %}
+          <tr>
+            <td class="text-truncate" style="max-width: 200px;">
+              {{ acc.name }}
+            </td>
+            <td class="text-truncate small" style="max-width: 160px;">
+              {{ acc.bank_name|default:"-" }}
+            </td>
+            <td class="small text-nowrap">
+              {{ acc.account_number|default:"-" }}
+            </td>
+            <td class="small text-nowrap">
+              {{ acc.account.code }} — {{ acc.account.name }}
+            </td>
+            <td class="text-center">
+              {% if acc.is_active %}
+                <span class="badge bg-success-subtle text-success-emphasis border small">
+                  {% trans "نشط" %}
+                </span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-secondary-emphasis border small">
+                  {% trans "غير نشط" %}
+                </span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <a href="{% url 'banking:bank_account_edit' acc.pk %}"
+                 class="btn btn-sm btn-outline-secondary">
+                {% trans "تعديل" %}
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted small py-4">
+              {% trans "لا توجد حسابات بنكية مسجلة حتى الآن." %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

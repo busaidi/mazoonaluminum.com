@@ -1,0 +1,129 @@
+{% extends "accounting/base_accounting.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "كشوف البنك" %}{% endblock %}
+
+{% block accounting_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h2 class="h5 mb-1">{% trans "كشوف البنك" %}</h2>
+    <p class="text-muted small mb-0">
+      {% trans "قائمة كشوف الحساب البنكي المسجلة في النظام." %}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ banking_nav.reconciliation_url }}" class="btn btn-sm btn-outline-secondary">
+      {% trans "التسوية البنكية" %}
+    </a>
+    <a href="{% url 'banking:bank_statement_upload' %}" class="btn btn-sm btn-primary">
+      {% trans "إضافة كشف بنك جديد" %}
+    </a>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="text-nowrap">{% trans "الحساب البنكي" %}</th>
+            <th class="text-nowrap">{% trans "الفترة" %}</th>
+            <th class="text-nowrap text-end">{% trans "الرصيد الافتتاحي" %}</th>
+            <th class="text-nowrap text-end">{% trans "الرصيد الختامي" %}</th>
+            <th class="text-nowrap text-center">{% trans "الحالة" %}</th>
+            <th class="text-nowrap text-center">{% trans "إجراءات" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for st in statements %}
+          <tr>
+            <td class="text-truncate" style="max-width: 220px;">
+              {{ st.bank_account }}
+            </td>
+            <td class="small">
+              {{ st.date_from }} → {{ st.date_to }}
+            </td>
+            <td class="text-end small">
+              {{ st.opening_balance }}
+            </td>
+            <td class="text-end small">
+              {{ st.closing_balance }}
+            </td>
+            <td class="text-center">
+              <span class="badge bg-light text-dark border small">
+                {% if st.status == "draft" %}
+                  {% trans "مسودة" %}
+                {% elif st.status == "in_progress" %}
+                  {% trans "قيد التسوية" %}
+                {% elif st.status == "reconciled" %}
+                  {% trans "مُسوّى" %}
+                {% else %}
+                  {{ st.status }}
+                {% endif %}
+              </span>
+            </td>
+            <td class="text-center">
+              <div class="btn-group btn-group-sm" role="group">
+                <a href="{% url 'banking:bank_reconciliation' %}?statement={{ st.pk }}"
+                   class="btn btn-outline-primary">
+                  {% trans "التسوية" %}
+                </a>
+                <a href="{% url 'banking:bank_statement_edit' st.pk %}"
+                   class="btn btn-outline-secondary">
+                  {% trans "تعديل" %}
+                </a>
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted small py-4">
+              {% trans "لا توجد كشوف بنك مسجلة حتى الآن." %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if is_paginated %}
+      <div class="card-footer bg-light border-top py-2">
+        <nav aria-label="{% trans 'صفحات كشوف البنك' %}">
+          <ul class="pagination pagination-sm mb-0 justify-content-center">
+            {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                  «
+                </a>
+              </li>
+            {% endif %}
+
+            {% for num in paginator.page_range %}
+              {% if num == page_obj.number %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}</span>
+                </li>
+              {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                  »
+                </a>
+              </li>
+            {% endif %}
+          </ul>
+        </nav>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
