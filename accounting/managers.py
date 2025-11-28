@@ -1,14 +1,19 @@
 # accounting/managers.py
+
 from django.db import models
 from django.utils import timezone
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # FiscalYear
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 class FiscalYearQuerySet(models.QuerySet):
+    """
+    QuerySet helpers for FiscalYear.
+    """
+
     def open(self):
         return self.filter(is_closed=False)
 
@@ -20,7 +25,7 @@ class FiscalYearQuerySet(models.QuerySet):
 
     def containing(self, date):
         """
-        السنوات التي تحتوي التاريخ المعطى ضمن [start_date, end_date].
+        Fiscal years that contain the given date within [start_date, end_date].
         """
         if not date:
             return self.none()
@@ -28,10 +33,15 @@ class FiscalYearQuerySet(models.QuerySet):
 
 
 class FiscalYearManager(models.Manager.from_queryset(FiscalYearQuerySet)):
+    """
+    Manager wrapper to expose convenient helpers like:
+        FiscalYear.objects.for_date(date)
+    """
+
     def for_date(self, date):
         """
-        التفاف مريح للاستخدام:
-        FiscalYear.objects.for_date(date)
+        Get the fiscal year that contains `date`, or fallback to same calendar year.
+        Returns None if nothing is found.
         """
         if not date:
             return None
@@ -42,12 +52,16 @@ class FiscalYearManager(models.Manager.from_queryset(FiscalYearQuerySet)):
         return self.for_year(date.year).first()
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Account
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 class AccountQuerySet(models.QuerySet):
+    """
+    QuerySet helpers for Account.
+    """
+
     def active(self):
         return self.filter(is_active=True)
 
@@ -56,21 +70,28 @@ class AccountQuerySet(models.QuerySet):
 
     def settlement_allowed(self):
         """
-        الحسابات المسموح استخدامها في التسويات (عملاء/موردين).
+        Accounts that can be used for settlements (receivables / payables).
         """
         return self.active().filter(allow_settlement=True)
 
 
 class AccountManager(models.Manager.from_queryset(AccountQuerySet)):
+    """
+    Manager for Account. Currently just exposes AccountQuerySet.
+    """
     pass
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Journal
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 class JournalQuerySet(models.QuerySet):
+    """
+    QuerySet helpers for Journal.
+    """
+
     def active(self):
         return self.filter(is_active=True)
 
@@ -80,14 +101,17 @@ class JournalQuerySet(models.QuerySet):
 
 class JournalManager(models.Manager.from_queryset(JournalQuerySet)):
     """
-    Manager لدفاتر اليومية مع دوال جاهزة لاختيار الدفاتر الافتراضية.
+    Manager for Journal with helpers to pick default journals.
     """
 
     def _get_default_by_types(self, preferred_types):
         """
-        Helper داخلي لاختيار دفتر افتراضي حسب أنواع مفضلة.
-        - يفضّل الدفاتر المعلمة كـ is_default=True إن وجدت.
-        - وإلا يأخذ أول دفتر من النوع المطلوب.
+        Internal helper to choose a default journal given a list of preferred types.
+
+        Priority:
+        - Journal with type in `preferred_types` AND is_default=True (if exists).
+        - Otherwise: first journal with that type.
+        - If nothing found: first active journal.
         """
         qs = self.active()
 
@@ -102,10 +126,10 @@ class JournalManager(models.Manager.from_queryset(JournalQuerySet)):
 
     def _get_default_from_settings(self, field_name, fallback_types):
         """
-        يحاول أولاً جلب الدفتر من LedgerSettings.<field_name> إن وُجد
-        وكان نشطًا، وإلا يرجع إلى fallback حسب النوع.
+        Try LedgerSettings.<field_name> first (if active), then fall back to
+        _get_default_by_types(fallback_types).
         """
-        from .models import LedgerSettings  # import محلي لتجنّب الدوران
+        from .models import LedgerSettings  # local import to avoid circular
 
         try:
             settings_obj = LedgerSettings.get_solo()
@@ -117,16 +141,18 @@ class JournalManager(models.Manager.from_queryset(JournalQuerySet)):
             if journal is not None and journal.is_active:
                 return journal
 
-        # fallback للسلوك السابق (حسب النوع)
+        # Fallback to behavior based on journal type
         return self._get_default_by_types(fallback_types)
 
     def get_default_for_manual_entry(self):
         """
-        دفتر افتراضي للقيود اليدوية:
-        - أولاً: LedgerSettings.default_manual_journal (إن وجد وكان نشطًا)
-        - ثانيًا: أي دفتر من النوع GENERAL.
+        Default journal for manual entries:
+
+        Priority:
+        1) LedgerSettings.default_manual_journal (if set & active)
+        2) Any journal of type GENERAL (preferring is_default=True)
         """
-        from .models import Journal  # لاستخدام Journal.Type
+        from .models import Journal  # to use Journal.Type
 
         return self._get_default_from_settings(
             "default_manual_journal",
@@ -135,11 +161,13 @@ class JournalManager(models.Manager.from_queryset(JournalQuerySet)):
 
     def get_default_for_sales_invoice(self):
         """
-        دفتر افتراضي لفواتير المبيعات:
-        - أولاً: LedgerSettings.sales_journal
-        - ثانيًا: أي دفتر من النوع SALES.
+        Default journal for sales invoices:
+
+        Priority:
+        1) LedgerSettings.sales_journal
+        2) Any journal of type SALES
         """
-        from .models import Journal  # لاستخدام Journal.Type
+        from .models import Journal  # to use Journal.Type
 
         return self._get_default_from_settings(
             "sales_journal",
@@ -148,23 +176,28 @@ class JournalManager(models.Manager.from_queryset(JournalQuerySet)):
 
     def get_default_for_customer_payment(self):
         """
-        دفتر افتراضي لدفعات الزبائن (كاش أو بنك).
-        الترتيب:
-        - CASH ثم BANK (مع تفضيل is_default إن وجد).
+        Default journal for customer payments (cash or bank).
+
+        Preference order:
+        - CASH then BANK (preferring is_default=True when possible).
         """
-        from .models import Journal  # لاستخدام Journal.Type
+        from .models import Journal  # to use Journal.Type
 
         return self._get_default_by_types(
             [Journal.Type.CASH, Journal.Type.BANK]
         )
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # JournalEntry
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 class JournalEntryQuerySet(models.QuerySet):
+    """
+    QuerySet helpers for JournalEntry.
+    """
+
     def posted(self):
         return self.filter(posted=True)
 
@@ -178,8 +211,7 @@ class JournalEntryQuerySet(models.QuerySet):
 
     def for_period(self, date_from=None, date_to=None):
         """
-        تقييد القيود ضمن فترة زمنية:
-        [date_from, date_to]
+        Filter entries within a date range [date_from, date_to].
         """
         qs = self
         if date_from:
@@ -190,9 +222,9 @@ class JournalEntryQuerySet(models.QuerySet):
 
     def with_totals(self):
         """
-        annotate بمجموع المدين والدائن لكل قيد:
-        - total_debit_value
-        - total_credit_value
+        Annotate each entry with:
+          - total_debit_value
+          - total_credit_value
         """
         return self.annotate(
             total_debit_value=models.Sum("lines__debit"),
@@ -202,30 +234,34 @@ class JournalEntryQuerySet(models.QuerySet):
 
 class JournalEntryManager(models.Manager.from_queryset(JournalEntryQuerySet)):
     """
-    Manager لقيود اليومية.
+    Manager for JournalEntry.
 
-    ⚠️ لا يوجد أي منطق ترقيم هنا الآن.
-    الترقيم (إن عاد لاحقاً) سيكون عبر PK أو ريفاكتور جديد منفصل.
+    ⚠️ No numbering logic here. Numbering is currently based on PK or
+    will be handled later with a dedicated mechanism.
     """
     pass
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # JournalLine
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 class JournalLineQuerySet(models.QuerySet):
+    """
+    QuerySet helpers for JournalLine.
+    """
+
     def posted_only(self):
         """
-        أسطر القيود المُرحّلة فقط.
+        Lines whose parent entry is posted.
         """
         return self.filter(entry__posted=True)
 
     def posted(self):
         """
-        Alias مريح:
-        JournalLine.objects.posted()
+        Convenient alias:
+            JournalLine.objects.posted()
         """
         return self.posted_only()
 
@@ -236,7 +272,7 @@ class JournalLineQuerySet(models.QuerySet):
 
     def within_period(self, date_from=None, date_to=None):
         """
-        أسطر ضمن فترة زمنية اعتمادًا على تاريخ القيد.
+        Lines within a given period based on entry.date.
         """
         qs = self
         if date_from:
@@ -247,22 +283,25 @@ class JournalLineQuerySet(models.QuerySet):
 
 
 class JournalLineManager(models.Manager.from_queryset(JournalLineQuerySet)):
+    """
+    Manager for JournalLine; exposes JournalLineQuerySet helpers.
+    """
     pass
 
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # Invoice
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 
 class InvoiceQuerySet(models.QuerySet):
     """
-    QuerySet مخصص للفواتير مع فلاتر جاهزة للتقارير وواجهات المستخدِم.
-    الحالة تعتمد على الحقل status في Invoice:
-    - draft / sent / partially_paid / paid / cancelled
+    Custom QuerySet for invoices with convenient filters.
+    Status uses Invoice.status field values:
+      - draft / sent / partially_paid / paid / cancelled
     """
 
-    # ----- بحسب الحالة -----
+    # ----- By status -----
 
     def drafts(self):
         return self.filter(status="draft")
@@ -281,22 +320,22 @@ class InvoiceQuerySet(models.QuerySet):
 
     def open(self):
         """
-        فواتير مفتوحة (عليها رصيد):
-        - ليست ملغاة
+        Open invoices (with remaining balance):
+        - not cancelled
         - total_amount > paid_amount
         """
         return self.exclude(status="cancelled").filter(
             total_amount__gt=models.F("paid_amount")
         )
 
-    # ----- التزامات متأخرة -----
+    # ----- Overdue -----
 
     def overdue(self):
         """
-        فواتير متأخرة:
-        - لها due_date
-        - due_date < اليوم
-        - ليست مدفوعة بالكامل ولا ملغاة
+        Overdue invoices:
+        - has due_date
+        - due_date < today
+        - not fully paid and not cancelled
         """
         today = timezone.localdate()
         return (
@@ -304,14 +343,14 @@ class InvoiceQuerySet(models.QuerySet):
             .filter(due_date__isnull=False, due_date__lt=today)
         )
 
-    # ----- حسب الزبون -----
+    # ----- By customer -----
 
     def for_customer(self, customer):
         """
-        فلتر بحسب الزبون:
-        - يقبل Contact instance أو ID.
+        Filter by customer:
+        - accepts Contact instance or ID.
         """
-        from contacts.models import Contact  # import محلي لتفادي الدوران
+        from contacts.models import Contact  # local import to avoid circular
 
         if isinstance(customer, Contact):
             customer_id = customer.pk
@@ -319,23 +358,24 @@ class InvoiceQuerySet(models.QuerySet):
             customer_id = customer
         return self.filter(customer_id=customer_id)
 
-    # ----- نطاق الزمن -----
+    # ----- Date ranges -----
 
     def in_year(self, year: int):
-        """فواتير ضمن سنة معينة (حسب issued_at__year)."""
+        """
+        Invoices within a specific calendar year (based on issued_at).
+        """
         return self.filter(issued_at__year=year)
 
     def in_period(self, date_from, date_to):
         """
-        فواتير ضمن فترة زمنية:
-        [date_from, date_to]
+        Invoices within a period [date_from, date_to] (based on issued_at).
         """
         return self.filter(issued_at__gte=date_from, issued_at__lte=date_to)
 
 
 class InvoiceManager(models.Manager.from_queryset(InvoiceQuerySet)):
     """
-    Manager للفواتير يستخدم InvoiceQuerySet.
-    يمكنك لاحقًا إضافة دوال high-level هنا إذا احتجت.
+    Manager for Invoice using InvoiceQuerySet.
+    High-level helpers can be added here later if needed.
     """
     pass

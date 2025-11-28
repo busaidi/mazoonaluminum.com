@@ -1,0 +1,90 @@
+{% extends "accounting/base_accounting.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "طريقة الدفع" %}{% endblock %}
+
+{% block accounting_content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h2 class="h5 mb-1">
+      {% if form.instance.pk %}
+        {% trans "تعديل طريقة دفع" %}
+      {% else %}
+        {% trans "إضافة طريقة دفع جديدة" %}
+      {% endif %}
+    </h2>
+    <p class="text-muted small mb-0">
+      {% trans "قم بتعريف طرق الدفع مثل النقدي، التحويل البنكي، الشيك، وغيرها لاستخدامها في السندات والفواتير." %}
+    </p>
+  </div>
+  <div>
+    <a href="{% url 'accounting:payment_method_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-right"></i> {% trans "رجوع إلى طرق الدفع" %}
+    </a>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <form method="post" class="card border-0 shadow-sm">
+      {% csrf_token %}
+      <div class="card-body p-4 small">
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger small mb-3">
+            {% for error in form.non_field_errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% for field in form %}
+          <div class="mb-3">
+            <label class="form-label form-label-sm fw-semibold mb-1"
+                   for="{{ field.id_for_label }}">
+              {{ field.label }}
+              {% if field.field.required %}
+                <span class="text-danger">*</span>
+              {% endif %}
+            </label>
+
+            {# حقل تشيك بوكس نعطيه ستايل مختلف #}
+            {% if field.field.widget.input_type == "checkbox" %}
+              <div class="form-check">
+                {{ field }}
+                <label class="form-check-label ms-1" for="{{ field.id_for_label }}">
+                  {{ field.help_text }}
+                </label>
+              </div>
+            {% else %}
+              {{ field }}
+              {% if field.help_text %}
+                <div class="form-text small text-muted">{{ field.help_text }}</div>
+              {% endif %}
+            {% endif %}
+
+            {% if field.errors %}
+              <div class="text-danger small mt-1">
+                {% for error in field.errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+
+        <div class="d-flex justify-content-end gap-2 mt-3">
+          <a href="{% url 'accounting:payment_method_list' %}"
+             class="btn btn-light btn-sm">
+            <i class="bi bi-x-circle"></i> {% trans "إلغاء" %}
+          </a>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-check2-circle"></i> {% trans "حفظ" %}
+          </button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

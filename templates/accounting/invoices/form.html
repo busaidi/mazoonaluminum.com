@@ -1,94 +1,25 @@
 {% extends "accounting/base_accounting.html" %}
-{% load i18n %}
+{% load i18n static %}
 
-{# ================= META TAGS ================= #}
-{% block meta_title %}
+{% block title %}
   {% if form.instance.pk %}
-    {% with serial=form.instance.display_number %}
-      {% if invoice_type == 'purchase' %}
-        {% blocktrans with serial=serial %}تعديل فاتورة مشتريات {{ serial }} | Mazoon Aluminum{% endblocktrans %}
-      {% elif invoice_type == 'sales' %}
-        {% blocktrans with serial=serial %}تعديل فاتورة مبيعات {{ serial }} | Mazoon Aluminum{% endblocktrans %}
-      {% else %}
-        {% blocktrans with serial=serial %}تعديل فاتورة {{ serial }} | Mazoon Aluminum{% endblocktrans %}
-      {% endif %}
-    {% endwith %}
+    {% trans "تعديل فاتورة" %} {{ form.instance.display_number }}
   {% else %}
-    {% if invoice_type == 'purchase' %}
-      {% trans "فاتورة مشتريات جديدة | Mazoon Aluminum" %}
-    {% elif invoice_type == 'sales' %}
-      {% trans "فاتورة مبيعات جديدة | Mazoon Aluminum" %}
-    {% else %}
-      {% trans "فاتورة جديدة | Mazoon Aluminum" %}
-    {% endif %}
-  {% endif %}
-{% endblock %}
-
-{% block meta_description %}
-  {% if form.instance.pk %}
-    {% with serial=form.instance.display_number %}
-      {% if invoice_type == 'purchase' %}
-        {% blocktrans with serial=serial %}تعديل بيانات فاتورة المشتريات رقم {{ serial }} في نظام المحاسبة.{% endblocktrans %}
-      {% elif invoice_type == 'sales' %}
-        {% blocktrans with serial=serial %}تعديل بيانات فاتورة المبيعات رقم {{ serial }} في نظام المحاسبة.{% endblocktrans %}
-      {% else %}
-        {% blocktrans with serial=serial %}تعديل بيانات الفاتورة رقم {{ serial }} في نظام المحاسبة.{% endblocktrans %}
-      {% endif %}
-    {% endwith %}
-  {% else %}
-    {% if invoice_type == 'purchase' %}
-      {% trans "إنشاء فاتورة مشتريات جديدة في نظام المحاسبة الخاص بمزون ألمنيوم." %}
-    {% elif invoice_type == 'sales' %}
-      {% trans "إنشاء فاتورة مبيعات جديدة لعميل في نظام المحاسبة الخاص بمزون ألمنيوم." %}
-    {% else %}
-      {% trans "إنشاء فاتورة جديدة في نظام المحاسبة الخاص بمزون ألمنيوم." %}
-    {% endif %}
+    {% trans "إنشاء فاتورة جديدة" %}
   {% endif %}
 {% endblock %}
 
 {% block accounting_content %}
-<div class="py-4">
+<div class="row justify-content-center">
+  <div class="col-12 col-xl-10">
 
-  {# نحدد رابط الرجوع حسب النوع #}
-  {% if invoice_type == 'purchase' %}
-    {% url 'accounting:purchase_invoice_list' as back_url %}
-  {% elif invoice_type == 'sales' %}
-    {% url 'accounting:sales_invoice_list' as back_url %}
-  {% else %}
-    {% url 'accounting:dashboard' as back_url %}
-  {% endif %}
-
-  {# ================= HEADER ================= #}
-  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-    <div>
-      {% if form.instance.pk %}
-        <div class="d-flex align-items-center gap-2 mb-1">
-          {% with serial=form.instance.display_number %}
-            <h1 class="h3 mb-0">
-              {% if invoice_type == 'purchase' %}
-                {% blocktrans with serial=serial %}تعديل فاتورة مشتريات {{ serial }}{% endblocktrans %}
-              {% elif invoice_type == 'sales' %}
-                {% blocktrans with serial=serial %}تعديل فاتورة مبيعات {{ serial }}{% endblocktrans %}
-              {% else %}
-                {% blocktrans with serial=serial %}تعديل فاتورة {{ serial }}{% endblocktrans %}
-              {% endif %}
-            </h1>
-          {% endwith %}
-          <span class="badge bg-light text-mazoon border">
-            {% trans "وضع التحرير" %}
-          </span>
-          {% if invoice_type_label %}
-            <span class="badge bg-body-secondary text-muted border">
-              {{ invoice_type_label }}
-            </span>
-          {% endif %}
-        </div>
-        <p class="text-muted small mb-0">
-          {% trans "قم بتحديث بيانات الفاتورة بدقة، وسيتم حفظ التغييرات في السجلات المحاسبية." %}
-        </p>
-      {% else %}
-        <div class="d-flex align-items-center gap-2 mb-1">
-          <h1 class="h3 mb-0">
+    {# --- Header --- #}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h4 class="fw-bold text-dark mb-1">
+          {% if form.instance.pk %}
+            {% trans "تعديل الفاتورة" %} <span class="text-muted">{{ form.instance.display_number }}</span>
+          {% else %}
             {% if invoice_type == 'purchase' %}
               {% trans "فاتورة مشتريات جديدة" %}
             {% elif invoice_type == 'sales' %}
@@ -96,380 +27,225 @@
             {% else %}
               {% trans "فاتورة جديدة" %}
             {% endif %}
-          </h1>
-          <span class="badge bg-light text-mazoon border">
-            {% trans "فاتورة يدوية" %}
-          </span>
-          {% if invoice_type_label %}
-            <span class="badge bg-body-secondary text-muted border">
-              {{ invoice_type_label }}
-            </span>
           {% endif %}
-        </div>
+        </h4>
         <p class="text-muted small mb-0">
-          {% if invoice_type == 'purchase' %}
-            {% trans "املأ بيانات فاتورة المشتريات، خصوصًا المورد، تاريخ الفاتورة، وبنود الشراء." %}
-          {% else %}
-            {% trans "املأ بيانات الفاتورة، خصوصًا العميل، تاريخ الإصدار، بنود الفاتورة، والشروط." %}
-          {% endif %}
+          {% trans "الرجاء تعبئة البيانات بدقة. الحقول المميزة بعلامة * إجبارية." %}
         </p>
-      {% endif %}
-    </div>
-
-    <div class="d-flex flex-wrap gap-2">
-      <a href="{{ back_url }}" class="btn btn-outline-secondary btn-sm">
+      </div>
+      <div>
         {% if invoice_type == 'purchase' %}
-          {% trans "رجوع إلى فواتير المشتريات" %}
-        {% elif invoice_type == 'sales' %}
-          {% trans "رجوع إلى فواتير المبيعات" %}
-        {% else %}
-          {% trans "رجوع إلى لوحة المحاسبة" %}
-        {% endif %}
-      </a>
-    </div>
-  </div>
-
-  {# ================= FORM CARD ================= #}
-  <div class="card border-0 shadow-sm">
-    <div class="card-body">
-
-      <form method="post" novalidate>
-        {% csrf_token %}
-
-        {# أخطاء عامة للفورم الرئيسي #}
-        {% if form.non_field_errors %}
-          <div class="alert alert-danger mb-3">
-            {% for error in form.non_field_errors %}
-              <div>{{ error }}</div>
-            {% endfor %}
-          </div>
-        {% endif %}
-
-        <div class="mb-3">
-          <div class="small text-muted">
-            {% trans "بيانات الفاتورة" %}
-          </div>
-        </div>
-
-        {# --- رأس الفاتورة: العميل/المورد + التواريخ + الحالة --- #}
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label class="form-label d-flex justify-content-between align-items-center" for="{{ form.customer.id_for_label }}">
-              <span>
-                {% if invoice_type == 'purchase' %}
-                  {% trans "المورد" %}
-                {% else %}
-                  {{ form.customer.label }}
-                {% endif %}
-              </span>
-              {% if form.customer.field.required %}
-                <span class="small text-muted">*</span>
-              {% endif %}
-            </label>
-            {{ form.customer }}
-            {% for error in form.customer.errors %}
-              <div class="text-danger small mt-1">{{ error }}</div>
-            {% endfor %}
-          </div>
-
-          <div class="col-md-3 mb-3">
-            <label class="form-label d-flex justify-content-between align-items-center" for="{{ form.issued_at.id_for_label }}">
-              <span>{{ form.issued_at.label }}</span>
-              {% if form.issued_at.field.required %}
-                <span class="small text-muted">*</span>
-              {% endif %}
-            </label>
-            {{ form.issued_at }}
-            {% for error in form.issued_at.errors %}
-              <div class="text-danger small mt-1">{{ error }}</div>
-            {% endfor %}
-          </div>
-
-          <div class="col-md-3 mb-3">
-            <label class="form-label d-flex justify-content-between align-items-center" for="{{ form.due_date.id_for_label }}">
-              <span>{{ form.due_date.label }}</span>
-            </label>
-            {{ form.due_date }}
-            {% for error in form.due_date.errors %}
-              <div class="text-danger small mt-1">{{ error }}</div>
-            {% endfor %}
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="col-md-4 mb-3">
-            <label class="form-label d-flex justify-content-between align-items-center" for="{{ form.status.id_for_label }}">
-              <span>{{ form.status.label }}</span>
-              {% if form.status.field.required %}
-                <span class="small text-muted">*</span>
-              {% endif %}
-            </label>
-            {{ form.status }}
-            {% for error in form.status.errors %}
-              <div class="text-danger small mt-1">{{ error }}</div>
-            {% endfor %}
-          </div>
-        </div>
-
-        <hr class="my-4">
-
-        {# ================= ITEMS (FORMSET) ================= #}
-        <div class="mb-3 d-flex justify-content-between align-items-center">
-          <div class="small text-muted">
-            {% trans "بنود الفاتورة (منتجات أو بنود حرة)" %}
-          </div>
-          <div class="small text-muted">
-            {% trans "يمكنك اختيار منتج من القائمة أو تركه فارغًا وكتابة وصف حر للبند، مع تحديد الكمية والسعر." %}
-          </div>
-        </div>
-
-        {# أخطاء عامة للـ formset #}
-        {% if item_formset.non_form_errors %}
-          <div class="alert alert-danger mb-3">
-            {% for error in item_formset.non_form_errors %}
-              <div>{{ error }}</div>
-            {% endfor %}
-          </div>
-        {% endif %}
-
-        {{ item_formset.management_form }}
-
-        <div class="table-responsive mb-3">
-          <table class="table table-sm align-middle invoice-items-table">
-            <thead class="table-light">
-              <tr>
-                <th class="product-col">{% trans "المنتج (اختياري)" %}</th>
-                <th class="desc-col">{% trans "الوصف" %}</th>
-                <th class="qty-col text-center">{% trans "الكمية" %}</th>
-                <th class="price-col text-center">{% trans "سعر الوحدة" %}</th>
-                <th class="total-col text-end">{% trans "الإجمالي" %}</th>
-                <th style="width: 6%;" class="text-center">{% trans "حذف" %}</th>
-              </tr>
-            </thead>
-            <tbody id="invoice-items-body">
-              {% for f in item_formset %}
-                {# حقول مخفية مثل id #}
-                {% for hidden in f.hidden_fields %}
-                  {{ hidden }}
-                {% endfor %}
-
-                <tr class="invoice-item-row">
-                  <td class="product-col">
-                    {{ f.product }}
-                    {% for error in f.product.errors %}
-                      <div class="text-danger small mt-1">{{ error }}</div>
-                    {% endfor %}
-                  </td>
-                  <td class="desc-col">
-                    {{ f.description }}
-                    {% for error in f.description.errors %}
-                      <div class="text-danger small mt-1">{{ error }}</div>
-                    {% endfor %}
-                  </td>
-                  <td class="qty-col">
-                    {{ f.quantity }}
-                    {% for error in f.quantity.errors %}
-                      <div class="text-danger small mt-1">{{ error }}</div>
-                    {% endfor %}
-                  </td>
-                  <td class="price-col">
-                    {{ f.unit_price }}
-                    {% for error in f.unit_price.errors %}
-                      <div class="text-danger small mt-1">{{ error }}</div>
-                    {% endfor %}
-                  </td>
-                  <td class="total-col text-end">
-                    <span class="invoice-line-total">
-                      {% if f.instance.pk %}
-                        {{ f.instance.subtotal }}
-                      {% else %}
-                        0.000
-                      {% endif %}
-                    </span>
-                  </td>
-                  <td class="text-center">
-                    {% if f.DELETE %}
-                      {{ f.DELETE }}
-                    {% endif %}
-                    {% if f.non_field_errors %}
-                      {% for error in f.non_field_errors %}
-                        <div class="text-danger small mt-1">{{ error }}</div>
-                      {% endfor %}
-                    {% endif %}
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-
-        <div class="mb-4">
-          <button type="button" class="btn btn-outline-primary btn-sm" id="add-item-row">
-            {% trans "إضافة بند جديد" %}
-          </button>
-        </div>
-
-        <hr class="my-4">
-
-        {# الوصف العام للفاتورة #}
-        <div class="mb-3">
-          <label class="form-label d-flex justify-content-between align-items-center" for="{{ form.description.id_for_label }}">
-            <span>{{ form.description.label }}</span>
-          </label>
-          {{ form.description }}
-          {% for error in form.description.errors %}
-            <div class="text-danger small mt-1">{{ error }}</div>
-          {% endfor %}
-        </div>
-
-        {# الشروط والأحكام #}
-        <div class="mb-3">
-          <label class="form-label d-flex justify-content-between align-items-center" for="{{ form.terms.id_for_label }}">
-            <span>{{ form.terms.label }}</span>
-          </label>
-          {{ form.terms }}
-          <div class="form-text small text-muted">
-            {% trans "اكتب هنا الشروط والأحكام أو ملاحظات الدفع التي ستظهر في الفاتورة." %}
-          </div>
-          {% for error in form.terms.errors %}
-            <div class="text-danger small mt-1">{{ error }}</div>
-          {% endfor %}
-        </div>
-
-        <div class="d-flex flex-wrap gap-2 mt-3">
-          <button type="submit" class="btn btn-primary">
-            {% if form.instance.pk %}
-              {% trans "حفظ التعديلات" %}
-            {% else %}
-              {% trans "حفظ الفاتورة" %}
-            {% endif %}
-          </button>
-          <a href="{{ back_url }}" class="btn btn-secondary">
+          <a href="{% url 'accounting:purchase_invoice_list' %}" class="btn btn-outline-secondary btn-sm">
             {% trans "إلغاء" %}
           </a>
-        </div>
-
-      </form>
+        {% else %}
+          <a href="{% url 'accounting:sales_invoice_list' %}" class="btn btn-outline-secondary btn-sm">
+            {% trans "إلغاء" %}
+          </a>
+        {% endif %}
+      </div>
     </div>
-  </div>
 
+    {# --- Form Card --- #}
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger mb-4">
+              {% for error in form.non_field_errors %}
+                <div>{{ error }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          {# القسم الأول: المعلومات الأساسية #}
+          <h6 class="text-uppercase text-muted small fw-bold mb-3">{% trans "بيانات أساسية" %}</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label small text-muted mb-1">{{ form.customer.label }}</label>
+              {{ form.customer }}
+              {{ form.customer.errors }}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label small text-muted mb-1">{{ form.status.label }}</label>
+              {{ form.status }}
+              {{ form.status.errors }}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label small text-muted mb-1">{{ form.issued_at.label }}</label>
+              {{ form.issued_at }}
+              {{ form.issued_at.errors }}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label small text-muted mb-1">{{ form.due_date.label }}</label>
+              {{ form.due_date }}
+              {{ form.due_date.errors }}
+            </div>
+          </div>
+
+          <hr class="my-4 text-muted opacity-25">
+
+          {# القسم الثاني: البنود #}
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="text-uppercase text-muted small fw-bold mb-0">{% trans "بنود الفاتورة" %}</h6>
+          </div>
+
+          {{ item_formset.management_form }}
+          
+          <div class="table-responsive mb-3">
+            <table class="table table-bordered table-sm align-middle invoice-items-table">
+              <thead class="bg-light">
+                <tr>
+                  <th style="width: 25%;">{% trans "المنتج" %}</th>
+                  <th style="width: 30%;">{% trans "الوصف" %}</th>
+                  <th style="width: 10%;" class="text-center">{% trans "الكمية" %}</th>
+                  <th style="width: 15%;" class="text-center">{% trans "السعر" %}</th>
+                  <th style="width: 15%;" class="text-end">{% trans "الإجمالي" %}</th>
+                  <th style="width: 5%;" class="text-center">x</th>
+                </tr>
+              </thead>
+              <tbody id="invoice-items-body">
+                {% for f in item_formset %}
+                  {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+                  <tr class="invoice-item-row">
+                    <td>
+                      {{ f.product }}
+                      {{ f.product.errors }}
+                    </td>
+                    <td>
+                      {{ f.description }}
+                      {{ f.description.errors }}
+                    </td>
+                    <td>
+                      {{ f.quantity }}
+                      {{ f.quantity.errors }}
+                    </td>
+                    <td>
+                      {{ f.unit_price }}
+                      {{ f.unit_price.errors }}
+                    </td>
+                    <td class="text-end bg-light fw-bold text-dark">
+                      <span class="invoice-line-total">0.000</span>
+                    </td>
+                    <td class="text-center">
+                      {% if item_formset.can_delete %}
+                        {{ f.DELETE }}
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <button type="button" class="btn btn-sm btn-outline-dark mb-4" id="add-item-row">
+            + {% trans "إضافة بند" %}
+          </button>
+
+          <hr class="my-4 text-muted opacity-25">
+
+          {# القسم الثالث: ملاحظات وشروط #}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small text-muted mb-1">{{ form.description.label }}</label>
+              {{ form.description }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small text-muted mb-1">{{ form.terms.label }}</label>
+              {{ form.terms }}
+            </div>
+          </div>
+
+          <div class="mt-5 d-flex justify-content-end gap-2">
+            <button type="submit" class="btn btn-primary px-4">
+              {% trans "حفظ البيانات" %}
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+  </div>
 </div>
 
-{# ================= JS: PRODUCTS & DYNAMIC ROWS ================= #}
 <script>
-  // بيانات المنتجات من الـ View
   window.INVOICE_PRODUCTS = {{ products_json|default:"{}"|safe }};
 
   function recalcRowTotal(row) {
-    if (!row) return;
-    const qtyInput = row.querySelector('input[name$="-quantity"]');
-    const priceInput = row.querySelector('input[name$="-unit_price"]');
+    const qty = parseFloat(row.querySelector('input[name$="-quantity"]').value || 0);
+    const price = parseFloat(row.querySelector('input[name$="-unit_price"]').value || 0);
     const totalSpan = row.querySelector(".invoice-line-total");
-
-    if (!qtyInput || !priceInput || !totalSpan) return;
-
-    const qty = parseFloat(qtyInput.value || "0");
-    const price = parseFloat(priceInput.value || "0");
-    const total = qty * price;
-
-    totalSpan.textContent = total.toFixed(3);
+    if (totalSpan) totalSpan.textContent = (qty * price).toFixed(3);
   }
 
-  function attachProductListener(selectEl) {
-    if (!selectEl) return;
-    selectEl.addEventListener("change", function () {
-      const productId = this.value;
-      const row = this.closest("tr");
-      if (!row) return;
-
-      const descInput =
-        row.querySelector('input[name$="-description"], textarea[name$="-description"]');
-      const priceInput = row.querySelector('input[name$="-unit_price"]');
-
-      const p = window.INVOICE_PRODUCTS[String(productId)];
-      if (p) {
-        if (descInput && !descInput.value) {
-          descInput.value = p.description || "";
-        }
-        if (priceInput && (!priceInput.value || priceInput.value === "0" || priceInput.value === "0.000")) {
-          priceInput.value = p.price;
-        }
-        recalcRowTotal(row);
-      }
-    });
-  }
-
-  function attachQtyPriceListeners(row) {
-    if (!row) return;
+  function attachListeners(row) {
+    const productSelect = row.querySelector('select[name$="-product"]');
     const qtyInput = row.querySelector('input[name$="-quantity"]');
     const priceInput = row.querySelector('input[name$="-unit_price"]');
 
-    [qtyInput, priceInput].forEach(function (el) {
-      if (!el) return;
-      el.addEventListener("input", function () {
-        recalcRowTotal(row);
+    if (productSelect) {
+      productSelect.addEventListener("change", function() {
+        const p = window.INVOICE_PRODUCTS[this.value];
+        if (p) {
+          const priceField = row.querySelector('input[name$="-unit_price"]');
+          if (priceField && parseFloat(priceField.value || 0) === 0) {
+            priceField.value = p.price;
+          }
+
+          const descField = row.querySelector('input[name$="-description"]');
+          if (descField && !descField.value) {
+            descField.value = p.description;
+          }
+
+          recalcRowTotal(row);
+        }
       });
+    }
+
+    [qtyInput, priceInput].forEach(el => {
+      if (el) el.addEventListener("input", () => recalcRowTotal(row));
     });
   }
 
-  // ربط الليسنرات على الصفوف الموجودة عند تحميل الصفحة
-  document.querySelectorAll("tr.invoice-item-row").forEach(function (row) {
-    const selectEl = row.querySelector('select[name$="-product"]');
-    if (selectEl) {
-      attachProductListener(selectEl);
-    }
-    attachQtyPriceListeners(row);
+  document.querySelectorAll(".invoice-item-row").forEach(row => {
+    attachListeners(row);
     recalcRowTotal(row);
   });
 
-  // إضافة صف جديد ديناميكيًا
-  (function () {
-    const addBtn = document.getElementById("add-item-row");
-    const tableBody = document.getElementById("invoice-items-body");
-    const totalFormsInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
+  document.getElementById("add-item-row").addEventListener("click", function() {
+    const body = document.getElementById("invoice-items-body");
+    const totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
+    const count = parseInt(totalForms.value);
 
-    if (!addBtn || !tableBody || !totalFormsInput) return;
+    const firstRow = body.firstElementChild;
+    if (!firstRow) return;
 
-    addBtn.addEventListener("click", function () {
-      const currentCount = parseInt(totalFormsInput.value, 10);
-      const newIndex = currentCount;
+    const newRow = firstRow.cloneNode(true);
 
-      const lastRow = tableBody.querySelector("tr.invoice-item-row:last-child");
-      if (!lastRow) return;
+    newRow.querySelectorAll("input, select").forEach(input => {
+      input.name = input.name.replace("-0-", `-${count}-`);
+      input.id = input.id.replace("-0-", `-${count}-`);
 
-      const newRow = lastRow.cloneNode(true);
-
-      newRow.querySelectorAll("input, select, textarea").forEach(function (el) {
-        if (el.name) {
-          el.name = el.name.replace(/\-(\d+)\-/, "-" + newIndex + "-");
-        }
-        if (el.id) {
-          el.id = el.id.replace(/\_(\d+)\_/, "_" + newIndex + "_");
-        }
-
-        if (el.type === "checkbox" || el.type === "radio") {
-          el.checked = false;
-        } else {
-          el.value = "";
-        }
-      });
-
-      const totalSpan = newRow.querySelector(".invoice-line-total");
-      if (totalSpan) {
-        totalSpan.textContent = "0.000";
+      if (input.type === "checkbox") {
+        input.checked = false;
+      } else if (input.type !== "hidden") {
+        input.value = "";
       }
-
-      tableBody.appendChild(newRow);
-
-      totalFormsInput.value = newIndex + 1;
-
-      const newSelect = newRow.querySelector('select[name$="-product"]');
-      if (newSelect) {
-        attachProductListener(newSelect);
-      }
-      attachQtyPriceListeners(newRow);
     });
-  })();
-</script>
 
+    const totalSpan = newRow.querySelector(".invoice-line-total");
+    if (totalSpan) totalSpan.textContent = "0.000";
+
+    body.appendChild(newRow);
+    totalForms.value = count + 1;
+    attachListeners(newRow);
+  });
+</script>
 {% endblock %}

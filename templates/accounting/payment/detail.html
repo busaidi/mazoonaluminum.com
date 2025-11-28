@@ -1,6 +1,14 @@
 {% extends "accounting/base_accounting.html" %}
 {% load i18n %}
 
+{% block title %}
+  {% if payment.type == "receipt" %}
+    {% trans "سند قبض" %} {{ payment.display_number }}
+  {% else %}
+    {% trans "سند صرف" %} {{ payment.display_number }}
+  {% endif %}
+{% endblock %}
+
 {% block accounting_content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
@@ -13,17 +21,26 @@
       {{ payment.display_number }}
     </h1>
     <p class="text-muted small mb-0">
-      {{ payment.contact.name }} • {{ payment.date|date:"Y-m-d" }}
+      {% if payment.contact %}
+        {{ payment.contact.name }}
+      {% else %}
+        {% trans "طرف غير محدد" %}
+      {% endif %}
+      • {{ payment.date|date:"Y-m-d" }}
     </p>
   </div>
   <div class="d-flex flex-wrap gap-2">
     <a href="{% url 'accounting:payment_list' %}"
        class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-arrow-right"></i> {% trans "رجوع للقائمة" %}
+      {% trans "رجوع للقائمة" %}
     </a>
     <a href="{% url 'accounting:payment_update' payment.pk %}"
        class="btn btn-primary btn-sm">
-      <i class="bi bi-pencil"></i> {% trans "تعديل" %}
+      {% trans "تعديل السند" %}
+    </a>
+    <a href="{% url 'accounting:payment_print' payment.pk %}"
+       class="btn btn-outline-secondary btn-sm" target="_blank">
+      {% trans "طباعة / PDF" %}
     </a>
   </div>
 </div>
@@ -45,30 +62,39 @@
               {% endif %}
             </div>
           </div>
+
           <div class="col-md-6">
             <div class="text-muted mb-1">{% trans "التاريخ" %}</div>
             <div class="fw-semibold">
               {{ payment.date|date:"Y-m-d" }}
             </div>
           </div>
+
           <div class="col-md-6">
             <div class="text-muted mb-1">{% trans "طريقة الدفع" %}</div>
             <div class="fw-semibold">
-              {{ payment.method.name }}
+              {% if payment.method %}
+                {{ payment.method.name }}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
             </div>
           </div>
+
           <div class="col-md-6">
             <div class="text-muted mb-1">{% trans "المبلغ" %}</div>
             <div class="fw-semibold">
               {{ payment.amount }} {{ payment.currency }}
             </div>
           </div>
+
           <div class="col-md-12">
             <div class="text-muted mb-1">{% trans "مرجع خارجي" %}</div>
             <div class="fw-semibold">
               {{ payment.reference|default:"—" }}
             </div>
           </div>
+
           <div class="col-md-12">
             <div class="text-muted mb-1">{% trans "ملاحظات" %}</div>
             {% if payment.notes %}
@@ -80,28 +106,34 @@
         </div>
       </div>
     </div>
-
   </div>
 
   <div class="col-lg-4">
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-body small">
         <h2 class="h6 fw-semibold mb-3">{% trans "تفاصيل الطرف" %}</h2>
-        <p class="mb-1">
-          <span class="text-muted d-block mb-1">{% trans "الاسم" %}</span>
-          <a href="{% url 'contacts:contact_detail' payment.contact.pk %}"
-             class="fw-semibold text-mazoon text-decoration-none">
-            {{ payment.contact.name }}
-          </a>
-        </p>
-        <p class="mb-1">
-          <span class="text-muted d-block mb-1">{% trans "الهاتف" %}</span>
-          <span class="fw-semibold">{{ payment.contact.phone|default:"—" }}</span>
-        </p>
-        <p class="mb-0">
-          <span class="text-muted d-block mb-1">{% trans "الرقم الضريبي" %}</span>
-          <span class="fw-semibold">{{ payment.contact.tax_number|default:"—" }}</span>
-        </p>
+
+        {% if payment.contact %}
+          <p class="mb-1">
+            <span class="text-muted d-block mb-1">{% trans "الاسم" %}</span>
+            <a href="{% url 'contacts:contact_detail' payment.contact.pk %}"
+               class="fw-semibold text-mazoon text-decoration-none">
+              {{ payment.contact.name }}
+            </a>
+          </p>
+          <p class="mb-1">
+            <span class="text-muted d-block mb-1">{% trans "الهاتف" %}</span>
+            <span class="fw-semibold">{{ payment.contact.phone|default:"—" }}</span>
+          </p>
+          <p class="mb-0">
+            <span class="text-muted d-block mb-1">{% trans "الرقم الضريبي" %}</span>
+            <span class="fw-semibold">{{ payment.contact.tax_number|default:"—" }}</span>
+          </p>
+        {% else %}
+          <p class="mb-0 text-muted">
+            {% trans "لم يتم ربط السند بأي عميل/مورد." %}
+          </p>
+        {% endif %}
       </div>
     </div>
   </div>

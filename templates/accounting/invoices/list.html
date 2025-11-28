@@ -1,242 +1,170 @@
 {% extends "accounting/base_accounting.html" %}
-{% load i18n %}
+{% load i18n humanize %}
 
-{# عنوان الصفحة في التبويب + SEO #}
-{% block meta_title %}
-  {% if invoice_type == 'purchase' %}
-    {% trans "فواتير المشتريات" %} | Mazoon Aluminum
-  {% elif invoice_type == 'sales' %}
-    {% trans "فواتير المبيعات" %} | Mazoon Aluminum
-  {% else %}
-    {% trans "الفواتير" %} | Mazoon Aluminum
-  {% endif %}
-{% endblock %}
-
-{% block meta_description %}
-  {% if invoice_type == 'purchase' %}
-    {% trans "قائمة فواتير المشتريات مع إمكانية التصفية حسب حالة الفاتورة وعرض الرصيد المتبقي لكل فاتورة." %}
-  {% elif invoice_type == 'sales' %}
-    {% trans "قائمة فواتير المبيعات مع إمكانية التصفية حسب حالة الفاتورة وعرض الرصيد المتبقي لكل فاتورة." %}
-  {% else %}
-    {% trans "قائمة الفواتير مع إمكانية التصفية حسب حالة الفاتورة وعرض الرصيد المتبقي لكل فاتورة." %}
-  {% endif %}
+{% block title %}
+  {% if invoice_type == 'sales' %}{% trans "فواتير المبيعات" %}
+  {% elif invoice_type == 'purchase' %}{% trans "فواتير المشتريات" %}
+  {% else %}{% trans "سجل الفواتير" %}{% endif %}
 {% endblock %}
 
 {% block accounting_content %}
-<div class="py-4">
 
-  {# رأس الصفحة #}
-  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-    <div>
-      <h1 class="h4 mb-1 text-mazoon">
-        📄
-        {% if invoice_type == 'purchase' %}
-          {% trans "فواتير المشتريات" %}
-        {% elif invoice_type == 'sales' %}
-          {% trans "فواتير المبيعات" %}
-        {% else %}
-          {% trans "الفواتير" %}
-        {% endif %}
-      </h1>
-      <p class="text-muted small mb-0">
-        {% if invoice_type == 'purchase' %}
-          {% trans "عرض وإدارة فواتير المشتريات، ومتابعة المبالغ المدفوعة والمتبقية لكل فاتورة." %}
-        {% elif invoice_type == 'sales' %}
-          {% trans "عرض وإدارة فواتير المبيعات، ومتابعة المبالغ المدفوعة والمتبقية لكل فاتورة." %}
-        {% else %}
-          {% trans "عرض وإدارة الفواتير، ومتابعة المبالغ المدفوعة والمتبقية لكل فاتورة." %}
-        {% endif %}
-      </p>
-    </div>
-
-    {# زر إنشاء فاتورة جديدة حسب النوع #}
-    {% if invoice_type == 'purchase' %}
-      <a href="{% url 'accounting:purchase_invoice_create' %}"
-         class="btn btn-primary btn-sm d-flex align-items-center gap-1">
-        <span class="fw-semibold">+ {% trans "فاتورة مشتريات جديدة" %}</span>
-      </a>
-    {% elif invoice_type == 'sales' %}
-      <a href="{% url 'accounting:sales_invoice_create' %}"
-         class="btn btn-primary btn-sm d-flex align-items-center gap-1">
-        <span class="fw-semibold">+ {% trans "فاتورة مبيعات جديدة" %}</span>
-      </a>
+{# --- Header --- #}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold text-dark mb-1">
+      {% if invoice_type == 'sales' %}{% trans "فواتير المبيعات" %}
+      {% elif invoice_type == 'purchase' %}{% trans "فواتير المشتريات" %}
+      {% else %}{% trans "سجل الفواتير" %}{% endif %}
+    </h4>
+    <p class="text-muted small mb-0">{% trans "عرض ومتابعة كافة الفواتير وحالات الدفع." %}</p>
+  </div>
+  
+  <div>
+    {% if invoice_type == 'sales' %}
+        <a href="{% url 'accounting:sales_invoice_create' %}" class="btn btn-dark btn-sm px-3">
+            {% trans "فاتورة مبيعات جديدة" %}
+        </a>
+    {% elif invoice_type == 'purchase' %}
+        <a href="{% url 'accounting:purchase_invoice_create' %}" class="btn btn-dark btn-sm px-3">
+            {% trans "فاتورة مشتريات جديدة" %}
+        </a>
     {% else %}
-      <a href="{% url 'accounting:invoice_create' %}"
-         class="btn btn-primary btn-sm d-flex align-items-center gap-1">
-        <span class="fw-semibold">+ {% trans "فاتورة جديدة" %}</span>
-      </a>
+        <a href="{% url 'accounting:sales_invoice_create' %}" class="btn btn-outline-dark btn-sm">{% trans "مبيعات" %}</a>
+        <a href="{% url 'accounting:purchase_invoice_create' %}" class="btn btn-outline-dark btn-sm">{% trans "مشتريات" %}</a>
     {% endif %}
   </div>
+</div>
 
-  {# فلتر الحالة داخل كرت نظيف #}
-  <form method="get" class="mb-3">
-    <div class="card bg-mazoon-card border-0 shadow-sm">
-      <div class="card-body py-2">
-        <div class="row g-2 align-items-end">
-          <div class="col-auto">
-            <label for="id_status" class="form-label small mb-1">{% trans "حالة الفاتورة" %}</label>
-            <select id="id_status"
-                    name="status"
-                    class="form-select form-select-sm"
-                    onchange="this.form.submit()">
-              <option value="">{% trans "كل الحالات" %}</option>
-              {% for value,label in invoices.model.Status.choices %}
-                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>
-                  {{ label }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-      </div>
-    </div>
-  </form>
+{# --- Filter Bar --- #}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body p-2">
+    <form method="get" class="d-flex align-items-center gap-2">
+        <label class="small fw-bold text-muted text-nowrap">{% trans "تصفية الحالة:" %}</label>
+        <select name="status" class="form-select form-select-sm" style="max-width: 200px;" onchange="this.form.submit()">
+            <option value="">{% trans "الكل" %}</option>
+            <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>{% trans "مسودة" %}</option>
+            <option value="sent" {% if status_filter == 'sent' %}selected{% endif %}>{% trans "مرسلة" %}</option>
+            <option value="partially_paid" {% if status_filter == 'partially_paid' %}selected{% endif %}>{% trans "مدفوعة جزئياً" %}</option>
+            <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>{% trans "مدفوعة" %}</option>
+            <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>{% trans "ملغاة" %}</option>
+        </select>
+    </form>
+  </div>
+</div>
 
-  <div class="card border-0 shadow-sm bg-mazoon-card">
-    <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table table-hover table-sm mb-0 align-middle">
-          <thead class="table-light small">
-            <tr>
-              <th>{% trans "رقم الفاتورة" %}</th>
-              <th>
-                {% if invoice_type == 'purchase' %}
-                  {% trans "المورد" %}
-                {% else %}
-                  {% trans "العميل" %}
-                {% endif %}
-              </th>
-              <th>{% trans "التاريخ" %}</th>
-              <th class="text-end">{% trans "الإجمالي" %}</th>
-              <th class="text-end">{% trans "المدفوع" %}</th>
-              <th class="text-end">{% trans "المتبقي" %}</th>
-              <th>{% trans "الحالة" %}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for inv in invoices %}
-              <tr>
-                <td>
-                  {# نحدد رابط التفاصيل حسب نوع الفاتورة الفعلي #}
-                  {% if inv.type == 'purchase' %}
-                    {% url 'accounting:purchase_invoice_detail' inv.pk as inv_detail_url %}
-                  {% elif inv.type == 'sales' %}
-                    {% url 'accounting:sales_invoice_detail' inv.pk as inv_detail_url %}
-                  {% else %}
-                    {% url 'accounting:invoice_detail' inv.pk as inv_detail_url %}
-                  {% endif %}
+{# --- Table --- #}
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="bg-light small text-muted">
+        <tr>
+          <th>{% trans "الرقم" %}</th>
+          <th>{% trans "الطرف (العميل/المورد)" %}</th>
+          <th>{% trans "التاريخ" %}</th>
+          <th class="text-end">{% trans "الإجمالي" %}</th>
+          <th class="text-end">{% trans "المدفوع" %}</th>
+          <th class="text-end">{% trans "المتبقي" %}</th>
+          <th class="text-center">{% trans "الحالة" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inv in invoices %}
+          {# تحديد رابط التفاصيل #}
+          {% if inv.type == 'sales' %}
+            {% url 'accounting:sales_invoice_detail' inv.pk as detail_url %}
+          {% else %}
+            {% url 'accounting:purchase_invoice_detail' inv.pk as detail_url %}
+          {% endif %}
 
-                  {% if inv.number %}
-                    <a href="{{ inv_detail_url }}"
-                       class="text-decoration-none text-mazoon fw-semibold">
-                      {{ inv.number }}
-                    </a>
-                  {% else %}
-                    <a href="{{ inv_detail_url }}"
-                       class="text-decoration-none text-muted small">
-                      {% trans "بدون رقم" %} (ID: {{ inv.id }})
-                    </a>
-                  {% endif %}
-                </td>
-
-                <td>
-                  {{ inv.customer|default:"-" }}
-                </td>
-
-                <td>
-                  {{ inv.issued_at|date:"d/m/Y" }}
-                </td>
-
-                <td class="text-end fw-semibold">
-                  {{ inv.total_amount }}
-                </td>
-
-                <td class="text-end">
-                  {{ inv.paid_amount }}
-                </td>
-
-                <td class="text-end">
-                  {{ inv.balance }}
-                </td>
-
-                <td>
-                  {% if inv.status == inv.Status.PAID %}
-                    <span class="badge-mazoon badge-paid">{% trans "مدفوعة" %}</span>
-                  {% elif inv.status == inv.Status.PARTIALLY_PAID %}
-                    <span class="badge-mazoon badge-partially-paid">{% trans "مدفوعة جزئياً" %}</span>
-                  {% elif inv.status == inv.Status.CANCELLED %}
-                    <span class="badge-mazoon badge-cancelled">{% trans "ملغاة" %}</span>
-                  {% elif inv.status == inv.Status.SENT %}
-                    <span class="badge-mazoon badge-sent">{% trans "مرسلة" %}</span>
-                  {% else %}
-                    <span class="badge-mazoon badge-draft">
-                      {{ inv.get_status_display }}
+          <tr onclick="window.location='{{ detail_url }}';" style="cursor: pointer;">
+            <td>
+                <span class="fw-bold text-dark">{{ inv.display_number }}</span>
+                {% if not invoice_type %}
+                    <br>
+                    <span class="badge bg-light text-secondary border fw-normal" style="font-size: 0.65rem;">
+                      {{ inv.get_type_display }}
                     </span>
-                  {% endif %}
-                </td>
-              </tr>
-
-            {% empty %}
-              <tr>
-                <td colspan="7" class="text-center text-muted py-4">
-                  {% if invoice_type == 'purchase' %}
-                    {% trans "لا توجد فواتير مشتريات حتى الآن." %}
-                  {% elif invoice_type == 'sales' %}
-                    {% trans "لا توجد فواتير مبيعات حتى الآن." %}
-                  {% else %}
-                    {% trans "لا توجد فواتير حتى الآن." %}
-                  {% endif %}
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    {# Pagination #}
-    {% if is_paginated %}
-      <div class="card-footer bg-body-tertiary">
-        <nav aria-label="{% trans 'صفحات الفواتير' %}">
-          <ul class="pagination justify-content-center mb-0 small">
-
+                {% endif %}
+            </td>
+            <td>
+              {% if inv.customer %}
+                <span class="text-dark">{{ inv.customer.name }}</span>
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+            <td class="text-muted small">
+                {{ inv.issued_at|date:"Y-m-d" }}
+            </td>
+            <td class="text-end fw-bold text-dark">
+                {{ inv.total_amount|intcomma }}
+            </td>
+            <td class="text-end text-success small">
+                {{ inv.paid_amount|intcomma }}
+            </td>
+            <td class="text-end">
+                {% if inv.balance > 0 %}
+                    <span class="fw-bold text-danger">{{ inv.balance|intcomma }}</span>
+                {% else %}
+                    <span class="text-muted">-</span>
+                {% endif %}
+            </td>
+            <td class="text-center">
+                {% if inv.status == 'paid' %}
+                    <span class="badge bg-dark">{% trans "مدفوعة" %}</span>
+                {% elif inv.status == 'partially_paid' %}
+                    <span class="badge bg-warning text-dark">{% trans "جزئي" %}</span>
+                {% elif inv.status == 'sent' %}
+                    <span class="badge bg-primary">{% trans "مرسلة" %}</span>
+                {% elif inv.status == 'cancelled' %}
+                    <span class="badge bg-danger">{% trans "ملغاة" %}</span>
+                {% else %}
+                    <span class="badge bg-secondary">{% trans "مسودة" %}</span>
+                {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="text-center p-5 text-muted">
+                {% trans "لا توجد فواتير مطابقة للعرض." %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+  {# Pagination #}
+  {% if is_paginated %}
+  <div class="card-footer bg-white border-top py-3">
+    <nav>
+        <ul class="pagination justify-content-center mb-0 small">
             {% if page_obj.has_previous %}
-              <li class="page-item">
-                <a class="page-link"
-                   href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
-                  {% trans "السابق" %}
-                </a>
-              </li>
-            {% else %}
-              <li class="page-item disabled">
-                <span class="page-link">{% trans "السابق" %}</span>
-              </li>
+                <li class="page-item">
+                  <a class="page-link text-dark"
+                     href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}">
+                    {% trans "السابق" %}
+                  </a>
+                </li>
             {% endif %}
-
             <li class="page-item disabled">
-              <span class="page-link">
-                {% blocktrans %}صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}{% endblocktrans %}
+              <span class="page-link text-muted">
+                {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
               </span>
             </li>
-
             {% if page_obj.has_next %}
-              <li class="page-item">
-                <a class="page-link"
-                   href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
-                  {% trans "التالي" %}
-                </a>
-              </li>
-            {% else %}
-              <li class="page-item disabled">
-                <span class="page-link">{% trans "التالي" %}</span>
-              </li>
+                <li class="page-item">
+                  <a class="page-link text-dark"
+                     href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}">
+                    {% trans "التالي" %}
+                  </a>
+                </li>
             {% endif %}
-
-          </ul>
-        </nav>
-      </div>
-    {% endif %}
+        </ul>
+    </nav>
   </div>
-
+  {% endif %}
 </div>
+
 {% endblock %}

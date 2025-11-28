@@ -1,97 +1,59 @@
-# banking/views.py
+import pandas as pd  # لقراءة ملفات الاكسل
+from decimal import Decimal
 
-from django.urls import reverse
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse_lazy, reverse
 from django.utils.translation import gettext as _
 from django.views.generic import (
-    TemplateView,
-    ListView,
-    CreateView,
-    UpdateView,
+    TemplateView, ListView, CreateView, UpdateView, DetailView, DeleteView
 )
+from django.db import transaction
+from django.http import JsonResponse, HttpResponseBadRequest
+from django.views.decorators.http import require_POST
+from django.contrib import messages
 
+from accounting.models import JournalLine
+# تأكد من مسار الاستيراد الصحيح للميكسن الخاص بك
 from accounting.views import AccountingStaffRequiredMixin
-from .models import BankStatement, BankAccount
+
+from .models import (
+    BankStatement,
+    BankAccount,
+    BankStatementLine,
+    BankReconciliation
+)
 from .forms import BankStatementForm, BankAccountForm
 
 
+# =========================================================
+# 1. Base Logic & Mixins
+# =========================================================
+
 class BankBaseView(AccountingStaffRequiredMixin):
     """
-    Base view for banking screens so they appear as part of accounting UI.
-    - يضبط accounting_section عشان يضوي تبويب "التسوية البنكية" في نافبار المحاسبة.
-    - يضيف روابط banking_nav للروابط الفرعية.
+    بيئة العمل الأساسية للبنك.
+    تضمن ظهور القوائم الجانبية الصحيحة وتمرير الروابط المشتركة.
     """
-
     accounting_section = "banking"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-
-        # نضمن وجود هذا المتغير للـ navbar في base_accounting.html
         ctx.setdefault("accounting_section", self.accounting_section)
 
-        # روابط فرعية للبنك
-        ctx.setdefault(
-            "banking_nav",
-            {
-                "reconciliation_url": reverse("banking:bank_reconciliation"),
-                "bank_account_list_url": reverse("banking:bank_account_list"),
-                "bank_account_create_url": reverse("banking:bank_account_create"),
-                "statement_list_url": reverse("banking:bank_statement_list"),
-                "statement_upload_url": reverse("banking:bank_statement_upload"),
-            },
-        )
+        # روابط التنقل السريع في النافبار الفرعية
+        ctx["banking_nav"] = {
+            "account_list": reverse("banking:bank_account_list"),
+            "statement_list": reverse("banking:bank_statement_list"),
+            "upload_statement": reverse("banking:bank_statement_upload"),
+        }
         return ctx
 
 
-class BankReconciliationView(BankBaseView, TemplateView):
-    """
-    شاشة التسوية البنكية:
-      - عرض قائمة مختصرة لآخر كشوف البنك.
-      - اختيار كشف محدد.
-      - عرض أسطر كشف البنك (BankStatementLine) للكشف المختار.
-      - لاحقاً: عرض حركات النظام ومطابقتها.
-    """
-
-    template_name = "banking/bank_reconciliation.html"
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-
-        ctx["title"] = _("التسوية البنكية")
-
-        # آخر كشوف البنك
-        ctx["recent_statements"] = (
-            BankStatement.objects.select_related("bank_account")
-            .order_by("-date_from", "-id")[:10]
-        )
-
-        # كشف مختار من كويري سترنغ ?statement=ID
-        statement_id = self.request.GET.get("statement")
-        selected_statement = None
-        statement_lines = []
-
-        if statement_id:
-            try:
-                selected_statement = (
-                    BankStatement.objects.select_related("bank_account")
-                    .get(pk=statement_id)
-                )
-                statement_lines = selected_statement.lines.order_by("date", "id")
-            except BankStatement.DoesNotExist:
-                selected_statement = None
-                statement_lines = []
-
-        ctx["selected_statement"] = selected_statement
-        ctx["statement_lines"] = statement_lines
-
-        return ctx
-
+# =========================================================
+# 2. Bank Accounts Management
+# =========================================================
 
 class BankAccountListView(BankBaseView, ListView):
-    """
-    قائمة الحسابات البنكية المعرفة في النظام.
-    """
-
     model = BankAccount
     template_name = "banking/bank_account_list.html"
     context_object_name = "accounts"
@@ -104,93 +66,269 @@ class BankAccountListView(BankBaseView, ListView):
 
 
 class BankAccountCreateView(BankBaseView, CreateView):
-    """
-    إنشاء حساب بنكي جديد وربطه بحساب محاسبي من دليل الحسابات.
-    """
-
     model = BankAccount
     form_class = BankAccountForm
     template_name = "banking/bank_account_form.html"
+    success_url = reverse_lazy("banking:bank_account_list")
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["title"] = _("إضافة حساب بنكي جديد")
         return ctx
 
-    def get_success_url(self):
-        # بعد الإضافة يرجّع المستخدم لقائمة الحسابات البنكية
-        return reverse("banking:bank_account_list")
-
 
 class BankAccountUpdateView(BankBaseView, UpdateView):
-    """
-    تعديل حساب بنكي موجود.
-    """
-
     model = BankAccount
     form_class = BankAccountForm
     template_name = "banking/bank_account_form.html"
-    context_object_name = "account"
+    success_url = reverse_lazy("banking:bank_account_list")
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["title"] = _("تعديل حساب بنكي")
+        ctx["title"] = _("تعديل بيانات الحساب البنكي")
         return ctx
 
-    def get_success_url(self):
-        return reverse("banking:bank_account_list")
 
+class BankAccountDeleteView(BankBaseView, DeleteView):
+    model = BankAccount
+    template_name = "banking/confirm_delete.html"  # تأكد من وجود تمبلت عام للحذف
+    success_url = reverse_lazy("banking:bank_account_list")
+
+
+# =========================================================
+# 3. Bank Statements (Upload & Processing)
+# =========================================================
 
 class BankStatementListView(BankBaseView, ListView):
-    """
-    قائمة كشوف البنك المسجلة في النظام.
-    """
-
     model = BankStatement
     template_name = "banking/bank_statement_list.html"
     context_object_name = "statements"
     paginate_by = 25
-    ordering = ["-date_from", "-id"]
+    ordering = ["-date", "-id"]  # تم تعديل date_from إلى date حسب المودل الجديد
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["title"] = _("كشوف البنك")
+        ctx["title"] = _("سجل كشوفات البنك")
         return ctx
 
 
 class BankStatementUploadView(BankBaseView, CreateView):
     """
-    إنشاء / إدخال كشف بنك جديد (يدوي مع إمكانية إرفاق ملف).
+    الفيو المسؤول عن رفع الملف وقراءته (Parsing).
+    هنا يحدث السحر: تحويل Excel إلى Database Rows.
     """
-
     model = BankStatement
     form_class = BankStatementForm
     template_name = "banking/bank_statement_form.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["title"] = _("رفع كشف بنكي جديد")
+        return ctx
+
+    def form_valid(self, form):
+        # 1. نبدأ عملية ذرية (Atomic Transaction)
+        # إذا حدث أي خطأ أثناء قراءة الملف، لا يتم حفظ الكشف ولا الأسطر
+        with transaction.atomic():
+            # حفظ الهيدر (الكشف) أولاً
+            self.object = form.save()
+
+            # 2. معالجة الملف إذا وجد
+            uploaded_file = self.object.imported_file
+            if uploaded_file:
+                try:
+                    self.process_file(uploaded_file, self.object)
+                    messages.success(self.request, _("تم رفع ومعالجة الكشف بنجاح."))
+                except Exception as e:
+                    # في حال الخطأ، نظهر رسالة للمستخدم ونوقف الحفظ
+                    form.add_error('imported_file', f"خطأ في قراءة الملف: {str(e)}")
+                    return self.form_invalid(form)
+
+        return super().form_valid(form)
+
+    def process_file(self, file_obj, statement_obj):
+        """
+        دالة مساعدة لقراءة ملف الاكسل/CSV
+        يفترض أن الملف يحتوي أعمدة: Date, Description, Reference, Amount
+        """
+        # تحديد الامتداد واستخدام المكتبة المناسبة
+        if file_obj.name.endswith('.csv'):
+            df = pd.read_csv(file_obj)
+        else:
+            df = pd.read_excel(file_obj)
+
+        # تنظيف أسماء الأعمدة (إزالة المسافات وتحويلها لأحرف صغيرة)
+        df.columns = df.columns.str.strip().str.lower()
+
+        # التأكد من وجود الأعمدة الإجبارية (يمكنك تعديل الأسماء حسب صيغة بنكك)
+        # مثال: نفترض أن البنك يسمي العمود 'transaction date' و 'amount'
+        # هنا سنبحث عن أقرب اسم
+
+        # -- منطق تبسيط للتوضيح --
+        # سنفترض أن المستخدم يرفع ملفاً فيه أعمدة بالأسماء التالية:
+        # date, label, ref, amount
+
+        lines_to_create = []
+        for index, row in df.iterrows():
+            # تحويل التاريخ
+            # date_val = pd.to_datetime(row.get('date')).date()
+
+            # إنشاء السطر
+            line = BankStatementLine(
+                statement=statement_obj,
+                date=row.get('date'),  # يجب التأكد أن الصيغة مقروءة لبايثون
+                label=row.get('label') or row.get('description') or "No Desc",
+                ref=row.get('ref', ''),
+                amount=Decimal(str(row.get('amount', 0))),  # التحويل لـ Decimal مهم جداً
+                # amount_residual سيتم حسابه تلقائياً في المودل عند الحفظ
+            )
+            lines_to_create.append(line)
+
+        # الحفظ الجماعي (Bulk Create) أسرع، لكنه لا يشغل دالة save() الخاصة بالمودل
+        # لذلك سنستخدم الحفظ العادي لضمان عمل logic الـ residual
+        for line in lines_to_create:
+            line.save()
+
+    def get_success_url(self):
+        # نذهب لصفحة التفاصيل لمراجعة ما تم رفعه
+        return reverse("banking:bank_statement_detail", kwargs={"pk": self.object.pk})
+
+
+class BankStatementDetailView(BankBaseView, DetailView):
+    """عرض تفاصيل الكشف والأسطر التي بداخله"""
+    model = BankStatement
+    template_name = "banking/bank_statement_detail.html"
     context_object_name = "statement"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["title"] = _("إضافة كشف بنك جديد")
+        ctx["title"] = f"تفاصيل الكشف: {self.object.name}"
+        # جلب الأسطر
+        ctx["lines"] = self.object.lines.order_by("date", "id")
         return ctx
-
-    def get_success_url(self):
-        return reverse("banking:bank_statement_list")
 
 
 class BankStatementUpdateView(BankBaseView, UpdateView):
-    """
-    تعديل كشف بنك موجود.
-    """
-
     model = BankStatement
     form_class = BankStatementForm
     template_name = "banking/bank_statement_form.html"
-    context_object_name = "statement"
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx["title"] = _("تعديل كشف البنك")
-        return ctx
 
     def get_success_url(self):
         return reverse("banking:bank_statement_list")
+
+
+class BankStatementDeleteView(BankBaseView, DeleteView):
+    model = BankStatement
+    success_url = reverse_lazy("banking:bank_statement_list")
+    template_name = "banking/confirm_delete.html"
+
+
+# =========================================================
+# 4. Reconciliation Dashboard (The Core Feature)
+# =========================================================
+
+class ReconciliationDashboardView(BankBaseView, DetailView):
+    """
+    لوحة القيادة للتسوية.
+    تعرض عمودين:
+    1. حركات البنك غير المسواة (لهذا الحساب).
+    2. قيود المحاسبة غير المسواة (لنفس حساب الأستاذ).
+    """
+    model = BankAccount
+    template_name = "banking/reconciliation_dashboard.html"
+    context_object_name = "bank_account"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        bank_account = self.object
+        gl_account = bank_account.account  # حساب الأستاذ المرتبط
+
+        ctx["title"] = f"تسوية: {bank_account.name}"
+
+        # 1. جلب حركات البنك غير المسواة (أو المسواة جزئياً)
+        # نستبعد الحركات التي amount_residual = 0
+        ctx["bank_lines"] = (
+            BankStatementLine.objects
+            .filter(statement__bank_account=bank_account)
+            .exclude(amount_residual=0)
+            .order_by("date")
+        )
+
+        # 2. جلب قيود المحاسبة غير المسواة
+        # نفترض في مودل JournalItem لديك حقل لتتبع حالة التسوية أو نعتمد على جدول الربط
+        # الطريقة الأدق: نجلب القيود التي ليس لها BankReconciliation يغطي كامل المبلغ
+        # للتبسيط هنا: سنفترض أننا نريد عرض كل القيود على حساب البنك في دفتر الأستاذ
+        # التي لم يتم ربطها بالكامل.
+
+        # ملاحظة: هذا الكويري يعتمد على تصميم JournalItem لديك.
+        # سنفترض وجود flag اسمه is_reconciled في JournalItem أو نحسبه
+        ctx["journal_items"] = (
+            JournalLine.objects
+            .filter(account=gl_account)  # فقط القيود التي تخص هذا البنك
+            .filter(reconciled=False)  # غير مسواة (حسب مودل المحاسبة لديك)
+            .order_by("date")
+        )
+
+        return ctx
+
+
+# =========================================================
+# 5. API / AJAX Actions (JSON Responses)
+# =========================================================
+
+@require_POST
+def perform_reconciliation(request):
+    """
+    يستقبل طلب AJAX لربط سطر بنكي بسطر محاسبي.
+    Data: {bank_line_id: 1, journal_item_id: 50, amount: 100}
+    """
+    import json
+    data = json.loads(request.body)
+
+    bank_line_id = data.get("bank_line_id")
+    journal_item_id = data.get("journal_item_id")
+    amount = data.get("amount")  # المبلغ المراد تسويته
+
+    try:
+        with transaction.atomic():
+            # جلب الكائنات
+            bank_line = get_object_or_404(BankStatementLine, pk=bank_line_id)
+            journal_item = get_object_or_404(JournalLine, pk=journal_item_id)
+
+            # إنشاء التسوية
+            rec = BankReconciliation.objects.create(
+                bank_line=bank_line,
+                journal_item=journal_item,
+                amount_reconciled=Decimal(amount)
+            )
+
+            # (اختياري) تحديث حالة القيد المحاسبي لـ "مسوى" إذا تغطى المبلغ بالكامل
+            # journal_item.check_reconciled_status() 
+
+            return JsonResponse({
+                "status": "success",
+                "message": "تمت المطابقة بنجاح",
+                "new_residual": str(bank_line.amount_residual)  # لإرسال المتبقي للواجهة لتحديثها
+            })
+
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=400)
+
+
+@require_POST
+def undo_reconciliation(request):
+    """
+    فك التسوية (حذف الربط)
+    Data: {reconciliation_id: 55}
+    """
+    import json
+    data = json.loads(request.body)
+    rec_id = data.get("reconciliation_id")
+
+    try:
+        rec = get_object_or_404(BankReconciliation, pk=rec_id)
+        rec.delete()  # دالة delete في المودل ستعيد الأموال للسطر البنكي تلقائياً
+
+        return JsonResponse({"status": "success", "message": "تم إلغاء المطابقة"})
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=400)

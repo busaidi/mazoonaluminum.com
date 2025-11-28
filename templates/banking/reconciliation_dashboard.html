@@ -1,0 +1,129 @@
+{% extends "accounting/base_accounting.html" %}
+{% load i18n humanize %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block accounting_content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="h5 mb-1">{{ title }}</h2>
+        <p class="text-muted small mb-0">
+            {% trans "قم بمطابقة حركات البنك (يمين) مع قيود النظام (يسار)." %}
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'banking:bank_account_list' %}" class="btn btn-sm btn-outline-secondary">{% trans "خروج" %}</a>
+    </div>
+</div>
+
+<div class="row g-3" style="height: calc(100vh - 200px);">
+    
+    <div class="col-md-6 h-100">
+        <div class="card shadow-sm h-100 border-0">
+            <div class="card-header bg-primary text-white d-flex justify-content-between">
+                <span class="fw-bold">{% trans "كشف البنك (الوارد)" %}</span>
+                <span class="badge bg-white text-primary">{{ bank_lines.count }}</span>
+            </div>
+            <div class="card-body p-0 overflow-auto">
+                <table class="table table-hover table-sm mb-0 small">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th>{% trans "التاريخ" %}</th>
+                            <th>{% trans "الوصف" %}</th>
+                            <th class="text-end">{% trans "المبلغ" %}</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for line in bank_lines %}
+                        <tr class="align-middle bank-line-row" data-id="{{ line.id }}" data-amount="{{ line.amount_residual }}">
+                            <td>{{ line.date|date:"d/m" }}</td>
+                            <td class="text-truncate" style="max-width: 150px;" title="{{ line.label }}">
+                                {{ line.label }}
+                            </td>
+                            <td class="text-end fw-bold {% if line.amount < 0 %}text-danger{% else %}text-success{% endif %}">
+                                {{ line.amount_residual|intcomma }}
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-primary py-0 px-1 select-bank-line">
+                                    <i class="bi bi-check"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center py-5 text-muted">{% trans "لا توجد حركات بنكية معلقة." %}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 h-100">
+        <div class="card shadow-sm h-100 border-0">
+            <div class="card-header bg-success text-white d-flex justify-content-between">
+                <span class="fw-bold">{% trans "دفتر الأستاذ (النظام)" %}</span>
+                <span class="badge bg-white text-success">{{ journal_items.count }}</span>
+            </div>
+            <div class="card-body p-0 overflow-auto">
+                <table class="table table-hover table-sm mb-0 small">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th></th>
+                            <th>{% trans "التاريخ" %}</th>
+                            <th>{% trans "القيد/الشريك" %}</th>
+                            <th class="text-end">{% trans "المبلغ" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in journal_items %}
+                        <tr class="align-middle gl-line-row" data-id="{{ item.id }}" data-amount="{{ item.amount }}"> <td>
+                                <button class="btn btn-sm btn-outline-success py-0 px-1 select-gl-line">
+                                    <i class="bi bi-check"></i>
+                                </button>
+                            </td>
+                            <td>{{ item.date|date:"d/m" }}</td>
+                            <td class="text-truncate" style="max-width: 150px;">
+                                {{ item.journal_entry.name|default:"-" }} <br>
+                                <span class="text-muted">{{ item.partner.name|default:"" }}</span>
+                            </td>
+                            <td class="text-end fw-bold">
+                                {{ item.amount|intcomma }} </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center py-5 text-muted">{% trans "لا توجد قيود غير مسواة." %}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div id="action-bar" class="fixed-bottom bg-white border-top shadow p-3 d-none justify-content-center gap-3 align-items-center">
+    <div>
+        <span class="text-muted">{% trans "مجموع البنك:" %}</span>
+        <span id="sum-bank" class="fw-bold mx-2">0.00</span>
+    </div>
+    <div>|</div>
+    <div>
+        <span class="text-muted">{% trans "مجموع النظام:" %}</span>
+        <span id="sum-gl" class="fw-bold mx-2">0.00</span>
+    </div>
+    
+    <button id="btn-reconcile" class="btn btn-primary px-4" disabled>
+        {% trans "تأكيد التسوية" %}
+    </button>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // هذا مكان كود الجافاسكربت الخاص بالتفاعل
+    // يمكننا إضافته لاحقاً لتفعيل الأزرار والحساب
+    console.log("Reconciliation Dashboard Loaded");
+</script>
+{% endblock %}

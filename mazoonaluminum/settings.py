@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Library for framework only
     "django.contrib.sitemaps",
+    "django.contrib.humanize",
     # My App
     "contacts.apps.ContactsConfig",
     "core.apps.CoreConfig",

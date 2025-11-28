@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <title>
-    {% blocktrans with number=invoice.number %}فاتورة {{ number }}{% endblocktrans %}
+    {% blocktrans with number=invoice.display_number %}فاتورة {{ number }}{% endblocktrans %}
   </title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -198,7 +198,6 @@
       background: #e5e7eb;
     }
 
-    /* بنود الفاتورة */
     .items-table th,
     .items-table td {
       font-size: 12px;
@@ -260,7 +259,7 @@
       <div class="invoice-meta">
         <div>
           <strong>{% trans "رقم الفاتورة:" %}</strong>
-          {{ invoice.number }}
+          {{ invoice.display_number }}
         </div>
         <div>
           <strong>{% trans "تاريخ الإصدار:" %}</strong>
@@ -285,22 +284,32 @@
     </div>
   </div>
 
-  <!-- بيانات الزبون -->
+  <!-- بيانات العميل / المورد -->
   <div class="block">
-    <div class="section-title">{% trans "بيانات الزبون" %}</div>
+    <div class="section-title">
+      {% if invoice.type == "purchase" %}
+        {% trans "بيانات المورد" %}
+      {% else %}
+        {% trans "بيانات العميل" %}
+      {% endif %}
+    </div>
+
     <div class="box">
-      <div><strong>{% trans "الاسم:" %}</strong> {{ invoice.customer.name }}</div>
-      {% if invoice.customer.company_name %}
-        <div><strong>{% trans "الشركة:" %}</strong> {{ invoice.customer.company_name }}</div>
-      {% endif %}
-      {% if invoice.customer.tax_number %}
-        <div><strong>{% trans "الرقم الضريبي:" %}</strong> {{ invoice.customer.tax_number }}</div>
-      {% endif %}
-      {% if invoice.customer.phone %}
-        <div><strong>{% trans "الهاتف:" %}</strong> {{ invoice.customer.phone }}</div>
-      {% endif %}
-      {% if invoice.customer.address %}
-        <div><strong>{% trans "العنوان:" %}</strong> {{ invoice.customer.address }}</div>
+      {% if invoice.customer %}
+        <div><strong>{% trans "الاسم:" %}</strong> {{ invoice.customer.name }}</div>
+        {% if invoice.customer.company_name %}
+          <div><strong>{% trans "الشركة:" %}</strong> {{ invoice.customer.company_name }}</div>
+        {% endif %}
+        {% if invoice.customer.tax_number %}
+          <div><strong>{% trans "الرقم الضريبي:" %}</strong> {{ invoice.customer.tax_number }}</div>
+        {% endif %}
+        {% if invoice.customer.phone %}
+          <div><strong>{% trans "الهاتف:" %}</strong> {{ invoice.customer.phone }}</div>
+        {% endif %}
+      {% else %}
+        <div class="company-details">
+          {% trans "لم يتم ربط الفاتورة بأي عميل/مورد." %}
+        </div>
       {% endif %}
     </div>
   </div>
@@ -382,7 +391,6 @@
   </div>
 
   {% if invoice.description %}
-    <!-- الوصف / التفاصيل -->
     <div class="block">
       <div class="section-title">{% trans "الوصف / التفاصيل" %}</div>
       <div class="box notes">
@@ -392,7 +400,6 @@
   {% endif %}
 
   {% if invoice.terms %}
-    <!-- الشروط والأحكام -->
     <div class="block">
       <div class="section-title">{% trans "الشروط والأحكام" %}</div>
       <div class="box notes">
@@ -418,8 +425,20 @@
           <tr>
             <td>{{ p.date }}</td>
             <td>{{ p.amount }}</td>
-            <td>{{ p.get_method_display }}</td>
-            <td>{{ p.notes }}</td>
+            <td>
+              {% if p.method %}
+                {{ p.method.name }}
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if p.description %}
+                {{ p.description }}
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
           </tr>
         {% empty %}
           <tr>
@@ -439,8 +458,7 @@
 </div>
 
 <script>
-  // لو تحب يفتح صفحة الطباعة مباشرة:
-  // window.print();
+  // window.print();  // فعّلها لو تحب تفتح الطباعة مباشرة
 </script>
 
 </body>

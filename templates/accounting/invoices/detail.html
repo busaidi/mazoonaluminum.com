@@ -1,5 +1,5 @@
 {% extends "accounting/base_accounting.html" %}
-{% load i18n %}
+{% load i18n humanize %}
 
 {# ================= META TAGS ================= #}
 {% block meta_title %}
@@ -10,24 +10,6 @@
       {% blocktrans with serial=serial %}فاتورة مبيعات {{ serial }} | Mazoon Aluminum{% endblocktrans %}
     {% else %}
       {% blocktrans with serial=serial %}فاتورة {{ serial }} | Mazoon Aluminum{% endblocktrans %}
-    {% endif %}
-  {% endwith %}
-{% endblock %}
-
-{% block meta_description %}
-  {% with serial=invoice.display_number customer=invoice.customer.name %}
-    {% if invoice_type == 'purchase' %}
-      {% blocktrans with serial=serial customer=customer %}
-        تفاصيل فاتورة المشتريات رقم {{ serial }} للمورد {{ customer }}، مع عرض البنود والمبالغ.
-      {% endblocktrans %}
-    {% elif invoice_type == 'sales' %}
-      {% blocktrans with serial=serial customer=customer %}
-        تفاصيل فاتورة المبيعات رقم {{ serial }} للعميل {{ customer }}، مع عرض البنود والمبالغ.
-      {% endblocktrans %}
-    {% else %}
-      {% blocktrans with serial=serial customer=customer %}
-        تفاصيل الفاتورة رقم {{ serial }} للطرف {{ customer }}، مع عرض البنود والمبالغ.
-      {% endblocktrans %}
     {% endif %}
   {% endwith %}
 {% endblock %}
@@ -48,7 +30,7 @@
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
       {% with serial=invoice.display_number %}
-        <h1 class="h3 mb-1">
+        <h1 class="h3 mb-1 text-dark fw-bold">
           {% if invoice_type == 'purchase' %}
             {% blocktrans with serial=serial %}فاتورة مشتريات {{ serial }}{% endblocktrans %}
           {% elif invoice_type == 'sales' %}
@@ -59,129 +41,93 @@
         </h1>
       {% endwith %}
 
-      <p class="text-muted small mb-0">
-        {% if invoice_type == 'purchase' %}
-          {% blocktrans with name=invoice.customer.name %}مورد: {{ name }}{% endblocktrans %}
-        {% else %}
-          {% blocktrans with name=invoice.customer.name %}عميل: {{ name }}{% endblocktrans %}
-        {% endif %}
-      </p>
+      {# سطر العميل / المورد مع حماية لو ما فيه عميل #}
+      {% if invoice.customer %}
+        <p class="text-muted small mb-0">
+          {% if invoice_type == 'purchase' %}
+            {% blocktrans with name=invoice.customer.name %}مورد: {{ name }}{% endblocktrans %}
+          {% else %}
+            {% blocktrans with name=invoice.customer.name %}عميل: {{ name }}{% endblocktrans %}
+          {% endif %}
+        </p>
+      {% else %}
+        <p class="text-muted small mb-0">
+          {% if invoice_type == 'purchase' %}
+            {% trans "مورد غير محدد" %}
+          {% else %}
+            {% trans "عميل غير محدد" %}
+          {% endif %}
+        </p>
+      {% endif %}
     </div>
 
     <div class="d-flex flex-wrap gap-2">
-      {# نحدد روابط التعديل / الاعتماد / إلغاء الترحيل / الطباعة حسب نوع الفاتورة #}
-      {% if invoice_type == 'purchase' %}
+      {# نحدد روابط التعديل والطباعة حسب نوع الفاتورة في الموديل نفسه #}
+      {% if invoice.type == 'purchase' %}
         {% url 'accounting:purchase_invoice_edit' invoice.pk as edit_url %}
-        {% url 'accounting:purchase_invoice_confirm' invoice.pk as confirm_url %}
-        {% url 'accounting:purchase_invoice_unpost' invoice.pk as unpost_url %}
         {% url 'accounting:purchase_invoice_print' invoice.pk as print_url %}
       {% else %}
-        {# نعتبر الباقي = مبيعات #}
         {% url 'accounting:sales_invoice_edit' invoice.pk as edit_url %}
-        {% url 'accounting:sales_invoice_confirm' invoice.pk as confirm_url %}
-        {% url 'accounting:sales_invoice_unpost' invoice.pk as unpost_url %}
         {% url 'accounting:sales_invoice_print' invoice.pk as print_url %}
       {% endif %}
 
-      {# تعديل الفاتورة #}
-      <a href="{{ edit_url }}"
-         class="btn btn-primary btn-sm">
+      <a href="{{ edit_url }}" class="btn btn-primary btn-sm">
         {% trans "تعديل الفاتورة" %}
       </a>
 
-      {# اعتماد وترحيل - فقط لو مسودة #}
-      {% if invoice.status == 'draft' %}
-        <a href="{{ confirm_url }}"
-           class="btn btn-outline-primary btn-sm">
-          {% trans "اعتماد وترحيل إلى دفتر الأستاذ" %}
-        </a>
-      {% endif %}
-
-      {# إلغاء الترحيل - لو ليست مسودة ويوجد قيد مرتبط #}
-      {% if invoice.status != 'draft' and invoice.ledger_entry %}
-        <a href="{{ unpost_url }}"
-           class="btn btn-outline-warning btn-sm">
-          {% trans "إلغاء الترحيل" %}
-        </a>
-      {% endif %}
-
-      {# عرض قيد اليومية المرتبط بالفاتورة #}
-      {% if invoice.ledger_entry %}
-        <a href="{% url 'accounting:journal_entry_detail' invoice.ledger_entry.pk %}"
-           class="btn btn-outline-secondary btn-sm">
-          {% trans "عرض قيد اليومية" %}
-        </a>
-      {% endif %}
-
-      {# طباعة / PDF #}
-      <a href="{{ print_url }}"
-         class="btn btn-outline-secondary btn-sm"
-         target="_blank">
+      <a href="{{ print_url }}" class="btn btn-outline-secondary btn-sm" target="_blank">
         {% trans "طباعة / PDF" %}
       </a>
 
-      {# رجوع للقائمة الصحيحة #}
       <a href="{{ back_url }}" class="btn btn-secondary btn-sm">
-        {% if invoice_type == 'purchase' %}
-          {% trans "رجوع إلى فواتير المشتريات" %}
-        {% elif invoice_type == 'sales' %}
-          {% trans "رجوع إلى فواتير المبيعات" %}
-        {% else %}
-          {% trans "رجوع إلى لوحة المحاسبة" %}
-        {% endif %}
+        {% trans "رجوع" %}
       </a>
     </div>
   </div>
 
   <div class="row g-3 mb-3">
-    <!-- بيانات العميل/المورد -->
     <div class="col-md-6">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-body">
-          <h5 class="card-title mb-3">
+          <h5 class="card-title mb-3 text-muted small fw-bold text-uppercase">
             {% if invoice_type == 'purchase' %}
               {% trans "بيانات المورد" %}
             {% else %}
               {% trans "بيانات العميل" %}
             {% endif %}
           </h5>
-          <p class="mb-1 fw-semibold">{{ invoice.customer.name }}</p>
 
-          {% if invoice.customer.company_name %}
-            <p class="mb-1 text-muted small">{{ invoice.customer.company_name }}</p>
-          {% endif %}
+          <p class="mb-1 fw-bold text-dark fs-5">
+            {% if invoice.customer %}
+              {{ invoice.customer.name }}
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </p>
 
-          {% if invoice.customer.phone %}
+          {% if invoice.customer and invoice.customer.phone %}
             <p class="mb-1">
-              <span class="text-muted small">📞</span>
+              <span class="text-muted small">{% trans "هاتف:" %}</span>
               <span class="small">{{ invoice.customer.phone }}</span>
-            </p>
-          {% endif %}
-
-          {% if invoice.customer.email %}
-            <p class="mb-0">
-              <span class="text-muted small">✉</span>
-              <span class="small">{{ invoice.customer.email }}</span>
             </p>
           {% endif %}
         </div>
       </div>
     </div>
 
-    <!-- تفاصيل الفاتورة -->
     <div class="col-md-6">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-body">
-          <h5 class="card-title mb-3">{% trans "تفاصيل الفاتورة" %}</h5>
+          <h5 class="card-title mb-3 text-muted small fw-bold text-uppercase">{% trans "تفاصيل الفاتورة" %}</h5>
           <p class="mb-1 small">
             <span class="text-muted">{% trans "التاريخ:" %}</span>
-            <span class="fw-semibold">{{ invoice.issued_at|date:"d M Y" }}</span>
+            <span class="fw-semibold">{{ invoice.issued_at|date:"d/m/Y" }}</span>
           </p>
           <p class="mb-1 small">
-            <span class="text-muted">{% trans "تاريخ الاستحقاق:" %}</span>
+            <span class="text-muted">{% trans "الاستحقاق:" %}</span>
             <span class="fw-semibold">
               {% if invoice.due_date %}
-                {{ invoice.due_date|date:"d M Y" }}
+                {{ invoice.due_date|date:"d/m/Y" }}
               {% else %}
                 -
               {% endif %}
@@ -189,117 +135,124 @@
           </p>
           <p class="mb-0 small">
             <span class="text-muted">{% trans "الحالة:" %}</span>
-            <span class="{{ invoice.status_badge }} ms-1">
-              {{ invoice.get_status_display }}
-            </span>
+            {% if invoice.status == 'paid' %}
+                <span class="badge bg-dark">{% trans "مدفوعة" %}</span>
+            {% elif invoice.status == 'partially_paid' %}
+                <span class="badge bg-warning text-dark">{% trans "جزئي" %}</span>
+            {% elif invoice.status == 'sent' %}
+                <span class="badge bg-primary">{% trans "مرسلة" %}</span>
+            {% elif invoice.status == 'cancelled' %}
+                <span class="badge bg-danger">{% trans "ملغاة" %}</span>
+            {% else %}
+                <span class="badge bg-secondary">{% trans "مسودة" %}</span>
+            {% endif %}
           </p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- المبالغ -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body">
-      <h5 class="card-title mb-3">{% trans "المبالغ" %}</h5>
-      <div class="row">
-        <div class="col-md-4 col-sm-6 mb-2">
-          <div class="small text-muted mb-1">{% trans "الإجمالي" %}</div>
-          <div class="fw-semibold">{{ invoice.total_amount }}</div>
+      <div class="row text-center">
+        <div class="col-4 border-end">
+          <div class="small text-muted mb-1 text-uppercase fw-bold">{% trans "الإجمالي" %}</div>
+          <div class="fw-bold fs-5">{{ invoice.total_amount|intcomma }}</div>
         </div>
-        <div class="col-md-4 col-sm-6 mb-2">
-          <div class="small text-muted mb-1">{% trans "المدفوع" %}</div>
-          <div class="fw-semibold">{{ invoice.paid_amount }}</div>
+        <div class="col-4 border-end">
+          <div class="small text-muted mb-1 text-uppercase fw-bold">{% trans "المدفوع" %}</div>
+          <div class="fw-bold fs-5 text-success">{{ invoice.paid_amount|intcomma }}</div>
         </div>
-        <div class="col-md-4 col-sm-6 mb-2">
-          <div class="small text-muted mb-1">{% trans "المتبقي" %}</div>
-          <div class="fw-semibold">{{ invoice.balance }}</div>
+        <div class="col-4">
+          <div class="small text-muted mb-1 text-uppercase fw-bold">{% trans "المتبقي" %}</div>
+          <div class="fw-bold fs-5 text-danger">{{ invoice.balance|intcomma }}</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- بنود الفاتورة -->
   <div class="card border-0 shadow-sm mb-3">
-    <div class="card-body">
-      <h5 class="card-title mb-3">{% trans "بنود الفاتورة" %}</h5>
-
+    <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table table-sm align-middle invoice-items-table mb-0">
-          <thead class="table-light">
+        <table class="table table-hover align-middle invoice-items-table mb-0">
+          <thead class="bg-light small text-muted">
             <tr>
-              <th class="product-col">{% trans "المنتج" %}</th>
-              <th class="desc-col">{% trans "الوصف" %}</th>
-              <th class="qty-col text-center">{% trans "الكمية" %}</th>
-              <th class="price-col text-center">{% trans "سعر الوحدة" %}</th>
-              <th class="total-col text-end">{% trans "الإجمالي" %}</th>
+              <th style="padding-left: 1.5rem;">{% trans "المنتج / الوصف" %}</th>
+              <th class="text-center">{% trans "الكمية" %}</th>
+              <th class="text-center">{% trans "السعر" %}</th>
+              <th class="text-end" style="padding-right: 1.5rem;">{% trans "الإجمالي" %}</th>
             </tr>
           </thead>
           <tbody>
             {% for item in invoice.items.all %}
               <tr>
-                <td class="product-col">
-                  {% if item.product %}
-                    {{ item.product.name }}
-                  {% else %}
-                    <span class="text-muted small">—</span>
+                <td style="padding-left: 1.5rem;">
+                  <div class="fw-bold text-dark">
+                    {{ item.product.name|default:item.description }}
+                  </div>
+                  {% if item.product and item.description %}
+                    <small class="text-muted">{{ item.description }}</small>
                   {% endif %}
                 </td>
-                <td class="desc-col small">
-                  {% if item.description %}
-                    {{ item.description }}
-                  {% elif item.product %}
-                    {{ item.product.description }}
-                  {% else %}
-                    <span class="text-muted">—</span>
-                  {% endif %}
-                </td>
-                <td class="qty-col text-center">
-                  {{ item.quantity }}
-                </td>
-                <td class="price-col text-center">
-                  {{ item.unit_price }}
-                </td>
-                <td class="total-col text-end">
-                  <span class="invoice-line-total">{{ item.subtotal }}</span>
+                <td class="text-center">{{ item.quantity|stringformat:".2f" }}</td>
+                <td class="text-center">{{ item.unit_price|stringformat:".3f" }}</td>
+                <td class="text-end fw-bold text-dark" style="padding-right: 1.5rem;">
+                    {{ item.subtotal|stringformat:".3f" }}
                 </td>
               </tr>
             {% empty %}
               <tr>
-                <td colspan="5" class="text-center text-muted small py-3">
+                <td colspan="4" class="text-center text-muted py-4">
                   {% trans "لا توجد بنود في هذه الفاتورة." %}
                 </td>
               </tr>
             {% endfor %}
           </tbody>
+          <tfoot class="bg-light">
+            <tr>
+              <td colspan="3" class="text-end text-muted small fw-bold text-uppercase py-3">
+                {% trans "الإجمالي الكلي" %}
+              </td>
+              <td class="text-end fw-bold fs-5 text-dark py-3" style="padding-right: 1.5rem;">
+                {{ invoice.total_amount|intcomma }} <small class="fs-6 text-muted">OMR</small>
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
-
     </div>
   </div>
 
-  <!-- الوصف -->
-  {% if invoice.description %}
-    <div class="card border-0 shadow-sm mb-3">
-      <div class="card-body">
-        <h5 class="card-title mb-3">{% trans "الوصف" %}</h5>
-        <p class="mb-0 small">{{ invoice.description|linebreaks }}</p>
+  {% if invoice.description or invoice.terms %}
+    <div class="row g-3">
+      {% if invoice.description %}
+      <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body">
+            <h6 class="card-title text-muted small fw-bold mb-2">{% trans "ملاحظات" %}</h6>
+            <p class="mb-0 small text-dark">{{ invoice.description|linebreaksbr }}</p>
+          </div>
+        </div>
       </div>
+      {% endif %}
+      
+      {% if invoice.terms %}
+      <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body">
+            <h6 class="card-title text-muted small fw-bold mb-2">{% trans "الشروط والأحكام" %}</h6>
+            <p class="mb-0 small text-dark">{{ invoice.terms|linebreaksbr }}</p>
+          </div>
+        </div>
+      </div>
+      {% endif %}
     </div>
   {% endif %}
 
-  <!-- الشروط والأحكام -->
-  {% if invoice.terms %}
-    <div class="card border-0 shadow-sm mb-3">
-      <div class="card-body">
-        <h5 class="card-title mb-3">{% trans "الشروط والأحكام" %}</h5>
-        <p class="mb-0 small">{{ invoice.terms|linebreaks }}</p>
-      </div>
-    </div>
-  {% endif %}
-
-  {# المرفقات من الـ AttachmentPanelMixin #}
-  {% include "core/attachments/_panel.html" %}
+  {# المرفقات #}
+  <div class="mt-4">
+      {% include "core/attachments/_panel.html" %}
+  </div>
 
 </div>
 {% endblock %}
