@@ -24,7 +24,7 @@
 # from cart.cart import Cart
 # from contacts.models import Contact
 # from core.services.notifications import create_notification
-# from payments.models import Payment
+# from reconcile.models import Payment
 # from website.models import Product
 #
 #
@@ -97,7 +97,7 @@
 #
 # class CustomerPaymentQuerysetMixin(CustomerPortalMixin):
 #     """
-#     Mixin that provides a queryset of payments filtered by the current customer.
+#     Mixin that provides a queryset of reconcile filtered by the current customer.
 #     """
 #
 #     def get_queryset(self):
@@ -129,9 +129,9 @@
 # class PortalDashboardView(CustomerPortalMixin, TemplateView):
 #     """
 #     Simple dashboard summary for the customer:
-#     - Number of invoices and payments
+#     - Number of invoices and reconcile
 #     - Total invoiced, total paid, current balance
-#     - Recent invoices and payments
+#     - Recent invoices and reconcile
 #     """
 #     template_name = "portal/dashboard.html"
 #
@@ -241,11 +241,11 @@
 #
 # class PortalPaymentListView(CustomerPaymentQuerysetMixin, ListView):
 #     """
-#     List all payments made by the current customer.
+#     List all reconcile made by the current customer.
 #     """
 #     model = Payment
 #     template_name = "portal/payment/list.html"
-#     context_object_name = "payments"
+#     context_object_name = "reconcile"
 #     paginate_by = 20
 #
 #

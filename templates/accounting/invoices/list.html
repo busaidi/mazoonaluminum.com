@@ -101,7 +101,7 @@
                 {{ inv.total_amount|intcomma }}
             </td>
             <td class="text-end text-success small">
-                {{ inv.paid_amount|intcomma }}
+                {{ inv.allocated_amount|intcomma }}
             </td>
             <td class="text-end">
                 {% if inv.balance > 0 %}
@@ -134,7 +134,7 @@
       </tbody>
     </table>
   </div>
-  
+
   {# Pagination #}
   {% if is_paginated %}
   <div class="card-footer bg-white border-top py-3">

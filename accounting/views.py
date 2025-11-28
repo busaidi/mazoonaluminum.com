@@ -21,7 +21,7 @@ from django.views.generic import (
     ListView,
     TemplateView,
     UpdateView,
-    DeleteView,
+    DeleteView, FormView,
 )
 from openpyxl import Workbook
 from openpyxl.styles import Font
@@ -44,7 +44,7 @@ from .forms import (
     LedgerSettingsForm,
     SettingsForm,
     TrialBalanceFilterForm,
-    PaymentForm,
+    PaymentForm, PaymentReconciliationForm,
 )
 from .models import (
     Account,
@@ -61,7 +61,7 @@ from .models import (
 from .services import (
     build_lines_from_formset,
     ensure_default_chart_of_accounts,
-    import_chart_of_accounts_from_excel,
+    import_chart_of_accounts_from_excel, allocate_payment_to_invoices, clear_payment_allocations,
 )
 
 
@@ -365,8 +365,8 @@ def invoice_unpost_view(request, pk):
 class PaymentListView(AccountingBaseView, ListView):
     model = Payment
     template_name = "accounting/payment/list.html"
-    context_object_name = "payments"
-    accounting_section = "payments"
+    context_object_name = "reconcile"
+    accounting_section = "reconcile"
     paginate_by = 25
 
 
@@ -374,7 +374,7 @@ class PaymentCreateView(AccountingBaseView, CreateView):
     model = Payment
     form_class = PaymentForm
     template_name = "accounting/payment/form.html"
-    accounting_section = "payments"
+    accounting_section = "reconcile"
     success_url = reverse_lazy("accounting:payment_list")
 
     def form_valid(self, form):
@@ -387,14 +387,14 @@ class PaymentUpdateView(AccountingBaseView, UpdateView):
     model = Payment
     form_class = PaymentForm
     template_name = "accounting/payment/form.html"
-    accounting_section = "payments"
+    accounting_section = "reconcile"
     success_url = reverse_lazy("accounting:payment_list")
 
 
 class PaymentDetailView(AccountingBaseView, DetailView):
     model = Payment
     template_name = "accounting/payment/detail.html"
-    accounting_section = "payments"
+    accounting_section = "reconcile"
 
 
 class PaymentDeleteView(AccountingStaffRequiredMixin, DeleteView):
@@ -950,3 +950,130 @@ class PaymentPrintView(AccountingStaffRequiredMixin, DetailView):
     model = Payment
     template_name = "accounting/payment/print.html"
     context_object_name = "payment"
+
+
+
+class PaymentReconcileView(AccountingStaffRequiredMixin, FormView):
+    """
+    شاشة تسوية دفعة معينة مع الفواتير المفتوحة لنفس الطرف.
+
+    - تعرض جميع الفواتير المفتوحة / غير المدفوعة لنفس العميل.
+    - تُنشئ حقلاً لكل فاتورة لإدخال مبلغ التسوية.
+    - عند الحفظ تستدعي خدمة allocate_payment_to_invoices في services.
+    """
+
+    template_name = "accounting/reconcile/reconcile_payment.html"
+    form_class = PaymentReconciliationForm
+
+    # ------------------------------------------------------
+    # جلب الدفعة المستهدفة من الـ URL
+    # ------------------------------------------------------
+    def dispatch(self, request, *args, **kwargs):
+        self.payment = get_object_or_404(Payment, pk=kwargs.get("pk"))
+        return super().dispatch(request, *args, **kwargs)
+
+    # ------------------------------------------------------
+    # الفواتير المتاحة للتسوية
+    # ------------------------------------------------------
+    def get_invoices_queryset(self):
+        """
+        إرجاع الفواتير المفتوحة لنفس الطرف المرتبط بهذه الدفعة.
+        يمكنك تعديل الشروط حسب منطق المشروع.
+        """
+        qs = Invoice.objects.filter(
+            customer=self.payment.contact,
+            type=Invoice.InvoiceType.SALES,
+        ).exclude(
+            status__in=[
+                Invoice.Status.CANCELLED,
+                Invoice.Status.DRAFT,
+                Invoice.Status.PAID,
+            ]
+        )
+
+        return qs.order_by("-issued_at", "-id")
+
+    # ------------------------------------------------------
+    # تمرير الدفعة والفواتير إلى الفورم
+    # ------------------------------------------------------
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        invoices = self.get_invoices_queryset()
+        kwargs["payment"] = self.payment
+        kwargs["invoices"] = invoices
+        return kwargs
+
+    # ------------------------------------------------------
+    # إعداد الكونتكست للقالب (الدفعة + الفواتير + الحقول)
+    # ------------------------------------------------------
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        invoices = self.get_invoices_queryset()
+        form = context["form"]
+
+        # نحضّر صفوف الجدول: كل صف يحتوي الفاتورة + حقل التسوية الخاص بها
+        invoice_rows = []
+        for inv in invoices:
+            field_name = PaymentReconciliationForm._field_name_for_invoice(inv)
+            invoice_rows.append(
+                {
+                    "invoice": inv,
+                    "field": form[field_name],
+                }
+            )
+
+        context.update(
+            {
+                "payment": self.payment,
+                "invoices": invoices,
+                "invoice_rows": invoice_rows,
+                # عشان يضوي تبويب الدفعات في الـ navbar لو مستخدمه
+                "accounting_section": "reconcile",
+            }
+        )
+        return context
+
+    # ------------------------------------------------------
+    # منطق حفظ التسوية
+    # ------------------------------------------------------
+    def form_valid(self, form):
+        """
+        عند الضغط على "حفظ التسوية":
+        - نبني قاموس {invoice_id: amount}
+        - نستدعي خدمة allocate_payment_to_invoices
+        - في حال وجود خطأ محاسبي نعرضه في الفورم
+        """
+        allocations_dict = form.get_allocations_dict()
+
+        try:
+            allocate_payment_to_invoices(self.payment, allocations_dict)
+        except ValidationError as e:
+            # نضيف الخطأ كـ non_field_error عشان يظهر أعلى الفورم
+            form.add_error(None, e)
+            return self.form_invalid(form)
+
+        messages.success(
+            self.request,
+            _("تم حفظ تسوية الدفعة مع الفواتير بنجاح."),
+        )
+
+        # رجوع إلى صفحة تفاصيل الدفعة (عدّل الاسم لو عندك view مختلف)
+        return redirect(reverse("accounting:payment_detail", args=[self.payment.pk]))
+
+
+class PaymentClearReconciliationView(AccountingStaffRequiredMixin, View):
+    """
+    إلغاء جميع التسويات المتعلقة بهذه الدفعة.
+    """
+
+    def post(self, request, pk, *args, **kwargs):
+        payment = get_object_or_404(Payment, pk=pk)
+
+        clear_payment_allocations(payment)
+
+        messages.success(
+            request,
+            _("تم إلغاء جميع تسويات هذه الدفعة وإرجاع الأرصدة كما كانت."),
+        )
+
+        return redirect(reverse("accounting:payment_detail", args=[payment.pk]))

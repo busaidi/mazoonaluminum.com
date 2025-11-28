@@ -219,9 +219,9 @@ class Migration(migrations.Migration):
                 ('is_posted', models.BooleanField(default=False)),
                 ('posted_at', models.DateTimeField(blank=True, null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('contact', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='payments', to='contacts.contact', verbose_name='الطرف')),
+                ('contact', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='reconcile', to='contacts.contact', verbose_name='الطرف')),
                 ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL)),
-                ('journal_entry', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='payments', to='accounting.journalentry')),
+                ('journal_entry', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='reconcile', to='accounting.journalentry')),
                 ('method', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='accounting.paymentmethod', verbose_name='طريقة الدفع')),
             ],
             options={

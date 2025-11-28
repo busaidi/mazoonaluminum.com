@@ -197,9 +197,9 @@ class Contact(models.Model):
     def total_paid(self) -> Decimal:
         """
         مجموع المدفوعات لهذه الجهة لو كانت زبون.
-        يعتمد على related_name='payments' في Payment.contact.
+        يعتمد على related_name='reconcile' في Payment.contact.
         """
-        related = getattr(self, "payments", None)
+        related = getattr(self, "reconcile", None)
         if related is None:
             return Decimal("0")
         value = related.aggregate(s=Sum("amount")).get("s")

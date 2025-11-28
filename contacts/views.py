@@ -141,10 +141,6 @@ class ContactDetailView(ContactsStaffRequiredMixin, DetailView):
     context_object_name = "contact"
 
     def get_queryset(self):
-        """
-        نستخدم select_related لجلب الشركة المرتبطة من نفس الكويري،
-        عشان نقلل عدد الاستعلامات عند استخدام contact.company في القالب.
-        """
         return Contact.objects.select_related("company")
 
     def get_context_data(self, **kwargs):
@@ -162,7 +158,7 @@ class ContactDetailView(ContactsStaffRequiredMixin, DetailView):
         ctx["addresses"] = addresses
 
         # -----------------------------
-        # ملخص مالي
+        # ملخص مالي من خصائص الكونتاكت
         # -----------------------------
         ctx["total_invoiced"] = contact.total_invoiced
         ctx["total_paid"] = contact.total_paid
@@ -178,26 +174,31 @@ class ContactDetailView(ContactsStaffRequiredMixin, DetailView):
             .order_by("-date", "-id")
         )
 
+        incoming_types = ["in", "incoming", "customer_receipt"]
+        outgoing_types = ["out", "outgoing", "supplier_payment"]
+
         total_in = (
-            payments_qs.filter(direction=Payment.Direction.IN)
+            payments_qs.filter(type__in=incoming_types)
             .aggregate(total=Sum("amount"))["total"]
             or Decimal("0.000")
         )
         total_out = (
-            payments_qs.filter(direction=Payment.Direction.OUT)
+            payments_qs.filter(type__in=outgoing_types)
             .aggregate(total=Sum("amount"))["total"]
             or Decimal("0.000")
         )
 
+        # ✅ هذه اللي يحتاجها التاب
         ctx["payments"] = payments_qs
         ctx["payments_total_in"] = total_in
         ctx["payments_total_out"] = total_out
 
+        # لو ما تحتاجها في مكان آخر تقدر تشيلها
+        ctx["reconcile"] = payments_qs
+
         # سياق الأقسام
         ctx["section"] = self.section
         ctx["subsection"] = "contacts"
-
-        # 🔹 عشان ناف المحاسبة
         ctx["accounting_section"] = "customers"
 
         return ctx

@@ -138,7 +138,7 @@ msgstr "Email (optional)"
 
 #: accounting/forms.py:523 accounting/models.py:669
 msgid "بادئة أرقام الدفعات"
-msgstr "View all payments"
+msgstr "View all reconcile"
 
 #: accounting/forms.py:524 accounting/models.py:676
 msgid "عدد الخانات الرقمية للدفعات"
@@ -290,11 +290,11 @@ msgstr ""
 
 #: accounting/models.py:662
 msgid "تفعيل ترقيم الدفعات؟"
-msgstr "Total payments"
+msgstr "Total reconcile"
 
 #: accounting/models.py:663
 msgid "إذا تم تعطيله، لن يتم توليد أرقام تلقائية للدفعات."
-msgstr "If disabled, no automatic numbers will be generated for payments."
+msgstr "If disabled, no automatic numbers will be generated for reconcile."
 
 #: accounting/models.py:670
 msgid "تظهر في بداية رقم الدفع مثل PAY-2025-0001."
@@ -302,7 +302,7 @@ msgstr "Appears at the beginning of the payment number, e.g. PAY-2025-0001."
 
 #: accounting/models.py:677
 msgid "مثلاً 4 تعني 0001، 0002، ... للدفعات."
-msgstr "For example, 4 means 0001, 0002, ... for payments."
+msgstr "For example, 4 means 0001, 0002, ... for reconcile."
 
 #: accounting/models.py:684
 msgid "مثلاً 1 تعني أن أول دفعة ستكون 0001."
@@ -1921,7 +1921,7 @@ msgstr "Customer details"
 #, python-format
 msgid "تفاصيل حساب الزبون %(name)s مع الفواتير والطلبات والدفعات."
 msgstr ""
-"Customer account details for %(name)s with invoices, orders, and payments."
+"Customer account details for %(name)s with invoices, orders, and reconcile."
 
 #: templates/accounting/customer/detail.html:18
 #, python-format
@@ -1989,7 +1989,7 @@ msgstr "Total invoices"
 #: templates/accounting/customer/detail.html:111
 #: templates/portal/dashboard.html:53
 msgid "إجمالي الدفعات"
-msgstr "Total payments"
+msgstr "Total reconcile"
 
 #: templates/accounting/customer/detail.html:120
 #: templates/accounting/customer/list.html:58
@@ -2144,7 +2144,7 @@ msgstr "Settle / link to invoice"
 
 #: templates/accounting/customer/detail.html:331
 msgid "لا توجد دفعات لهذا الزبون."
-msgstr "There are no payments for this customer."
+msgstr "There are no reconcile for this customer."
 
 #: templates/accounting/customer/form.html:5
 #: templates/accounting/customer/form.html:23
@@ -2313,12 +2313,12 @@ msgid ""
 "لوحة تحكم لمتابعة العملاء، الطلبات، الفواتير والدفعات في نظام المحاسبة الخاص "
 "بمزون ألمنيوم."
 msgstr ""
-"A dashboard to monitor invoices, payments, and orders in Mazoon Aluminum's "
+"A dashboard to monitor invoices, reconcile, and orders in Mazoon Aluminum's "
 "accounting system."
 
 #: templates/accounting/dashboard.html:23
 msgid "نظرة سريعة على العملاء، الطلبات، الفواتير والدفعات."
-msgstr "Quick overview of invoices, customer, orders, and payments."
+msgstr "Quick overview of invoices, customer, orders, and reconcile."
 
 #: templates/accounting/dashboard.html:28
 #: templates/accounting/dashboard.html:126
@@ -2352,7 +2352,7 @@ msgstr "Number of invoices"
 
 #: templates/accounting/dashboard.html:81
 msgid "عدد الدفعات"
-msgstr "Number of payments"
+msgstr "Number of reconcile"
 
 #: templates/accounting/dashboard.html:96
 msgid "إجمالي المتبقي على العملاء"
@@ -2360,11 +2360,11 @@ msgstr "Total outstanding balance for customer"
 
 #: templates/accounting/dashboard.html:102
 msgid "إجمالي الفواتير ناقص الدفعات المسجّلة."
-msgstr "Total invoices minus recorded payments."
+msgstr "Total invoices minus recorded reconcile."
 
 #: templates/accounting/dashboard.html:119
 msgid "إدارة بيانات العملاء وربطهم بالفواتير والدفعات والطلبات."
-msgstr "Manage customer data and link them to invoices, payments, and orders."
+msgstr "Manage customer data and link them to invoices, reconcile, and orders."
 
 #: templates/accounting/dashboard.html:123
 msgid "عرض كل العملاء"
@@ -2397,12 +2397,12 @@ msgstr "New invoice"
 #: templates/accounting/dashboard.html:179
 msgid "تسجيل دفعات العملاء وتسويتها على الفواتير أو كدفعات عامة."
 msgstr ""
-"Record customer payments and apply them to invoices or keep them as general "
-"payments."
+"Record customer reconcile and apply them to invoices or keep them as general "
+"reconcile."
 
 #: templates/accounting/dashboard.html:183
 msgid "عرض كل الدفعات"
-msgstr "View all payments"
+msgstr "View all reconcile"
 
 #: templates/accounting/dashboard.html:186
 msgid "تسجيل دفعة"
@@ -2438,12 +2438,12 @@ msgstr "No invoices yet."
 
 #: templates/accounting/dashboard.html:303 templates/portal/dashboard.html:166
 msgid "آخر الدفعات"
-msgstr "Latest payments"
+msgstr "Latest reconcile"
 
 #: templates/accounting/dashboard.html:339
 #: templates/portal/payment/list.html:88
 msgid "لا توجد دفعات مسجلة حتى الآن."
-msgstr "No payments have been recorded yet."
+msgstr "No reconcile have been recorded yet."
 
 #: templates/accounting/dashboard.html:359
 msgid "قائمة التنبيهات"
@@ -2512,7 +2512,7 @@ msgid ""
 msgstr ""
 "\n"
 "        Details of invoice no. %(number)s for customer %(customer)s, showing "
-"line items, related payments, and the remaining amount.\n"
+"line items, related reconcile, and the remaining amount.\n"
 "    "
 
 #: templates/accounting/invoices/detail.html:22
@@ -2623,7 +2623,7 @@ msgstr "Terms and conditions"
 
 #: templates/accounting/invoices/detail.html:254
 msgid "الدفعات المرتبطة"
-msgstr "Related payments"
+msgstr "Related reconcile"
 
 #: templates/accounting/invoices/detail.html:261
 #: templates/accounting/payment/print.html:300
@@ -2634,7 +2634,7 @@ msgstr "Payment method"
 
 #: templates/accounting/invoices/detail.html:289
 msgid "لا توجد دفعات لهذه الفاتورة بعد."
-msgstr "There are no payments for this invoice yet."
+msgstr "There are no reconcile for this invoice yet."
 
 #: templates/accounting/invoices/form.html:6
 #, fuzzy, python-format
@@ -2738,7 +2738,7 @@ msgid ""
 "قائمة فواتير العملاء مع إمكانية التصفية حسب حالة الفاتورة وعرض الرصيد "
 "المتبقي لكل فاتورة."
 msgstr ""
-"List of payments with search, filter, and settlement on invoices in the "
+"List of reconcile with search, filter, and settlement on invoices in the "
 "accounting system."
 
 #: templates/accounting/invoices/list.html:21
@@ -2887,7 +2887,7 @@ msgstr "Payments on this invoice"
 
 #: templates/accounting/invoices/print.html:427
 msgid "لا توجد دفعات مسجلة على هذه الفاتورة."
-msgstr "There are no payments recorded on this invoice."
+msgstr "There are no reconcile recorded on this invoice."
 
 #: templates/accounting/invoices/print.html:436
 #: templates/accounting/orders/print.html:427
@@ -3127,7 +3127,7 @@ msgstr "Add new payment"
 
 #: templates/accounting/payment/form.html:25
 msgid "رجوع إلى الدفعات"
-msgstr "Back to payments"
+msgstr "Back to reconcile"
 
 #: templates/accounting/payment/form.html:50
 msgid "يمكن تركها فارغة لتكون دفعة عامة."
@@ -3142,14 +3142,14 @@ msgid ""
 "قائمة الدفعات مع إمكانية البحث والتصفية والتسوية على الفواتير في نظام "
 "المحاسبة."
 msgstr ""
-"List of payments with search, filter, and settlement on invoices in the "
+"List of reconcile with search, filter, and settlement on invoices in the "
 "accounting system."
 
 #: templates/accounting/payment/list.html:18
 msgid "إدارة دفعات العملاء وتسويتها على الفواتير أو كدفعات عامة."
 msgstr ""
-"Manage customer payments and apply them to invoices or keep them as general "
-"payments."
+"Manage customer reconcile and apply them to invoices or keep them as general "
+"reconcile."
 
 #: templates/accounting/payment/list.html:34
 msgid "بحث باسم العميل"
@@ -3173,7 +3173,7 @@ msgstr "Settle"
 
 #: templates/accounting/payment/list.html:139
 msgid "لا توجد دفعات"
-msgstr "No payments"
+msgstr "No reconcile"
 
 #: templates/accounting/payment/payment_apply.html:13
 #, python-format
@@ -3302,7 +3302,7 @@ msgstr ""
 
 #: templates/accounting/settings/settings.html:182
 msgid "ترقيم الدفعات"
-msgstr "View all payments"
+msgstr "View all reconcile"
 
 #: templates/accounting/settings/settings.html:184
 msgid "تحكم في شكل أرقام الدفعات، البادئة، عدد الخانات، وسياسة إعادة الترقيم."
@@ -3450,7 +3450,7 @@ msgstr "Are you sure you want to close this fiscal year?"
 
 #: templates/core/attachments/_panel.html:83
 msgid "لا توجد مرفقات حتى الآن."
-msgstr "No payments yet."
+msgstr "No reconcile yet."
 
 #: templates/core/attachments/_panel.html:92
 msgid "إضافة مرفق جديد"
@@ -3497,7 +3497,7 @@ msgstr "Excel file instructions:"
 
 #: templates/core/notifications/_navbar_dropdown.html:64
 msgid "عرض كل الإشعارات"
-msgstr "View all payments"
+msgstr "View all reconcile"
 
 #: templates/core/notifications/_navbar_dropdown.html:69
 msgid "لا توجد إشعارات حالياً."
@@ -3577,7 +3577,7 @@ msgstr "Save settings"
 
 #: templates/inventory/_nav.html:85
 msgid "نظرة عامة على المخزون وحركاته مع مؤشرات سريعة."
-msgstr "Quick overview of invoices, customer, orders, and payments."
+msgstr "Quick overview of invoices, customer, orders, and reconcile."
 
 #: templates/inventory/_nav.html:87
 msgid "تعريف وإدارة المنتجات ووحدات القياس وحالة النشر والتتبع في المخزون."
@@ -3680,7 +3680,7 @@ msgstr ""
 
 #: templates/inventory/category/list.html:85
 msgid "لا توجد فئات مسجلة حالياً."
-msgstr "No payments have been recorded yet."
+msgstr "No reconcile have been recorded yet."
 
 #: templates/inventory/dashboard.html:4
 msgid "لوحة المخزون"
@@ -3692,11 +3692,11 @@ msgstr "Accounting dashboard"
 
 #: templates/inventory/dashboard.html:20
 msgid "نظرة سريعة على حالة المخزون، الحركات الأخيرة، والتنبيهات."
-msgstr "Quick overview of invoices, customer, orders, and payments."
+msgstr "Quick overview of invoices, customer, orders, and reconcile."
 
 #: templates/inventory/dashboard.html:31
 msgid "إجمالي المنتجات"
-msgstr "Total payments"
+msgstr "Total reconcile"
 
 #: templates/inventory/dashboard.html:34
 #, fuzzy, python-format
@@ -3846,7 +3846,7 @@ msgstr ""
 
 #: templates/inventory/dashboard.html:291
 msgid "لا توجد حركات مخزون حديثة للعرض."
-msgstr "No payments have been recorded yet."
+msgstr "No reconcile have been recorded yet."
 
 #: templates/inventory/dashboard.html:304
 msgid "إدارة المنتجات"
@@ -3887,7 +3887,7 @@ msgstr "Search by name or company"
 #: templates/inventory/stocklevel/list.html:39
 #: templates/inventory/stockmove/list.html:37
 msgid "كل المخازن"
-msgstr "All payments"
+msgstr "All reconcile"
 
 #: templates/inventory/location/list.html:78
 msgid "داخلي"
@@ -4075,7 +4075,7 @@ msgstr ""
 
 #: templates/inventory/product/detail.html:334
 msgid "إجمالي الكمية المتوفرة لجميع المستويات"
-msgstr "Total invoices minus recorded payments."
+msgstr "Total invoices minus recorded reconcile."
 
 #: templates/inventory/product/detail.html:343
 msgid "لا توجد مستويات مخزون مسجلة لهذا المنتج حتى الآن."
@@ -4149,7 +4149,7 @@ msgstr "Search by name or company"
 
 #: templates/inventory/product/list.html:75
 msgid "كل الفئات"
-msgstr "All payments"
+msgstr "All reconcile"
 
 #: templates/inventory/product/list.html:130
 msgid "منشور"
@@ -4161,7 +4161,7 @@ msgstr "Inactive"
 
 #: templates/inventory/product/list.html:204
 msgid "أحد المستودعات تحت الحد الأدنى."
-msgstr "No payments yet."
+msgstr "No reconcile yet."
 
 #: templates/inventory/product/list.html:208
 msgid "مستقر"
@@ -4441,7 +4441,7 @@ msgstr ""
 
 #: templates/inventory/stockmove/list.html:154
 msgid "لا توجد حركات مسجلة."
-msgstr "No payments have been recorded yet."
+msgstr "No reconcile have been recorded yet."
 
 #: templates/inventory/warehouse/form.html:5
 #: templates/inventory/warehouse/form.html:13
@@ -4457,8 +4457,8 @@ msgstr "Add new item"
 #: templates/inventory/warehouse/list.html:12
 msgid "إدارة جميع المخازن الرئيسية أو الفرعية داخل النظام."
 msgstr ""
-"Manage customer payments and apply them to invoices or keep them as general "
-"payments."
+"Manage customer reconcile and apply them to invoices or keep them as general "
+"reconcile."
 
 #: templates/inventory/warehouse/list.html:29
 msgid "بحث برمز أو اسم المخزن..."
@@ -4493,7 +4493,7 @@ msgstr ""
 
 #: templates/inventory/warehouse/list.html:93
 msgid "لا توجد مخازن مسجلة."
-msgstr "No payments have been recorded yet."
+msgstr "No reconcile have been recorded yet."
 
 #: templates/ledger/_nav.html:12
 msgid "لوحة الملخص"
@@ -5157,14 +5157,14 @@ msgstr ""
 
 #: templates/ledger/settings/ledger_settings_form.html:109
 msgid "الحسابات الافتراضية للمبيعات والدفعات المقدّمة"
-msgstr "Total invoices minus recorded payments."
+msgstr "Total invoices minus recorded reconcile."
 
 #: templates/ledger/settings/ledger_settings_form.html:111
 msgid ""
 "تُستخدم هذه الحسابات عند ترحيل فواتير المبيعات والدفعات المقدّمة إلى دفتر "
 "الأستاذ بشكل تلقائي."
 msgstr ""
-"A dashboard to monitor invoices, payments, and orders in Mazoon Aluminum's "
+"A dashboard to monitor invoices, reconcile, and orders in Mazoon Aluminum's "
 "accounting system."
 
 #: templates/ledger/settings/ledger_settings_form.html:166
@@ -5251,7 +5251,7 @@ msgstr "No description."
 
 #: templates/portal/dashboard.html:99
 msgid "أحدث الفواتير الصادرة على حسابك."
-msgstr "Total invoices minus recorded payments."
+msgstr "Total invoices minus recorded reconcile."
 
 #: templates/portal/dashboard.html:103
 msgid "كل الفواتير"
@@ -5263,11 +5263,11 @@ msgstr "Payments on this invoice"
 
 #: templates/portal/dashboard.html:172
 msgid "كل الدفعات"
-msgstr "All payments"
+msgstr "All reconcile"
 
 #: templates/portal/dashboard.html:206
 msgid "لا توجد دفعات حتى الآن."
-msgstr "No payments yet."
+msgstr "No reconcile yet."
 
 #: templates/portal/invoice/detail.html:12
 #: templates/portal/invoice/list.html:10 templates/portal/orders/create.html:11
@@ -5304,7 +5304,7 @@ msgstr "Total for the period"
 
 #: templates/portal/invoice/detail.html:231
 msgid "لا توجد دفعات على هذه الفاتورة."
-msgstr "There are no payments recorded on this invoice."
+msgstr "There are no reconcile recorded on this invoice."
 
 #: templates/portal/invoice/list.html:26 templates/portal/orders/list.html:26
 #: templates/portal/payment/list.html:26 templates/portal/profile/form.html:26
@@ -5425,7 +5425,7 @@ msgstr "Payments"
 
 #: templates/portal/payment/list.html:37
 msgid "استعراض جميع الدفعات المسجلة على حسابك."
-msgstr "There are no payments recorded on this invoice."
+msgstr "There are no reconcile recorded on this invoice."
 
 #: templates/portal/profile/form.html:37
 msgid "حدّث معلومات الاتصال والفواتير الخاصة بك لضمان تواصل أفضل وفواتير صحيحة."

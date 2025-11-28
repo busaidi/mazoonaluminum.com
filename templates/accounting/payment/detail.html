@@ -29,15 +29,44 @@
       • {{ payment.date|date:"Y-m-d" }}
     </p>
   </div>
+
   <div class="d-flex flex-wrap gap-2">
+
+    {# رجوع للقائمة #}
     <a href="{% url 'accounting:payment_list' %}"
        class="btn btn-outline-secondary btn-sm">
       {% trans "رجوع للقائمة" %}
     </a>
+
+    {# زر تسوية مع الفواتير #}
+    {% if payment.contact %}
+      <a href="{% url 'accounting:payment_reconcile' payment.pk %}"
+         class="btn btn-outline-primary btn-sm">
+        {% trans "تسوية مع الفواتير" %}
+      </a>
+    {% endif %}
+
+    {# زر إلغاء جميع التسويات (يظهر فقط إذا كان هناك مبلغ مخصص) #}
+    {% if payment.allocated_amount and payment.allocated_amount > 0 %}
+      <form method="post"
+            action="{% url 'accounting:payment_clear_reconciliation' payment.pk %}"
+            class="d-inline">
+        {% csrf_token %}
+        <button type="submit"
+                class="btn btn-outline-danger btn-sm"
+                onclick="return confirm('{% trans "هل أنت متأكد من إلغاء جميع التسويات لهذه الدفعة؟" %}');">
+          {% trans "إلغاء التسوية" %}
+        </button>
+      </form>
+    {% endif %}
+
+    {# تعديل السند #}
     <a href="{% url 'accounting:payment_update' payment.pk %}"
        class="btn btn-primary btn-sm">
       {% trans "تعديل السند" %}
     </a>
+
+    {# طباعة #}
     <a href="{% url 'accounting:payment_print' payment.pk %}"
        class="btn btn-outline-secondary btn-sm" target="_blank">
       {% trans "طباعة / PDF" %}
@@ -85,6 +114,20 @@
             <div class="text-muted mb-1">{% trans "المبلغ" %}</div>
             <div class="fw-semibold">
               {{ payment.amount }} {{ payment.currency }}
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="text-muted mb-1">{% trans "المبلغ المخصص" %}</div>
+            <div class="fw-semibold">
+              {{ payment.allocated_amount|default:"0.000" }} {{ payment.currency }}
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="text-muted mb-1">{% trans "المبلغ المتبقي" %}</div>
+            <div class="fw-semibold">
+              {{ payment.unallocated_amount|default:"0.000" }} {{ payment.currency }}
             </div>
           </div>
 

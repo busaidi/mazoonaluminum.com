@@ -45,12 +45,16 @@ urlpatterns = [
     # =========================================
     # Payments (سندات القبض والصرف)
     # =========================================
-    path("payments/", views.PaymentListView.as_view(), name="payment_list"),
-    path("payments/new/", views.PaymentCreateView.as_view(), name="payment_create"),
-    path("payments/<int:pk>/", views.PaymentDetailView.as_view(), name="payment_detail"),
-    path("payments/<int:pk>/edit/", views.PaymentUpdateView.as_view(), name="payment_update"),
-    path("payments/<int:pk>/delete/", views.PaymentDeleteView.as_view(), name="payment_delete"),
-    path("payments/<int:pk>/print/", views.PaymentPrintView.as_view(), name="payment_print"),
+    path("reconcile/", views.PaymentListView.as_view(), name="payment_list"),
+    path("reconcile/new/", views.PaymentCreateView.as_view(), name="payment_create"),
+    path("reconcile/<int:pk>/", views.PaymentDetailView.as_view(), name="payment_detail"),
+    path("reconcile/<int:pk>/edit/", views.PaymentUpdateView.as_view(), name="payment_update"),
+    path("reconcile/<int:pk>/delete/", views.PaymentDeleteView.as_view(), name="payment_delete"),
+    path("reconcile/<int:pk>/print/", views.PaymentPrintView.as_view(), name="payment_print"),
+
+    #التسوية
+    path("reconcile/<int:pk>/reconcile/",views.PaymentReconcileView.as_view(), name="payment_reconcile",),
+    path("payments/<int:pk>/clear-reconciliation/", views.PaymentClearReconciliationView.as_view(), name="payment_clear_reconciliation",),
 
     # =========================================
     # Accounts & Chart of Accounts

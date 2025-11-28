@@ -176,7 +176,7 @@ class JournalManager(models.Manager.from_queryset(JournalQuerySet)):
 
     def get_default_for_customer_payment(self):
         """
-        Default journal for customer payments (cash or bank).
+        Default journal for customer reconcile (cash or bank).
 
         Preference order:
         - CASH then BANK (preferring is_default=True when possible).

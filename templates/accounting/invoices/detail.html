@@ -75,6 +75,7 @@
         {% trans "تعديل الفاتورة" %}
       </a>
 
+
       <a href="{{ print_url }}" class="btn btn-outline-secondary btn-sm" target="_blank">
         {% trans "طباعة / PDF" %}
       </a>
@@ -159,10 +160,13 @@
           <div class="small text-muted mb-1 text-uppercase fw-bold">{% trans "الإجمالي" %}</div>
           <div class="fw-bold fs-5">{{ invoice.total_amount|intcomma }}</div>
         </div>
-        <div class="col-4 border-end">
-          <div class="small text-muted mb-1 text-uppercase fw-bold">{% trans "المدفوع" %}</div>
-          <div class="fw-bold fs-5 text-success">{{ invoice.paid_amount|intcomma }}</div>
-        </div>
+       <div class="col-4 border-end">
+  <div class="small text-muted mb-1 text-uppercase fw-bold">{% trans "المدفوع" %}</div>
+  <div class="fw-bold fs-5 text-success">
+    {{ invoice.allocated_amount|intcomma }}
+  </div>
+</div>
+
         <div class="col-4">
           <div class="small text-muted mb-1 text-uppercase fw-bold">{% trans "المتبقي" %}</div>
           <div class="fw-bold fs-5 text-danger">{{ invoice.balance|intcomma }}</div>

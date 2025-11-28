@@ -1,7 +1,9 @@
 # accounting/forms.py
 
 from django import forms
+from decimal import Decimal
 from django.forms import inlineformset_factory
+
 from django.utils.translation import gettext_lazy as _
 
 from contacts.models import Contact
@@ -420,3 +422,61 @@ class ChartOfAccountsImportForm(BootstrapFormMixin, forms.Form):
         required=False,
         label=_("سنة الرصيد الافتتاحي"),
     )
+
+
+
+class PaymentReconciliationForm(forms.Form):
+    """
+    نموذج لتسوية دفعة معينة مع مجموعة من الفواتير لنفس الطرف.
+    يتم إنشاء حقل (مبلغ) لكل فاتورة بشكل ديناميكي في __init__.
+    """
+
+    def __init__(self, *args, payment: Payment, invoices, **kwargs):
+        """
+        :param payment: الدفعة المراد تسويتها
+        :param invoices: قائمة الفواتير المفتوحة لنفس الطرف
+        """
+        super().__init__(*args, **kwargs)
+        self.payment = payment
+        self.invoices = invoices
+
+        for invoice in invoices:
+            field_name = self._field_name_for_invoice(invoice)
+            # نحاول جلب أي تسوية سابقة لهذه الفاتورة مع هذه الدفعة
+            allocation = invoice.allocations.filter(payment=payment).first()
+            initial_amount = allocation.amount if allocation else Decimal("0.000")
+
+            self.fields[field_name] = forms.DecimalField(
+                label=_("المبلغ المخصص للفاتورة %(inv)s") % {
+                    "inv": invoice.display_number
+                },
+                max_digits=12,
+                decimal_places=3,
+                required=False,
+                initial=initial_amount,
+                help_text=_("اتركه فارغًا أو صفر لإلغاء التخصيص لهذه الفاتورة."),
+            )
+
+    @staticmethod
+    def _field_name_for_invoice(invoice: Invoice) -> str:
+        return f"invoice_{invoice.pk}"
+
+    def get_allocations_dict(self):
+        """
+        إرجاع قاموس {invoice_id: amount} مبني على البيانات المُدخلة في الفورم.
+        """
+        data = {}
+
+        for invoice in self.invoices:
+            field_name = self._field_name_for_invoice(invoice)
+            value = self.cleaned_data.get(field_name)
+
+            if value is None:
+                # عدم تعبئة الحقل = نعتبره 0 (إلغاء أي تسوية سابقة)
+                amount = Decimal("0.000")
+            else:
+                amount = Decimal(value)
+
+            data[invoice.pk] = amount
+
+        return data

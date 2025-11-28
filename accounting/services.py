@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 from decimal import Decimal, ROUND_HALF_UP
+from typing import Dict
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -15,8 +16,7 @@ from .models import (
     JournalEntry,
     JournalLine,
     Account,
-    Journal,
-    PaymentAllocation,
+    Journal, Payment, Invoice, PaymentReconciliation,
 )
 
 # Common decimal helpers
@@ -480,14 +480,14 @@ def unpost_sales_invoice_from_ledger(invoice, reversal_date=None, user=None):
     Reverse a posted sales invoice by creating a reversal journal entry.
 
     Rules:
-      - If invoice has any payments (paid_amount > 0), reversal is not allowed.
+      - If invoice has any reconcile (paid_amount > 0), reversal is not allowed.
       - Reversal is created on `reversal_date` (or today) in the fiscal year matching that date.
       - Original invoice status is reset back to DRAFT and ledger_entry is cleared.
     """
     if not invoice.ledger_entry:
         return None
 
-    # If invoice has payments, do not allow unposting
+    # If invoice has reconcile, do not allow unposting
     if invoice.paid_amount > 0:
         raise ValueError(_("لا يمكن إلغاء ترحيل فاتورة مرتبطة بدفعات."))
 
@@ -586,27 +586,92 @@ def convert_order_to_invoice(order, *, issued_at=None):
 # =====================================================================
 # Payment Allocation
 # =====================================================================
-
-def allocate_general_payment(payment, invoice, amount: Decimal):
+@transaction.atomic
+def allocate_payment_to_invoices(payment: Payment, allocations: Dict[int, Decimal]) -> None:
     """
-    Allocate part of a general Payment to a given Invoice.
+    تسوية دفعة واحدة مع مجموعة من الفواتير.
 
-    Creates a PaymentAllocation record. The PaymentAllocation model is
-    responsible for updating invoice.paid_amount and its payment status.
+    allocations:
+        قاموس بشكل:
+        {
+            invoice_id: amount,
+            invoice_id: amount,
+            ...
+        }
+
+    ملاحظات:
+    - لا يتم إنشاء Payment جديد نهائياً.
+    - فقط يتم إنشاء/تحديث/حذف أسطر PaymentReconciliation.
     """
 
-    if amount <= 0:
-        raise ValueError(_("المبلغ يجب أن يكون أكبر من صفر."))
+    # 1) التحقق من المجموع الكلي للمبالغ
+    total_alloc = sum(allocations.values())
+    if total_alloc > payment.amount:
+        raise ValidationError(_("إجمالي المبالغ المخصصة أكبر من مبلغ الدفعة."))
 
-    if amount > payment.unallocated_amount:
-        raise ValueError(
-            _("المبلغ المطلوب تخصيصه أكبر من المبلغ المتاح في الدفعة.")
+    # 2) التحقق من كل فاتورة
+    for invoice_id, amount in allocations.items():
+        if amount <= 0:
+            # بنسمح بقيم <= صفر كإشارة للحذف لاحقاً
+            continue
+
+        try:
+            invoice = Invoice.objects.get(pk=invoice_id)
+        except Invoice.DoesNotExist:
+            raise ValidationError(_("الفاتورة برقم %(inv)s غير موجودة.") % {"inv": invoice_id})
+
+        # الطرف لازم يكون نفسه
+        if invoice.customer != payment.contact:
+            raise ValidationError(
+                _("الفاتورة %(inv)s ليست لنفس الطرف المرتبط بالدفعة.")
+                % {"inv": invoice.display_number}
+            )
+
+        # لا يتجاوز الرصيد المتبقي على الفاتورة
+        if amount > invoice.balance:
+            raise ValidationError(
+                _("المبلغ المخصص للفاتورة %(inv)s أكبر من رصيدها المتبقي.")
+                % {"inv": invoice.display_number}
+            )
+
+        # لا يتجاوز المبلغ غير المخصص من الدفعة (تحقق إضافي)
+        if amount > payment.unallocated_amount:
+            raise ValidationError(
+                _("المبلغ المخصص أكبر من المبلغ غير المخصص المتبقي في الدفعة.")
+            )
+
+    # 3) إنشاء/تحديث/حذف التسويات
+    for invoice_id, amount in allocations.items():
+        invoice = Invoice.objects.get(pk=invoice_id)
+
+        if amount <= 0:
+            # لو صفر أو أقل: نحذف أي تسوية موجودة لهذه الفاتورة مع هذه الدفعة
+            PaymentReconciliation.objects.filter(payment=payment, invoice=invoice).delete()
+            continue
+
+        # update_or_create: يعدّل لو موجود، ينشئ لو جديد
+        PaymentReconciliation.objects.update_or_create(
+            payment=payment,
+            invoice=invoice,
+            defaults={"amount": amount},
         )
 
-    allocation = PaymentAllocation.objects.create(
-        payment=payment,
-        invoice=invoice,
-        amount=amount,
-    )
+        # بعد كل تعديل، ممكن تختار تحدث حالة الفاتورة:
+        invoice.update_payment_status()
 
-    return allocation
+
+@transaction.atomic
+def clear_payment_allocations(payment: Payment) -> None:
+    """
+    إلغاء جميع تسويات الدفعة (تحريرها من كل الفواتير).
+    لا يحذف الدفعة نفسها.
+    """
+    qs = PaymentReconciliation.objects.filter(payment=payment)
+
+    # نحفظ قائمة الفواتير لتحديث حالتها بعد الحذف
+    invoices = list({alloc.invoice for alloc in qs})
+
+    qs.delete()
+
+    for invoice in invoices:
+        invoice.update_payment_status()

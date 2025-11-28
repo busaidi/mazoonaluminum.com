@@ -1,4 +1,4 @@
-from accounting.models import Payment, PaymentAllocation, PaymentMethod, Account, FiscalYear, Invoice, InvoiceItem, \
+from accounting.models import Payment, PaymentMethod, Account, FiscalYear, Invoice, InvoiceItem, \
     Journal, JournalEntry, JournalLine, LedgerSettings, Settings
 
 from django.contrib import admin
@@ -8,10 +8,6 @@ from django.contrib import admin
 class PaymentAllocationAdmin(admin.ModelAdmin):
     pass
 
-
-@admin.register(PaymentAllocation)
-class PaymentAllocationAdmin(admin.ModelAdmin):
-    pass
 
 
 @admin.register(PaymentMethod)

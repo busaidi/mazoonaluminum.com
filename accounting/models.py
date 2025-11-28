@@ -579,7 +579,7 @@ class LedgerSettings(models.Model):
 
 class Invoice(StatefulDomainModel):
     """
-    Accounting invoice (sales / purchase), linked to contact and journal entry.
+    فاتورة (مبيعات / مشتريات)
     """
 
     class InvoiceType(models.TextChoices):
@@ -597,8 +597,8 @@ class Invoice(StatefulDomainModel):
         max_length=20,
         choices=InvoiceType.choices,
         default=InvoiceType.SALES,
-        verbose_name=_("نوع الفاتورة"),
         db_index=True,
+        verbose_name=_("نوع الفاتورة"),
     )
 
     customer = models.ForeignKey(
@@ -608,26 +608,12 @@ class Invoice(StatefulDomainModel):
         verbose_name=_("الطرف"),
     )
 
-    issued_at = models.DateField(
-        default=timezone.now,
-        verbose_name=_("تاريخ الفاتورة"),
-    )
-    due_date = models.DateField(
-        null=True,
-        blank=True,
-        verbose_name=_("تاريخ الاستحقاق"),
-    )
+    issued_at = models.DateField(default=timezone.now, verbose_name=_("تاريخ الفاتورة"))
+    due_date = models.DateField(null=True, blank=True, verbose_name=_("تاريخ الاستحقاق"))
 
-    description = models.TextField(
-        blank=True,
-        verbose_name=_("وصف عام"),
-    )
-    terms = models.TextField(
-        blank=True,
-        verbose_name=_("الشروط والأحكام"),
-    )
+    description = models.TextField(blank=True, verbose_name=_("الوصف العام"))
+    terms = models.TextField(blank=True, verbose_name=_("الشروط"))
 
-    # Total is always computed from items (read-only for staff).
     total_amount = models.DecimalField(
         max_digits=12,
         decimal_places=3,
@@ -635,21 +621,21 @@ class Invoice(StatefulDomainModel):
         verbose_name=_("الإجمالي"),
     )
 
-    # Paid amount is driven only by PaymentAllocation.
+    # سنلغي الاعتماد على paid_amount المخزن، الآن نحسبه مباشرة من التسويات
     paid_amount = models.DecimalField(
         max_digits=12,
         decimal_places=3,
         default=DECIMAL_ZERO,
         editable=False,
-        verbose_name=_("المبلغ المدفوع"),
+        verbose_name=_("المبلغ المدفوع (قديم، سيتم إلغاءه لاحقاً)"),
     )
 
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
         default=Status.DRAFT,
-        verbose_name=_("الحالة"),
         db_index=True,
+        verbose_name=_("الحالة"),
     )
 
     ledger_entry = models.OneToOneField(
@@ -661,116 +647,56 @@ class Invoice(StatefulDomainModel):
         verbose_name=_("قيد اليومية"),
     )
 
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name=_("تاريخ الإنشاء"),
-    )
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        verbose_name=_("آخر تحديث"),
-    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("تاريخ الإنشاء"))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("آخر تحديث"))
 
-    objects = InvoiceManager()
-
-    class Meta:
-        ordering = ("-issued_at", "-id")
-        indexes = [
-            models.Index(fields=["status"]),
-            models.Index(fields=["issued_at"]),
-            models.Index(fields=["type", "status"]),
-        ]
-        verbose_name = _("فاتورة")
-        verbose_name_plural = _("الفواتير")
-
-    # ------------------------------------------------------------------
-    # Display / convenience
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------
+    # خصائص الدفع
+    # ------------------------------------------------------
     @property
-    def display_number(self) -> str:
-        return f"INV-{self.pk}" if self.pk else _("مسودة")
+    def allocated_amount(self) -> Decimal:
+        """المبلغ الذي تم تسويته فعلياً من خلال الدفعات."""
+        return (
+            self.allocations.aggregate(sum=Sum("amount"))["sum"]
+            or Decimal("0.000")
+        )
 
     @property
     def balance(self) -> Decimal:
-        return self.total_amount - self.paid_amount
+        """الرصيد المتبقي على الفاتورة."""
+        return self.total_amount - self.allocated_amount
 
     @property
     def is_fully_paid(self) -> bool:
-        return self.balance <= 0 and self.total_amount > 0
+        """هل الفاتورة مدفوعة بالكامل؟"""
+        return self.total_amount > 0 and self.balance <= 0
 
-    def __str__(self) -> str:
-        return f"{self.get_type_display()} #{self.pk} - {self.customer}"
+    @property
+    def display_number(self):
+        return f"INV-{self.pk}" if self.pk else _("مسودة")
 
-    # ------------------------------------------------------------------
-    # Validation & save logic
-    # ------------------------------------------------------------------
-    def clean(self):
-        super().clean()
-        if self.due_date and self.due_date < self.issued_at:
-            raise ValidationError(
-                {"due_date": _("تاريخ الاستحقاق لا يمكن أن يكون قبل تاريخ الفاتورة.")}
-            )
-
-    def save(self, *args, **kwargs):
-        is_new = self._state.adding
-
-        # Only apply defaults when creating the invoice
-        if is_new:
-            try:
-                settings_obj = Settings.get_solo()
-                if not self.due_date and settings_obj.default_due_days:
-                    self.due_date = self.issued_at + timedelta(
-                        days=settings_obj.default_due_days
-                    )
-                if not self.terms and settings_obj.default_terms:
-                    self.terms = settings_obj.default_terms
-            except Exception:
-                # In case Settings table is not ready yet (initial migrations).
-                pass
-
-        super().save(*args, **kwargs)
-
-    # ------------------------------------------------------------------
-    # Totals & payment status
-    # ------------------------------------------------------------------
-    def recalculate_totals(self) -> None:
-        """
-        Recalculate invoice total from its items.
-        """
-        total = self.items.aggregate(
-            total=Sum(F("quantity") * F("unit_price"))
-        )["total"] or DECIMAL_ZERO
-
-        self.total_amount = total
-        self.save(update_fields=["total_amount"])
-        self.update_payment_status()
-
+    # ------------------------------------------------------
+    # تحديث حالة الفاتورة حسب التسويات
+    # ------------------------------------------------------
     def update_payment_status(self) -> None:
-        """
-        Update status based on paid_amount.
-        For draft/cancelled invoices, do not change status based on payments.
-        """
+        """تحديث حالة الفاتورة."""
         if self.status in [self.Status.DRAFT, self.Status.CANCELLED]:
             return
 
-        if self.paid_amount >= self.total_amount and self.total_amount > 0:
+        allocated = self.allocated_amount
+
+        if allocated >= self.total_amount and self.total_amount > 0:
             self.status = self.Status.PAID
-        elif self.paid_amount > 0:
+        elif allocated > 0:
             self.status = self.Status.PARTIALLY_PAID
         else:
             self.status = self.Status.SENT
 
         self.save(update_fields=["status"])
 
-    # ------------------------------------------------------------------
-    # Domain events
-    # ------------------------------------------------------------------
-    @on_lifecycle("created")
-    def _on_created(self) -> None:
-        self.emit(InvoiceCreated(invoice_id=self.pk, serial=self.display_number))
-
-    @on_transition(Status.DRAFT, Status.SENT)
-    def _on_sent(self) -> None:
-        self.emit(InvoiceSent(invoice_id=self.pk, serial=self.display_number))
+    # ------------------------------------------------------
+    def __str__(self):
+        return f"{self.get_type_display()} #{self.pk} - {self.customer}"
 
 
 class InvoiceItem(models.Model):
@@ -887,7 +813,7 @@ class PaymentMethod(models.Model):
 
 class Payment(models.Model):
     """
-    Generic payment (receipt or payment), optionally linked to journal entry.
+    سند قبض / صرف
     """
 
     class Type(models.TextChoices):
@@ -899,172 +825,162 @@ class Payment(models.Model):
         choices=Type.choices,
         default=Type.RECEIPT,
         db_index=True,
+        verbose_name=_("النوع"),
     )
 
     contact = models.ForeignKey(
         "contacts.Contact",
         on_delete=models.PROTECT,
-        related_name="payments",
+        related_name="reconcile",
         verbose_name=_("الطرف"),
     )
+
     method = models.ForeignKey(
-        PaymentMethod,
+        "PaymentMethod",
         on_delete=models.PROTECT,
         verbose_name=_("طريقة الدفع"),
     )
-    date = models.DateField(
-        default=timezone.now,
-        verbose_name=_("التاريخ"),
-        db_index=True,
-    )
+
+    date = models.DateField(default=timezone.now, db_index=True, verbose_name=_("التاريخ"))
+
     amount = models.DecimalField(
         max_digits=12,
         decimal_places=3,
-        validators=[MinValueValidator(DECIMAL_ZERO)],
         verbose_name=_("المبلغ"),
     )
-    currency = models.CharField(
-        max_length=10,
-        default="OMR",
-    )
-    reference = models.CharField(
-        max_length=255,
-        blank=True,
-        verbose_name=_("مرجع خارجي"),
-    )
-    notes = models.CharField(
-        max_length=255,
-        blank=True,
-        verbose_name=_("ملاحظات"),
-    )
+
+    currency = models.CharField(max_length=10, default="OMR")
+    reference = models.CharField(max_length=255, blank=True, verbose_name=_("مرجع خارجي"))
+    notes = models.CharField(max_length=255, blank=True, verbose_name=_("ملاحظات"))
 
     journal_entry = models.ForeignKey(
-        JournalEntry,
+        "JournalEntry",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="payments",
+        related_name="reconcile",
     )
+
     is_posted = models.BooleanField(default=False)
     posted_at = models.DateTimeField(null=True, blank=True)
 
-    created_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="+",
-    )
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        verbose_name = _("دفعة")
-        verbose_name_plural = _("الدفعات")
-        ordering = ("-date", "-id")
-
+    # ------------------------------------------------------
+    # المبلغ غير المخصص
+    # ------------------------------------------------------
     @property
-    def display_number(self) -> str:
-        return f"PAY-{self.pk}" if self.pk else _("جديد")
-
-    def __str__(self) -> str:
-        return f"{self.get_type_display()} {self.amount} - {self.contact}"
+    def allocated_amount(self) -> Decimal:
+        """المبلغ الذي تم تسويته من هذه الدفعة."""
+        total = self.allocations.aggregate(sum=Sum("amount"))["sum"] or Decimal("0.000")
+        return total
 
     @property
     def unallocated_amount(self) -> Decimal:
-        """
-        Amount remaining from this payment that is not allocated to invoices.
-        """
-        allocated = self.allocations.aggregate(sum=Sum("amount"))["sum"] or Decimal(0)
-        return self.amount - allocated
+        """المبلغ المتبقي من الدفعة."""
+        return self.amount - self.allocated_amount
+
+    # ------------------------------------------------------
+    @property
+    def display_number(self):
+        return f"PAY-{self.pk}" if self.pk else _("جديد")
+
+    def __str__(self):
+        return f"{self.get_type_display()} {self.amount} - {self.contact}"
 
 
-class PaymentAllocation(models.Model):
+
+DECIMAL_ZERO = Decimal("0.000")
+
+
+class PaymentReconciliation(models.Model):
     """
-    Allocation of part of a payment to a specific invoice.
+    تسوية تربط بين دفعة (Payment) وفاتورة (Invoice).
+
+    - يمكن للدفعة الواحدة أن تُسوى مع عدة فواتير.
+    - ويمكن للفاتورة الواحدة أن تستقبل عدة دفعات.
+    - الحقل amount يمثل الجزء من الدفعة المطبق على هذه الفاتورة.
     """
 
     payment = models.ForeignKey(
-        Payment,
+        "Payment",
         on_delete=models.CASCADE,
         related_name="allocations",
         verbose_name=_("الدفعة"),
     )
+
     invoice = models.ForeignKey(
-        Invoice,
-        on_delete=models.PROTECT,
-        related_name="payment_allocations",
+        "Invoice",
+        on_delete=models.CASCADE,
+        related_name="allocations",
         verbose_name=_("الفاتورة"),
     )
+
     amount = models.DecimalField(
         max_digits=12,
         decimal_places=3,
-        verbose_name=_("المبلغ المخصص"),
+        verbose_name=_("المبلغ المطبَّق"),
+        help_text=_("كم جزء من الدفعة تم تطبيقه على هذه الفاتورة."),
     )
-    created_at = models.DateTimeField(auto_now_add=True)
+
+    note = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("ملاحظة"),
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("تاريخ الإنشاء"),
+    )
 
     class Meta:
-        verbose_name = _("تخصيص دفعة")
-        verbose_name_plural = _("تخصيصات الدفعات")
-        unique_together = ("payment", "invoice")
+        verbose_name = _("تسوية دفعة مع فاتورة")
+        verbose_name_plural = _("تسويات الدفعات مع الفواتير")
+        ordering = ["-created_at", "id"]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(amount__gt=DECIMAL_ZERO),
+                name="reconciliation_amount_positive",
+            ),
+            models.UniqueConstraint(
+                fields=["payment", "invoice"],
+                name="unique_payment_invoice_pair",
+            ),
+        ]
 
-    # ------------------------------------------------------------------
-    # Validation
-    # ------------------------------------------------------------------
+    def __str__(self):
+        return f"تسوية: دفعة {self.payment_id} → فاتورة {self.invoice_id} ({self.amount})"
+
+    # ------------------------------------------------------
+    # الطرف المرتبط
+    # ------------------------------------------------------
+    @property
+    def contact(self):
+        return getattr(self.payment, "contact", None) or getattr(self.invoice, "customer", None)
+
+    # ------------------------------------------------------
+    # التحقق المنطقي
+    # ------------------------------------------------------
     def clean(self):
-        """
-        1) Ensure allocation does not exceed remaining payment.
-        2) Ensure allocation does not exceed invoice remaining balance.
-        """
+        from django.core.exceptions import ValidationError
 
-        # Remaining payment amount (excluding current allocation if updating)
-        existing_allocations_sum = (
-            self.payment.allocations.exclude(pk=self.pk)
-            .aggregate(sum=Sum("amount"))["sum"]
-            or Decimal(0)
-        )
-        available_payment = self.amount if self.pk else self.payment.amount - existing_allocations_sum
-        # Note: we will still compare self.amount with available_payment below.
+        # التأكد أن الطرفين متطابقين
+        payment_contact = getattr(self.payment, "contact", None)
+        invoice_contact = getattr(self.invoice, "customer", None)
 
-        if self.amount > (self.payment.amount - existing_allocations_sum):
-            raise ValidationError(_("مبلغ التخصيص أكبر من المبلغ المتبقي في الدفعة."))
+        if payment_contact and invoice_contact and payment_contact != invoice_contact:
+            raise ValidationError(_("الدفعة والفاتورة يجب أن تكون لنفس الطرف."))
 
-        # Remaining invoice balance
-        invoice_balance = self.invoice.total_amount - self.invoice.paid_amount
+        # المبلغ
+        if self.amount <= DECIMAL_ZERO:
+            raise ValidationError(_("المبلغ المطبق يجب أن يكون أكبر من صفر."))
 
-        # If updating existing allocation, add back old amount to the balance check
-        if self.pk:
-            old_self = PaymentAllocation.objects.get(pk=self.pk)
-            invoice_balance += old_self.amount
+        # لا يتجاوز الباقي على الفاتورة
+        if self.amount > self.invoice.balance:
+            raise ValidationError(_("المبلغ المطبق أكبر من المبلغ المتبقي على الفاتورة."))
 
-        if self.amount > invoice_balance:
-            raise ValidationError(_("مبلغ التخصيص أكبر من الرصيد المتبقي للفاتورة."))
-
-    # ------------------------------------------------------------------
-    # Save / delete hooks
-    # ------------------------------------------------------------------
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        self._update_invoice_paid_amount()
-
-    def delete(self, *args, **kwargs):
-        invoice = self.invoice  # keep a reference
-        super().delete(*args, **kwargs)
-        self._update_invoice_paid_amount(invoice=invoice)
-
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-    def _update_invoice_paid_amount(self, invoice: Invoice | None = None) -> None:
-        """
-        Recalculate invoice.paid_amount from all allocations, then update status.
-        """
-        invoice = invoice or self.invoice
-        total_allocated = (
-            invoice.payment_allocations.aggregate(sum=Sum("amount"))["sum"] or Decimal(0)
-        )
-        invoice.paid_amount = total_allocated
-        invoice.save(update_fields=["paid_amount"])
-        invoice.update_payment_status()
-
-    def __str__(self) -> str:
-        return f"{self.amount} -> {self.invoice}"
+        # لا يتجاوز الباقي في الدفعة
+        if self.amount > self.payment.unallocated_amount:
+            raise ValidationError(_("المبلغ المطبق أكبر من الجزء غير المخصص من الدفعة."))
