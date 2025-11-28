@@ -313,22 +313,6 @@ class JournalEntry(models.Model):
         verbose_name = _("قيد يومية")
         verbose_name_plural = _("قيود اليومية")
 
-
-    @property
-    def imbalance(self):
-        """
-        الفرق بين إجمالي المدين وإجمالي الدائن.
-        موجب = زيادة مدين، سالب = زيادة دائن.
-        """
-        total_debit = self.total_debit or 0
-        total_credit = self.total_credit or 0
-        return total_debit - total_credit
-
-
-    @property
-    def display_number(self) -> str:
-        return f"JE-{self.pk}" if self.pk else "JE-New"
-
     @property
     def total_debit(self) -> Decimal:
         return self.lines.aggregate(sum=Sum("debit"))["sum"] or Decimal(0)
@@ -338,8 +322,20 @@ class JournalEntry(models.Model):
         return self.lines.aggregate(sum=Sum("credit"))["sum"] or Decimal(0)
 
     @property
+    def imbalance(self):
+        """
+        الفرق بين إجمالي المدين وإجمالي الدائن.
+        موجب = زيادة مدين، سالب = زيادة دائن.
+        """
+        return (self.total_debit or 0) - (self.total_credit or 0)
+
+    @property
     def is_balanced(self) -> bool:
         return self.total_debit == self.total_credit
+
+    @property
+    def display_number(self) -> str:
+        return f"JE-{self.pk}" if self.pk else "JE-New"
 
     def save(self, *args, **kwargs):
         """
@@ -356,6 +352,8 @@ class JournalEntry(models.Model):
 class JournalLine(models.Model):
     """
     Single debit/credit line in a journal entry.
+    يدعم الآن التسوية البنكية عبر BankReconciliation
+    (banking.BankReconciliation.bank_line <-> journal_item).
     """
 
     entry = models.ForeignKey(
@@ -378,14 +376,22 @@ class JournalLine(models.Model):
     debit = models.DecimalField(
         max_digits=12,
         decimal_places=3,
-        default=DECIMAL_ZERO,
+        default=Decimal("0.000"),
         verbose_name=_("مدين"),
     )
     credit = models.DecimalField(
         max_digits=12,
         decimal_places=3,
-        default=DECIMAL_ZERO,
+        default=Decimal("0.000"),
         verbose_name=_("دائن"),
+    )
+
+    # حقل منطقي بسيط: هل تمت تسوية هذا السطر بالكامل أم لا؟
+    # حاليًا سنعتمد بالأساس على الخاصية is_fully_reconciled،
+    # ويمكنك لاحقاً مزامنة هذا الحقل معها إن أردت.
+    reconciled = models.BooleanField(
+        default=False,
+        verbose_name=_("مُسوّى بالكامل"),
     )
 
     order = models.PositiveIntegerField(default=0)
@@ -408,6 +414,47 @@ class JournalLine(models.Model):
         ]
         verbose_name = _("سطر قيد")
         verbose_name_plural = _("سطور القيود")
+
+    # =========================
+    # خصائص متعلقة بالتسوية
+    # =========================
+
+    @property
+    def signed_amount(self) -> Decimal:
+        """
+        القيمة المحاسبية للسطر:
+        - للحسابات المدينة (مثل البنك): الإيداع = مدين موجب، السحب = دائن سالب.
+        وبالتالي استخدام (debit - credit) يجعل الإشارة متوافقة مع BankStatementLine.amount
+        (موجب للإيداع، سالب للسحب).
+        """
+        return (self.debit or Decimal("0.000")) - (self.credit or Decimal("0.000"))
+
+    @property
+    def amount_reconciled(self) -> Decimal:
+        """
+        مجموع المبالغ التي تم تسويتها من خلال BankReconciliation
+        (الربط بين هذا السطر وبين سطور البنك).
+        """
+        total = self.bank_reconciliations.aggregate(
+            sum=Sum("amount_reconciled")
+        )["sum"] or Decimal("0.000")
+        return total
+
+    @property
+    def amount_open(self) -> Decimal:
+        """
+        المبلغ المتبقي غير المُسوّى:
+        signed_amount - amount_reconciled
+        إذا كان الناتج 0 يعني أن السطر تمت تسويته بالكامل.
+        """
+        return self.signed_amount - self.amount_reconciled
+
+    @property
+    def is_fully_reconciled(self) -> bool:
+        """
+        هل هذا السطر تمت تسويته بالكامل؟
+        """
+        return self.amount_open == 0
 
     def __str__(self) -> str:
         return f"{self.account.name}: D({self.debit}) C({self.credit})"

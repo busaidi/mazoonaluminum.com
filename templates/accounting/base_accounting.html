@@ -53,28 +53,64 @@
           </a>
         </li>
 
-        {# 5. البنوك (معلّقة مؤقتاً لتفادي أخطاء لو banking app غير جاهز) #}
-       
+        {# 5. البنوك #}
         <li class="nav-item dropdown">
           <a class="nav-link px-3 py-1 dropdown-toggle {% if accounting_section == 'banking' %}active{% endif %}"
              data-bs-toggle="dropdown" href="#" role="button">
             {% trans "البنوك" %}
           </a>
           <ul class="dropdown-menu shadow-sm border-0">
-            <li><h6 class="dropdown-header text-uppercase small">{% trans "إدارة الحسابات" %}</h6></li>
+
+            {# إدارة الحسابات البنكية #}
             <li>
-              <a class="dropdown-item" href="{% url 'banking:bank_account_list' %}">{% trans "الحسابات البنكية" %}</a>
+              <h6 class="dropdown-header text-uppercase small">
+                {% trans "إدارة الحسابات البنكية" %}
+              </h6>
             </li>
             <li>
-              <a class="dropdown-item" href="{% url 'banking:bank_statement_list' %}">{% trans "سجل الكشوفات" %}</a>
+              <a class="dropdown-item"
+                 href="{% url 'banking:bank_account_list' %}">
+                {% trans "الحسابات البنكية" %}
+              </a>
             </li>
+            <li>
+              <a class="dropdown-item"
+                 href="{% url 'banking:bank_account_create' %}">
+                {% trans "إضافة حساب بنكي جديد" %}
+              </a>
+            </li>
+
             <li><hr class="dropdown-divider"></li>
+
+            {# كشوفات البنك #}
             <li>
-              <a class="dropdown-item" href="{% url 'banking:bank_statement_upload' %}">{% trans "رفع كشف جديد" %}</a>
+              <h6 class="dropdown-header text-uppercase small">
+                {% trans "كشوفات البنك" %}
+              </h6>
+            </li>
+            <li>
+              <a class="dropdown-item"
+                 href="{% url 'banking:bank_statement_list' %}">
+                {% trans "سجل كشوفات البنك" %}
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item"
+                 href="{% url 'banking:bank_statement_upload' %}">
+                {% trans "رفع كشف جديد" %}
+              </a>
+            </li>
+
+            <li><hr class="dropdown-divider"></li>
+
+            {# ملاحظة عن التسوية #}
+            <li>
+              <span class="dropdown-item-text text-muted small">
+                {% trans "التسوية البنكية تتم من شاشة الحسابات البنكية (زر تسوية لكل حساب)." %}
+              </span>
             </li>
           </ul>
         </li>
-     
 
         {# 6. قيود اليومية #}
         <li class="nav-item">
@@ -94,10 +130,14 @@
           </a>
           <ul class="dropdown-menu shadow-sm border-0">
             <li>
-              <a class="dropdown-item" href="{% url 'accounting:trial_balance' %}">{% trans "ميزان المراجعة" %}</a>
+              <a class="dropdown-item" href="{% url 'accounting:trial_balance' %}">
+                {% trans "ميزان المراجعة" %}
+              </a>
             </li>
             <li>
-              <a class="dropdown-item" href="{% url 'accounting:account_ledger' %}">{% trans "كشف الحساب" %}</a>
+              <a class="dropdown-item" href="{% url 'accounting:account_ledger' %}">
+                {% trans "كشف الحساب" %}
+              </a>
             </li>
           </ul>
         </li>
@@ -109,16 +149,48 @@
             {% trans "الإعدادات" %}
           </a>
           <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-            <li><h6 class="dropdown-header text-uppercase small">{% trans "البيانات الأساسية" %}</h6></li>
-            <li><a class="dropdown-item" href="{% url 'accounting:fiscal_year_list' %}">{% trans "السنوات المالية" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'accounting:account_list' %}">{% trans "دليل الحسابات" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'accounting:journal_list' %}">{% trans "الدفاتر" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'accounting:payment_method_list' %}">{% trans "طرق الدفع" %}</a></li>
+            <li>
+              <h6 class="dropdown-header text-uppercase small">
+                {% trans "البيانات الأساسية" %}
+              </h6>
+            </li>
+            <li>
+              <a class="dropdown-item" href="{% url 'accounting:fiscal_year_list' %}">
+                {% trans "السنوات المالية" %}
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="{% url 'accounting:account_list' %}">
+                {% trans "دليل الحسابات" %}
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="{% url 'accounting:journal_list' %}">
+                {% trans "الدفاتر" %}
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="{% url 'accounting:payment_method_list' %}">
+                {% trans "طرق الدفع" %}
+              </a>
+            </li>
 
             <li><hr class="dropdown-divider"></li>
-            <li><h6 class="dropdown-header text-uppercase small">{% trans "التهيئة" %}</h6></li>
-            <li><a class="dropdown-item" href="{% url 'accounting:ledger_settings' %}">{% trans "ربط الدفاتر" %}</a></li>
-            <li><a class="dropdown-item" href="{% url 'accounting:accounting_settings' %}">{% trans "الضبط العام" %}</a></li>
+            <li>
+              <h6 class="dropdown-header text-uppercase small">
+                {% trans "التهيئة" %}
+              </h6>
+            </li>
+            <li>
+              <a class="dropdown-item" href="{% url 'accounting:ledger_settings' %}">
+                {% trans "ربط الدفاتر" %}
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="{% url 'accounting:accounting_settings' %}">
+                {% trans "الضبط العام" %}
+              </a>
+            </li>
           </ul>
         </li>
 

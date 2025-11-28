@@ -1,28 +1,36 @@
+# banking/views.py
+
 import pandas as pd  # لقراءة ملفات الاكسل
 from decimal import Decimal
+import json
 
+from django.contrib import messages
+from django.db import transaction
+from django.http import JsonResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy, reverse
 from django.utils.translation import gettext as _
-from django.views.generic import (
-    TemplateView, ListView, CreateView, UpdateView, DetailView, DeleteView
-)
-from django.db import transaction
-from django.http import JsonResponse, HttpResponseBadRequest
 from django.views.decorators.http import require_POST
-from django.contrib import messages
+from django.views.generic import (
+    TemplateView,
+    ListView,
+    CreateView,
+    UpdateView,
+    DetailView,
+    DeleteView,
+)
 
 from accounting.models import JournalLine
 # تأكد من مسار الاستيراد الصحيح للميكسن الخاص بك
 from accounting.views import AccountingStaffRequiredMixin
 
+from .forms import BankStatementForm, BankAccountForm
 from .models import (
     BankStatement,
     BankAccount,
     BankStatementLine,
-    BankReconciliation
+    BankReconciliation,
 )
-from .forms import BankStatementForm, BankAccountForm
 
 
 # =========================================================
@@ -104,7 +112,7 @@ class BankStatementListView(BankBaseView, ListView):
     template_name = "banking/bank_statement_list.html"
     context_object_name = "statements"
     paginate_by = 25
-    ordering = ["-date", "-id"]  # تم تعديل date_from إلى date حسب المودل الجديد
+    ordering = ["-date", "-id"]
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -115,7 +123,7 @@ class BankStatementListView(BankBaseView, ListView):
 class BankStatementUploadView(BankBaseView, CreateView):
     """
     الفيو المسؤول عن رفع الملف وقراءته (Parsing).
-    هنا يحدث السحر: تحويل Excel إلى Database Rows.
+    هنا يحدث السحر: تحويل Excel/CSV إلى أسطر في قاعدة البيانات.
     """
     model = BankStatement
     form_class = BankStatementForm
@@ -127,13 +135,14 @@ class BankStatementUploadView(BankBaseView, CreateView):
         return ctx
 
     def form_valid(self, form):
-        # 1. نبدأ عملية ذرية (Atomic Transaction)
-        # إذا حدث أي خطأ أثناء قراءة الملف، لا يتم حفظ الكشف ولا الأسطر
+        """
+        حفظ الهيدر + استيراد الأسطر من الملف في معاملة ذرّية واحدة.
+        """
         with transaction.atomic():
-            # حفظ الهيدر (الكشف) أولاً
+            # حفظ الهيدر (الكشف)
             self.object = form.save()
 
-            # 2. معالجة الملف إذا وجد
+            # معالجة الملف إذا وجد
             uploaded_file = self.object.imported_file
             if uploaded_file:
                 try:
@@ -141,51 +150,59 @@ class BankStatementUploadView(BankBaseView, CreateView):
                     messages.success(self.request, _("تم رفع ومعالجة الكشف بنجاح."))
                 except Exception as e:
                     # في حال الخطأ، نظهر رسالة للمستخدم ونوقف الحفظ
-                    form.add_error('imported_file', f"خطأ في قراءة الملف: {str(e)}")
-                    return self.form_invalid(form)
+                    form.add_error("imported_file", _("خطأ في قراءة الملف: ") + str(e))
+                    # rollback ضمن الـ atomic
+                    raise
 
         return super().form_valid(form)
 
     def process_file(self, file_obj, statement_obj):
         """
-        دالة مساعدة لقراءة ملف الاكسل/CSV
-        يفترض أن الملف يحتوي أعمدة: Date, Description, Reference, Amount
+        دالة مساعدة لقراءة ملف الاكسل/CSV.
+        يفترض أن الملف يحتوي أعمدة: date, label/description, ref, amount
+        يمكنك لاحقاً تخصيص mapping حسب فورمات كل بنك.
         """
-        # تحديد الامتداد واستخدام المكتبة المناسبة
-        if file_obj.name.endswith('.csv'):
+        # اختيار الدالة المناسبة حسب الامتداد
+        filename = file_obj.name.lower()
+        if filename.endswith(".csv"):
             df = pd.read_csv(file_obj)
         else:
             df = pd.read_excel(file_obj)
 
-        # تنظيف أسماء الأعمدة (إزالة المسافات وتحويلها لأحرف صغيرة)
+        # تنظيف أسماء الأعمدة
         df.columns = df.columns.str.strip().str.lower()
 
-        # التأكد من وجود الأعمدة الإجبارية (يمكنك تعديل الأسماء حسب صيغة بنكك)
-        # مثال: نفترض أن البنك يسمي العمود 'transaction date' و 'amount'
-        # هنا سنبحث عن أقرب اسم
-
-        # -- منطق تبسيط للتوضيح --
-        # سنفترض أن المستخدم يرفع ملفاً فيه أعمدة بالأسماء التالية:
-        # date, label, ref, amount
-
         lines_to_create = []
-        for index, row in df.iterrows():
-            # تحويل التاريخ
-            # date_val = pd.to_datetime(row.get('date')).date()
 
-            # إنشاء السطر
+        for _, row in df.iterrows():
+            # الحصول على القيم مع fallbacks بسيطة
+            date_val = row.get("date")
+            label_val = (
+                row.get("label")
+                or row.get("description")
+                or row.get("memo")
+                or _("بدون وصف")
+            )
+            ref_val = row.get("ref") or row.get("reference") or ""
+            amount_val = row.get("amount", 0)
+
+            # تحويل المبلغ إلى Decimal (مع التعامل مع NaN)
+            if pd.isna(amount_val):
+                amount_val = 0
+
+            amount_dec = Decimal(str(amount_val))
+
             line = BankStatementLine(
                 statement=statement_obj,
-                date=row.get('date'),  # يجب التأكد أن الصيغة مقروءة لبايثون
-                label=row.get('label') or row.get('description') or "No Desc",
-                ref=row.get('ref', ''),
-                amount=Decimal(str(row.get('amount', 0))),  # التحويل لـ Decimal مهم جداً
-                # amount_residual سيتم حسابه تلقائياً في المودل عند الحفظ
+                date=date_val,  # تأكد أن pandas يرجع تاريخ/Datetime قابل للحفظ
+                label=label_val,
+                ref=ref_val,
+                amount=amount_dec,
+                # amount_residual سيتم ضبطه في save() للموديل
             )
             lines_to_create.append(line)
 
-        # الحفظ الجماعي (Bulk Create) أسرع، لكنه لا يشغل دالة save() الخاصة بالمودل
-        # لذلك سنستخدم الحفظ العادي لضمان عمل logic الـ residual
+        # حفظ الأسطر واحداً واحداً لضمان تشغيل منطق save() (amount_residual / is_reconciled)
         for line in lines_to_create:
             line.save()
 
@@ -202,8 +219,7 @@ class BankStatementDetailView(BankBaseView, DetailView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["title"] = f"تفاصيل الكشف: {self.object.name}"
-        # جلب الأسطر
+        ctx["title"] = _("تفاصيل الكشف: ") + self.object.name
         ctx["lines"] = self.object.lines.order_by("date", "id")
         return ctx
 
@@ -243,30 +259,22 @@ class ReconciliationDashboardView(BankBaseView, DetailView):
         bank_account = self.object
         gl_account = bank_account.account  # حساب الأستاذ المرتبط
 
-        ctx["title"] = f"تسوية: {bank_account.name}"
+        ctx["title"] = _("تسوية: ") + bank_account.name
 
         # 1. جلب حركات البنك غير المسواة (أو المسواة جزئياً)
-        # نستبعد الحركات التي amount_residual = 0
         ctx["bank_lines"] = (
             BankStatementLine.objects
             .filter(statement__bank_account=bank_account)
             .exclude(amount_residual=0)
-            .order_by("date")
+            .order_by("date", "id")
         )
 
-        # 2. جلب قيود المحاسبة غير المسواة
-        # نفترض في مودل JournalItem لديك حقل لتتبع حالة التسوية أو نعتمد على جدول الربط
-        # الطريقة الأدق: نجلب القيود التي ليس لها BankReconciliation يغطي كامل المبلغ
-        # للتبسيط هنا: سنفترض أننا نريد عرض كل القيود على حساب البنك في دفتر الأستاذ
-        # التي لم يتم ربطها بالكامل.
-
-        # ملاحظة: هذا الكويري يعتمد على تصميم JournalItem لديك.
-        # سنفترض وجود flag اسمه is_reconciled في JournalItem أو نحسبه
+        # 2. جلب قيود المحاسبة غير المسواة لهذا الحساب
+        # نستخدم حقل reconciled (bool) الذي يحدث عبر التسوية البنكية
         ctx["journal_items"] = (
             JournalLine.objects
-            .filter(account=gl_account)  # فقط القيود التي تخص هذا البنك
-            .filter(reconciled=False)  # غير مسواة (حسب مودل المحاسبة لديك)
-            .order_by("date")
+            .filter(account=gl_account, reconciled=False)
+            .order_by("entry__date", "id")
         )
 
         return ctx
@@ -280,55 +288,131 @@ class ReconciliationDashboardView(BankBaseView, DetailView):
 def perform_reconciliation(request):
     """
     يستقبل طلب AJAX لربط سطر بنكي بسطر محاسبي.
-    Data: {bank_line_id: 1, journal_item_id: 50, amount: 100}
+    Data (JSON):
+      {
+        "bank_line_id": 1,
+        "journal_item_id": 50,
+        "amount": "100.000"
+      }
     """
-    import json
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return HttpResponseBadRequest("Invalid JSON")
 
     bank_line_id = data.get("bank_line_id")
     journal_item_id = data.get("journal_item_id")
-    amount = data.get("amount")  # المبلغ المراد تسويته
+    amount_raw = data.get("amount")
+
+    if not (bank_line_id and journal_item_id and amount_raw):
+        return JsonResponse(
+            {"status": "error", "message": _("بيانات غير مكتملة.")},
+            status=400,
+        )
+
+    try:
+        amount = Decimal(str(amount_raw))
+    except Exception:
+        return JsonResponse(
+            {"status": "error", "message": _("صيغة المبلغ غير صحيحة.")},
+            status=400,
+        )
+
+    if amount == 0:
+        return JsonResponse(
+            {"status": "error", "message": _("لا يمكن تسوية مبلغ صفر.")},
+            status=400,
+        )
 
     try:
         with transaction.atomic():
-            # جلب الكائنات
             bank_line = get_object_or_404(BankStatementLine, pk=bank_line_id)
             journal_item = get_object_or_404(JournalLine, pk=journal_item_id)
 
-            # إنشاء التسوية
+            # إنشاء التسوية (التحقق المنطقي في clean() للموديل)
             rec = BankReconciliation.objects.create(
                 bank_line=bank_line,
                 journal_item=journal_item,
-                amount_reconciled=Decimal(amount)
+                amount_reconciled=amount,
             )
 
-            # (اختياري) تحديث حالة القيد المحاسبي لـ "مسوى" إذا تغطى المبلغ بالكامل
-            # journal_item.check_reconciled_status() 
+            # تحديث حالة القيد المحاسبي (مسوى/غير مسوى) بناءً على الخاصية is_fully_reconciled
+            journal_item.refresh_from_db()
+            journal_item.reconciled = journal_item.is_fully_reconciled
+            journal_item.save(update_fields=["reconciled"])
 
-            return JsonResponse({
-                "status": "success",
-                "message": "تمت المطابقة بنجاح",
-                "new_residual": str(bank_line.amount_residual)  # لإرسال المتبقي للواجهة لتحديثها
-            })
+            # إعادة تحميل سطر البنك بعد تحديث المتبقي عن طريق الموديل
+            bank_line.refresh_from_db()
+
+            return JsonResponse(
+                {
+                    "status": "success",
+                    "message": _("تمت المطابقة بنجاح."),
+                    "bank_line_residual": str(bank_line.amount_residual),
+                    "bank_line_is_reconciled": bank_line.is_reconciled,
+                    "journal_item_reconciled": journal_item.reconciled,
+                    "journal_item_open_amount": str(journal_item.amount_open),
+                    "reconciliation_id": rec.pk,
+                }
+            )
 
     except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)}, status=400)
+        return JsonResponse(
+            {"status": "error", "message": str(e)},
+            status=400,
+        )
 
 
 @require_POST
 def undo_reconciliation(request):
     """
     فك التسوية (حذف الربط)
-    Data: {reconciliation_id: 55}
+    Data (JSON):
+      {
+        "reconciliation_id": 55
+      }
     """
-    import json
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return HttpResponseBadRequest("Invalid JSON")
+
     rec_id = data.get("reconciliation_id")
+    if not rec_id:
+        return JsonResponse(
+            {"status": "error", "message": _("رقم التسوية مفقود.")},
+            status=400,
+        )
 
     try:
-        rec = get_object_or_404(BankReconciliation, pk=rec_id)
-        rec.delete()  # دالة delete في المودل ستعيد الأموال للسطر البنكي تلقائياً
+        with transaction.atomic():
+            rec = get_object_or_404(BankReconciliation, pk=rec_id)
+            bank_line = rec.bank_line
+            journal_item = rec.journal_item
 
-        return JsonResponse({"status": "success", "message": "تم إلغاء المطابقة"})
+            # delete() في الموديل يعيد المتبقي لسطر البنك
+            rec.delete()
+
+            # تحديث سطر البنك
+            bank_line.refresh_from_db()
+
+            # تحديث حالة القيد المحاسبي
+            journal_item.refresh_from_db()
+            journal_item.reconciled = journal_item.is_fully_reconciled
+            journal_item.save(update_fields=["reconciled"])
+
+        return JsonResponse(
+            {
+                "status": "success",
+                "message": _("تم إلغاء المطابقة."),
+                "bank_line_residual": str(bank_line.amount_residual),
+                "bank_line_is_reconciled": bank_line.is_reconciled,
+                "journal_item_reconciled": journal_item.reconciled,
+                "journal_item_open_amount": str(journal_item.amount_open),
+            }
+        )
     except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)}, status=400)
+        return JsonResponse(
+            {"status": "error", "message": str(e)},
+            status=400,
+        )

@@ -1,99 +1,173 @@
 {% extends "accounting/base_accounting.html" %}
-{% load i18n humanize %}
-
-{% block title %}{{ title }}{% endblock %}
+{% load i18n %}
 
 {% block accounting_content %}
 
-<div class="row mb-4">
-    <div class="col-md-12">
-        <div class="d-flex justify-content-between align-items-start mb-3">
-            <div>
-                <h2 class="h5 mb-1">{{ statement.name }}</h2>
-                <p class="text-muted mb-0">{{ statement.bank_account.name }} | {{ statement.date }}</p>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="{% url 'banking:bank_statement_list' %}" class="btn btn-sm btn-outline-secondary">
-                    {% trans "رجوع" %}
-                </a>
-                <a href="{% url 'banking:bank_statement_delete' statement.pk %}" class="btn btn-sm btn-outline-danger">
-                    {% trans "حذف" %}
-                </a>
-            </div>
-        </div>
-
-        <div class="card border-0 shadow-sm bg-light">
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-md-3 border-end">
-                        <small class="text-muted d-block">{% trans "الرصيد الافتتاحي" %}</small>
-                        <span class="fw-bold">{{ statement.start_balance|intcomma }}</span>
-                    </div>
-                    <div class="col-md-3 border-end">
-                        <small class="text-muted d-block">{% trans "مجموع الحركات" %}</small>
-                        <span class="fw-bold dir-ltr">{{ statement.lines.count }}</span>
-                    </div>
-                    <div class="col-md-3 border-end">
-                        <small class="text-muted d-block">{% trans "الرصيد المحسوب" %}</small>
-                        <span class="fw-bold text-primary">{{ statement.computed_balance|intcomma }}</span>
-                    </div>
-                    <div class="col-md-3">
-                        <small class="text-muted d-block">{% trans "الرصيد الختامي (مدخل)" %}</small>
-                        <span class="fw-bold {% if statement.is_valid %}text-success{% else %}text-danger{% endif %}">
-                            {{ statement.end_balance|intcomma }}
-                        </span>
-                        {% if not statement.is_valid %}
-                            <div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> {% trans "غير مطابق" %}</div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
+{# ===================== HEADER ===================== #}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="h5 mb-1">
+      {{ title|default:_("تفاصيل كشف البنك") }}
+    </h2>
+    <div class="text-muted small">
+      {{ statement.bank_account.name }} –
+      {{ statement.date|date:"Y-m-d" }}
     </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a href="{% url 'banking:bank_statement_list' %}"
+       class="btn btn-outline-secondary btn-sm">
+      {% trans "رجوع إلى الكشوفات" %}
+    </a>
+
+    {# زر الذهاب لتسوية الحساب البنكي المرتبط بهذا الكشف #}
+    <a href="{% url 'banking:reconciliation_dashboard' pk=statement.bank_account.id %}"
+       class="btn btn-primary btn-sm">
+      {% trans "تسوية الحساب البنكي" %}
+    </a>
+  </div>
 </div>
 
+{# ===================== SUMMARY CARD ===================== #}
+<div class="row g-3 mb-3">
+
+  <div class="col-md-4">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <div class="small text-muted mb-1">
+          {% trans "الحساب البنكي" %}
+        </div>
+        <div class="fw-semibold">
+          {{ statement.bank_account.name }}
+        </div>
+        <div class="text-muted small">
+          {{ statement.bank_account.account.code }} – {{ statement.bank_account.account.name }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <div class="small text-muted mb-1">
+          {% trans "الرصيد الافتتاحي / الختامي" %}
+        </div>
+        <div class="d-flex justify-content-between">
+          <span class="text-muted small">{% trans "افتتاحي:" %}</span>
+          <span class="fw-semibold">{{ statement.start_balance }}</span>
+        </div>
+        <div class="d-flex justify-content-between">
+          <span class="text-muted small">{% trans "ختامي (مدخل):" %}</span>
+          <span class="fw-semibold">{{ statement.end_balance }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% with computed=statement.computed_balance %}
+  <div class="col-md-4">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <div class="small text-muted mb-1">
+          {% trans "الرصيد المحسوب من الحركات" %}
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="fw-semibold">{{ computed }}</span>
+          {% if statement.is_valid %}
+            <span class="badge bg-success-subtle text-success-emphasis">
+              {% trans "متطابق" %}
+            </span>
+          {% else %}
+            <span class="badge bg-danger-subtle text-danger-emphasis">
+              {% trans "غير متطابق" %}
+            </span>
+          {% endif %}
+        </div>
+
+        {% if not statement.is_valid %}
+          <div class="small text-muted">
+            {% trans "هناك فرق بين الرصيد الختامي المدخل والرصيد المحسوب من الحركات." %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endwith %}
+
+</div>
+
+{# ===================== LINES TABLE ===================== #}
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-white py-3">
-        <h6 class="mb-0">{% trans "تفاصيل الحركات (Lines)" %}</h6>
-    </div>
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0 text-nowrap">
-            <thead class="table-light">
-                <tr>
-                    <th>#</th>
-                    <th>{% trans "التاريخ" %}</th>
-                    <th>{% trans "البيان / الوصف" %}</th>
-                    <th>{% trans "المرجع" %}</th>
-                    <th class="text-end">{% trans "المبلغ" %}</th>
-                    <th class="text-center">{% trans "الحالة" %}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for line in lines %}
-                <tr>
-                    <td>{{ forloop.counter }}</td>
-                    <td>{{ line.date|date:"Y-m-d" }}</td>
-                    <td>{{ line.label|truncatechars:50 }}</td>
-                    <td>{{ line.ref|default:"-" }}</td>
-                    <td class="text-end fw-bold {% if line.amount < 0 %}text-danger{% else %}text-success{% endif %}">
-                        {{ line.amount|intcomma }}
-                    </td>
-                    <td class="text-center">
-                        {% if line.is_reconciled %}
-                            <span class="badge bg-success-subtle text-success">{% trans "مُسوّى" %}</span>
-                        {% else %}
-                            <span class="badge bg-secondary-subtle text-secondary">{% trans "معلق" %}</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="text-center py-4 text-muted">{% trans "لا توجد حركات في هذا الكشف." %}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="fw-semibold">
+      {% trans "حركات الكشف" %}
+    </span>
+    <span class="badge bg-secondary-subtle text-secondary-emphasis small">
+      {{ lines|length }} {% trans "حركة" %}
+    </span>
+  </div>
+
+  <div class="card-body p-0">
+    {% if lines %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>{% trans "التاريخ" %}</th>
+              <th>{% trans "البيان" %}</th>
+              <th>{% trans "المرجع" %}</th>
+              <th class="text-end">{% trans "المبلغ" %}</th>
+              <th class="text-end">{% trans "المتبقي للتسوية" %}</th>
+              <th class="text-center">{% trans "الحالة" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for line in lines %}
+              <tr>
+                <td class="text-muted small">{{ forloop.counter }}</td>
+                <td>{{ line.date|date:"Y-m-d" }}</td>
+                <td class="small">
+                  {{ line.label }}
+                  {% if line.partner_name %}
+                    <div class="text-muted small">
+                      {% trans "شريك:" %} {{ line.partner_name }}
+                    </div>
+                  {% endif %}
+                </td>
+                <td class="small">
+                  {{ line.ref|default:"—" }}
+                </td>
+                <td class="text-end">
+                  {{ line.amount }}
+                </td>
+                <td class="text-end">
+                  {{ line.amount_residual }}
+                </td>
+                <td class="text-center">
+                  {% if line.is_reconciled %}
+                    <span class="badge bg-success-subtle text-success-emphasis">
+                      {% trans "مُسوّى" %}
+                    </span>
+                  {% else %}
+                    <span class="badge bg-warning-subtle text-warning-emphasis">
+                      {% trans "غير مُسوّى" %}
+                    </span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
         </table>
-    </div>
+      </div>
+    {% else %}
+      <div class="p-4 text-center text-muted small">
+        {% trans "لا توجد حركات مسجلة في هذا الكشف." %}
+      </div>
+    {% endif %}
+  </div>
 </div>
 
-{% endblock %}
+{% endblock accounting_content %}

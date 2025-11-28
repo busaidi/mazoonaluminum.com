@@ -1,129 +1,365 @@
+{# templates/banking/reconciliation_dashboard.html #}
 {% extends "accounting/base_accounting.html" %}
-{% load i18n humanize %}
-
-{% block title %}{{ title }}{% endblock %}
+{% load i18n %}
 
 {% block accounting_content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-        <h2 class="h5 mb-1">{{ title }}</h2>
-        <p class="text-muted small mb-0">
-            {% trans "قم بمطابقة حركات البنك (يمين) مع قيود النظام (يسار)." %}
-        </p>
-    </div>
-    <div class="d-flex gap-2">
-        <a href="{% url 'banking:bank_account_list' %}" class="btn btn-sm btn-outline-secondary">{% trans "خروج" %}</a>
-    </div>
+<h2 class="h5 mb-3">
+  {{ title|default:_("تسوية الحساب البنكي") }}
+</h2>
+
+<div class="alert alert-info small">
+  {% blocktrans %}
+  اختر حركة بنكية من العمود الأيسر، واختر سطر قيد من العمود الأيمن، ثم أدخل مبلغ التسوية واضغط "تسوية".
+  {% endblocktrans %}
 </div>
 
-<div class="row g-3" style="height: calc(100vh - 200px);">
-    
-    <div class="col-md-6 h-100">
-        <div class="card shadow-sm h-100 border-0">
-            <div class="card-header bg-primary text-white d-flex justify-content-between">
-                <span class="fw-bold">{% trans "كشف البنك (الوارد)" %}</span>
-                <span class="badge bg-white text-primary">{{ bank_lines.count }}</span>
-            </div>
-            <div class="card-body p-0 overflow-auto">
-                <table class="table table-hover table-sm mb-0 small">
-                    <thead class="table-light sticky-top">
-                        <tr>
-                            <th>{% trans "التاريخ" %}</th>
-                            <th>{% trans "الوصف" %}</th>
-                            <th class="text-end">{% trans "المبلغ" %}</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for line in bank_lines %}
-                        <tr class="align-middle bank-line-row" data-id="{{ line.id }}" data-amount="{{ line.amount_residual }}">
-                            <td>{{ line.date|date:"d/m" }}</td>
-                            <td class="text-truncate" style="max-width: 150px;" title="{{ line.label }}">
-                                {{ line.label }}
-                            </td>
-                            <td class="text-end fw-bold {% if line.amount < 0 %}text-danger{% else %}text-success{% endif %}">
-                                {{ line.amount_residual|intcomma }}
-                            </td>
-                            <td class="text-end">
-                                <button class="btn btn-sm btn-outline-primary py-0 px-1 select-bank-line">
-                                    <i class="bi bi-check"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="4" class="text-center py-5 text-muted">{% trans "لا توجد حركات بنكية معلقة." %}</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+<div class="row g-3">
+
+  {# ---------------------------------------- #}
+  {# عمود حركات البنك                         #}
+  {# ---------------------------------------- #}
+  <div class="col-md-6">
+    <div class="card shadow-sm border-0">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">
+          {% trans "حركات البنك غير المسواة" %}
+        </span>
+        <span class="badge bg-secondary-subtle text-secondary-emphasis small">
+          {{ bank_lines|length }} {% trans "حركة" %}
+        </span>
+      </div>
+      <div class="card-body p-0">
+        {% if bank_lines %}
+          <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0 align-middle" id="bank-lines-table">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 1%;">#</th>
+                  <th>{% trans "التاريخ" %}</th>
+                  <th>{% trans "الوصف" %}</th>
+                  <th class="text-end">{% trans "المبلغ" %}</th>
+                  <th class="text-end">{% trans "المتبقي" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for line in bank_lines %}
+                  <tr
+                    class="bank-line-row"
+                    data-bank-line-id="{{ line.id }}"
+                    data-bank-amount="{{ line.amount }}"
+                    data-bank-residual="{{ line.amount_residual }}"
+                  >
+                    <td class="text-muted small">{{ forloop.counter }}</td>
+                    <td>{{ line.date|date:"Y-m-d" }}</td>
+                    <td class="small">
+                      {{ line.label }}
+                      {% if line.ref %}
+                        <div class="text-muted small">
+                          <span class="me-1">#{{ line.ref }}</span>
+                        </div>
+                      {% endif %}
+                    </td>
+                    <td class="text-end">
+                      {{ line.amount }}
+                    </td>
+                    <td class="text-end">
+                      <span class="bank-line-residual">
+                        {{ line.amount_residual }}
+                      </span>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="p-3 text-muted small">
+            {% trans "لا توجد حركات بنكية غير مسواة لهذا الحساب." %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ---------------------------------------- #}
+  {# عمود قيود الأستاذ                        #}
+  {# ---------------------------------------- #}
+  <div class="col-md-6">
+    <div class="card shadow-sm border-0">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">
+          {% trans "قيود المحاسبة غير المسواة" %}
+        </span>
+        <span class="badge bg-secondary-subtle text-secondary-emphasis small">
+          {{ journal_items|length }} {% trans "سطر" %}
+        </span>
+      </div>
+      <div class="card-body p-0">
+        {% if journal_items %}
+          <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0 align-middle" id="journal-items-table">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 1%;">#</th>
+                  <th>{% trans "التاريخ" %}</th>
+                  <th>{% trans "القيد" %}</th>
+                  <th>{% trans "الحساب" %}</th>
+                  <th class="text-end">{% trans "مدين" %}</th>
+                  <th class="text-end">{% trans "دائن" %}</th>
+                  <th class="text-end">{% trans "متبقي" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in journal_items %}
+                  <tr
+                    class="journal-item-row"
+                    data-journal-item-id="{{ item.id }}"
+                    data-journal-open="{{ item.amount_open }}"
+                    data-journal-signed="{{ item.signed_amount }}"
+                  >
+                    <td class="text-muted small">{{ forloop.counter }}</td>
+                    <td>{{ item.entry.date|date:"Y-m-d" }}</td>
+                    <td class="small">
+                      {{ item.entry.display_number }}
+                    </td>
+                    <td class="small">
+                      {{ item.account.code }} - {{ item.account.name }}
+                    </td>
+                    <td class="text-end">{{ item.debit }}</td>
+                    <td class="text-end">{{ item.credit }}</td>
+                    <td class="text-end">
+                      <span class="journal-item-open">
+                        {{ item.amount_open }}
+                      </span>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="p-3 text-muted small">
+            {% trans "لا توجد سطور قيود مفتوحة لهذا الحساب." %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ---------------------------------------- #}
+{# منطقة تنفيذ التسوية                      #}
+{# ---------------------------------------- #}
+<div class="card shadow-sm border-0 mt-3" id="reconciliation-panel">
+  <div class="card-body">
+    <h3 class="h6 mb-3">{% trans "تنفيذ التسوية" %}</h3>
+
+    <div class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">
+          {% trans "الحركة البنكية المختارة" %}
+        </label>
+        <div class="border rounded-3 p-2 small bg-light" id="selected-bank-line-info">
+          <span class="text-muted">{% trans "لم يتم اختيار حركة بنك بعد." %}</span>
         </div>
-    </div>
+      </div>
 
-    <div class="col-md-6 h-100">
-        <div class="card shadow-sm h-100 border-0">
-            <div class="card-header bg-success text-white d-flex justify-content-between">
-                <span class="fw-bold">{% trans "دفتر الأستاذ (النظام)" %}</span>
-                <span class="badge bg-white text-success">{{ journal_items.count }}</span>
-            </div>
-            <div class="card-body p-0 overflow-auto">
-                <table class="table table-hover table-sm mb-0 small">
-                    <thead class="table-light sticky-top">
-                        <tr>
-                            <th></th>
-                            <th>{% trans "التاريخ" %}</th>
-                            <th>{% trans "القيد/الشريك" %}</th>
-                            <th class="text-end">{% trans "المبلغ" %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in journal_items %}
-                        <tr class="align-middle gl-line-row" data-id="{{ item.id }}" data-amount="{{ item.amount }}"> <td>
-                                <button class="btn btn-sm btn-outline-success py-0 px-1 select-gl-line">
-                                    <i class="bi bi-check"></i>
-                                </button>
-                            </td>
-                            <td>{{ item.date|date:"d/m" }}</td>
-                            <td class="text-truncate" style="max-width: 150px;">
-                                {{ item.journal_entry.name|default:"-" }} <br>
-                                <span class="text-muted">{{ item.partner.name|default:"" }}</span>
-                            </td>
-                            <td class="text-end fw-bold">
-                                {{ item.amount|intcomma }} </td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="4" class="text-center py-5 text-muted">{% trans "لا توجد قيود غير مسواة." %}</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">
+          {% trans "سطر القيد المختار" %}
+        </label>
+        <div class="border rounded-3 p-2 small bg-light" id="selected-journal-item-info">
+          <span class="text-muted">{% trans "لم يتم اختيار سطر قيد بعد." %}</span>
         </div>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label fw-semibold" for="reconcile-amount-input">
+          {% trans "مبلغ التسوية" %}
+        </label>
+        <input
+          type="number"
+          step="0.001"
+          class="form-control"
+          id="reconcile-amount-input"
+          placeholder="0.000"
+        >
+      </div>
+
+      <div class="col-md-2 d-grid">
+        <button
+          type="button"
+          class="btn btn-primary"
+          id="reconcile-submit-btn"
+        >
+          {% trans "تسوية" %}
+        </button>
+      </div>
     </div>
 
+    <div class="mt-2 small text-muted">
+      {% blocktrans %}
+      سيتم اقتراح مبلغ التسوية تلقائياً كأقل قيمة بين المتبقي في حركة البنك والمتبقي في سطر القيد، ويمكنك تعديله قبل التنفيذ.
+      {% endblocktrans %}
+    </div>
+  </div>
 </div>
 
-<div id="action-bar" class="fixed-bottom bg-white border-top shadow p-3 d-none justify-content-center gap-3 align-items-center">
-    <div>
-        <span class="text-muted">{% trans "مجموع البنك:" %}</span>
-        <span id="sum-bank" class="fw-bold mx-2">0.00</span>
-    </div>
-    <div>|</div>
-    <div>
-        <span class="text-muted">{% trans "مجموع النظام:" %}</span>
-        <span id="sum-gl" class="fw-bold mx-2">0.00</span>
-    </div>
-    
-    <button id="btn-reconcile" class="btn btn-primary px-4" disabled>
-        {% trans "تأكيد التسوية" %}
-    </button>
-</div>
-
-{% endblock %}
-
-{% block extra_js %}
+{# ---------------------------------------- #}
+{# سكربت للتعامل مع الاختيار والتسوية      #}
+{# ---------------------------------------- #}
 <script>
-    // هذا مكان كود الجافاسكربت الخاص بالتفاعل
-    // يمكننا إضافته لاحقاً لتفعيل الأزرار والحساب
-    console.log("Reconciliation Dashboard Loaded");
+  (function() {
+    const bankTable = document.getElementById("bank-lines-table");
+    const journalTable = document.getElementById("journal-items-table");
+    const selectedBankInfo = document.getElementById("selected-bank-line-info");
+    const selectedJournalInfo = document.getElementById("selected-journal-item-info");
+    const amountInput = document.getElementById("reconcile-amount-input");
+    const submitBtn = document.getElementById("reconcile-submit-btn");
+
+    const reconcileUrl = "{% url 'banking:reconcile_perform' %}";
+
+    let selectedBank = null;
+    let selectedJournal = null;
+
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + "=")) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+    const csrftoken = getCookie("csrftoken");
+
+    function clearRowSelection(table, className) {
+      if (!table) return;
+      table.querySelectorAll("." + className).forEach(function(row) {
+        row.classList.remove("table-active");
+      });
+    }
+
+    function updateSuggestedAmount() {
+      if (!selectedBank || !selectedJournal) return;
+
+      const bankResidual = parseFloat(selectedBank.dataset.bankResidual || "0");
+      const journalOpen = parseFloat(selectedJournal.dataset.journalOpen || "0");
+
+      if (!bankResidual || !journalOpen) return;
+
+      const absBank = Math.abs(bankResidual);
+      const absOpen = Math.abs(journalOpen);
+      let suggested = Math.min(absBank, absOpen);
+
+      // نحافظ على إشارة حركة البنك (موجب/سالب)
+      if (bankResidual < 0) {
+        suggested = -suggested;
+      }
+
+      amountInput.value = suggested.toFixed(3);
+    }
+
+    if (bankTable) {
+      bankTable.addEventListener("click", function(e) {
+        const tr = e.target.closest("tr.bank-line-row");
+        if (!tr) return;
+
+        clearRowSelection(bankTable, "table-active");
+        tr.classList.add("table-active");
+        selectedBank = tr;
+
+        const date = tr.children[1].innerText;
+        const label = tr.children[2].innerText.trim();
+        const residual = tr.querySelector(".bank-line-residual").innerText.trim();
+
+        selectedBankInfo.innerHTML =
+          "<div><span class='fw-semibold'>" + label + "</span></div>" +
+          "<div class='text-muted'>" + date + "</div>" +
+          "<div class='mt-1 small'>متبقي: <span class='fw-semibold'>" + residual + "</span></div>";
+
+        updateSuggestedAmount();
+      });
+    }
+
+    if (journalTable) {
+      journalTable.addEventListener("click", function(e) {
+        const tr = e.target.closest("tr.journal-item-row");
+        if (!tr) return;
+
+        clearRowSelection(journalTable, "table-active");
+        tr.classList.add("table-active");
+        selectedJournal = tr;
+
+        const date = tr.children[1].innerText;
+        const jeNumber = tr.children[2].innerText.trim();
+        const account = tr.children[3].innerText.trim();
+        const openAmount = tr.querySelector(".journal-item-open").innerText.trim();
+
+        selectedJournalInfo.innerHTML =
+          "<div><span class='fw-semibold'>" + jeNumber + "</span></div>" +
+          "<div class='text-muted'>" + account + "</div>" +
+          "<div class='mt-1 small'>متبقي: <span class='fw-semibold'>" + openAmount + "</span></div>";
+
+        updateSuggestedAmount();
+      });
+    }
+
+    submitBtn.addEventListener("click", function() {
+      if (!selectedBank || !selectedJournal) {
+        alert("يرجى اختيار حركة بنك وسطر قيد أولاً.");
+        return;
+      }
+
+      const amountVal = amountInput.value;
+      if (!amountVal || Number(amountVal) === 0) {
+        alert("يرجى إدخال مبلغ صحيح للتسوية (غير صفر).");
+        return;
+      }
+
+      const payload = {
+        bank_line_id: selectedBank.dataset.bankLineId,
+        journal_item_id: selectedJournal.dataset.journalItemId,
+        amount: amountVal
+      };
+
+      fetch(reconcileUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrftoken
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(function(response) {
+        return response.json().then(function(data) {
+          if (!response.ok) {
+            throw new Error(data.message || "خطأ غير معروف.");
+          }
+          return data;
+        });
+      })
+      .then(function(data) {
+        if (data.status === "success") {
+          // أبسط شيء: نعيد تحميل الصفحة لتحديث القوائم
+          window.location.reload();
+        } else {
+          alert(data.message || "حدث خطأ أثناء تنفيذ التسوية.");
+        }
+      })
+      .catch(function(err) {
+        alert(err.message || "حدث خطأ أثناء الاتصال بالخادم.");
+      });
+    });
+
+  })();
 </script>
-{% endblock %}
+
+{% endblock accounting_content %}

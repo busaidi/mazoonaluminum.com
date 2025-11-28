@@ -1,83 +1,97 @@
 {% extends "accounting/base_accounting.html" %}
-{% load i18n humanize %}
-
-{% block title %}{{ title }}{% endblock %}
+{% load i18n %}
 
 {% block accounting_content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-  <div>
-    <h2 class="h5 mb-1">{{ title }}</h2>
-    <p class="text-muted small mb-0">{% trans "إدارة الحسابات البنكية وربطها بدليل الحسابات." %}</p>
-  </div>
-  <a href="{% url 'banking:bank_account_create' %}" class="btn btn-sm btn-primary">
-    <i class="bi bi-plus-lg"></i> {% trans "حساب جديد" %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="h5 mb-0">{% trans "الحسابات البنكية" %}</h2>
+  <a href="{% url 'banking:bank_account_create' %}" class="btn btn-primary btn-sm">
+    {% trans "إضافة حساب" %}
   </a>
 </div>
 
 <div class="card shadow-sm border-0">
   <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
-        <thead class="table-light">
-          <tr>
-            <th>{% trans "اسم الحساب" %}</th>
-            <th>{% trans "البنك" %}</th>
-            <th>{% trans "رقم الحساب / IBAN" %}</th>
-            <th>{% trans "حساب الأستاذ (GL)" %}</th>
-            <th>{% trans "العملة" %}</th>
-            <th>{% trans "الحالة" %}</th>
-            <th class="text-end">{% trans "إجراءات" %}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for account in accounts %}
-          <tr>
-            <td class="fw-bold">
-              <a href="{% url 'banking:bank_account_edit' account.pk %}" class="text-decoration-none text-dark">
-                {{ account.name }}
-              </a>
-            </td>
-            <td>{{ account.bank_name|default:"-" }}</td>
-            <td>
-              <div class="small">{{ account.account_number|default:"-" }}</div>
-              <div class="text-muted small">{{ account.iban|default:"" }}</div>
-            </td>
-            <td>
-              <span class="badge bg-light text-dark border">
-                {{ account.account.code }} - {{ account.account.name }}
-              </span>
-            </td>
-            <td>{{ account.currency }}</td>
-            <td>
-              {% if account.is_active %}
-                <span class="badge bg-success-subtle text-success">{% trans "نشط" %}</span>
-              {% else %}
-                <span class="badge bg-danger-subtle text-danger">{% trans "غير نشط" %}</span>
-              {% endif %}
-            </td>
-            <td class="text-end">
-              <div class="btn-group">
-                <a href="{% url 'banking:reconciliation_dashboard' account.pk %}" class="btn btn-sm btn-outline-primary" title="{% trans 'تسوية' %}">
-                  <i class="bi bi-arrow-repeat"></i> {% trans "تسوية" %}
+
+    {% if accounts %}
+      <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>{% trans "اسم الحساب" %}</th>
+              <th>{% trans "الحساب المحاسبي" %}</th>
+              <th>{% trans "رقم الحساب" %}</th>
+              <th>{% trans "الحالة" %}</th>
+              <th class="text-end">{% trans "إجراءات" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            {% for acc in accounts %}
+            <tr>
+              <td class="text-muted small">{{ forloop.counter }}</td>
+
+              <td>
+                <strong>{{ acc.name }}</strong><br>
+                <span class="text-muted small">
+                  {{ acc.bank_name }}
+                </span>
+              </td>
+
+              <td class="small">
+                {{ acc.account.code }} – {{ acc.account.name }}
+              </td>
+
+              <td class="small">
+                {{ acc.account_number|default:"—" }}
+              </td>
+
+              <td>
+                {% if acc.is_active %}
+                  <span class="badge bg-success-subtle text-success-emphasis">
+                    {% trans "نشط" %}
+                  </span>
+                {% else %}
+                  <span class="badge bg-secondary-subtle text-secondary-emphasis">
+                    {% trans "غير نشط" %}
+                  </span>
+                {% endif %}
+              </td>
+
+              <td class="text-end">
+
+                {# زر التسوية البنكية — أهم زر #}
+                <a href="{% url 'banking:reconciliation_dashboard' pk=acc.id %}"
+                   class="btn btn-outline-primary btn-sm me-1">
+                  {% trans "تسوية" %}
                 </a>
-                <a href="{% url 'banking:bank_account_edit' account.pk %}" class="btn btn-sm btn-outline-secondary" title="{% trans 'تعديل' %}">
-                  <i class="bi bi-pencil"></i>
+
+                <a href="{% url 'banking:bank_account_edit' pk=acc.id %}"
+                   class="btn btn-outline-secondary btn-sm me-1">
+                  {% trans "تعديل" %}
                 </a>
-              </div>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="7" class="text-center py-5 text-muted">
-              <i class="bi bi-bank fs-1 d-block mb-2"></i>
-              {% trans "لا توجد حسابات بنكية معرفة حتى الآن." %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+
+                <a href="{% url 'banking:bank_account_delete' pk=acc.id %}"
+                   class="btn btn-outline-danger btn-sm">
+                  {% trans "حذف" %}
+                </a>
+
+              </td>
+            </tr>
+            {% endfor %}
+
+          </tbody>
+        </table>
+      </div>
+
+    {% else %}
+      <div class="p-4 text-center text-muted small">
+        {% trans "لا توجد حسابات بنكية مضافة بعد." %}
+      </div>
+    {% endif %}
+
   </div>
 </div>
-{% endblock %}
+
+{% endblock accounting_content %}
