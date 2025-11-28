@@ -969,7 +969,10 @@ class PaymentReconcileView(AccountingStaffRequiredMixin, FormView):
     # جلب الدفعة المستهدفة من الـ URL
     # ------------------------------------------------------
     def dispatch(self, request, *args, **kwargs):
-        self.payment = get_object_or_404(Payment, pk=kwargs.get("pk"))
+        self.payment = get_object_or_404(
+            Payment.objects.select_related("contact"),
+            pk=kwargs.get("pk"),
+        )
         return super().dispatch(request, *args, **kwargs)
 
     # ------------------------------------------------------
@@ -977,21 +980,37 @@ class PaymentReconcileView(AccountingStaffRequiredMixin, FormView):
     # ------------------------------------------------------
     def get_invoices_queryset(self):
         """
-        إرجاع الفواتير المفتوحة لنفس الطرف المرتبط بهذه الدفعة.
-        يمكنك تعديل الشروط حسب منطق المشروع.
+        يرجّع الفواتير المفتوحة لنفس الطرف المرتبط بهذه الدفعة.
+        - لو الدفعة قبض من عميل → نستخدم فواتير مبيعات.
+        - لو الدفعة صرف لمورد → نستخدم فواتير مشتريات.
+        - نستثني فقط الملغاة والمدفوعة بالكامل.
+        - وبعدها نفلتر في الذاكرة على balance > 0.
         """
-        qs = Invoice.objects.filter(
-            customer=self.payment.contact,
-            type=Invoice.InvoiceType.SALES,
-        ).exclude(
+        payment_type = self.payment.type  # حقل string عندك
+
+        # نبدأ بكل فواتير هذا الكونتاكت
+        qs = Invoice.objects.filter(customer=self.payment.contact)
+
+        # نحدد نوع الفاتورة حسب نوع الدفعة
+        if payment_type in ("customer_receipt", "in", "incoming", None, ""):
+            qs = qs.filter(type=Invoice.InvoiceType.SALES)
+        elif payment_type in ("supplier_payment", "out", "outgoing"):
+            qs = qs.filter(type=Invoice.InvoiceType.PURCHASE)
+        # غير كذا نخليها بدون فلتر type لو حاب (أو تقدر تضيف منطق خاص لاحقاً)
+
+        # نستثني فقط الملغاة والمدفوعة بالكامل
+        qs = qs.exclude(
             status__in=[
                 Invoice.Status.CANCELLED,
-                Invoice.Status.DRAFT,
                 Invoice.Status.PAID,
             ]
-        )
+        ).order_by("issued_at", "pk")
 
-        return qs.order_by("-issued_at", "-id")
+        # balance خاصية بايثون تعتمد على allocations، فنفلتر في الذاكرة
+        open_invoices = [inv for inv in qs if inv.balance > 0]
+
+        return open_invoices
+
 
     # ------------------------------------------------------
     # تمرير الدفعة والفواتير إلى الفورم
@@ -1011,24 +1030,28 @@ class PaymentReconcileView(AccountingStaffRequiredMixin, FormView):
         invoices = self.get_invoices_queryset()
         form = context["form"]
 
-        # نحضّر صفوف الجدول: كل صف يحتوي الفاتورة + حقل التسوية الخاص بها
         invoice_rows = []
         for inv in invoices:
             field_name = PaymentReconciliationForm._field_name_for_invoice(inv)
-            invoice_rows.append(
-                {
-                    "invoice": inv,
-                    "field": form[field_name],
-                }
-            )
+            # نتأكد أن الحقل موجود فعلاً في الفورم
+            if field_name in form.fields:
+                invoice_rows.append(
+                    {
+                        "invoice": inv,
+                        "field": form[field_name],
+                    }
+                )
 
         context.update(
             {
                 "payment": self.payment,
                 "invoices": invoices,
                 "invoice_rows": invoice_rows,
-                # عشان يضوي تبويب الدفعات في الـ navbar لو مستخدمه
-                "accounting_section": "reconcile",
+                "has_open_invoices": bool(invoices),
+                # عشان الناف / التبويب
+                "section": "accounting",
+                "subsection": "reconcile",
+                "accounting_section": "payments",
             }
         )
         return context
@@ -1048,7 +1071,6 @@ class PaymentReconcileView(AccountingStaffRequiredMixin, FormView):
         try:
             allocate_payment_to_invoices(self.payment, allocations_dict)
         except ValidationError as e:
-            # نضيف الخطأ كـ non_field_error عشان يظهر أعلى الفورم
             form.add_error(None, e)
             return self.form_invalid(form)
 
@@ -1057,8 +1079,9 @@ class PaymentReconcileView(AccountingStaffRequiredMixin, FormView):
             _("تم حفظ تسوية الدفعة مع الفواتير بنجاح."),
         )
 
-        # رجوع إلى صفحة تفاصيل الدفعة (عدّل الاسم لو عندك view مختلف)
-        return redirect(reverse("accounting:payment_detail", args=[self.payment.pk]))
+        return redirect(
+            reverse("accounting:payment_detail", args=[self.payment.pk])
+        )
 
 
 class PaymentClearReconciliationView(AccountingStaffRequiredMixin, View):

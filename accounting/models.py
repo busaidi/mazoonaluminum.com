@@ -658,7 +658,7 @@ class Invoice(StatefulDomainModel):
         """المبلغ الذي تم تسويته فعلياً من خلال الدفعات."""
         return (
             self.allocations.aggregate(sum=Sum("amount"))["sum"]
-            or Decimal("0.000")
+            or DECIMAL_ZERO
         )
 
     @property
@@ -674,6 +674,27 @@ class Invoice(StatefulDomainModel):
     @property
     def display_number(self):
         return f"INV-{self.pk}" if self.pk else _("مسودة")
+
+    # ------------------------------------------------------
+    # إعادة احتساب الإجمالي من البنود
+    # ------------------------------------------------------
+    def recalculate_totals(self, commit: bool = True) -> None:
+        """
+        يحسب total_amount من بنود الفاتورة:
+        sum(quantity * unit_price) لجميع items المرتبطة.
+        """
+        total = DECIMAL_ZERO
+
+        # نفترض أن related_name للبنود هو "items"
+        for line in self.items.all():
+            qty = line.quantity or DECIMAL_ZERO
+            price = line.unit_price or DECIMAL_ZERO
+            total += qty * price
+
+        self.total_amount = total
+
+        if commit:
+            self.save(update_fields=["total_amount"])
 
     # ------------------------------------------------------
     # تحديث حالة الفاتورة حسب التسويات
