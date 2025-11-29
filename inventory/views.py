@@ -1,12 +1,13 @@
 # inventory/views.py
+
 from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.db.models import Sum, Q, F
+from django.db.models import Sum, Q, F, Case, When, IntegerField
 from django.http import HttpResponseRedirect
-from django.urls import reverse_lazy
-from django.urls.base import reverse
+from django.urls import reverse_lazy, reverse
+from django.utils.translation import gettext_lazy as _
 from django.views.generic import (
     TemplateView,
     ListView,
@@ -15,32 +16,45 @@ from django.views.generic import (
     UpdateView,
 )
 
-from .forms import StockMoveForm, ProductForm, StockLevelForm, ProductCategoryForm, InventorySettingsForm, \
-    StockMoveLineFormSet
+from .forms import (
+    StockMoveForm,
+    ProductForm,
+    StockLevelForm,
+    ProductCategoryForm,
+    InventorySettingsForm,
+    StockMoveLineFormSet,
+)
 from .models import (
     ProductCategory,
     Product,
     Warehouse,
     StockLocation,
     StockMove,
-    StockLevel, InventorySettings,
+    StockLevel,
+    InventorySettings,
 )
-from .services import get_stock_summary_per_warehouse, get_low_stock_levels, filter_below_min_stock_levels, \
-    get_low_stock_total, filter_stock_moves_queryset, filter_products_queryset
+from .services import (
+    get_stock_summary_per_warehouse,
+    get_low_stock_levels,
+    filter_below_min_stock_levels,
+    get_low_stock_total,
+    filter_stock_moves_queryset,
+    filter_products_queryset,
+)
 
 
 # ============================================================
-# Base mixin for inventory staff
+# مكسين الصلاحيات للمخزون
 # ============================================================
 
 class InventoryStaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     """
-    Restrict inventory views to staff users.
-    Later you can replace this with a shared mixin from core if needed.
+    مكسين يقيّد شاشات المخزون على المستخدمين الستاف فقط.
+    يمكن لاحقاً استبداله بمكسين مشترك من core.
     """
 
-    raise_exception = True  # return 403 instead of redirect loop
-    section = "inventory"   # for layout/nav highlighting
+    raise_exception = True  # يرجّع 403 بدل دوّامة إعادة التوجيه
+    section = "inventory"   # لاستخدامه في الـ layout / الـ navbar
 
     def test_func(self):
         user = self.request.user
@@ -48,12 +62,12 @@ class InventoryStaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
 
 
 # ============================================================
-# Dashboard
+# لوحة تحكم المخزون
 # ============================================================
 
 class InventoryDashboardView(InventoryStaffRequiredMixin, TemplateView):
     """
-    Simple inventory dashboard with high-level KPIs.
+    لوحة تحكم بسيطة فيها مؤشرات عامة للمخزون.
     """
     template_name = "inventory/dashboard.html"
 
@@ -71,7 +85,7 @@ class InventoryDashboardView(InventoryStaffRequiredMixin, TemplateView):
         total_moves = StockMove.objects.count()
         done_moves = StockMove.objects.filter(status=StockMove.Status.DONE).count()
 
-        # recent 10 moves – الآن بدون product لأنه انتقل للـ lines
+        # آخر 10 حركات مخزون (مع البنود)
         recent_moves = (
             StockMove.objects
             .select_related(
@@ -84,10 +98,10 @@ class InventoryDashboardView(InventoryStaffRequiredMixin, TemplateView):
             .order_by("-move_date", "-id")[:10]
         )
 
-        # stock summary per warehouse (نستخدم warehouse مباشرة + quantity_on_hand)
+        # ملخص رصيد المخزون لكل مستودع
         stock_per_warehouse = get_stock_summary_per_warehouse()
 
-        # Low stock: min_stock > 0 && quantity_on_hand < min_stock
+        # مستويات مخزون تحت الحد الأدنى
         low_stock_levels = get_low_stock_levels()
 
         ctx.update(
@@ -110,8 +124,9 @@ class InventoryDashboardView(InventoryStaffRequiredMixin, TemplateView):
 
 
 # ============================================================
-# Product categories
+# تصنيفات المنتجات
 # ============================================================
+
 class ProductCategoryListView(InventoryStaffRequiredMixin, ListView):
     model = ProductCategory
     template_name = "inventory/category/list.html"
@@ -143,7 +158,7 @@ class ProductCategoryCreateView(InventoryStaffRequiredMixin, CreateView):
     success_url = reverse_lazy("inventory:category_list")
 
     def form_valid(self, form):
-        messages.success(self.request, "تم إنشاء التصنيف بنجاح.")
+        messages.success(self.request, _("تم إنشاء التصنيف بنجاح."))
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -160,7 +175,7 @@ class ProductCategoryUpdateView(InventoryStaffRequiredMixin, UpdateView):
     success_url = reverse_lazy("inventory:category_list")
 
     def form_valid(self, form):
-        messages.success(self.request, "تم تحديث التصنيف بنجاح.")
+        messages.success(self.request, _("تم تحديث التصنيف بنجاح."))
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -169,8 +184,9 @@ class ProductCategoryUpdateView(InventoryStaffRequiredMixin, UpdateView):
         ctx["mode"] = "update"
         return ctx
 
+
 # ============================================================
-# Products
+# المنتجات
 # ============================================================
 
 class ProductListView(InventoryStaffRequiredMixin, ListView):
@@ -179,39 +195,85 @@ class ProductListView(InventoryStaffRequiredMixin, ListView):
     context_object_name = "products"
     paginate_by = 25
 
-
     def get_queryset(self):
-        # Base queryset مع العلاقات والترتيب
+        """
+        قائمة المنتجات مع:
+        - علاقات التصنيف لأجل الأداء (select_related)
+        - تلخيص رصيد المخزون لكل منتج في حقول:
+            total_on_hand_agg
+            has_low_stock_anywhere_agg
+        - فلاتر:
+            q, category, product_type, only_published
+        """
+
         base_qs = (
             Product.objects
             .select_related("category")
+            .annotate(
+                # إجمالي المخزون (بدون ما نصطدم مع property total_on_hand)
+                total_on_hand_agg=Sum("stock_levels__quantity_on_hand"),
+
+                # عدد المواقع اللي تحت الحد الأدنى (0 أو أكثر)
+                has_low_stock_anywhere_agg=Sum(
+                    Case(
+                        When(
+                            stock_levels__min_stock__gt=Decimal("0.000"),
+                            stock_levels__quantity_on_hand__lt=F("stock_levels__min_stock"),
+                            then=1,
+                        ),
+                        default=0,
+                        output_field=IntegerField(),
+                    )
+                ),
+            )
             .order_by("code")
         )
 
         q = self.request.GET.get("q", "").strip()
         category_id = self.request.GET.get("category") or None
+        product_type = self.request.GET.get("product_type") or None
         only_published = self.request.GET.get("published") == "1"
 
         qs = filter_products_queryset(
             base_qs,
             q=q,
             category_id=category_id,
+            product_type=product_type,
             only_published=only_published,
         )
 
+        # نخزّن الفلاتر لأجل الـ context
         self.search_query = q
         self.category_filter = category_id
+        self.product_type_filter = product_type
         self.only_published = only_published
+
+        # نحسب اللابل لنوع المنتج الحالي (للاستخدام في القالب)
+        self.product_type_filter_label = None
+        if product_type:
+            for value, label in Product.ProductType.choices:
+                if value == product_type:
+                    self.product_type_filter_label = label
+                    break
+
         return qs
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["q"] = getattr(self, "search_query", "")
         ctx["category_filter"] = getattr(self, "category_filter", None)
+        ctx["product_type_filter"] = getattr(self, "product_type_filter", None)
+        ctx["product_type_filter_label"] = getattr(self, "product_type_filter_label", None)
         ctx["only_published"] = getattr(self, "only_published", False)
+
         ctx["categories"] = ProductCategory.objects.filter(is_active=True)
+        ctx["product_type_choices"] = Product.ProductType.choices
+
         ctx["subsection"] = "products"
         return ctx
+
+
+
 
 
 class ProductDetailView(InventoryStaffRequiredMixin, DetailView):
@@ -223,7 +285,7 @@ class ProductDetailView(InventoryStaffRequiredMixin, DetailView):
         ctx = super().get_context_data(**kwargs)
         product = self.object
 
-        # stock snapshot per level
+        # snapshot لرصيد المخزون لهذا المنتج
         stock_levels = (
             StockLevel.objects
             .select_related("warehouse", "location")
@@ -248,12 +310,12 @@ class ProductCreateView(InventoryStaffRequiredMixin, CreateView):
     success_url = reverse_lazy("inventory:product_list")
 
     def form_valid(self, form):
-        messages.success(self.request, "تم إنشاء المنتج بنجاح.")
+        messages.success(self.request, _("تم إنشاء المنتج بنجاح."))
         return super().form_valid(form)
 
     def get_initial(self):
         initial = super().get_initial()
-        initial.setdefault("uom", "PCS")
+        # قيم افتراضية بسيطة
         initial.setdefault("is_stock_item", True)
         initial.setdefault("is_active", True)
         return initial
@@ -272,7 +334,7 @@ class ProductUpdateView(InventoryStaffRequiredMixin, UpdateView):
     success_url = reverse_lazy("inventory:product_list")
 
     def form_valid(self, form):
-        messages.success(self.request, "تم تحديث بيانات المنتج بنجاح.")
+        messages.success(self.request, _("تم تحديث بيانات المنتج بنجاح."))
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -282,9 +344,8 @@ class ProductUpdateView(InventoryStaffRequiredMixin, UpdateView):
         return ctx
 
 
-
 # ============================================================
-# Warehouses
+# المستودعات
 # ============================================================
 
 class WarehouseListView(InventoryStaffRequiredMixin, ListView):
@@ -318,7 +379,7 @@ class WarehouseCreateView(InventoryStaffRequiredMixin, CreateView):
     success_url = reverse_lazy("inventory:warehouse_list")
 
     def form_valid(self, form):
-        messages.success(self.request, "Warehouse created successfully.")
+        messages.success(self.request, _("تم إنشاء المستودع بنجاح."))
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -335,7 +396,7 @@ class WarehouseUpdateView(InventoryStaffRequiredMixin, UpdateView):
     success_url = reverse_lazy("inventory:warehouse_list")
 
     def form_valid(self, form):
-        messages.success(self.request, "Warehouse updated successfully.")
+        messages.success(self.request, _("تم تحديث بيانات المستودع بنجاح."))
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -346,7 +407,7 @@ class WarehouseUpdateView(InventoryStaffRequiredMixin, UpdateView):
 
 
 # ============================================================
-# Stock locations
+# مواقع المخزون داخل المستودع
 # ============================================================
 
 class StockLocationListView(InventoryStaffRequiredMixin, ListView):
@@ -395,7 +456,7 @@ class StockLocationCreateView(InventoryStaffRequiredMixin, CreateView):
     success_url = reverse_lazy("inventory:location_list")
 
     def form_valid(self, form):
-        messages.success(self.request, "Location created successfully.")
+        messages.success(self.request, _("تم إنشاء الموقع بنجاح."))
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -412,7 +473,7 @@ class StockLocationUpdateView(InventoryStaffRequiredMixin, UpdateView):
     success_url = reverse_lazy("inventory:location_list")
 
     def form_valid(self, form):
-        messages.success(self.request, "Location updated successfully.")
+        messages.success(self.request, _("تم تحديث بيانات الموقع بنجاح."))
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -423,7 +484,7 @@ class StockLocationUpdateView(InventoryStaffRequiredMixin, UpdateView):
 
 
 # ============================================================
-# Stock moves
+# حركات المخزون
 # ============================================================
 
 class StockMoveListView(InventoryStaffRequiredMixin, ListView):
@@ -450,22 +511,12 @@ class StockMoveListView(InventoryStaffRequiredMixin, ListView):
         move_type = self.request.GET.get("move_type") or None
         status = self.request.GET.get("status") or None
 
-        if q:
-            qs = qs.filter(
-                Q(reference__icontains=q)
-                | Q(from_warehouse__code__icontains=q)
-                | Q(to_warehouse__code__icontains=q)
-                | Q(from_location__code__icontains=q)
-                | Q(to_location__code__icontains=q)
-                | Q(lines__product__code__icontains=q)
-                | Q(lines__product__name__icontains=q)
-            ).distinct()
-
-        if move_type:
-            qs = qs.filter(move_type=move_type)
-
-        if status:
-            qs = qs.filter(status=status)
+        qs = filter_stock_moves_queryset(
+            qs,
+            q=q,
+            move_type=move_type,
+            status=status,
+        ).distinct()
 
         self.search_query = q
         self.move_type_filter = move_type
@@ -483,8 +534,6 @@ class StockMoveListView(InventoryStaffRequiredMixin, ListView):
         return ctx
 
 
-
-
 class StockMoveDetailView(InventoryStaffRequiredMixin, DetailView):
     model = StockMove
     template_name = "inventory/stockmove/detail.html"
@@ -498,7 +547,6 @@ class StockMoveDetailView(InventoryStaffRequiredMixin, DetailView):
         return ctx
 
 
-
 class StockMoveCreateView(InventoryStaffRequiredMixin, CreateView):
     model = StockMove
     form_class = StockMoveForm
@@ -507,8 +555,9 @@ class StockMoveCreateView(InventoryStaffRequiredMixin, CreateView):
 
     def get_initial(self):
         """
-        Prefill form using query string params when available:
-        ?move_type=in|out|transfer&from_warehouse=&from_location=&to_warehouse=&to_location=
+        ملء بعض الحقول افتراضياً من الـ query string لو موجودة.
+        مثال:
+          ?move_type=in&from_warehouse=1&to_warehouse=2
         """
         initial = super().get_initial()
         request = self.request
@@ -529,35 +578,48 @@ class StockMoveCreateView(InventoryStaffRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
 
+        # inline formset للبنود
         if self.request.POST:
-            ctx["line_formset"] = StockMoveLineFormSet(self.request.POST, instance=self.object)
+            line_formset = StockMoveLineFormSet(
+                self.request.POST,
+                instance=self.object,
+            )
         else:
-            ctx["line_formset"] = StockMoveLineFormSet(instance=self.object)
+            # هنا نمرر initial لو جايين من زر "حركة مخزون" في المنتج
+            product_id = self.request.GET.get("product")
+            initial = []
 
+            if product_id:
+                # نعبي أول سطر بالمنتج افتراضياً
+                initial.append({"product": product_id})
+
+            line_formset = StockMoveLineFormSet(
+                instance=self.object,
+                initial=initial,
+            )
+
+        ctx["line_formset"] = line_formset
         ctx["subsection"] = "moves"
         ctx["mode"] = "create"
         return ctx
-
 
     def form_valid(self, form):
         context = self.get_context_data()
         line_formset = context["line_formset"]
 
         if not line_formset.is_valid():
-            # لو في أخطاء في البنود نرجع نفس الصفحة مع الأخطاء
+            # وجود أخطاء في البنود → نرجع نفس الصفحة مع الأخطاء
             return self.render_to_response(self.get_context_data(form=form))
 
-        # نحفظ الهيدر
+        # حفظ رأس الحركة
         self.object = form.save()
 
-        # نربط البنود بالهيدر ثم نحفظها
+        # ربط البنود بالرأس ثم حفظها
         line_formset.instance = self.object
         line_formset.save()
 
-        messages.success(self.request, "تم إنشاء حركة المخزون بنجاح.")
+        messages.success(self.request, _("تم إنشاء حركة المخزون بنجاح."))
         return HttpResponseRedirect(self.get_success_url())
-
-
 
 
 
@@ -590,13 +652,12 @@ class StockMoveUpdateView(InventoryStaffRequiredMixin, UpdateView):
         line_formset.instance = self.object
         line_formset.save()
 
-        messages.success(self.request, "تم تحديث حركة المخزون بنجاح.")
+        messages.success(self.request, _("تم تحديث حركة المخزون بنجاح."))
         return HttpResponseRedirect(self.get_success_url())
 
 
-
 # ============================================================
-# Stock levels (read-only list)
+# مستويات المخزون
 # ============================================================
 
 class StockLevelListView(InventoryStaffRequiredMixin, ListView):
@@ -635,7 +696,6 @@ class StockLevelListView(InventoryStaffRequiredMixin, ListView):
         self.below_min_only = below_min
         return qs
 
-
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["q"] = getattr(self, "search_query", "")
@@ -665,7 +725,7 @@ class StockLevelCreateView(InventoryStaffRequiredMixin, CreateView):
         return reverse("inventory:stocklevel_detail", kwargs={"pk": self.object.pk})
 
     def form_valid(self, form):
-        messages.success(self.request, "تم إنشاء مستوى المخزون بنجاح.")
+        messages.success(self.request, _("تم إنشاء مستوى المخزون بنجاح."))
         return super().form_valid(form)
 
     def get_initial(self):
@@ -698,11 +758,13 @@ class StockLevelUpdateView(InventoryStaffRequiredMixin, UpdateView):
         return reverse("inventory:stocklevel_detail", kwargs={"pk": self.object.pk})
 
     def form_valid(self, form):
-        messages.success(self.request, "تم تحديث مستوى المخزون بنجاح.")
+        messages.success(self.request, _("تم تحديث مستوى المخزون بنجاح."))
         return super().form_valid(form)
 
 
-
+# ============================================================
+# إعدادات المخزون
+# ============================================================
 
 class InventorySettingsView(InventoryStaffRequiredMixin, UpdateView):
     model = InventorySettings
@@ -711,11 +773,11 @@ class InventorySettingsView(InventoryStaffRequiredMixin, UpdateView):
     success_url = reverse_lazy("inventory:settings")
 
     def get_object(self, queryset=None):
-        # django-solo pattern
+        # نمط django-solo
         return InventorySettings.get_solo()
 
     def form_valid(self, form):
-        messages.success(self.request, "تم حفظ إعدادات المخزون بنجاح.")
+        messages.success(self.request, _("تم حفظ إعدادات المخزون بنجاح."))
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):

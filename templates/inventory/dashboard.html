@@ -5,7 +5,7 @@
 
 {% block inventory_content %}
 
-
+{# ───── هيدر لوحة المخزون ───── #}
 <div class="card border-0 shadow-sm mb-3 bg-mazoon-card">
   <div class="card-body d-flex justify-content-between align-items-center gap-3">
     <div>
@@ -30,7 +30,7 @@
   </div>
 </div>
 
-
+{# ───── كروت الـ KPI ───── #}
 <div class="row g-3 mb-4">
 
   <div class="col-md-3 col-sm-6">
@@ -117,7 +117,7 @@
 
 </div>
 
-
+{# ───── ملخص المخزون + تنبيهات الانخفاض ───── #}
 <div class="row g-3 mb-4">
 
   {# ملخص المخزون حسب المخزن #}
@@ -255,7 +255,7 @@
 
 </div>
 
-
+{# ───── أحدث حركات المخزون ───── #}
 <div class="row g-3 mb-4">
   <div class="col-12">
     <div class="card shadow-sm border-0">
@@ -302,21 +302,21 @@
                     </td>
 
                     <td class="small">
-                      {% if move.serial %}
-                        <a href="{% url 'inventory:move_detail' move.pk %}"
-                           class="fw-semibold text-decoration-none"
-                           dir="ltr">
-                          {{ move.serial }}
+                      <a href="{% url 'inventory:move_detail' move.pk %}"
+                         class="fw-semibold text-decoration-none"
+                         dir="ltr">
+                        {{ move.serial|default:move.pk }}
+                      </a>
+                    </td>
+
+                    <td class="small">
+                      {% if move.product %}
+                        <a href="{% url 'inventory:product_list' %}?q={{ move.product.code }}">
+                          {{ move.product.code }}
                         </a>
                       {% else %}
                         <span class="text-muted">—</span>
                       {% endif %}
-                    </td>
-
-                    <td class="small">
-                      <a href="{% url 'inventory:product_list' %}?q={{ move.product.code }}">
-                        {{ move.product.code }}
-                      </a>
                     </td>
 
                     <td class="small">
@@ -340,7 +340,11 @@
                     </td>
 
                     <td class="text-end fw-semibold small">
-                      {{ move.quantity }} {{ move.uom }}
+                      {% if move.quantity %}
+                        {{ move.quantity }}{% if move.uom %} {{ move.uom }}{% endif %}
+                      {% else %}
+                        <span class="text-muted">—</span>
+                      {% endif %}
                     </td>
 
                     <td class="small">
@@ -366,15 +370,15 @@
                     </td>
 
                     <td class="small">
-                      {% if move.status == move.Status.DONE %}
+                      {% if move.status == "done" %}
                         <span class="badge bg-success-subtle text-success border">
                           {% trans "مكتملة" %}
                         </span>
-                      {% elif move.status == move.Status.DRAFT %}
+                      {% elif move.status == "draft" %}
                         <span class="badge bg-secondary-subtle text-secondary border">
                           {% trans "مسودة" %}
                         </span>
-                      {% elif move.status == move.Status.CANCELLED %}
+                      {% elif move.status == "cancelled" %}
                         <span class="badge bg-danger-subtle text-danger border">
                           {% trans "ملغاة" %}
                         </span>
@@ -399,6 +403,7 @@
   </div>
 </div>
 
+{# ───── إجراءات سريعة ───── #}
 <div class="card border-0 shadow-sm mb-3">
   <div class="card-body py-2 d-flex flex-wrap gap-2">
     <span class="text-muted small me-2">

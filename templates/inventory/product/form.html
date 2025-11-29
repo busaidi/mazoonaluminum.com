@@ -74,6 +74,19 @@
               <div class="text-danger small">{{ error }}</div>
             {% endfor %}
           </div>
+          <div class="mb-3">
+    <label for="{{ form.product_type.id_for_label }}" class="form-label small fw-semibold">
+      {{ form.product_type.label }}
+    </label>
+    {{ form.product_type }}
+    {% if form.product_type.help_text %}
+      <div class="form-text small">{{ form.product_type.help_text }}</div>
+    {% endif %}
+    {% for error in form.product_type.errors %}
+      <div class="text-danger small">{{ error }}</div>
+    {% endfor %}
+  </div>
+
 
           <div class="row g-3">
             <div class="col-sm-6">

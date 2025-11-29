@@ -241,6 +241,26 @@
       </div>
     </div>
 
+    {# بطاقة الارتباطات (جاهزة لربط الفواتير / أوامر الشراء لاحقاً) #}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-light border-0 py-2">
+        <h2 class="h6 fw-bold mb-0 d-flex align-items-center gap-2">
+          <i class="bi bi-link-45deg ms-1"></i>
+          <span>{% trans "الارتباطات" %}</span>
+        </h2>
+      </div>
+      <div class="card-body small text-muted">
+        <p class="mb-2">
+          {% trans "في الإصدارات القادمة يمكن ربط حركة المخزون هذه مع فواتير البيع والشراء، أوامر الشراء/البيع، والإرجاعات." %}
+        </p>
+        <ul class="mb-0 ps-3">
+          <li>{% trans "ربط الحركة بفواتير المبيعات لتحديث المخزون والقيود المحاسبية." %}</li>
+          <li>{% trans "ربط الحركة بأوامر الشراء لتتبع الاستلام من الموردين." %}</li>
+          <li>{% trans "إتاحة التتبع العكسي من المستند المحاسبي إلى حركة المخزون والعكس." %}</li>
+        </ul>
+      </div>
+    </div>
+
   </div>
 
   {# العمود الجانبي: معلومات زمنية + ملاحظة #}

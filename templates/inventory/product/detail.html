@@ -5,7 +5,6 @@
 
 {% block inventory_content %}
 
-
 <div class="card border-0 shadow-sm mb-3 bg-mazoon-card">
   <div class="card-body pb-2">
 
@@ -29,6 +28,12 @@
             </span>
             <span class="text-muted mx-1">•</span>
           {% endif %}
+
+          <span class="me-2">
+            <span class="text-muted">{% trans "نوع المنتج" %}:</span>
+            <span class="fw-semibold">{{ object.get_product_type_display }}</span>
+          </span>
+          <span class="text-muted mx-1">•</span>
 
           <span class="me-2">
             <span class="text-muted">{% trans "الوحدة الأساسية" %}:</span>
@@ -174,6 +179,54 @@
               </div>
             </div>
           {% endif %}
+        </section>
+
+        {# قسم الأسعار الافتراضية #}
+        <section class="mb-3">
+          <h2 class="h6 fw-bold mb-2 d-flex align-items-center gap-2">
+            <span class="feature-icon">
+              <i class="bi bi-cash-coin"></i>
+            </span>
+            <span>{% trans "الأسعار الافتراضية" %}</span>
+          </h2>
+
+          <div class="row g-2 small">
+            <div class="col-sm-6">
+              <div class="kpi-card h-100">
+                <div class="text-muted mb-1">
+                  {% trans "سعر البيع الافتراضي" %}
+                </div>
+                {% if object.default_sale_price %}
+                  <div class="fw-semibold">
+                    {{ object.default_sale_price }}
+                    <span class="text-muted">{{ object.base_uom }}</span>
+                  </div>
+                {% else %}
+                  <div class="text-muted">
+                    {% trans "غير محدد" %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="col-sm-6">
+              <div class="kpi-card h-100">
+                <div class="text-muted mb-1">
+                  {% trans "سعر التكلفة التقريبي" %}
+                </div>
+                {% if object.default_cost_price %}
+                  <div class="fw-semibold">
+                    {{ object.default_cost_price }}
+                    <span class="text-muted">{{ object.base_uom }}</span>
+                  </div>
+                {% else %}
+                  <div class="text-muted">
+                    {% trans "غير محدد" %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
         </section>
 
         {# بطاقات معلومات – تواريخ + وحدات قياس #}
@@ -336,7 +389,6 @@
     </div>
   </div>
 </div>
-
 
 {% if stock_levels %}
   <div class="card shadow-sm border-0">

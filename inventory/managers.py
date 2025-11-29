@@ -1,8 +1,12 @@
 # inventory/managers.py
+
 from decimal import Decimal
 
 from django.db import models
-from django.db.models import F, Sum, Count
+from django.db.models import F, Sum, Count, Q
+
+
+DECIMAL_ZERO = Decimal("0.000")
 
 
 # ============================
@@ -11,26 +15,40 @@ from django.db.models import F, Sum, Count
 
 class ProductCategoryQuerySet(models.QuerySet):
     def active(self):
-        """Only active categories."""
+        """
+        يرجع التصنيفات النشطة فقط.
+        """
         return self.filter(is_active=True)
 
     def roots(self):
-        """Top-level categories (no parent)."""
+        """
+        يرجع التصنيفات العليا (بدون أب).
+        """
         return self.filter(parent__isnull=True)
 
     def children_of(self, parent):
-        """Children of a given parent category."""
+        """
+        يرجع التصنيفات الفرعية لتصنيف معيّن.
+        """
         return self.filter(parent=parent)
 
     def with_products_count(self):
         """
-        Annotate with products_count for quick display in lists.
+        يضيف حقل products_count لعدد المنتجات النشطة في كل تصنيف.
+        مفيد للعرض في القوائم.
         """
-        return self.annotate(products_count=Count("products"))
+        return self.annotate(
+            products_count=Count(
+                "products",
+                filter=Q(products__is_active=True),
+            )
+        )
 
 
 class ProductCategoryManager(models.Manager.from_queryset(ProductCategoryQuerySet)):
-    """Manager for ProductCategory."""
+    """
+    Manager خاص بتصنيفات المنتجات.
+    """
     pass
 
 
@@ -40,24 +58,57 @@ class ProductCategoryManager(models.Manager.from_queryset(ProductCategoryQuerySe
 
 class ProductQuerySet(models.QuerySet):
     def active(self):
-        """Only active products."""
+        """
+        يرجع المنتجات النشطة فقط.
+        """
         return self.filter(is_active=True)
 
     def published(self):
-        """Products published on website/portal."""
+        """
+        يرجع المنتجات المنشورة في الموقع / البوابة.
+        (نستخدم المنتجات النشطة فقط).
+        """
         return self.active().filter(is_published=True)
 
+    # ===== حسب نوع المنتج (product_type) =====
+
+    def stockable(self):
+        """
+        المنتجات المخزنية (stockable).
+        """
+        return self.filter(product_type="stockable")
+
+    def services(self):
+        """
+        المنتجات من نوع خدمة (service).
+        """
+        return self.filter(product_type="service")
+
+    def consumables(self):
+        """
+        المنتجات من نوع مستهلكات (consumable).
+        """
+        return self.filter(product_type="consumable")
+
     def stock_items(self):
-        """Products that are tracked in stock."""
-        return self.filter(is_stock_item=True)
+        """
+        المنتجات التي تُتابَع في المخزون فعلياً.
+        - نوع المنتج مخزني stockable
+        - الحقل is_stock_item = True
+        """
+        return self.stockable().filter(is_stock_item=True)
 
     def with_category(self):
-        """Select related category for list/detail performance."""
+        """
+        يعمل select_related للتصنيف لتحسين الأداء في القوائم والتفاصيل.
+        """
         return self.select_related("category")
 
 
 class ProductManager(models.Manager.from_queryset(ProductQuerySet)):
-    """Manager for Product."""
+    """
+    Manager خاص بالمنتجات.
+    """
     pass
 
 
@@ -67,11 +118,14 @@ class ProductManager(models.Manager.from_queryset(ProductQuerySet)):
 
 class WarehouseQuerySet(models.QuerySet):
     def active(self):
+        """
+        يرجع المستودعات النشطة فقط.
+        """
         return self.filter(is_active=True)
 
     def with_total_qty(self):
         """
-        Annotate each warehouse with total_qty (sum of quantity_on_hand).
+        يضيف حقل total_qty لكل مستودع (مجموع quantity_on_hand من StockLevel).
         """
         return self.annotate(
             total_qty=Sum("stock_levels__quantity_on_hand")
@@ -79,16 +133,18 @@ class WarehouseQuerySet(models.QuerySet):
 
     def with_low_stock(self):
         """
-        Warehouses that have at least one StockLevel below min_stock.
+        يرجع المستودعات التي تحتوي على الأقل على صنف واحد تحت الحد الأدنى للمخزون.
         """
         return self.filter(
-            stock_levels__min_stock__gt=Decimal("0.000"),
+            stock_levels__min_stock__gt=DECIMAL_ZERO,
             stock_levels__quantity_on_hand__lt=F("stock_levels__min_stock"),
         ).distinct()
 
 
 class WarehouseManager(models.Manager.from_queryset(WarehouseQuerySet)):
-    """Manager for Warehouse."""
+    """
+    Manager خاص بالمستودعات.
+    """
     pass
 
 
@@ -98,29 +154,52 @@ class WarehouseManager(models.Manager.from_queryset(WarehouseQuerySet)):
 
 class StockLocationQuerySet(models.QuerySet):
     def active(self):
+        """
+        يرجع مواقع المخزون النشطة فقط.
+        """
         return self.filter(is_active=True)
 
     def for_warehouse(self, warehouse):
+        """
+        يرجع المواقع التابعة لمستودع معيّن.
+        """
         return self.filter(warehouse=warehouse)
 
     def internal(self):
+        """
+        مواقع من نوع داخلي.
+        """
         return self.filter(type="internal")
 
     def supplier(self):
+        """
+        مواقع من نوع مورد.
+        """
         return self.filter(type="supplier")
 
     def customer(self):
+        """
+        مواقع من نوع عميل.
+        """
         return self.filter(type="customer")
 
     def scrap(self):
+        """
+        مواقع من نوع تالفة (Scrap).
+        """
         return self.filter(type="scrap")
 
     def transit(self):
+        """
+        مواقع من نوع قيد النقل (Transit).
+        """
         return self.filter(type="transit")
 
 
 class StockLocationManager(models.Manager.from_queryset(StockLocationQuerySet)):
-    """Manager for StockLocation."""
+    """
+    Manager خاص بمواقع المخزون.
+    """
     pass
 
 
@@ -129,55 +208,87 @@ class StockLocationManager(models.Manager.from_queryset(StockLocationQuerySet)):
 # ============================
 
 class StockMoveQuerySet(models.QuerySet):
-    # Status filters
+    # ===== فلاتر الحالة =====
+
     def draft(self):
+        """
+        حركات في حالة مسودة.
+        """
         return self.filter(status="draft")
 
     def done(self):
+        """
+        حركات منفذة.
+        """
         return self.filter(status="done")
 
     def cancelled(self):
+        """
+        حركات ملغاة.
+        """
         return self.filter(status="cancelled")
 
-    # Move type filters
+    # ===== فلاتر نوع الحركة =====
+
     def incoming(self):
+        """
+        حركات واردة (IN).
+        """
         return self.filter(move_type="in")
 
     def outgoing(self):
+        """
+        حركات صادرة (OUT).
+        """
         return self.filter(move_type="out")
 
     def transfers(self):
+        """
+        حركات تحويل بين مستودعات/مواقع (TRANSFER).
+        """
         return self.filter(move_type="transfer")
 
+    # ===== فلاتر مساعدة =====
+
     def for_product(self, product):
-        return self.filter(product=product)
+        """
+        يرجع الحركات التي تحتوي على المنتج المحدد في أحد البنود (StockMoveLine).
+        """
+        return self.filter(lines__product=product).distinct()
 
     def for_warehouse(self, warehouse):
         """
-        Any move where the warehouse is either source or destination.
+        يرجع أي حركة يكون فيها المستودع المحدد إما مصدر أو وجهة.
         """
         return self.filter(
-            models.Q(from_warehouse=warehouse)
-            | models.Q(to_warehouse=warehouse)
+            Q(from_warehouse=warehouse) | Q(to_warehouse=warehouse)
         )
 
     def with_related(self):
         """
-        Select related foreign keys for better performance in lists.
+        يحسّن الأداء في القوائم بالتالي:
+          - select_related للمستودعات والمواقع (من/إلى)
+          - prefetch_related للبنود والمنتجات ووحدات القياس
         """
-        return self.select_related(
-            "product",
-            "uom",            # ✅ مهم الآن بعد ما صارت FK
-            "from_warehouse",
-            "to_warehouse",
-            "from_location",
-            "to_location",
+        return (
+            self.select_related(
+                "from_warehouse",
+                "to_warehouse",
+                "from_location",
+                "to_location",
+            )
+            .prefetch_related(
+                "lines",
+                "lines__product",
+                "lines__uom",
+            )
         )
 
 
-
 class StockMoveManager(models.Manager.from_queryset(StockMoveQuerySet)):
-    """Manager for StockMove."""
+    """
+    Manager خاص بحركات المخزون.
+    """
     pass
 
 
@@ -188,23 +299,44 @@ class StockMoveManager(models.Manager.from_queryset(StockMoveQuerySet)):
 class StockLevelQuerySet(models.QuerySet):
     def below_min(self):
         """
-        Stock levels where quantity_on_hand is below min_stock.
+        أرصدة المخزون التي تكون الكمية المتوفرة فيها أقل من الحد الأدنى.
         """
         return self.filter(
-            min_stock__gt=Decimal("0.000"),
+            min_stock__gt=DECIMAL_ZERO,
             quantity_on_hand__lt=F("min_stock"),
         )
 
+    def available(self):
+        """
+        أرصدة المخزون التي فيها كمية متاحة (الكمية المتوفرة - المحجوزة > 0).
+        """
+        return self.filter(
+            quantity_on_hand__gt=DECIMAL_ZERO,
+        ).filter(
+            quantity_on_hand__gt=F("quantity_reserved")
+        )
+
     def for_warehouse(self, warehouse):
+        """
+        أرصدة مخزون لمستودع معيّن.
+        """
         return self.filter(warehouse=warehouse)
 
     def for_product(self, product):
+        """
+        أرصدة مخزون لمنتج معيّن.
+        """
         return self.filter(product=product)
 
     def with_related(self):
+        """
+        select_related للمنتج والمستودع والموقع لتحسين الأداء.
+        """
         return self.select_related("product", "warehouse", "location")
 
 
 class StockLevelManager(models.Manager.from_queryset(StockLevelQuerySet)):
-    """Manager for StockLevel."""
+    """
+    Manager خاص بأرصدة المخزون.
+    """
     pass

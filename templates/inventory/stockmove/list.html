@@ -149,13 +149,11 @@
             <td class="small">
               {% with lines_count=move.lines.count %}
                 {% if lines_count %}
-                  <div class="fw-semibold">
-                    {% blocktrans count lines_count as cnt %}
-                      {{ cnt }} بند
-                    {% plural %}
-                      {{ cnt }} بنود
-                    {% endblocktrans %}
-                  </div>
+                  {% blocktrans count cnt=lines_count %}
+                    {{ cnt }} بند
+                  {% plural %}
+                    {{ cnt }} بنود
+                  {% endblocktrans %}
                   {% with first_line=move.lines.first %}
                     {% if first_line %}
                       <div class="text-muted small">

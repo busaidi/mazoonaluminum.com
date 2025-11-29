@@ -4,25 +4,33 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Q
 from django.utils import timezone
-from solo.models import SingletonModel
 from django.utils.translation import gettext_lazy as _
-
+from solo.models import SingletonModel
 
 from core.models import TimeStampedModel, NumberedModel
-from inventory.managers import ProductCategoryManager, ProductManager, StockLocationManager, StockMoveManager, \
-    StockLevelManager, WarehouseManager
+from inventory.managers import (
+    ProductCategoryManager,
+    ProductManager,
+    StockLocationManager,
+    StockMoveManager,
+    StockLevelManager,
+    WarehouseManager,
+)
 from uom.models import UnitOfMeasure
 
 
+DECIMAL_ZERO = Decimal("0.000")
+
+
 # ============================================================
-# Categories
+# تصنيفات المنتجات
 # ============================================================
 class ProductCategory(TimeStampedModel):
     """
-    Simple category tree for inventory product.
-    Example: Aluminum Systems, Accessories, Glass, Services...
+    شجرة تصنيفات بسيطة للمنتجات.
+    مثال: أنظمة ألمنيوم، إكسسوارات، زجاج، خدمات...
     """
 
     slug = models.SlugField(
@@ -69,14 +77,15 @@ class ProductCategory(TimeStampedModel):
         return self.name
 
     # ============================
-    # Helpers
+    # دوال مساعدة
     # ============================
 
     @property
     def full_path(self) -> str:
         """
-        Full hierarchical path, e.g. "Systems / Thermal Break / Sliding".
-        Useful for dropdowns and reports.
+        يرجع المسار الكامل للتصنيف، مثلاً:
+        "أنظمة / معزول حرارياً / سحاب".
+        مفيد للقوائم والتقارير.
         """
         parts = [self.name]
         parent = self.parent
@@ -88,34 +97,39 @@ class ProductCategory(TimeStampedModel):
 
     def active_children(self):
         """
-        Return only active child categories.
+        يرجع فقط التصنيفات الفرعية النشطة.
         """
         return self.children.filter(is_active=True)
 
     def products_count(self) -> int:
         """
-        Number of active products in this category (direct only).
+        عدد المنتجات النشطة في هذا التصنيف (مباشرة فقط).
         """
-        # Product.category has related_name="products"
         return self.products.filter(is_active=True).count()
 
     def can_be_deleted(self) -> bool:
         """
-        Simple rule:
-        - No child categories
-        - No products
+        قاعدة بسيطة:
+        - لا يوجد تصنيفات فرعية
+        - لا يوجد منتجات
         """
         return not self.children.exists() and not self.products.exists()
-# ============================================================
-# Products
-# ============================================================
 
+
+# ============================================================
+# المنتجات
+# ============================================================
 class Product(TimeStampedModel):
     """
-    Core inventory product.
-    Master product used by inventory / orders / invoices.
-    Website / portal visibility is controlled by `is_published`.
+    المنتج الأساسي للمخزون.
+    يُستخدم في المخزون / الأوامر / الفواتير.
+    نشر المنتج للموقع/البوابة يتحكم به الحقل is_published.
     """
+
+    class ProductType(models.TextChoices):
+        STOCKABLE = "stockable", _("صنف مخزني")
+        SERVICE = "service", _("خدمة")
+        CONSUMABLE = "consumable", _("مستهلكات")
 
     category = models.ForeignKey(
         ProductCategory,
@@ -126,7 +140,6 @@ class Product(TimeStampedModel):
         verbose_name=_("التصنيف"),
     )
 
-    # Internal product code / SKU
     code = models.CharField(
         max_length=50,
         unique=True,
@@ -134,7 +147,6 @@ class Product(TimeStampedModel):
         help_text=_("كود داخلي فريد، مثل: MZN-46-FRAME"),
     )
 
-    # Name/description (later can be linked to django-modeltranslation)
     name = models.CharField(
         max_length=255,
         verbose_name=_("اسم المنتج"),
@@ -143,17 +155,17 @@ class Product(TimeStampedModel):
     default_sale_price = models.DecimalField(
         max_digits=12,
         decimal_places=3,
-        default=0,
-        verbose_name="سعر البيع الافتراضي (لكل وحدة أساس)",
-        help_text="سعر البيع الداخلي الافتراضي لكل وحدة القياس الأساسية للمنتج.",
+        default=DECIMAL_ZERO,
+        verbose_name=_("سعر البيع الافتراضي (لكل وحدة أساس)"),
+        help_text=_("سعر البيع الداخلي الافتراضي لكل وحدة القياس الأساسية للمنتج."),
     )
 
     default_cost_price = models.DecimalField(
         max_digits=12,
         decimal_places=3,
-        default=0,
-        verbose_name="سعر التكلفة التقريبي",
-        help_text="يستخدم للتقارير الداخلية وتقدير تكلفة المخزون (اختياري).",
+        default=DECIMAL_ZERO,
+        verbose_name=_("سعر التكلفة التقريبي"),
+        help_text=_("يُستخدم للتقارير الداخلية وتقدير تكلفة المخزون (اختياري)."),
     )
 
     short_description = models.CharField(
@@ -168,20 +180,27 @@ class Product(TimeStampedModel):
         verbose_name=_("وصف تفصيلي"),
     )
 
+    # نوع المنتج (مخزني / خدمة / مستهلكات)
+    product_type = models.CharField(
+        max_length=20,
+        choices=ProductType.choices,
+        default=ProductType.STOCKABLE,
+        verbose_name=_("نوع المنتج"),
+        help_text=_("يحدد إذا كان المنتج مخزني، خدمة أو مستهلكات."),
+    )
+
     # ============================
-    #   Units of measure
+    # وحدات القياس
     # ============================
 
-    # Base quantity UoM (e.g. m, pcs)
     base_uom = models.ForeignKey(
         UnitOfMeasure,
         on_delete=models.PROTECT,
         related_name="products_as_base",
         verbose_name=_("وحدة القياس الأساسية"),
-        help_text=_("الوحدة الأساسية للمخزون، مثل: M, PCS."),
+        help_text=_("الوحدة الأساسية للمخزون، مثل: م، قطعة."),
     )
 
-    # Optional alternative UoM (e.g. roll, box) with factor
     alt_uom = models.ForeignKey(
         UnitOfMeasure,
         on_delete=models.PROTECT,
@@ -207,7 +226,6 @@ class Product(TimeStampedModel):
         ),
     )
 
-    # Weight UoM (e.g. kg) and relation to base unit
     weight_uom = models.ForeignKey(
         UnitOfMeasure,
         on_delete=models.PROTECT,
@@ -215,7 +233,7 @@ class Product(TimeStampedModel):
         blank=True,
         related_name="products_as_weight",
         verbose_name=_("وحدة الوزن"),
-        help_text=_("الوحدة المستخدمة للوزن، مثل: KG."),
+        help_text=_("الوحدة المستخدمة للوزن، مثل: كجم."),
     )
 
     weight_per_base = models.DecimalField(
@@ -231,24 +249,21 @@ class Product(TimeStampedModel):
     )
 
     # ============================
-    #   Inventory / status flags
+    # أعلام الحالة والمخزون
     # ============================
 
-    # Is this tracked in stock?
     is_stock_item = models.BooleanField(
         default=True,
         verbose_name=_("يُتابَع في المخزون"),
         help_text=_("إذا تم تعطيله، لن يتم تتبع هذا المنتج في حركات المخزون."),
     )
 
-    # Status flags
     is_active = models.BooleanField(
         default=True,
         verbose_name=_("نشط"),
         help_text=_("إذا تم تعطيله، لن يظهر في المستندات الجديدة."),
     )
 
-    # نشر المنتج على البورتال / الموقع
     is_published = models.BooleanField(
         default=False,
         verbose_name=_("منشور على الموقع/البوابة"),
@@ -266,46 +281,45 @@ class Product(TimeStampedModel):
         return f"{self.code} – {self.name}"
 
     # ============================
-    #   UoM converters
+    # تحويل الكميات بين الوحدات
     # ============================
 
     def convert_qty(self, qty, from_uom, to_uom):
         """
-        Convert quantity between base_uom and alt_uom using alt_factor.
+        تحويل الكمية بين الوحدة الأساسية والبديلة باستخدام alt_factor.
 
-        Rules:
-        - 1 alt_uom = alt_factor * base_uom
+        القاعدة:
+        - 1 وحدة بديلة = alt_factor * وحدة أساسية
         """
         if qty is None:
             return None
 
         qty = Decimal(qty)
 
-        # Same unit: nothing to do
         if from_uom == to_uom:
             return qty
 
         if not self.alt_uom or not self.alt_factor:
-            raise ValueError("No alternative unit/factor configured for this product.")
+            raise ValueError("لم يتم ضبط وحدة بديلة / عامل تحويل لهذا المنتج.")
 
         factor = Decimal(self.alt_factor)
 
-        # alt -> base
+        # من بديلة إلى أساسية
         if from_uom == self.alt_uom and to_uom == self.base_uom:
             return qty * factor
 
-        # base -> alt
+        # من أساسية إلى بديلة
         if from_uom == self.base_uom and to_uom == self.alt_uom:
             if factor == 0:
-                raise ZeroDivisionError("alt_factor cannot be zero.")
+                raise ZeroDivisionError("alt_factor لا يمكن أن يكون صفر.")
             return qty / factor
 
-        raise ValueError("Unsupported conversion for this product (unit is not linked).")
+        raise ValueError("تحويل غير مدعوم لهذا المنتج (الوحدة غير مرتبطة).")
 
     def to_base(self, qty, uom=None):
         """
-        Always return quantity in base_uom.
-        If uom is None, assume qty is already in base_uom.
+        يرجع الكمية دائماً بوحدة القياس الأساسية.
+        إذا لم تُحدد وحدة، يُفترض أن الكمية بوحدة الأساس.
         """
         if qty is None:
             return None
@@ -317,53 +331,53 @@ class Product(TimeStampedModel):
 
     def to_alt(self, qty, uom=None):
         """
-        Return quantity in alt_uom (if configured).
-        If uom is None, assume qty is in base_uom.
+        يرجع الكمية بوحدة القياس البديلة (إذا كانت مضبوطة).
+        إذا لم تُحدد وحدة، يُفترض أن الكمية بوحدة الأساس.
         """
         if qty is None:
             return None
 
         if not self.alt_uom:
-            raise ValueError("No alternative unit configured for this product.")
+            raise ValueError("لم يتم ضبط وحدة بديلة لهذا المنتج.")
 
         from_uom = uom or self.base_uom
         return self.convert_qty(qty=qty, from_uom=from_uom, to_uom=self.alt_uom)
 
     def qty_to_weight(self, qty, qty_uom=None):
         """
-        Convert any quantity (base or alt) to weight in 'weight_uom'.
+        تحويل أي كمية (أساس أو بديلة) إلى وزن بوحدة الوزن weight_uom.
 
-        Steps:
-        1) Convert qty to base_uom.
-        2) Multiply by weight_per_base to get weight.
+        الخطوات:
+        1) تحويل الكمية إلى وحدة الأساس.
+        2) ضربها في الوزن لكل وحدة أساس weight_per_base.
         """
         if qty is None:
             return None
 
         if self.weight_uom is None or self.weight_per_base is None:
-            raise ValueError("Weight is not configured for this product.")
+            raise ValueError("لم يتم ضبط الوزن لهذا المنتج.")
 
         qty_base = self.to_base(qty=qty, uom=qty_uom)
         return qty_base * Decimal(self.weight_per_base)
 
     def weight_to_qty(self, weight, to_uom=None):
         """
-        Convert a weight (in 'weight_uom') back to quantity (base or alt).
+        تحويل وزن (بوحدة الوزن) إلى كمية (أساس أو بديلة).
 
-        Steps:
-        1) Compute quantity in base_uom: qty_base = weight / weight_per_base
-        2) If to_uom is alt_uom, convert base -> alt
+        الخطوات:
+        1) حساب كمية وحدة الأساس: qty_base = weight / weight_per_base
+        2) إذا كانت to_uom وحدة بديلة، تحويل من أساس إلى بديلة.
         """
         if weight is None:
             return None
 
         if self.weight_uom is None or self.weight_per_base is None:
-            raise ValueError("Weight is not configured for this product.")
+            raise ValueError("لم يتم ضبط الوزن لهذا المنتج.")
 
         weight = Decimal(weight)
 
         if self.weight_per_base == 0:
-            raise ZeroDivisionError("weight_per_base cannot be zero.")
+            raise ZeroDivisionError("weight_per_base لا يمكن أن يكون صفر.")
 
         qty_base = weight / Decimal(self.weight_per_base)
 
@@ -377,106 +391,100 @@ class Product(TimeStampedModel):
                 to_uom=self.alt_uom,
             )
 
-        raise ValueError("Unsupported target unit for this product.")
+        raise ValueError("وحدة الهدف غير مدعومة لهذا المنتج.")
 
     # ============================
-    # Inventory helpers
+    # دوال مساعدة للمخزون
     # ============================
 
     @property
     def total_on_hand(self) -> Decimal:
         """
-        Total quantity on hand across all warehouses/locations.
-
-        Uses StockLevel -> related_name="stock_levels".
+        إجمالي الكمية المتوفرة لهذا المنتج في كل المستودعات / المواقع.
         """
         agg = self.stock_levels.aggregate(total=Sum("quantity_on_hand"))
-        return agg["total"] or Decimal("0.000")
+        return agg["total"] or DECIMAL_ZERO
 
     def low_stock_levels(self):
         """
-        Returns queryset of StockLevel rows where this product
-        is below the minimum stock (per warehouse/location).
+        يرجع QuerySet من StockLevel حيث المنتج تحت الحد الأدنى في المواقع.
         """
         return self.stock_levels.filter(
-            min_stock__gt=Decimal("0.000"),
+            min_stock__gt=DECIMAL_ZERO,
             quantity_on_hand__lt=F("min_stock"),
         )
 
     @property
     def has_low_stock_anywhere(self) -> bool:
         """
-        True if this product is below min stock in any warehouse/location.
+        هل هذا المنتج تحت الحد الأدنى في أي مستودع/موقع؟
         """
         return self.low_stock_levels().exists()
 
     def total_on_hand_in_warehouse(self, warehouse) -> Decimal:
         """
-        Quantity on hand for this product in a specific warehouse.
+        إجمالي الكمية المتوفرة في مستودع معيّن.
         """
         agg = self.stock_levels.filter(warehouse=warehouse).aggregate(
             total=Sum("quantity_on_hand")
         )
-        return agg["total"] or Decimal("0.000")
+        return agg["total"] or DECIMAL_ZERO
 
     def has_stock(self, warehouse=None) -> bool:
         """
-        Returns True if there is any stock for this product.
+        هل يوجد أي رصيد لهذا المنتج؟
 
-        - If warehouse is provided: check only that warehouse.
-        - Otherwise: check total_on_hand across all warehouses.
+        - إذا تم تمرير warehouse: يبحث فقط في هذا المستودع.
+        - إذا لم يُمرر: يبحث في كل المستودعات.
         """
         if warehouse is not None:
-            return self.total_on_hand_in_warehouse(warehouse) > Decimal("0.000")
-        return self.total_on_hand > Decimal("0.000")
+            return self.total_on_hand_in_warehouse(warehouse) > DECIMAL_ZERO
+        return self.total_on_hand > DECIMAL_ZERO
 
     def can_be_deleted(self) -> bool:
         """
-        Simple rule: product can be deleted if it has no stock moves.
-
-        You can later extend this to check orders/invoices, etc.
+        قاعدة بسيطة: يمكن حذف المنتج إذا لم يكن له أي حركات مخزون.
+        (يمكن لاحقاً توسيعها للأوامر / الفواتير...)
         """
         return not self.stock_moves.exists()
 
 
-
 # ============================================================
-# Warehouses
+# المستودعات
 # ============================================================
-
 class Warehouse(TimeStampedModel):
     """
-    Physical / logical warehouse.
-    Example: Main Warehouse, Showroom, External Storage.
+    مستودع فعلي أو منطقي.
+    مثال: مستودع رئيسي، معرض، مخزن خارجي...
     """
 
     code = models.CharField(
         max_length=20,
         unique=True,
-        verbose_name=_("Warehouse code"),
-        help_text=_("Short code, e.g. WH-MCT."),
+        verbose_name=_("كود المستودع"),
+        help_text=_("كود قصير، مثل: WH-MCT."),
     )
 
     name = models.CharField(
         max_length=200,
-        verbose_name=_("Warehouse name"),
+        verbose_name=_("اسم المستودع"),
     )
 
     description = models.TextField(
         blank=True,
-        verbose_name=_("Description"),
+        verbose_name=_("الوصف"),
     )
 
     is_active = models.BooleanField(
         default=True,
-        verbose_name=_("Active"),
+        verbose_name=_("نشط"),
     )
 
     objects = WarehouseManager()
 
     class Meta:
-        verbose_name = _("Warehouse")
-        verbose_name_plural = _("Warehouses")
+        verbose_name = _("مستودع")
+        verbose_name_plural = _("المستودعات")
         ordering = ("code",)
 
     def __str__(self) -> str:
@@ -485,14 +493,10 @@ class Warehouse(TimeStampedModel):
     @property
     def stock_levels_qs(self):
         """
-        All stock levels for this warehouse with related product and location.
-
-        Note:
-        We use 'stock_levels_qs' to avoid shadowing the reverse relation
-        'stock_levels' from StockLevel.related_name.
+        جميع أرصدة المخزون في هذا المستودع مع ربط المنتج والموقع.
         """
         return (
-            self.stock_levels  # ← هذا الآن هو الـ reverse manager الحقيقي
+            self.stock_levels
             .select_related("product", "location")
             .all()
         )
@@ -503,7 +507,7 @@ class Warehouse(TimeStampedModel):
         إجمالي الكمية المتوفرة في هذا المستودع (كل المنتجات وكل المواقع).
         """
         agg = self.stock_levels.aggregate(total=Sum("quantity_on_hand"))
-        return agg["total"] or Decimal("0")
+        return agg["total"] or DECIMAL_ZERO
 
     @property
     def low_stock_count(self) -> int:
@@ -511,7 +515,7 @@ class Warehouse(TimeStampedModel):
         عدد الأصناف التي تحت الحد الأدنى min_stock.
         """
         return self.stock_levels.filter(
-            min_stock__gt=0,
+            min_stock__gt=DECIMAL_ZERO,
             quantity_on_hand__lt=F("min_stock"),
         ).count()
 
@@ -524,60 +528,61 @@ class Warehouse(TimeStampedModel):
 
 
 # ============================================================
-# Stock locations
+# مواقع المخزون داخل المستودعات
 # ============================================================
-
 class StockLocation(TimeStampedModel):
     """
-    Locations inside / related to a warehouse.
-    Example types:
-      - Internal stock location
-      - Supplier
-      - Customer
-      - Scrap
+    موقع مخزون داخل / مرتبط بالمستودع.
+    أمثلة:
+      - مخزون داخلي
+      - مورد
+      - عميل
+      - تالفة (Scrap)
+      - قيد النقل (Transit)
     """
 
     class LocationType(models.TextChoices):
-        INTERNAL = "internal", _("Internal")
-        SUPPLIER = "supplier", _("Supplier")
-        CUSTOMER = "customer", _("Customer")
-        SCRAP = "scrap", _("Scrap")
-        TRANSIT = "transit", _("Transit")
+        INTERNAL = "internal", _("داخلي")
+        SUPPLIER = "supplier", _("مورد")
+        CUSTOMER = "customer", _("عميل")
+        SCRAP = "scrap", _("تالفة")
+        TRANSIT = "transit", _("قيد النقل")
 
     warehouse = models.ForeignKey(
         Warehouse,
         on_delete=models.CASCADE,
         related_name="locations",
-        verbose_name=_("Warehouse"),
+        verbose_name=_("المستودع"),
     )
 
     code = models.CharField(
         max_length=30,
-        verbose_name=_("Location code"),
-        help_text=_("Short code, e.g. STOCK, SCRAP, SHOWROOM."),
+        verbose_name=_("كود الموقع"),
+        help_text=_("كود قصير، مثل: STOCK, SCRAP, SHOWROOM."),
     )
 
     name = models.CharField(
         max_length=200,
-        verbose_name=_("Location name"),
+        verbose_name=_("اسم الموقع"),
     )
 
     type = models.CharField(
         max_length=20,
         choices=LocationType.choices,
         default=LocationType.INTERNAL,
-        verbose_name=_("Location type"),
+        verbose_name=_("نوع الموقع"),
     )
 
     is_active = models.BooleanField(
         default=True,
-        verbose_name=_("Active"),
+        verbose_name=_("نشط"),
     )
+
     objects = StockLocationManager()
 
     class Meta:
-        verbose_name = _("Stock location")
-        verbose_name_plural = _("Stock locations")
+        verbose_name = _("موقع مخزون")
+        verbose_name_plural = _("مواقع المخزون")
         unique_together = ("warehouse", "code")
         ordering = ("warehouse__code", "code")
 
@@ -586,41 +591,36 @@ class StockLocation(TimeStampedModel):
 
 
 # ============================================================
-# Stock moves
+# حركات المخزون (الرأس)
 # ============================================================
-
-# ============================================================
-# Stock moves (Header)
-# ============================================================
-
 class StockMove(NumberedModel):
     """
-    Stock move header (document).
-    يحتوي على معلومات الحركة العامة:
+    مستند حركة مخزون.
+    يحتوي على معلومات عامة عن الحركة:
       - نوع الحركة (دخول / خروج / تحويل)
-      - من مخزن / إلى مخزن
+      - من مستودع / إلى مستودع
       - من موقع / إلى موقع
       - التاريخ، الحالة، المرجع، الملاحظات
 
-    تفاصيل المنتجات (البنود) موجودة في:
-      - StockMoveLine (many lines per move)
+    تفاصيل المنتجات في:
+      - StockMoveLine (عدة بنود لكل حركة)
     """
 
     class MoveType(models.TextChoices):
-        IN = "in", _("Incoming")
-        OUT = "out", _("Outgoing")
-        TRANSFER = "transfer", _("Transfer")
+        IN = "in", _("حركة واردة")
+        OUT = "out", _("حركة صادرة")
+        TRANSFER = "transfer", _("تحويل بين مواقع/مستودعات")
 
     class Status(models.TextChoices):
-        DRAFT = "draft", _("Draft")
-        DONE = "done", _("Done")
-        CANCELLED = "cancelled", _("Cancelled")
+        DRAFT = "draft", _("مسودة")
+        DONE = "done", _("منفذة")
+        CANCELLED = "cancelled", _("ملغاة")
 
     move_type = models.CharField(
         max_length=20,
         choices=MoveType.choices,
         default=MoveType.IN,
-        verbose_name=_("Move type"),
+        verbose_name=_("نوع الحركة"),
     )
 
     from_warehouse = models.ForeignKey(
@@ -629,7 +629,7 @@ class StockMove(NumberedModel):
         null=True,
         blank=True,
         related_name="outgoing_moves",
-        verbose_name=_("From warehouse"),
+        verbose_name=_("من مستودع"),
     )
 
     from_location = models.ForeignKey(
@@ -638,7 +638,7 @@ class StockMove(NumberedModel):
         null=True,
         blank=True,
         related_name="outgoing_moves",
-        verbose_name=_("From location"),
+        verbose_name=_("من موقع"),
     )
 
     to_warehouse = models.ForeignKey(
@@ -647,7 +647,7 @@ class StockMove(NumberedModel):
         null=True,
         blank=True,
         related_name="incoming_moves",
-        verbose_name=_("To warehouse"),
+        verbose_name=_("إلى مستودع"),
     )
 
     to_location = models.ForeignKey(
@@ -656,54 +656,78 @@ class StockMove(NumberedModel):
         null=True,
         blank=True,
         related_name="incoming_moves",
-        verbose_name=_("To location"),
+        verbose_name=_("إلى موقع"),
     )
 
     move_date = models.DateTimeField(
         default=timezone.now,
-        verbose_name=_("Move date"),
+        verbose_name=_("تاريخ الحركة"),
     )
 
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
         default=Status.DRAFT,
-        verbose_name=_("Status"),
+        verbose_name=_("الحالة"),
     )
 
     reference = models.CharField(
         max_length=255,
         blank=True,
-        verbose_name=_("Reference"),
-        help_text=_("Optional external reference, e.g. PO/2025/0001."),
+        verbose_name=_("مرجع خارجي"),
+        help_text=_("مرجع خارجي اختياري، مثل: PO/2025/0001."),
     )
 
     note = models.TextField(
         blank=True,
-        verbose_name=_("Note"),
+        verbose_name=_("ملاحظات"),
     )
 
     objects = StockMoveManager()
 
     class Meta:
-        verbose_name = _("Stock move")
-        verbose_name_plural = _("Stock moves")
+        verbose_name = _("حركة مخزون")
+        verbose_name_plural = _("حركات المخزون")
         ordering = ("-move_date", "-id")
+        indexes = [
+            models.Index(
+                fields=["move_date", "status"],
+                name="stockmove_date_status_idx",
+            ),
+            models.Index(
+                fields=["status"],
+                name="stockmove_status_idx",
+            ),
+        ]
+        constraints = [
+            # منع تحويل من نفس المستودع ونفس الموقع إلى نفسه (إذا كانت الحقول كلها غير فارغة)
+            models.CheckConstraint(
+                name="stockmove_from_to_not_same",
+                check=~(
+                    Q(from_warehouse__isnull=False)
+                    & Q(to_warehouse__isnull=False)
+                    & Q(from_location__isnull=False)
+                    & Q(to_location__isnull=False)
+                    & Q(from_warehouse=F("to_warehouse"))
+                    & Q(from_location=F("to_location"))
+                ),
+            ),
+        ]
 
     # ============================
-    # Numbering context
+    # سياق الترقيم
     # ============================
 
     def get_numbering_context(self) -> dict:
         """
-        نضيف prefix حسب نوع الحركة:
+        يضيف بادئة prefix حسب نوع الحركة:
           - IN       → من إعدادات المخزون
           - OUT      → من إعدادات المخزون
           - TRANSFER → من إعدادات المخزون
 
-        هذا الـ prefix يُستخدم في pattern مثل: {prefix}-{seq:05d}
+        تُستخدم البادئة في pattern مثل: {prefix}-{seq:05d}
         """
-        from inventory.models import InventorySettings  # import محلي
+        from inventory.models import InventorySettings  # import محلي لتجنب الدوران
 
         try:
             ctx = super().get_numbering_context() or {}
@@ -722,61 +746,83 @@ class StockMove(NumberedModel):
         return ctx
 
     def __str__(self) -> str:
-        return f"Move #{self.pk} ({self.get_move_type_display()})"
+        return f"حركة #{self.pk} ({self.get_move_type_display()})"
 
     # ============================
-    # Validation
+    # التحقق (Validation)
     # ============================
 
     def clean(self):
         super().clean()
 
-        # تأكد من الحقول المطلوبة حسب نوع الحركة
+        # تحقق من الحقول المطلوبة حسب نوع الحركة
         if self.move_type == self.MoveType.IN:
             if not self.to_warehouse or not self.to_location:
-                raise ValidationError(_("Incoming move requires destination warehouse and location."))
+                raise ValidationError(
+                    _("حركة واردة تتطلب مستودع وموقع وجهة (إلى مستودع/إلى موقع).")
+                )
             if self.from_warehouse or self.from_location:
-                raise ValidationError(_("Incoming move should not have source warehouse/location."))
+                raise ValidationError(
+                    _("حركة واردة لا يجب أن تحتوي على مستودع/موقع مصدر.")
+                )
 
         elif self.move_type == self.MoveType.OUT:
             if not self.from_warehouse or not self.from_location:
-                raise ValidationError(_("Outgoing move requires source warehouse and location."))
+                raise ValidationError(
+                    _("حركة صادرة تتطلب مستودع وموقع مصدر (من مستودع/من موقع).")
+                )
             if self.to_warehouse or self.to_location:
-                raise ValidationError(_("Outgoing move should not have destination warehouse/location."))
+                raise ValidationError(
+                    _("حركة صادرة لا يجب أن تحتوي على مستودع/موقع وجهة.")
+                )
 
         elif self.move_type == self.MoveType.TRANSFER:
-            if not (self.from_warehouse and self.from_location and self.to_warehouse and self.to_location):
-                raise ValidationError(_("Transfer move requires both source and destination."))
+            if not (
+                self.from_warehouse
+                and self.from_location
+                and self.to_warehouse
+                and self.to_location
+            ):
+                raise ValidationError(
+                    _("حركة تحويل تتطلب مصدرًا ووجهة (مستودع + موقع) معاً.")
+                )
 
             if self.from_location.warehouse_id != self.from_warehouse_id:
-                raise ValidationError(_("Source location must belong to source warehouse."))
+                raise ValidationError(
+                    _("موقع المصدر يجب أن يكون تابعاً لمستودع المصدر.")
+                )
             if self.to_location.warehouse_id != self.to_warehouse_id:
-                raise ValidationError(_("Destination location must belong to destination warehouse."))
+                raise ValidationError(
+                    _("موقع الوجهة يجب أن يكون تابعاً لمستودع الوجهة.")
+                )
 
     # ============================
-    # Helpers
+    # دوال مساعدة
     # ============================
 
     @property
     def is_done(self) -> bool:
+        """
+        هل الحركة منفذة (DONE)؟
+        """
         return self.status == self.Status.DONE
 
     @property
     def total_lines_quantity(self) -> Decimal:
         """
-        مجموع الكميات في كل البنود (كما هي في وحداتها المختارة).
-        مجرد معلومة للعرض، وليس أساس التحديث في StockLevel.
+        مجموع الكميات في جميع البنود (بوحداتها كما هي في البنود).
+        هذه المعلومة للعرض فقط، وليست أساس التحديث في StockLevel.
         """
         agg = self.lines.aggregate(total=Sum("quantity"))
-        return agg["total"] or Decimal("0.000")
+        return agg["total"] or DECIMAL_ZERO
 
     def save(self, *args, **kwargs):
         """
         يربط تحديث المخزون بتغيير حالة الحركة (status).
 
-        المنطق المتوقع في apply_stock_move_status_change:
-          - يمر على self.lines ويحدث StockLevel بحسب:
-            * move_type
+        المنطق في apply_stock_move_status_change:
+          - يمر على self.lines ويحدث StockLevel حسب:
+            * نوع الحركة move_type
             * الكمية الأساسية (base_uom) لكل سطر
         """
         from .services import apply_stock_move_status_change  # import محلي
@@ -786,184 +832,209 @@ class StockMove(NumberedModel):
 
         if not is_create:
             try:
-                old_status = self.__class__.objects.only("status").get(pk=self.pk).status
+                old_status = (
+                    self.__class__.objects.only("status").get(pk=self.pk).status
+                )
             except self.__class__.DoesNotExist:
                 is_create = True
                 old_status = None
 
         super().save(*args, **kwargs)
 
-        apply_stock_move_status_change(move=self, old_status=old_status, is_create=is_create)
-
-
-
+        apply_stock_move_status_change(
+            move=self,
+            old_status=old_status,
+            is_create=is_create,
+        )
 
 
 # ============================================================
-# Stock move lines (Detail)
+# بنود حركات المخزون (التفاصيل)
 # ============================================================
-
 class StockMoveLine(TimeStampedModel):
     """
-    Single line in a stock move.
-    كل سطر يحتوي:
+    سطر واحد في حركة مخزون.
+    يحتوي على:
       - المنتج
       - الكمية
       - وحدة القياس
 
-    المخزون الفعلي يتم تحديثه بناءً على:
-      - move.move_type
-      - base quantity لكل سطر (product.base_uom)
+    تحديث المخزون الفعلي يتم بناءً على:
+      - نوع الحركة move.move_type
+      - الكمية المحوّلة لوحدة الأساس للمنتج (product.base_uom)
     """
 
     move = models.ForeignKey(
         StockMove,
         on_delete=models.CASCADE,
         related_name="lines",
-        verbose_name=_("Stock move"),
+        verbose_name=_("حركة المخزون"),
     )
 
-    # ⚠️ مهم: related_name = "stock_moves" عشان تظل:
-    # product.stock_moves موجودة وتستخدم في Product.can_be_deleted
+    # related_name = "stock_moves" حتى نستخدم:
+    # product.stock_moves في Product.can_be_deleted
     product = models.ForeignKey(
         Product,
         on_delete=models.PROTECT,
         related_name="stock_moves",
-        verbose_name=_("Product"),
+        verbose_name=_("المنتج"),
     )
 
     quantity = models.DecimalField(
         max_digits=12,
         decimal_places=3,
-        verbose_name=_("Quantity"),
+        verbose_name=_("الكمية"),
     )
 
     uom = models.ForeignKey(
         UnitOfMeasure,
         on_delete=models.PROTECT,
         related_name="stock_move_lines",
-        verbose_name=_("Unit of measure"),
+        verbose_name=_("وحدة القياس"),
         help_text=_(
-            "Unit of measure used for this line "
-            "(must be base or alternative UoM of the product)."
+            "وحدة القياس المستخدمة في هذا السطر "
+            "ويجب أن تكون وحدة الأساس أو الوحدة البديلة للمنتج."
         ),
     )
 
     class Meta:
-        verbose_name = _("Stock move line")
-        verbose_name_plural = _("Stock move lines")
+        verbose_name = _("بند حركة مخزون")
+        verbose_name_plural = _("بنود حركات المخزون")
 
     def __str__(self) -> str:
         uom_code = self.uom.code if self.uom_id else "?"
         return f"{self.product.code}: {self.quantity} {uom_code}"
 
     # ============================
-    # Validation
+    # التحقق (Validation)
     # ============================
 
     def clean(self):
         super().clean()
 
         if self.quantity is None or self.quantity <= 0:
-            raise ValidationError(_("Quantity must be greater than zero."))
+            raise ValidationError(_("الكمية يجب أن تكون أكبر من صفر."))
 
         if self.product_id and self.uom_id:
             allowed_uoms = [self.product.base_uom]
             if self.product.alt_uom:
                 allowed_uoms.append(self.product.alt_uom)
-            # عمداً لا نسمح باستخدام weight_uom كبند حركة
+
+            # عمداً لا نسمح باستخدام وحدة الوزن كبند حركة
             if self.uom not in allowed_uoms:
                 raise ValidationError(
-                    _("Selected unit of measure is not configured for this product (must be base or alternative UoM).")
+                    _(
+                        "وحدة القياس المختارة غير مضبوطة لهذا المنتج "
+                        "(يجب أن تكون وحدة الأساس أو الوحدة البديلة)."
+                    )
                 )
 
     # ============================
-    # Helpers
+    # دوال مساعدة
     # ============================
 
     def get_base_quantity(self) -> Decimal:
         """
         يرجع الكمية المحوّلة إلى وحدة المنتج الأساسية base_uom.
-        هذه القيمة هي اللي لازم تُستخدم لتحديث StockLevel.
+        هذه القيمة هي التي تُستخدم لتحديث StockLevel.
         """
         return self.product.to_base(self.quantity, uom=self.uom)
 
 
 # ============================================================
-# Stock levels
+# أرصدة المخزون
 # ============================================================
-
 class StockLevel(TimeStampedModel):
     """
-    Current stock level per (product, warehouse, location).
+    الرصيد الحالي لكل (منتج، مستودع، موقع).
 
-    - warehouse مكرر هنا رغم أنه موجود في StockLocation، حتى نسهل الاستعلامات
-      ونعمل aggregate على مستوى المخزن مباشرة بدون join مع location.
+    نكرر المستودع هنا بالرغم من أنه موجود في StockLocation
+    حتى نسهل الاستعلامات ونعمل تجميع (aggregate) على مستوى المستودع
+    بدون join إضافي.
     """
 
     product = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
         related_name="stock_levels",
-        verbose_name=_("Product"),
+        verbose_name=_("المنتج"),
     )
 
     warehouse = models.ForeignKey(
         Warehouse,
         on_delete=models.PROTECT,
         related_name="stock_levels",
-        verbose_name=_("Warehouse"),
+        verbose_name=_("المستودع"),
     )
 
     location = models.ForeignKey(
         StockLocation,
         on_delete=models.PROTECT,
         related_name="stock_levels",
-        verbose_name=_("Location inside warehouse"),
+        verbose_name=_("الموقع داخل المستودع"),
     )
 
-    # الكمية الفعلية على الرف
     quantity_on_hand = models.DecimalField(
         max_digits=12,
         decimal_places=3,
-        default=Decimal("0.000"),
-        verbose_name=_("Quantity on hand"),
+        default=DECIMAL_ZERO,
+        verbose_name=_("الكمية المتوفرة"),
     )
 
-    # كمية محجوزة (للأوامر) – مستقبلية
     quantity_reserved = models.DecimalField(
         max_digits=12,
         decimal_places=3,
-        default=Decimal("0.000"),
-        verbose_name=_("Reserved quantity"),
+        default=DECIMAL_ZERO,
+        verbose_name=_("كمية محجوزة"),
     )
 
-    # حد إعادة الطلب / الحد الأدنى المقبول
     min_stock = models.DecimalField(
         max_digits=12,
         decimal_places=3,
-        default=Decimal("0.000"),
-        verbose_name=_("Minimum stock"),
+        default=DECIMAL_ZERO,
+        verbose_name=_("الحد الأدنى للمخزون"),
     )
 
     objects = StockLevelManager()
 
     class Meta:
-        verbose_name = _("Stock level")
-        verbose_name_plural = _("Stock levels")
+        verbose_name = _("رصيد مخزون")
+        verbose_name_plural = _("أرصدة المخزون")
         unique_together = ("product", "warehouse", "location")
+        indexes = [
+            models.Index(
+                fields=["product", "warehouse"],
+                name="stk_lvl_prod_wh_idx",
+            ),
+            models.Index(
+                fields=["warehouse", "location"],
+                name="stk_lvl_wh_loc_idx",
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                name="stocklevel_quantity_on_hand_non_negative",
+                check=Q(quantity_on_hand__gte=0),
+            ),
+            models.CheckConstraint(
+                name="stocklevel_quantity_reserved_non_negative",
+                check=Q(quantity_reserved__gte=0),
+            ),
+            models.CheckConstraint(
+                name="stocklevel_min_stock_non_negative",
+                check=Q(min_stock__gte=0),
+            ),
+        ]
 
     def __str__(self):
         return f"{self.product} @ {self.warehouse} / {self.location}"
 
     @property
-    def qty(self):
+    def qty(self) -> Decimal:
         """
-        Backwards-compatible alias for quantity_on_hand.
+        اسم قديم متوافق مع الخلف: alias لـ quantity_on_hand.
         """
         return self.quantity_on_hand
-
-    # الحقول موجودة عندك هنا
 
     # ============================
     # خصائص مساعدة
@@ -972,28 +1043,28 @@ class StockLevel(TimeStampedModel):
     @property
     def available_quantity(self) -> Decimal:
         """
-        Available quantity = on_hand - reserved.
+        الكمية المتاحة = المتوفرة - المحجوزة.
         """
-        return (self.quantity_on_hand or Decimal("0.000")) - (
-                self.quantity_reserved or Decimal("0.000")
+        return (self.quantity_on_hand or DECIMAL_ZERO) - (
+            self.quantity_reserved or DECIMAL_ZERO
         )
 
     @property
     def is_below_min(self) -> bool:
         """
-        Is current quantity below configured minimum?
+        هل الرصيد الحالي أقل من الحد الأدنى المضبوط؟
         """
         if not self.min_stock:
             return False
         return self.quantity_on_hand < self.min_stock
 
 
-
-
-
+# ============================================================
+# إعدادات المخزون العامة
+# ============================================================
 class InventorySettings(SingletonModel):
     """
-    إعدادات المخزون العامة (منها البادئة لترقيم حركات المخزون).
+    إعدادات المخزون العامة (مثل بادئات ترقيم حركات المخزون).
     """
 
     stock_move_in_prefix = models.CharField(

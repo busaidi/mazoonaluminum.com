@@ -6,12 +6,20 @@ from django.forms.models import inlineformset_factory
 from django.utils.translation import gettext_lazy as _
 
 from uom.models import UnitOfMeasure
-from .models import StockMove, Product, StockLevel, ProductCategory, InventorySettings, StockLocation, StockMoveLine
+from .models import (
+    StockMove,
+    Product,
+    StockLevel,
+    ProductCategory,
+    InventorySettings,
+    StockLocation,
+    StockMoveLine,
+)
 
 
 class StockMoveForm(forms.ModelForm):
     """
-    فورم رأس حركة المخزون (بدون منتجات)
+    فورم رأس حركة المخزون (بدون المنتجات).
     """
 
     class Meta:
@@ -34,21 +42,25 @@ class StockMoveForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fields["move_type"].label = "نوع الحركة"
-        self.fields["from_warehouse"].label = "من مخزن"
-        self.fields["from_location"].label = "من موقع"
-        self.fields["to_warehouse"].label = "إلى مخزن"
-        self.fields["to_location"].label = "إلى موقع"
-        self.fields["move_date"].label = "تاريخ/وقت الحركة"
-        self.fields["status"].label = "الحالة"
-        self.fields["reference"].label = "مرجع خارجي"
-        self.fields["note"].label = "ملاحظات"
+        # عناوين عربية (مع قابلية الترجمة)
+        self.fields["move_type"].label = _("نوع الحركة")
+        self.fields["from_warehouse"].label = _("من مخزن")
+        self.fields["from_location"].label = _("من موقع")
+        self.fields["to_warehouse"].label = _("إلى مخزن")
+        self.fields["to_location"].label = _("إلى موقع")
+        self.fields["move_date"].label = _("تاريخ/وقت الحركة")
+        self.fields["status"].label = _("الحالة")
+        self.fields["reference"].label = _("مرجع خارجي")
+        self.fields["note"].label = _("ملاحظات")
 
+        # Bootstrap classes
         for name, field in self.fields.items():
             widget = field.widget
             css = widget.attrs.get("class", "")
             if isinstance(widget, (forms.Select, forms.SelectMultiple)):
-                widget.attrs["class"] = (css.replace("form-control", "") + " form-select").strip()
+                widget.attrs["class"] = (
+                    css.replace("form-control", "") + " form-select"
+                ).strip()
             elif isinstance(widget, forms.CheckboxInput):
                 widget.attrs["class"] = (css + " form-check-input").strip()
             else:
@@ -64,19 +76,24 @@ class StockMoveForm(forms.ModelForm):
 
         # تأكد أن المواقع تتبع المخازن عند تعبئتها
         if from_loc and from_wh and from_loc.warehouse_id != from_wh.id:
-            self.add_error("from_location", "الموقع المختار لا يتبع المخزن المحدد (من مخزن).")
+            self.add_error(
+                "from_location",
+                _("الموقع المختار لا يتبع المخزن المحدد في حقل (من مخزن)."),
+            )
 
         if to_loc and to_wh and to_loc.warehouse_id != to_wh.id:
-            self.add_error("to_location", "الموقع المختار لا يتبع المخزن المحدد (إلى مخزن).")
+            self.add_error(
+                "to_location",
+                _("الموقع المختار لا يتبع المخزن المحدد في حقل (إلى مخزن)."),
+            )
 
         return cleaned
 
 
-
-
 class StockMoveLineForm(forms.ModelForm):
     """
-    فورم بند واحد في حركة المخزون (منتج + كمية + وحدة قياس)
+    فورم بند واحد في حركة المخزون (منتج + كمية + وحدة قياس).
+
     - يقيّد uom على الوحدة الأساسية + البديلة للمنتج.
     - يضبط افتراضيًا وحدة القياس على base_uom لو ما اختار المستخدم شيء.
     """
@@ -88,13 +105,15 @@ class StockMoveLineForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fields["product"].label = "المنتج"
-        self.fields["quantity"].label = "الكمية"
-        self.fields["uom"].label = "وحدة القياس"
+        self.fields["product"].label = _("المنتج")
+        self.fields["quantity"].label = _("الكمية")
+        self.fields["uom"].label = _("وحدة القياس")
 
         # مبدئياً: كل الوحدات المفعّلة
         if "uom" in self.fields:
-            self.fields["uom"].queryset = UnitOfMeasure.objects.filter(is_active=True)
+            self.fields["uom"].queryset = UnitOfMeasure.objects.filter(
+                is_active=True
+            )
 
         # نحاول نحدد المنتج لهذا السطر (من POST أو instance أو initial)
         product = self._get_current_product()
@@ -106,7 +125,9 @@ class StockMoveLineForm(forms.ModelForm):
             widget = field.widget
             css = widget.attrs.get("class", "")
             if isinstance(widget, (forms.Select, forms.SelectMultiple)):
-                widget.attrs["class"] = (css.replace("form-control", "") + " form-select").strip()
+                widget.attrs["class"] = (
+                    css.replace("form-control", "") + " form-select"
+                ).strip()
             elif isinstance(widget, forms.CheckboxInput):
                 widget.attrs["class"] = (css + " form-check-input").strip()
             else:
@@ -177,7 +198,7 @@ class StockMoveLineForm(forms.ModelForm):
     def clean_quantity(self):
         qty = self.cleaned_data.get("quantity")
         if qty is None or qty <= 0:
-            raise ValidationError("الكمية يجب أن تكون أكبر من صفر.")
+            raise ValidationError(_("الكمية يجب أن تكون أكبر من صفر."))
         return qty
 
     def clean(self):
@@ -199,8 +220,10 @@ class StockMoveLineForm(forms.ModelForm):
 
         if uom not in allowed_uoms:
             raise ValidationError(
-                "وحدة القياس المختارة لا تتوافق مع إعدادات هذا المنتج. "
-                "يُرجى اختيار وحدة من الوحدات المحددة للمنتج."
+                _(
+                    "وحدة القياس المختارة لا تتوافق مع إعدادات هذا المنتج. "
+                    "يُرجى اختيار وحدة من الوحدات المحددة للمنتج."
+                )
             )
 
         return cleaned
@@ -215,24 +238,21 @@ StockMoveLineFormSet = inlineformset_factory(
 )
 
 
-
-
-
-
 class ProductForm(forms.ModelForm):
     """
-    Form for managing products in inventory.
-    Arabic UI labels, with simple Bootstrap integration.
+    فورم إدارة المنتجات في نظام المخزون.
+    واجهة عربية مع تكامل بسيط مع Bootstrap.
     """
 
     class Meta:
         model = Product
         fields = [
             "category",
+            "product_type",  # 👈 جديد
             "code",
             "name",
             "short_description",
-            # NEW: prices
+            # الأسعار
             "default_sale_price",
             "default_cost_price",
             "description",
@@ -242,7 +262,8 @@ class ProductForm(forms.ModelForm):
             "alt_factor",
             "weight_uom",
             "weight_per_base",
-            # Flags
+            # نوع المنتج وأعلام الحالة
+            "product_type",
             "is_stock_item",
             "is_active",
             "is_published",
@@ -251,55 +272,81 @@ class ProductForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Arabic labels
-        self.fields["category"].label = "التصنيف"
-        self.fields["code"].label = "كود المنتج"
-        self.fields["name"].label = "اسم المنتج"
-        self.fields["short_description"].label = "وصف مختصر"
-        self.fields["description"].label = "وصف تفصيلي"
+        # عناوين عربية
+        self.fields["category"].label = _("التصنيف")
+        self.fields["product_type"].label = "نوع المنتج"
+        self.fields["code"].label = _("كود المنتج")
+        self.fields["name"].label = _("اسم المنتج")
+        self.fields["short_description"].label = _("وصف مختصر")
+        self.fields["description"].label = _("وصف تفصيلي")
 
-        self.fields["default_sale_price"].label = "سعر البيع الافتراضي"
-        self.fields["default_cost_price"].label = "سعر التكلفة التقريبي"
+        self.fields["default_sale_price"].label = _("سعر البيع الافتراضي")
+        self.fields["default_cost_price"].label = _("سعر التكلفة التقريبي")
 
-        self.fields["base_uom"].label = "وحدة القياس الأساسية"
-        self.fields["alt_uom"].label = "وحدة بديلة"
-        self.fields["alt_factor"].label = "عامل تحويل الوحدة البديلة"
-        self.fields["weight_uom"].label = "وحدة الوزن"
-        self.fields["weight_per_base"].label = "الوزن لكل وحدة أساسية"
+        self.fields["base_uom"].label = _("وحدة القياس الأساسية")
+        self.fields["alt_uom"].label = _("وحدة بديلة")
+        self.fields["alt_factor"].label = _("عامل تحويل الوحدة البديلة")
+        self.fields["weight_uom"].label = _("وحدة الوزن")
+        self.fields["weight_per_base"].label = _("الوزن لكل وحدة أساسية")
 
-        self.fields["is_stock_item"].label = "يُتابَع في المخزون"
-        self.fields["is_active"].label = "نشط"
-        self.fields["is_published"].label = "منشور على الموقع/البوابة"
+        self.fields["product_type"].label = _("نوع المنتج")
+        self.fields["is_stock_item"].label = _("يُتابَع في المخزون")
+        self.fields["is_active"].label = _("نشط")
+        self.fields["is_published"].label = _("منشور على الموقع/البوابة")
 
         # Help texts
-        self.fields["code"].help_text = "كود داخلي فريد، مثل: MZN-46-FRAME"
-        self.fields["short_description"].help_text = "سطر واحد يظهر في القوائم والجداول."
-        self.fields["description"].help_text = "وصف كامل للمنتج يمكن استخدامه في الموقع أو العروض."
+        self.fields["code"].help_text = _(
+            "كود داخلي فريد، مثل: MZN-46-FRAME."
+        )
+        self.fields["product_type"].help_text = (
+            "يحدد سلوك المنتج في المخزون والتقارير (مثل: صنف مخزني، خدمة، أصل ثابت...)."
+        )
+        self.fields["short_description"].help_text = _(
+            "سطر واحد يظهر في القوائم والجداول."
+        )
+        self.fields["description"].help_text = _(
+            "وصف كامل للمنتج يمكن استخدامه في الموقع أو العروض."
+        )
 
-        self.fields["default_sale_price"].help_text = (
+        self.fields["default_sale_price"].help_text = _(
             "سعر البيع الداخلي الافتراضي لكل وحدة القياس الأساسية."
         )
-        self.fields["default_cost_price"].help_text = (
+        self.fields["default_cost_price"].help_text = _(
             "سعر التكلفة التقريبي يستخدم للتقارير الداخلية وتقدير تكلفة المخزون."
         )
 
-        self.fields["base_uom"].help_text = "الوحدة الأساسية للمخزون، مثل: M للمتر، PCS للقطعة."
-        self.fields["alt_uom"].help_text = "وحدة أخرى للبيع أو الشراء (مثل: لفة، كرتون)."
-        self.fields["alt_factor"].help_text = (
+        self.fields["base_uom"].help_text = _(
+            "الوحدة الأساسية للمخزون، مثل: M للمتر، PCS للقطعة."
+        )
+        self.fields["alt_uom"].help_text = _(
+            "وحدة أخرى للبيع أو الشراء (مثل: لفة، كرتون)."
+        )
+        self.fields["alt_factor"].help_text = _(
             "كم تساوي 1 وحدة بديلة من الوحدة الأساسية. "
             "مثال: إذا الأساس متر والبديلة لفة 6م، اكتب 6."
         )
-        self.fields["weight_uom"].help_text = "الوحدة المستخدمة للوزن، مثل: KG."
-        self.fields["weight_per_base"].help_text = (
+        self.fields["weight_uom"].help_text = _(
+            "الوحدة المستخدمة للوزن، مثل: KG."
+        )
+        self.fields["weight_per_base"].help_text = _(
             "الوزن في وحدة الوزن لكل 1 من الوحدة الأساسية. "
             "مثال: إذا الأساس متر ووحدة الوزن كجم، هذا الحقل هو كجم/م."
         )
 
-        self.fields["is_stock_item"].help_text = "إذا تم تعطيله، لن يتم تتبع هذا المنتج في حركات المخزون."
-        self.fields["is_active"].help_text = "إذا تم تعطيله، لن يظهر في المستندات الجديدة."
-        self.fields["is_published"].help_text = "إذا تم تفعيله، يمكن عرضه في الموقع أو بوابة العملاء."
+        self.fields["product_type"].help_text = _(
+            "يحدد إذا كان المنتج صنف مخزني، خدمة أو مستهلكات."
+        )
+        self.fields["is_stock_item"].help_text = _(
+            "إذا تم تعطيله، لن يتم تتبع هذا المنتج في حركات المخزون."
+        )
+        self.fields["is_active"].help_text = _(
+            "إذا تم تعطيله، لن يظهر في المستندات الجديدة."
+        )
+        self.fields["is_published"].help_text = _(
+            "إذا تم تفعيله، يمكن عرضه في الموقع أو بوابة العملاء."
+        )
 
-        # Limit UoM fields to active units
+        # حصر وحدات القياس على الوحدات النشطة
         active_uoms = UnitOfMeasure.objects.filter(is_active=True)
         if "base_uom" in self.fields:
             self.fields["base_uom"].queryset = active_uoms
@@ -308,16 +355,20 @@ class ProductForm(forms.ModelForm):
         if "weight_uom" in self.fields:
             self.fields["weight_uom"].queryset = active_uoms
 
-        # Add Bootstrap classes
+        # Bootstrap classes
         for name, field in self.fields.items():
             widget = field.widget
             css = widget.attrs.get("class", "")
             if isinstance(widget, forms.CheckboxInput):
                 widget.attrs["class"] = (css + " form-check-input").strip()
+            elif isinstance(widget, (forms.Select, forms.SelectMultiple)):
+                widget.attrs["class"] = (
+                    css.replace("form-control", "") + " form-select"
+                ).strip()
             else:
                 widget.attrs["class"] = (css + " form-control").strip()
 
-        # Numeric field tuning
+        # إعداد بعض الخصائص الرقمية
         if "default_sale_price" in self.fields:
             self.fields["default_sale_price"].widget.attrs.setdefault("step", "0.001")
             self.fields["default_sale_price"].widget.attrs.setdefault("min", "0")
@@ -334,9 +385,9 @@ class ProductForm(forms.ModelForm):
 
     def clean_code(self):
         """
-        Normalize product code:
-        - strip spaces
-        - uppercase
+        تطبيع كود المنتج:
+        - إزالة المسافات
+        - تحويل إلى حروف كبيرة
         """
         code = self.cleaned_data.get("code", "") or ""
         code = code.strip().upper()
@@ -344,35 +395,37 @@ class ProductForm(forms.ModelForm):
 
     def clean_alt_factor(self):
         """
-        Ensure alt_factor is only set when alt_uom is provided and vice versa.
+        التأكد من أن alt_factor مضبوط فقط عند وجود alt_uom والعكس.
         """
         alt_uom = self.cleaned_data.get("alt_uom")
         alt_factor = self.cleaned_data.get("alt_factor")
 
         if alt_uom and not alt_factor:
-            raise forms.ValidationError("يجب تحديد عامل التحويل عند اختيار وحدة بديلة.")
+            raise forms.ValidationError(
+                _("يجب تحديد عامل التحويل عند اختيار وحدة بديلة.")
+            )
         if alt_factor and not alt_uom:
-            raise forms.ValidationError("لا يمكن تعيين عامل تحويل بدون وحدة بديلة.")
+            raise forms.ValidationError(
+                _("لا يمكن تعيين عامل تحويل بدون وحدة بديلة.")
+            )
         return alt_factor
 
     def clean_default_sale_price(self):
         value = self.cleaned_data.get("default_sale_price") or 0
         if value < 0:
-            raise forms.ValidationError("لا يمكن أن يكون سعر البيع سالباً.")
+            raise forms.ValidationError(_("لا يمكن أن يكون سعر البيع سالباً."))
         return value
 
     def clean_default_cost_price(self):
         value = self.cleaned_data.get("default_cost_price") or 0
         if value < 0:
-            raise forms.ValidationError("لا يمكن أن يكون سعر التكلفة سالباً.")
+            raise forms.ValidationError(_("لا يمكن أن يكون سعر التكلفة سالباً."))
         return value
-
-
 
 
 class StockLevelForm(forms.ModelForm):
     """
-    Form لإدارة مستوى المخزون لمنتج معيّن في مخزن/موقع معيّن.
+    فورم لإدارة مستوى المخزون لمنتج معيّن في مخزن/موقع معيّن.
     - في الإنشاء: يمكن اختيار المنتج + المخزن + الموقع.
     - في التعديل: نعرض المنتج + المخزن + الموقع لكن بدون تعديل (disabled).
     """
@@ -391,20 +444,26 @@ class StockLevelForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # ==== عناوين عربية ====
-        self.fields["product"].label = "المنتج"
-        self.fields["warehouse"].label = "المخزن"
-        self.fields["location"].label = "الموقع داخل المخزن"
+        # عناوين عربية
+        self.fields["product"].label = _("المنتج")
+        self.fields["warehouse"].label = _("المخزن")
+        self.fields["location"].label = _("الموقع داخل المخزن")
 
-        self.fields["quantity_on_hand"].label = "الكمية الفعلية المتوفرة"
-        self.fields["quantity_reserved"].label = "الكمية المحجوزة (للطلبيات)"
-        self.fields["min_stock"].label = "الحد الأدنى / مستوى إعادة الطلب"
+        self.fields["quantity_on_hand"].label = _("الكمية الفعلية المتوفرة")
+        self.fields["quantity_reserved"].label = _("الكمية المحجوزة (للطلبيات)")
+        self.fields["min_stock"].label = _("الحد الأدنى / مستوى إعادة الطلب")
 
-        self.fields["quantity_on_hand"].help_text = "الكمية الموجودة حاليًا على الرف في هذا المخزن/الموقع."
-        self.fields["quantity_reserved"].help_text = "كمية محجوزة لطلبيات لم تُسَلَّم بعد."
-        self.fields["min_stock"].help_text = "إذا نزل المخزون عن هذا الحد، يعتبر بحاجة لإعادة طلب."
+        self.fields["quantity_on_hand"].help_text = _(
+            "الكمية الموجودة حاليًا على الرف في هذا المخزن/الموقع."
+        )
+        self.fields["quantity_reserved"].help_text = _(
+            "كمية محجوزة لطلبيات لم تُسَلَّم بعد."
+        )
+        self.fields["min_stock"].help_text = _(
+            "إذا نزل المخزون عن هذا الحد، يعتبر بحاجة لإعادة طلب."
+        )
 
-        # ==== Bootstrap classes ====
+        # Bootstrap classes
         for name, field in self.fields.items():
             widget = field.widget
             css = widget.attrs.get("class", "")
@@ -413,13 +472,35 @@ class StockLevelForm(forms.ModelForm):
             else:
                 widget.attrs["class"] = (css + " form-control").strip()
 
-        # ==== في حالة التعديل: نمنع تعديل المنتج/المخزن/الموقع ====
+        # في حالة التعديل: نمنع تعديل المنتج/المخزن/الموقع
         if self.instance and self.instance.pk:
             for name in ["product", "warehouse", "location"]:
                 field = self.fields.get(name)
                 if field:
                     field.disabled = True
-                    field.required = False  # عشان ما يشتكي الفاليديشن
+                    field.required = False  # حتى لا يشتكي الفاليديشن
+
+    # ============================
+    # Validation للقيم غير السالبة
+    # ============================
+
+    def clean_quantity_on_hand(self):
+        value = self.cleaned_data.get("quantity_on_hand")
+        if value is not None and value < 0:
+            raise ValidationError(_("لا يمكن أن تكون الكمية المتوفرة سالبة."))
+        return value
+
+    def clean_quantity_reserved(self):
+        value = self.cleaned_data.get("quantity_reserved")
+        if value is not None and value < 0:
+            raise ValidationError(_("لا يمكن أن تكون الكمية المحجوزة سالبة."))
+        return value
+
+    def clean_min_stock(self):
+        value = self.cleaned_data.get("min_stock")
+        if value is not None and value < 0:
+            raise ValidationError(_("لا يمكن أن يكون الحد الأدنى للمخزون سالباً."))
+        return value
 
     def clean(self):
         """
@@ -439,16 +520,17 @@ class StockLevelForm(forms.ModelForm):
             ).exists()
             if exists:
                 raise ValidationError(
-                    "يوجد بالفعل مستوى مخزون لهذا المنتج في هذا المخزن وهذا الموقع."
+                    _(
+                        "يوجد بالفعل مستوى مخزون لهذا المنتج في هذا المخزن وهذا الموقع."
+                    )
                 )
 
         return cleaned
 
 
-
 class ProductCategoryForm(forms.ModelForm):
     """
-    Form لإدارة تصنيفات المنتجات في نظام المخزون.
+    فورم لإدارة تصنيفات المنتجات في نظام المخزون.
     """
 
     class Meta:
@@ -458,16 +540,20 @@ class ProductCategoryForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fields["slug"].label = "المعرّف (Slug)"
-        self.fields["name"].label = "اسم التصنيف"
-        self.fields["description"].label = "الوصف"
-        self.fields["parent"].label = "التصنيف الأب"
-        self.fields["is_active"].label = "نشط"
+        self.fields["slug"].label = _("المعرّف (Slug)")
+        self.fields["name"].label = _("اسم التصنيف")
+        self.fields["description"].label = _("الوصف")
+        self.fields["parent"].label = _("التصنيف الأب")
+        self.fields["is_active"].label = _("نشط")
 
-        self.fields["slug"].help_text = "معرّف بدون مسافات، يُستخدم في الروابط (مثال: mazoon-46-system)."
-        self.fields["parent"].help_text = "اختياري: لربط هذا التصنيف كتحت تصنيف من تصنيف آخر."
+        self.fields["slug"].help_text = _(
+            "معرّف بدون مسافات، يُستخدم في الروابط (مثال: mazoon-46-system)."
+        )
+        self.fields["parent"].help_text = _(
+            "اختياري: لربط هذا التصنيف كتحت تصنيف من تصنيف آخر."
+        )
 
-        # ترتيب بسيط في الـ Select للتصنيف الأب (اختياري)
+        # ترتيب بسيط في الـ Select للتصنيف الأب
         self.fields["parent"].queryset = ProductCategory.objects.order_by("name")
 
         # Bootstrap classes
@@ -482,9 +568,11 @@ class ProductCategoryForm(forms.ModelForm):
                 widget.attrs["class"] = (css + " form-control").strip()
 
 
-
-
 class InventorySettingsForm(forms.ModelForm):
+    """
+    فورم إعدادات المخزون العامة (بادئات ترقيم حركات المخزون).
+    """
+
     class Meta:
         model = InventorySettings
         fields = [
@@ -497,28 +585,34 @@ class InventorySettingsForm(forms.ModelForm):
                 attrs={
                     "class": "form-control form-control-sm",
                     "dir": "ltr",
-                    "placeholder": "IN- أو STM-IN- مثلاً",
+                    "placeholder": _("IN- أو STM-IN- مثلاً"),
                 }
             ),
             "stock_move_out_prefix": forms.TextInput(
                 attrs={
                     "class": "form-control form-control-sm",
                     "dir": "ltr",
-                    "placeholder": "OUT- أو STM-OUT- مثلاً",
+                    "placeholder": _("OUT- أو STM-OUT- مثلاً"),
                 }
             ),
             "stock_move_transfer_prefix": forms.TextInput(
                 attrs={
                     "class": "form-control form-control-sm",
                     "dir": "ltr",
-                    "placeholder": "TRF- أو STM-TRF- مثلاً",
+                    "placeholder": _("TRF- أو STM-TRF- مثلاً"),
                 }
             ),
         }
         labels = {
-            "stock_move_in_prefix": _("بادئة حركات الوارد (IN)"),
-            "stock_move_out_prefix": _("بادئة حركات الصادر (OUT)"),
-            "stock_move_transfer_prefix": _("بادئة حركات التحويل (TRANSFER)"),
+            "stock_move_in_prefix": _(
+                "بادئة حركات الوارد (IN)"
+            ),
+            "stock_move_out_prefix": _(
+                "بادئة حركات الصادر (OUT)"
+            ),
+            "stock_move_transfer_prefix": _(
+                "بادئة حركات التحويل (TRANSFER)"
+            ),
         }
         help_texts = {
             "stock_move_in_prefix": _(
@@ -535,10 +629,10 @@ class InventorySettingsForm(forms.ModelForm):
             ),
         }
 
-    # ====== Helper للتنظيف ======
+    # ===== Helper للتنظيف =====
     def _clean_prefix(self, field_name: str) -> str:
         value = self.cleaned_data.get(field_name, "") or ""
-        # نشيل المسافات ونخليها كابيتال
+        # نشيل المسافات ونخليها حروف كبيرة
         return value.strip().upper()
 
     def clean_stock_move_in_prefix(self):

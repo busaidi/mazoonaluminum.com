@@ -3,7 +3,6 @@
 from django.urls import path
 
 from . import views
-from .views import InventorySettingsView
 
 app_name = "inventory"
 
@@ -123,9 +122,8 @@ urlpatterns = [
     ),
 
     # ------------------------
-    # Stock levels (read-only)
+    # Stock levels
     # ------------------------
-    # Stock Levels
     path(
         "stock-levels/",
         views.StockLevelListView.as_view(),
@@ -147,7 +145,12 @@ urlpatterns = [
         name="stocklevel_update",
     ),
 
-
-    #setting
-    path("settings/", InventorySettingsView.as_view(), name="settings"),
+    # ------------------------
+    # Inventory settings
+    # ------------------------
+    path(
+        "settings/",
+        views.InventorySettingsView.as_view(),
+        name="settings",
+    ),
 ]
