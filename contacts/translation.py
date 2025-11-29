@@ -7,42 +7,30 @@ from .models import Contact, ContactAddress
 @register(Contact)
 class ContactTranslationOptions(TranslationOptions):
     """
-    الحقول المترجمة في Contact:
+    ترجمة الحقول الأساسية لجهة الاتصال:
     - الاسم
-    - اسم الشركة
-    - العنوان الحر
-    - تفاصيل الموقع (دولة، محافظة، ولاية، قرية)
-    - الرمز البريدي وصندوق البريد
+    - اسم الشركة الحر
     """
     fields = (
         "name",
         "company_name",
-        "address",
-        "country",
-        "governorate",
-        "wilaya",
-        "village",
-        "postal_code",
-        "po_box",
     )
 
 
 @register(ContactAddress)
 class ContactAddressTranslationOptions(TranslationOptions):
     """
-    الحقول المترجمة في ContactAddress:
-    - وصف العنوان (label)
-    - العنوان التفصيلي
-    - تفاصيل الموقع (دولة، محافظة، ولاية، قرية)
-    - الرمز البريدي وصندوق البريد
+    ترجمة العنوان التفصيلي + بيانات الموقع الأساسية:
+    - address
+    - country
+    - governorate
+    - wilaya
+    - village
     """
     fields = (
-        "label",
         "address",
         "country",
         "governorate",
         "wilaya",
         "village",
-        "postal_code",
-        "po_box",
     )

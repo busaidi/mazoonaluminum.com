@@ -38,7 +38,7 @@ urlpatterns += i18n_patterns(
     path("cart/", include("cart.urls", namespace="cart")),
     path("accounts/", include("django.contrib.auth.urls")),
     path("inventory/", include("inventory.urls", namespace="inventory")),
-    path("contacts/", include("contacts.urls", namespace="contacts")),
+    path("sales/contacts/", include("contacts.urls", namespace="contacts")),
     path("uom/", include("uom.urls", namespace="uom")),
     path("sales/", include("sales.urls", namespace="sales")),
     path("windowcad/", include("windowcad.urls", namespace="windowcad")),

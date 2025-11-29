@@ -9,6 +9,7 @@
 
   {# === رأس قسم المبيعات + الناف === #}
   <div class="mb-3">
+
     <div class="d-flex justify-content-between align-items-center mb-2">
       <div>
         <h1 class="h3 fw-bold mb-1 text-mazoon">
@@ -22,55 +23,54 @@
 
     <ul class="nav nav-pills mazoon-nav bg-mazoon-card p-2 rounded-3 shadow-sm mb-2">
 
+
+
+      {# --- لوحة التحكم --- #}
       <li class="nav-item">
         <a class="nav-link px-3 py-1 {% if sales_section == 'dashboard' %}active{% endif %}"
            href="{% url 'sales:dashboard' %}">
-          <i class="bi bi-speedometer2 ms-1"></i>
-          <span>{% trans "لوحة التحكم" %}</span>
+          {% trans "لوحة التحكم" %}
         </a>
       </li>
 
+          {# --- رابط جهات الاتصال --- #}
+          <li class="nav-item">
+        <a class="nav-link px-3 py-1 {% if sales_section == 'contacts' %}active{% endif %}"
+           href="{% url 'contacts:contact_list' %}">
+          {% trans "جهات الاتصال" %}
+        </a>
+      </li>
+
+      {# --- عروض الأسعار --- #}
       <li class="nav-item">
         <a class="nav-link px-3 py-1 {% if sales_section == 'quotations' %}active{% endif %}"
            href="{% url 'sales:quotation_list' %}">
-          <i class="bi bi-file-earmark-text ms-1"></i>
-          <span>{% trans "عروض الأسعار" %}</span>
+          {% trans "عروض الأسعار" %}
         </a>
       </li>
 
+      {# --- أوامر البيع --- #}
       <li class="nav-item">
         <a class="nav-link px-3 py-1 {% if sales_section == 'orders' %}active{% endif %}"
            href="{% url 'sales:order_list' %}">
-          <i class="bi bi-bag-check ms-1"></i>
-          <span>{% trans "أوامر البيع" %}</span>
+          {% trans "أوامر البيع" %}
         </a>
       </li>
 
+      {# --- مذكرات التسليم --- #}
       <li class="nav-item">
         <a class="nav-link px-3 py-1 {% if sales_section == 'deliveries' %}active{% endif %}"
            href="{% url 'sales:delivery_list' %}">
-          <i class="bi bi-truck ms-1"></i>
-          <span>{% trans "مذكرات التسليم" %}</span>
+          {% trans "مذكرات التسليم" %}
         </a>
       </li>
-
-      {# مساحة لإعدادات المبيعات لاحقاً #}
-      <!--
-      <li class="nav-item">
-        <a class="nav-link px-3 py-1 {% if sales_section == 'settings' %}active{% endif %}"
-           href="#">
-          <i class="bi bi-sliders ms-1"></i>
-          <span>{% trans "الإعدادات" %}</span>
-        </a>
-      </li>
-      -->
 
     </ul>
 
     <div class="mb-3">
       <p class="text-muted small mb-0">
         {% if sales_section == 'dashboard' %}
-          {% trans "نظرة عامة على مستندات المبيعات وحالة سير العمل والعملاء الرئيسيين." %}
+          {% trans "نظرة عامة على مستندات المبيعات وحالة سير العمل." %}
         {% elif sales_section == 'quotations' %}
           {% trans "إدارة عروض الأسعار المقدمة للعملاء وتحويلها إلى أوامر بيع." %}
         {% elif sales_section == 'orders' %}
@@ -82,9 +82,10 @@
         {% endif %}
       </p>
     </div>
+
   </div>
 
-  {# === هنا يتم حقن محتوى كل صفحة فرعية === #}
+  {# === محتوى الصفحات الفرعية === #}
   <div class="mt-3">
     {% block sales_content %}{% endblock %}
   </div>

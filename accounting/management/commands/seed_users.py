@@ -1,8 +1,9 @@
+# accounting/management/commands/seed_users.py
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 
-from contacts.models import Contact
+from contacts.models import Contact, ContactAddress
 
 
 User = get_user_model()
@@ -125,9 +126,9 @@ class Command(BaseCommand):
         village_en = "Al Khoudh 6"
         village_ar = "الخوض ٦"
 
+        # الأرقام نفسها تنفع للغتين
         postal_code_en = "123"
         postal_code_ar = "١٢٣"
-
         po_box_en = "256"
         po_box_ar = "٢٥٦"
 
@@ -152,68 +153,36 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.WARNING("User 'agent' exists. Password updated."))
 
-        # إنشاء أو تحديث العميل المرتبط
+        # إنشاء أو تحديث العميل المرتبط (Contact فقط بالحقول الموجودة فعلياً في الموديل)
+        contact_defaults = {
+            "kind": Contact.ContactKind.PERSON,
+            "name_ar": full_name_ar,
+            "name_en": full_name_en,
+            "company_name_ar": company_name_ar,
+            "company_name_en": company_name_en,
+            "phone": phone,
+            "email": email,
+            "tax_number": tax_number,
+            "is_customer": True,
+            "is_supplier": False,
+            "is_owner": False,
+            "is_employee": False,
+            "is_active": True,
+        }
+
         customer, c_created = Contact.objects.get_or_create(
             user=user,
-            defaults={
-                # الحقول المترجمة (modeltranslation)
-                "name_ar": full_name_ar,
-                "name_en": full_name_en,
-                "company_name_ar": company_name_ar,
-                "company_name_en": company_name_en,
-                "address_ar": address_ar,
-                "address_en": address_en,
-                "country_ar": country_ar,
-                "country_en": country_en,
-                "governorate_ar": governorate_ar,
-                "governorate_en": governorate_en,
-                "wilaya_ar": wilaya_ar,
-                "wilaya_en": wilaya_en,
-                "village_ar": village_ar,
-                "village_en": village_en,
-                "postal_code_ar": postal_code_ar,
-                "postal_code_en": postal_code_en,
-                "po_box_ar": po_box_ar,
-                "po_box_en": po_box_en,
-
-                # الحقول غير المترجمة
-                "phone": phone,
-                "email": email,
-                "tax_number": tax_number,
-            },
+            defaults=contact_defaults,
         )
 
-        updated = False
-        if not c_created:
-            # تأكد أن المستخدم مربوط
-            if customer.user != user:
-                customer.user = user
-                updated = True
-
-            # نحدّث البيانات المترجمة / غير المترجمة
-            for field, value in {
-                "name_ar": full_name_ar,
-                "name_en": full_name_en,
-                "company_name_ar": company_name_ar,
-                "company_name_en": company_name_en,
-                "address_ar": address_ar,
-                "address_en": address_en,
-                "country_ar": country_ar,
-                "country_en": country_en,
-                "governorate_ar": governorate_ar,
-                "governorate_en": governorate_en,
-                "wilaya_ar": wilaya_ar,
-                "wilaya_en": wilaya_en,
-                "village_ar": village_ar,
-                "village_en": village_en,
-                "postal_code_ar": postal_code_ar,
-                "postal_code_en": postal_code_en,
-                "po_box_ar": po_box_ar,
-                "po_box_en": po_box_en,
-                "phone": phone,
-                "email": email,
-                "tax_number": tax_number,
-            }.items():
+        if c_created:
+            self.stdout.write(
+                self.style.SUCCESS("Customer for 'agent' created with translated profile.")
+            )
+        else:
+            # نحدّث بيانات جهة الاتصال لو تغيّرت
+            updated = False
+            for field, value in contact_defaults.items():
                 if getattr(customer, field, None) != value:
                     setattr(customer, field, value)
                     updated = True
@@ -222,18 +191,48 @@ class Command(BaseCommand):
                 customer.save()
                 self.stdout.write(
                     self.style.WARNING(
-                        "Customer for 'agent' existed. Data updated to match translated form."
+                        "Customer for 'agent' existed. Contact data updated."
                     )
                 )
             else:
                 self.stdout.write(
                     self.style.WARNING(
-                        "Customer for 'agent' existed. No field changes were necessary."
+                        "Customer for 'agent' existed. No contact field changes were necessary."
                     )
                 )
+
+        # إنشاء / تحديث عنوان فوترة مترجم في ContactAddress
+        billing_defaults = {
+            "address_ar": address_ar,
+            "address_en": address_en,
+            "country_ar": country_ar,
+            "country_en": country_en,
+            "governorate_ar": governorate_ar,
+            "governorate_en": governorate_en,
+            "wilaya_ar": wilaya_ar,
+            "wilaya_en": wilaya_en,
+            "village_ar": village_ar,
+            "village_en": village_en,
+            # نستخدم النسخة الإنجليزية للحقول غير المترجمة (أرقام في الأساس)
+            "postal_code": postal_code_en,
+            "po_box": po_box_en,
+            "is_primary": True,
+            "is_active": True,
+        }
+
+        billing_address, a_created = ContactAddress.objects.update_or_create(
+            contact=customer,
+            address_type=ContactAddress.AddressType.BILLING,
+            defaults=billing_defaults,
+        )
+
+        if a_created:
+            self.stdout.write(
+                self.style.SUCCESS("Default billing address created for 'agent'.")
+            )
         else:
             self.stdout.write(
-                self.style.SUCCESS("Customer for 'agent' created with translated Oman profile.")
+                self.style.WARNING("Billing address for 'agent' updated/ensured.")
             )
 
     # -------------------------------------------------------

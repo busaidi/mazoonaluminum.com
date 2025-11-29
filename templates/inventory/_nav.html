@@ -17,7 +17,6 @@
     <li class="nav-item">
       <a class="nav-link px-3 py-1 {% if subsection == 'dashboard' %}active{% endif %}"
          href="{% url 'inventory:dashboard' %}">
-        <i class="bi bi-speedometer2 ms-1"></i>
         <span>{% trans "لوحة التحكم" %}</span>
       </a>
     </li>
@@ -25,7 +24,6 @@
     <li class="nav-item">
       <a class="nav-link px-3 py-1 {% if subsection == 'products' %}active{% endif %}"
          href="{% url 'inventory:product_list' %}">
-        <i class="bi bi-box-seam ms-1"></i>
         <span>{% trans "المنتجات" %}</span>
       </a>
     </li>
@@ -33,7 +31,6 @@
     <li class="nav-item">
       <a class="nav-link px-3 py-1 {% if subsection == 'categories' %}active{% endif %}"
          href="{% url 'inventory:category_list' %}">
-        <i class="bi bi-tags ms-1"></i>
         <span>{% trans "الفئات" %}</span>
       </a>
     </li>
@@ -41,7 +38,6 @@
     <li class="nav-item">
       <a class="nav-link px-3 py-1 {% if subsection == 'warehouses' %}active{% endif %}"
          href="{% url 'inventory:warehouse_list' %}">
-        <i class="bi bi-buildings ms-1"></i>
         <span>{% trans "المخازن" %}</span>
       </a>
     </li>
@@ -49,7 +45,6 @@
     <li class="nav-item">
       <a class="nav-link px-3 py-1 {% if subsection == 'locations' %}active{% endif %}"
          href="{% url 'inventory:location_list' %}">
-        <i class="bi bi-geo-alt ms-1"></i>
         <span>{% trans "مواقع التخزين" %}</span>
       </a>
     </li>
@@ -57,7 +52,6 @@
     <li class="nav-item">
       <a class="nav-link px-3 py-1 {% if subsection == 'moves' %}active{% endif %}"
          href="{% url 'inventory:move_list' %}">
-        <i class="bi bi-arrow-left-right ms-1"></i>
         <span>{% trans "حركات المخزون" %}</span>
       </a>
     </li>
@@ -65,7 +59,6 @@
     <li class="nav-item">
       <a class="nav-link px-3 py-1 {% if subsection == 'stock_levels' %}active{% endif %}"
          href="{% url 'inventory:stocklevel_list' %}">
-        <i class="bi bi-layers ms-1"></i>
         <span>{% trans "مستويات المخزون" %}</span>
       </a>
     </li>
@@ -73,7 +66,6 @@
     <li class="nav-item">
       <a class="nav-link px-3 py-1 {% if subsection == 'uom' %}active{% endif %}"
          href="{% url 'uom:unit_list' %}">
-        <i class="bi bi-rulers ms-1"></i>
         <span>{% trans "وحدات القياس" %}</span>
       </a>
     </li>
@@ -81,7 +73,6 @@
     <li class="nav-item">
       <a class="nav-link px-3 py-1 {% if subsection == 'settings' %}active{% endif %}"
          href="{% url 'inventory:settings' %}">
-        <i class="bi bi-sliders ms-1"></i>
         <span>{% trans "الإعدادات" %}</span>
       </a>
     </li>

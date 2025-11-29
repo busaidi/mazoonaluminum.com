@@ -9,12 +9,18 @@ from .models import Contact, ContactAddress
 class ContactForm(forms.ModelForm):
     """
     الفورم الأساسي لـ Contact (جهة اتصال عامة).
-    يدعم:
-      - فرد / شركة (kind)
-      - ربط الشخص بشركة (company)
-      - بيانات الاتصال
-      - العنوان الرئيسي (مترجم)
-      - الأدوار + الحالة
+
+    ✅ بعد الريفاكتور:
+      - بدون حقول عنوان (لا address_* ولا country_* ...الخ)
+      - العناوين تُدار بالكامل عبر ContactAddress + formset
+      - يبقى هنا:
+        * نوع الجهة (فرد / شركة)
+        * الربط مع شركة (company)
+        * الاسم بالعربي/الإنجليزي
+        * اسم الشركة الحر بالعربي/الإنجليزي
+        * بيانات الاتصال (هاتف، إيميل، رقم ضريبي)
+        * الأدوار (زبون، مورد، مالك، موظف)
+        * حالة النشاط
     """
 
     class Meta:
@@ -26,25 +32,11 @@ class ContactForm(forms.ModelForm):
             # ==== الربط مع شركة (Contact من نوع COMPANY) ====
             "company",
 
-            # ==== الحقول المترجمة ====
+            # ==== الحقول المترجمة (modeltranslation) ====
             "name_ar",
             "name_en",
             "company_name_ar",
             "company_name_en",
-            "address_ar",
-            "address_en",
-            "country_ar",
-            "country_en",
-            "governorate_ar",
-            "governorate_en",
-            "wilaya_ar",
-            "wilaya_en",
-            "village_ar",
-            "village_en",
-            "postal_code_ar",
-            "postal_code_en",
-            "po_box_ar",
-            "po_box_en",
 
             # ==== بيانات الاتصال ====
             "phone",
@@ -67,20 +59,6 @@ class ContactForm(forms.ModelForm):
             "name_en": _("الاسم (إنجليزي)"),
             "company_name_ar": _("اسم الشركة (عربي – نص حر)"),
             "company_name_en": _("اسم الشركة (إنجليزي – نص حر)"),
-            "address_ar": _("العنوان التفصيلي (عربي)"),
-            "address_en": _("العنوان التفصيلي (إنجليزي)"),
-            "country_ar": _("الدولة (عربي)"),
-            "country_en": _("الدولة (إنجليزي)"),
-            "governorate_ar": _("المحافظة (عربي)"),
-            "governorate_en": _("المحافظة (إنجليزي)"),
-            "wilaya_ar": _("الولاية (عربي)"),
-            "wilaya_en": _("الولاية (إنجليزي)"),
-            "village_ar": _("القرية / المنطقة (عربي)"),
-            "village_en": _("القرية / المنطقة (إنجليزي)"),
-            "postal_code_ar": _("الرمز البريدي (عربي)"),
-            "postal_code_en": _("الرمز البريدي (إنجليزي)"),
-            "po_box_ar": _("صندوق البريد (عربي)"),
-            "po_box_en": _("صندوق البريد (إنجليزي)"),
             "phone": _("رقم الهاتف"),
             "email": _("البريد الإلكتروني"),
             "tax_number": _("الرقم الضريبي / VAT"),
@@ -89,10 +67,6 @@ class ContactForm(forms.ModelForm):
             "is_owner": _("مالك"),
             "is_employee": _("موظف"),
             "is_active": _("نشط"),
-        }
-        widgets = {
-            "address_ar": forms.Textarea(attrs={"rows": 3}),
-            "address_en": forms.Textarea(attrs={"rows": 3}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -104,6 +78,7 @@ class ContactForm(forms.ModelForm):
                 Contact.objects.companies().active().order_by("name")
             )
 
+        # توحيد الـ CSS مع ثيم Mazoon (Bootstrap)
         for name, field in self.fields.items():
             css = field.widget.attrs.get("class", "")
 
@@ -123,18 +98,18 @@ class ContactForm(forms.ModelForm):
 class ContactAddressForm(forms.ModelForm):
     """
     فورم لعناوين جهة الاتصال المتعددة:
-    - label مختصر اختياري مثل "المكتب الرئيسي"
-    - عنوان كامل + تفاصيل الموقع.
+    - address_type: فوترة / شحن / مكتب / آخر
+    - address: العنوان التفصيلي
+    - country / governorate / wilaya / village
+    - postal_code / po_box
+    - is_primary: لتحديد العنوان الرئيسي لهذا النوع
     """
 
     class Meta:
         model = ContactAddress
         fields = [
-            "label_ar",
-            "label_en",
             "address_type",
-            "address_ar",
-            "address_en",
+            "address",       # نص العنوان التفصيلي
             "country",
             "governorate",
             "wilaya",
@@ -145,36 +120,41 @@ class ContactAddressForm(forms.ModelForm):
             "is_active",
         ]
         labels = {
-            "label_ar": _("عنوان مختصر (عربي)"),
-            "label_en": _("عنوان مختصر (إنجليزي)"),
             "address_type": _("نوع العنوان"),
-            "address_ar": _("العنوان التفصيلي (عربي)"),
-            "address_en": _("العنوان التفصيلي (إنجليزي)"),
+
+            "address": _("العنوان التفصيلي"),
+
             "country": _("الدولة"),
             "governorate": _("المحافظة"),
             "wilaya": _("الولاية"),
             "village": _("القرية / المنطقة"),
+
             "postal_code": _("الرمز البريدي"),
             "po_box": _("صندوق البريد"),
             "is_primary": _("عنوان رئيسي لهذا النوع"),
             "is_active": _("نشط"),
         }
         widgets = {
-            "address_ar": forms.Textarea(attrs={"rows": 2}),
-            "address_en": forms.Textarea(attrs={"rows": 2}),
+            "address": forms.Textarea(attrs={"rows": 2}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
         for name, field in self.fields.items():
             css = field.widget.attrs.get("class", "")
+
+            # نوع العنوان (select صغير)
             if name == "address_type":
                 field.widget.attrs["class"] = (css + " form-select form-select-sm").strip()
+
+            # checkboxes
             elif name in ("is_primary", "is_active"):
                 field.widget.attrs["class"] = (css + " form-check-input").strip()
+
+            # باقي الحقول input / textarea
             else:
                 field.widget.attrs["class"] = (css + " form-control form-control-sm").strip()
-
 
 ContactAddressFormSet = inlineformset_factory(
     Contact,

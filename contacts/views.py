@@ -1,10 +1,10 @@
 # contacts/views.py
 from decimal import Decimal
 
-from django.db.models import Sum
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.db.models import Q
+from django.db import transaction
+from django.db.models import Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
@@ -21,7 +21,6 @@ from django.views.generic import (
 from accounting.models import Payment
 from .forms import ContactForm, ContactAddressFormSet
 from .models import Contact
-from .services import save_contact_with_addresses
 
 
 # ============================================================
@@ -131,6 +130,7 @@ class ContactListView(ContactsStaffRequiredMixin, ListView):
 
         # 🔹 هذا عشان accounting/_nav.html
         ctx["accounting_section"] = "customers"
+        ctx["sales_section"] = "contacts"
 
         return ctx
 
@@ -200,104 +200,104 @@ class ContactDetailView(ContactsStaffRequiredMixin, DetailView):
         ctx["section"] = self.section
         ctx["subsection"] = "contacts"
         ctx["accounting_section"] = "customers"
+        ctx["sales_section"] = "contacts"
 
         return ctx
 
 
 # ============================================================
-# Create / Update / Delete views (بدون BaseFormView)
+# مكسين مشترك لإنشاء/تعديل كونتاكت مع عناوينه
 # ============================================================
 
-class ContactCreateView(ContactsStaffRequiredMixin, CreateView):
+class ContactFormsetMixin:
+    """
+    مكسين لتجميع منطق ContactForm + ContactAddressFormSet
+    يُستخدم في الإنشاء والتعديل.
+    """
+
+    model = Contact
+    form_class = ContactForm
+    template_name = "contacts/form.html"
+
+    def get_address_formset(self):
+        """
+        يبني الفورم ست للعناوين مع ربطه بالـ instance الصحيح.
+        """
+        instance = getattr(self, "object", None)
+        if self.request.method == "POST":
+            return ContactAddressFormSet(self.request.POST, instance=instance)
+        return ContactAddressFormSet(instance=instance)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+
+        if "address_formset" not in ctx:
+            ctx["address_formset"] = self.get_address_formset()
+
+        # سياق الأقسام (نفس القديم)
+        ctx.setdefault("section", getattr(self, "section", "contacts"))
+        ctx.setdefault("subsection", "contacts")
+        ctx.setdefault("accounting_section", "customers")
+
+        return ctx
+
+    @transaction.atomic
+    def form_valid(self, form):
+        """
+        نحفظ جهة الاتصال + العناوين في معاملة واحدة.
+        """
+        context = self.get_context_data(form=form)
+        address_formset = context["address_formset"]
+
+        if not address_formset.is_valid():
+            # نرجع نفس الصفحة مع أخطاء الفورم ست
+            return self.render_to_response(context)
+
+        # أولاً نحفظ جهة الاتصال
+        self.object = form.save()
+
+        # ثم نربط العناوين بهذه الجهة ونحفظها
+        address_formset.instance = self.object
+        address_formset.save()
+
+        messages.success(self.request, _("تم حفظ جهة الاتصال بنجاح."))
+        return redirect(self.get_success_url())
+
+
+# ============================================================
+# Create / Update / Delete views
+# ============================================================
+
+class ContactCreateView(ContactsStaffRequiredMixin, ContactFormsetMixin, CreateView):
     """
     إنشاء جهة اتصال جديدة مع عناوينها.
     """
-    model = Contact
-    form_class = ContactForm
-    template_name = "contacts/form.html"
 
     def get_success_url(self):
         return reverse("contacts:contact_detail", kwargs={"pk": self.object.pk})
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        # في الإنشاء ما عندنا object بعد، فـ instance = None
-        instance = getattr(self, "object", None)
-
-        if self.request.method == "POST":
-            ctx["address_formset"] = ContactAddressFormSet(
-                self.request.POST,
-                instance=instance,
-            )
-        else:
-            ctx["address_formset"] = ContactAddressFormSet(
-                instance=instance,
-            )
-
-        ctx["section"] = self.section
-        ctx["subsection"] = "contacts"
-        # 🔹 عشان ناف المحاسبة
-        ctx["accounting_section"] = "customers"
+        ctx["title"] = _("إنشاء جهة اتصال جديدة")
+        ctx["is_create"] = True
+        ctx["sales_section"] = "contacts"
         return ctx
 
-    def form_valid(self, form):
-        ctx = self.get_context_data(form=form)
-        address_formset = ctx.get("address_formset")
 
-        if address_formset is None or not address_formset.is_valid():
-            # لو في أخطاء في العناوين نرجّع نفس الفورم مع الأخطاء
-            return self.render_to_response(ctx)
-
-        # نحفظ جهة الاتصال + العناوين في معاملة واحدة
-        self.object = save_contact_with_addresses(form, address_formset)
-        messages.success(self.request, _("تم حفظ جهة الاتصال بنجاح."))
-        return redirect(self.get_success_url())
-
-
-class ContactUpdateView(ContactsStaffRequiredMixin, UpdateView):
+class ContactUpdateView(ContactsStaffRequiredMixin, ContactFormsetMixin, UpdateView):
     """
     تعديل جهة اتصال وعناوينها.
     """
-    model = Contact
-    form_class = ContactForm
-    template_name = "contacts/form.html"
 
     def get_success_url(self):
         return reverse("contacts:contact_detail", kwargs={"pk": self.object.pk})
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        # في التعديل self.object = جهة الاتصال الحالية
-        instance = getattr(self, "object", None)
-
-        if self.request.method == "POST":
-            ctx["address_formset"] = ContactAddressFormSet(
-                self.request.POST,
-                instance=instance,
-            )
-        else:
-            ctx["address_formset"] = ContactAddressFormSet(
-                instance=instance,
-            )
-
-        ctx["section"] = self.section
-        ctx["subsection"] = "contacts"
-        # 🔹 عشان ناف المحاسبة
-        ctx["accounting_section"] = "customers"
+        ctx["title"] = _("تعديل جهة الاتصال")
+        ctx["is_create"] = False
+        ctx["sales_section"] = "contacts"
         return ctx
-
-    def form_valid(self, form):
-        # في UpdateView، self.object تم تعيينه في post() قبل form_valid()
-        ctx = self.get_context_data(form=form)
-        address_formset = ctx.get("address_formset")
-
-        if address_formset is None or not address_formset.is_valid():
-            return self.render_to_response(ctx)
-
-        # نحفظ التعديلات على جهة الاتصال والعناوين
-        self.object = save_contact_with_addresses(form, address_formset)
-        messages.success(self.request, _("تم حفظ جهة الاتصال بنجاح."))
-        return redirect(self.get_success_url())
 
 
 class ContactDeleteView(ContactsStaffRequiredMixin, DeleteView):

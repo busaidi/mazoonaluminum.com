@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "sales/base_sales.html" %}
 {% load i18n %}
 
 {% block title %}
@@ -9,7 +9,7 @@
   {% endif %}
 {% endblock %}
 
-{% block content %}
+{% block sales_content %}
 <div class="row">
   <div class="col-lg-9">
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -37,7 +37,7 @@
       {% endif %}
 
       {# 1) البيانات الأساسية #}
-      <div class="card border-0.shadow-sm mb-3">
+      <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
           <h2 class="h6 fw-semibold mb-3">{% trans "البيانات الأساسية" %}</h2>
 
@@ -123,124 +123,8 @@
         </div>
       </div>
 
-      {# 2) العنوان الرئيسي #}
+      {# 2) الأدوار والحالة #}
       <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body">
-          <h2 class="h6 fw-semibold mb-3">{% trans "العنوان الرئيسي" %}</h2>
-
-          <div class="row g-3 mb-3">
-            <div class="col-md-6">
-              <label class="form-label small mb-1" for="{{ form.address_ar.id_for_label }}">
-                {{ form.address_ar.label }}
-              </label>
-              {{ form.address_ar }}
-              {{ form.address_ar.errors }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label small mb-1" for="{{ form.address_en.id_for_label }}">
-                {{ form.address_en.label }}
-              </label>
-              {{ form.address_en }}
-              {{ form.address_en.errors }}
-            </div>
-          </div>
-
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label small mb-1" for="{{ form.country_ar.id_for_label }}">
-                {{ form.country_ar.label }}
-              </label>
-              {{ form.country_ar }}
-              {{ form.country_ar.errors }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label small mb-1" for="{{ form.country_en.id_for_label }}">
-                {{ form.country_en.label }}
-              </label>
-              {{ form.country_en }}
-              {{ form.country_en.errors }}
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label small mb-1" for="{{ form.governorate_ar.id_for_label }}">
-                {{ form.governorate_ar.label }}
-              </label>
-              {{ form.governorate_ar }}
-              {{ form.governorate_ar.errors }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label small mb-1" for="{{ form.governorate_en.id_for_label }}">
-                {{ form.governorate_en.label }}
-              </label>
-              {{ form.governorate_en }}
-              {{ form.governorate_en.errors }}
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label small mb-1" for="{{ form.wilaya_ar.id_for_label }}">
-                {{ form.wilaya_ar.label }}
-              </label>
-              {{ form.wilaya_ar }}
-              {{ form.wilaya_ar.errors }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label small mb-1" for="{{ form.wilaya_en.id_for_label }}">
-                {{ form.wilaya_en.label }}
-              </label>
-              {{ form.wilaya_en }}
-              {{ form.wilaya_en.errors }}
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label small mb-1" for="{{ form.village_ar.id_for_label }}">
-                {{ form.village_ar.label }}
-              </label>
-              {{ form.village_ar }}
-              {{ form.village_ar.errors }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label small mb-1" for="{{ form.village_en.id_for_label }}">
-                {{ form.village_en.label }}
-              </label>
-              {{ form.village_en }}
-              {{ form.village_en.errors }}
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label small mb-1" for="{{ form.postal_code_ar.id_for_label }}">
-                {{ form.postal_code_ar.label }}
-              </label>
-              {{ form.postal_code_ar }}
-              {{ form.postal_code_ar.errors }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label small mb-1" for="{{ form.postal_code_en.id_for_label }}">
-                {{ form.postal_code_en.label }}
-              </label>
-              {{ form.postal_code_en }}
-              {{ form.postal_code_en.errors }}
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label small mb-1" for="{{ form.po_box_ar.id_for_label }}">
-                {{ form.po_box_ar.label }}
-              </label>
-              {{ form.po_box_ar }}
-              {{ form.po_box_ar.errors }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label small mb-1" for="{{ form.po_box_en.id_for_label }}">
-                {{ form.po_box_en.label }}
-              </label>
-              {{ form.po_box_en }}
-              {{ form.po_box_en.errors }}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {# 3) الأدوار والحالة #}
-      <div class="card border-0.shadow-sm mb-3">
         <div class="card-body">
           <h2 class="h6 fw-semibold mb-3">{% trans "الأدوار والحالة" %}</h2>
 
@@ -288,13 +172,13 @@
         </div>
       </div>
 
-      {# 4) العناوين الإضافية (formset) #}
+      {# 3) العناوين (formset) #}
       {% if address_formset %}
         <div class="card border-0 shadow-sm mb-3">
           <div class="card-body">
-            <h2 class="h6 fw-semibold mb-3">{% trans "العناوين الإضافية" %}</h2>
+            <h2 class="h6 fw-semibold mb-3">{% trans "العناوين" %}</h2>
             <p class="text-muted small mb-3">
-              {% trans "استخدم هذه العناوين للفوترة، الشحن، أو مواقع المشاريع والورش." %}
+              {% trans "استخدم هذه العناوين للفوترة، الشحن، أو مواقع المشاريع والورش. يمكنك تمييز أحد العناوين كرئيسي." %}
             </p>
 
             {{ address_formset.management_form }}
@@ -313,20 +197,6 @@
 
                   <div class="row g-3 align-items-start">
                     <div class="col-md-4">
-                      <label class="form-label small mb-1" for="{{ addr_form.label_ar.id_for_label }}">
-                        {{ addr_form.label_ar.label }}
-                      </label>
-                      {{ addr_form.label_ar }}
-                      {{ addr_form.label_ar.errors }}
-                    </div>
-                    <div class="col-md-4">
-                      <label class="form-label small mb-1" for="{{ addr_form.label_en.id_for_label }}">
-                        {{ addr_form.label_en.label }}
-                      </label>
-                      {{ addr_form.label_en }}
-                      {{ addr_form.label_en.errors }}
-                    </div>
-                    <div class="col-md-4">
                       <label class="form-label small mb-1" for="{{ addr_form.address_type.id_for_label }}">
                         {{ addr_form.address_type.label }}
                       </label>
@@ -334,14 +204,14 @@
                       {{ addr_form.address_type.errors }}
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                       <label class="form-label small mb-1" for="{{ addr_form.address_ar.id_for_label }}">
                         {{ addr_form.address_ar.label }}
                       </label>
                       {{ addr_form.address_ar }}
                       {{ addr_form.address_ar.errors }}
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                       <label class="form-label small mb-1" for="{{ addr_form.address_en.id_for_label }}">
                         {{ addr_form.address_en.label }}
                       </label>
@@ -349,35 +219,35 @@
                       {{ addr_form.address_en.errors }}
                     </div>
 
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                       <label class="form-label small mb-1" for="{{ addr_form.country.id_for_label }}">
                         {{ addr_form.country.label }}
                       </label>
                       {{ addr_form.country }}
                       {{ addr_form.country.errors }}
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                       <label class="form-label small mb-1" for="{{ addr_form.governorate.id_for_label }}">
                         {{ addr_form.governorate.label }}
                       </label>
                       {{ addr_form.governorate }}
                       {{ addr_form.governorate.errors }}
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                       <label class="form-label small mb-1" for="{{ addr_form.wilaya.id_for_label }}">
                         {{ addr_form.wilaya.label }}
                       </label>
                       {{ addr_form.wilaya }}
                       {{ addr_form.wilaya.errors }}
                     </div>
-
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                       <label class="form-label small mb-1" for="{{ addr_form.village.id_for_label }}">
                         {{ addr_form.village.label }}
                       </label>
                       {{ addr_form.village }}
                       {{ addr_form.village.errors }}
                     </div>
+
                     <div class="col-md-4">
                       <label class="form-label small mb-1" for="{{ addr_form.postal_code.id_for_label }}">
                         {{ addr_form.postal_code.label }}

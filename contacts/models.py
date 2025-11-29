@@ -110,43 +110,6 @@ class Contact(models.Model):
         verbose_name=_("نشط"),
     )
 
-    # --------- العنوان الرئيسي (حقول بسيطة – ستُترجم) ---------
-    country = models.CharField(
-        max_length=255,
-        blank=True,
-        verbose_name=_("الدولة"),
-    )
-    governorate = models.CharField(
-        max_length=255,
-        blank=True,
-        verbose_name=_("المحافظة"),
-    )
-    wilaya = models.CharField(
-        max_length=255,
-        blank=True,
-        verbose_name=_("الولاية"),
-    )
-    village = models.CharField(
-        max_length=255,
-        blank=True,
-        verbose_name=_("القرية / المنطقة"),
-    )
-    postal_code = models.CharField(
-        max_length=20,
-        blank=True,
-        verbose_name=_("الرمز البريدي"),
-    )
-    po_box = models.CharField(
-        max_length=20,
-        blank=True,
-        verbose_name=_("صندوق البريد"),
-    )
-
-    address = models.TextField(
-        blank=True,
-        verbose_name=_("عنوان تفصيلي (حر)"),
-    )
-
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_("تاريخ الإنشاء"),
@@ -178,6 +141,76 @@ class Contact(models.Model):
         هل هذه الجهة عبارة عن شركة؟
         """
         return self.kind == self.ContactKind.COMPANY
+
+    # ---------- خصائص العناوين (عبر ContactAddress فقط) ----------
+
+    def _get_address_by_type(self, address_type: str):
+        """
+        إرجاع أول عنوان نشط من نوع معيّن، مفضَّل فيه is_primary = True.
+        """
+        return (
+            self.addresses.filter(
+                address_type=address_type,
+                is_active=True,
+            )
+            .order_by("-is_primary", "id")
+            .first()
+        )
+
+    @property
+    def primary_address(self):
+        """
+        العنوان الرئيسي (أي نوع) – حاليًا نعتبره:
+        - أول عنوان is_primary=True (أيًا كان نوعه)،
+        - ولو ما فيه، نرجع أول عنوان نشط.
+        """
+        addr = (
+            self.addresses.filter(is_active=True, is_primary=True)
+            .order_by("id")
+            .first()
+        )
+        if addr:
+            return addr
+        return self.addresses.filter(is_active=True).order_by("id").first()
+
+    @property
+    def billing_address(self):
+        from .models import ContactAddress  # لتفادي مشاكل الاستيراد الدائري داخل الملف
+
+        return self._get_address_by_type(ContactAddress.AddressType.BILLING)
+
+    @property
+    def shipping_address(self):
+        from .models import ContactAddress
+
+        return self._get_address_by_type(ContactAddress.AddressType.SHIPPING)
+
+    @property
+    def office_address(self):
+        from .models import ContactAddress
+
+        return self._get_address_by_type(ContactAddress.AddressType.OFFICE)
+
+    @property
+    def display_address(self) -> str:
+        """
+        نص لطيف لعرض العنوان في القوائم والفواتير:
+        يأخذ العنوان الأساسي (primary_address) لو موجود.
+        """
+        addr = self.primary_address
+        if not addr:
+            return ""
+        parts = [
+            addr.address or "",
+            addr.village or "",
+            addr.wilaya or "",
+            addr.governorate or "",
+            addr.country or "",
+            f"ص.ب {addr.po_box}" if addr.po_box else "",
+            f"الرمز البريدي {addr.postal_code}" if addr.postal_code else "",
+        ]
+        # نحذف الفارغ ونربط بفاصل "، "
+        return "، ".join(p for p in parts if p)
 
     # ---------- خصائص تجميعية (مفيدة لو هو زبون) ----------
 
@@ -216,11 +249,8 @@ class Contact(models.Model):
 class ContactAddress(models.Model):
     """
     عناوين متعددة لكل جهة اتصال.
-    ممكن تستخدم:
-      - عنوان فوترة
-      - عنوان شحن
-      - عنوان مقر رئيسي
-      - ...الخ
+    - AddressType يحدد هل هو فوترة / شحن / مكتب / غيره.
+    - address + بقية التفاصيل تصف العنوان بالكامل.
     """
 
     class AddressType(models.TextChoices):
@@ -234,13 +264,6 @@ class ContactAddress(models.Model):
         on_delete=models.CASCADE,
         related_name="addresses",
         verbose_name=_("جهة الاتصال"),
-    )
-
-    # سيكون مترجم عبر modeltranslation
-    label = models.CharField(
-        max_length=100,
-        verbose_name=_("وصف العنوان"),
-        help_text=_("مثال: المكتب الرئيسي، المخزن، موقع المشروع 1..."),
     )
 
     address_type = models.CharField(
@@ -308,4 +331,5 @@ class ContactAddress(models.Model):
         verbose_name_plural = _("عناوين جهات الاتصال")
 
     def __str__(self) -> str:
-        return f"{self.contact} – {self.label}"
+        # نستخدم نوع العنوان كمسمى
+        return f"{self.contact} – {self.get_address_type_display()}"

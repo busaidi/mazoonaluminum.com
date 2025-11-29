@@ -1,9 +1,9 @@
-{% extends "base.html" %}
+{% extends "sales/base_sales.html" %}
 {% load i18n %}
 
 {% block title %}{{ contact.name }} – {% trans "جهة اتصال" %}{% endblock %}
 
-{% block content %}
+{% block sales_content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
     <h1 class="h4 fw-bold mb-1">
@@ -186,56 +186,58 @@
               </div>
             </div>
 
-            {# العنوان الرئيسي #}
+            {# العنوان الرئيسي (من ContactAddress) #}
             <div class="mb-3">
               <h2 class="h6 fw-semibold mb-3">{% trans "العنوان الرئيسي" %}</h2>
 
-              {% if contact.address or contact.country or contact.governorate or contact.wilaya or contact.village or contact.po_box or contact.postal_code %}
-                {% if contact.address %}
-                  <p class="mb-2 small">
-                    {{ contact.address|linebreaksbr }}
+              {% with primary=contact.primary_address %}
+                {% if primary %}
+                  {% if primary.address %}
+                    <p class="mb-2 small">
+                      {{ primary.address|linebreaksbr }}
+                    </p>
+                  {% endif %}
+
+                  <p class="text-muted small mb-1">
+                    {% if primary.village %}
+                      {{ primary.village }}
+                    {% endif %}
+                    {% if primary.village and primary.wilaya %}, {% endif %}
+                    {% if primary.wilaya %}
+                      {{ primary.wilaya }}
+                    {% endif %}
+                    {% if primary.governorate %}
+                      <br>{{ primary.governorate }}
+                    {% endif %}
+                    {% if primary.country %}
+                      {% if primary.governorate %}, {% else %}<br>{% endif %}
+                      {{ primary.country }}
+                    {% endif %}
                   </p>
-                {% endif %}
 
-                <p class="text-muted small mb-1">
-                  {% if contact.village %}
-                    {{ contact.village }}
+                  {% if primary.po_box or primary.postal_code %}
+                    <p class="text-muted small mb-0">
+                      {% if primary.po_box %}
+                        {% trans "ص.ب" %} {{ primary.po_box }}
+                      {% endif %}
+                      {% if primary.po_box and primary.postal_code %} · {% endif %}
+                      {% if primary.postal_code %}
+                        {% trans "الرمز البريدي" %} {{ primary.postal_code }}
+                      {% endif %}
+                    </p>
                   {% endif %}
-                  {% if contact.village and contact.wilaya %}, {% endif %}
-                  {% if contact.wilaya %}
-                    {{ contact.wilaya }}
-                  {% endif %}
-                  {% if contact.governorate %}
-                    <br>{{ contact.governorate }}
-                  {% endif %}
-                  {% if contact.country %}
-                    {% if contact.governorate %}, {% else %}<br>{% endif %}
-                    {{ contact.country }}
-                  {% endif %}
-                </p>
-
-                {% if contact.po_box or contact.postal_code %}
+                {% else %}
                   <p class="text-muted small mb-0">
-                    {% if contact.po_box %}
-                      {% trans "ص.ب" %} {{ contact.po_box }}
-                    {% endif %}
-                    {% if contact.po_box and contact.postal_code %} · {% endif %}
-                    {% if contact.postal_code %}
-                      {% trans "الرمز البريدي" %} {{ contact.postal_code }}
-                    {% endif %}
+                    {% trans "لا يوجد عنوان رئيسي مسجل لهذه الجهة." %}
                   </p>
                 {% endif %}
-              {% else %}
-                <p class="text-muted small mb-0">
-                  {% trans "لا يوجد عنوان رئيسي مسجل لهذه الجهة." %}
-                </p>
-              {% endif %}
+              {% endwith %}
             </div>
 
-            {# العناوين الإضافية #}
+            {# العناوين الأخرى #}
             <div class="mb-0">
               <div class="d-flex justify-content-between align-items-center mb-2">
-                <h2 class="h6 fw-semibold mb-0">{% trans "العناوين الإضافية" %}</h2>
+                <h2 class="h6 fw-semibold mb-0">{% trans "العناوين الأخرى" %}</h2>
                 <a href="{% url 'contacts:contact_edit' contact.pk %}" class="btn btn-outline-secondary btn-sm">
                   <i class="bi bi-pencil"></i>
                   {% trans "إدارة العناوين" %}
@@ -249,12 +251,7 @@
                       <div class="card-body p-2">
                         <div class="d-flex justify-content-between align-items-start mb-1">
                           <div>
-                            {% if addr.label %}
-                              <div class="small fw-semibold">
-                                {{ addr.label }}
-                              </div>
-                            {% endif %}
-                            <div class="text-muted small">
+                            <div class="small fw-semibold">
                               {{ addr.get_address_type_display }}
                             </div>
                           </div>
