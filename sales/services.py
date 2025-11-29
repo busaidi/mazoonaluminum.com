@@ -28,20 +28,31 @@ def create_quotation(contact, date=None, **kwargs) -> SalesDocument:
 
 
 @transaction.atomic
-def convert_quotation_to_order(document: SalesDocument) -> SalesDocument:
+def confirm_quotation_to_order(document: SalesDocument) -> SalesDocument:
     """
-    تحويل عرض سعر إلى أمر بيع على نفس السجل.
-    لا ينشئ مستند جديد، فقط يغير kind و status.
+    يحول عرض سعر قائم إلى أمر بيع دون إنشاء مستند جديد.
+    - يتحقق أن المستند عرض سعر
+    - يتحقق أنه غير ملغي
+    - يحوله إلى أمر بيع
+    - يضع حالته (مؤكد)
     """
+
+    # --- التحقق من النوع ---
     if not document.is_quotation:
-        raise ValidationError("هذا المستند ليس عرض سعر.")
+        raise ValidationError(_("لا يمكن تحويل هذا المستند لأنه ليس عرض سعر."))
 
+    # --- ممنوع تحويل مستند ملغي ---
     if document.is_cancelled:
-        raise ValidationError("لا يمكن تحويل مستند ملغي إلى أمر بيع.")
+        raise ValidationError(_("لا يمكن تحويل مستند ملغي إلى أمر بيع."))
 
+    # --- تحديث النوع والحالة ---
     document.kind = SalesDocument.Kind.ORDER
     document.status = SalesDocument.Status.CONFIRMED
     document.save(update_fields=["kind", "status"])
+
+    # --- إعادة حساب الإجمالي / الحقول المشتقة إن وجدت ---
+    if hasattr(document, "recompute_totals"):
+        document.recompute_totals(save=True)
 
     return document
 

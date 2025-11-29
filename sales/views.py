@@ -221,7 +221,7 @@ class ConvertQuotationToOrderView(SalesBaseView, View):
         document = get_object_or_404(SalesDocument.objects.quotations(), pk=pk)
 
         try:
-            services.convert_quotation_to_order(document)
+            services.confirm_quotation_to_order(document)
         except Exception as e:
             messages.error(request, str(e))
             return redirect(document.get_absolute_url())

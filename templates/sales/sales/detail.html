@@ -84,10 +84,10 @@
             action="{% url 'sales:quotation_convert' document.pk %}"
             class="d-inline">
         {% csrf_token %}
-        <button type="submit" class="btn btn-outline-success btn-sm">
-          <i class="bi bi-arrow-left-right ms-1"></i>
-          {% trans "تحويل إلى أمر بيع" %}
-        </button>
+        <button type="submit" class="btn btn-success btn-sm">
+  <i class="bi bi-check-circle"></i>
+  {% trans "تأكيد" %}
+</button>
       </form>
     {% endif %}
 

@@ -119,7 +119,7 @@
                 {# العميل #}
                 <td class="small">
                   {% if doc.contact %}
-                    <a href="{% url 'contacts:contact_detail' doc.contact.pk %}"
+                    <a href="{% url 'sales:sales_detail' doc.pk %}"
                        class="text-decoration-none">
                       {{ doc.contact.name }}
                     </a>
