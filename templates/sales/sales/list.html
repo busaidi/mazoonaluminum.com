@@ -95,6 +95,7 @@
               <th class="small text-muted">{% trans "الحالة" %}</th>
               <th class="small text-muted text-end">{% trans "الإجمالي" %}</th>
               <th class="small text-muted">{% trans "النوع" %}</th>
+              <th class="small text-muted">{% trans "الفوترة" %}</th>
             </tr>
           </thead>
 
@@ -150,22 +151,6 @@
                         </span>
                       {% endif %}
                     </div>
-
-                    {% if doc.is_order %}
-                      <div>
-                        {% if doc.is_invoiced %}
-                          <span class="badge bg-success-subtle text-success border border-success-subtle">
-                            <i class="bi bi-receipt ms-1"></i>
-                            {% trans "مفوتر" %}
-                          </span>
-                        {% else %}
-                          <span class="badge bg-light text-muted border">
-                            <i class="bi bi-receipt ms-1"></i>
-                            {% trans "غير مفوتر" %}
-                          </span>
-                        {% endif %}
-                      </div>
-                    {% endif %}
                   </div>
                 </td>
 
@@ -188,8 +173,25 @@
                       {% trans "أمر بيع" %}
                     </span>
                   {% endif %}
+                
                 </td>
-
+<td>
+    {% if doc.is_order %}
+                      <div>
+                        {% if doc.is_invoiced %}
+                          <span class="badge bg-success-subtle text-success border border-success-subtle">
+                            <i class="bi bi-receipt ms-1"></i>
+                            {% trans "مفوتر" %}
+                          </span>
+                        {% else %}
+                          <span class="badge bg-light text-muted border">
+                            <i class="bi bi-receipt ms-1"></i>
+                            {% trans "غير مفوتر" %}
+                          </span>
+                        {% endif %}
+                      </div>
+                    {% endif %}
+</td>
               </tr>
             {% endfor %}
           </tbody>

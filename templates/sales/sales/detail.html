@@ -66,11 +66,7 @@
 
   <div class="d-flex flex-wrap gap-2">
 
-    {# رجوع للقائمة #}
-    <a href="{% url 'sales:sales_list' %}" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-arrow-right-circle ms-1"></i>
-      {% trans "رجوع للقائمة" %}
-    </a>
+  
 
     {# تعديل المستند #}
     <a href="{% url 'sales:sales_edit' document.pk %}" class="btn btn-outline-primary btn-sm">
