@@ -40,6 +40,12 @@ python manage.py seed_website_data
 python manage.py seed_journals
 ```
 ```bash
+python manage.py seed_accounts_oman
+```
+```bash
+python manage.py seed_accounting_demo
+```
+```bash
  python manage.py seed_uom
 ```
 ```bash

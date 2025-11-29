@@ -87,7 +87,13 @@
               {% trans "تم الإنشاء بواسطة" %}
             </div>
             <div class="text-dark">
-              {{ entry.created_by.get_full_name|default:entry.created_by.username }}
+              {% with user=entry.created_by %}
+                {% if user %}
+                  {{ user.get_full_name|default:user.username }}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              {% endwith %}
               <small class="text-muted d-block">
                 {{ entry.created_at|date:"d/m/Y H:i" }}
               </small>
