@@ -1,75 +1,46 @@
 # sales/forms.py
-from decimal import Decimal
-
 from django import forms
-from django.forms import inlineformset_factory
-from django.utils.translation import gettext_lazy as _
-
-from .models import SalesDocument, SalesLine
+from .models import SalesDocument, DeliveryNote
 
 
 class SalesDocumentForm(forms.ModelForm):
     """
-    Base form for SalesDocument.
-    Kind will be fixed per view (quotation / order / delivery).
+    فورم مستند المبيعات:
+    - لا نعرض حقل kind للمستخدم.
+    - نثبّت النوع = QUOTATION عند الإنشاء.
     """
 
     class Meta:
         model = SalesDocument
-        fields = [
-            "contact",
-            "date",
-            "due_date",
-            "currency",
-            "notes",
-            "customer_notes",
-        ]
+        # لاحظ: حذفنا kind من الحقول
+        fields = ["contact", "date", "due_date", "notes", "customer_notes"]
         widgets = {
-            "date": forms.DateInput(attrs={"type": "date"}),
-            "due_date": forms.DateInput(attrs={"type": "date"}),
-            "notes": forms.Textarea(attrs={"rows": 3}),
-            "customer_notes": forms.Textarea(attrs={"rows": 3}),
-        }
-        labels = {
-            "contact": _("العميل / جهة الاتصال"),
-            "date": _("التاريخ"),
-            "due_date": _("تاريخ الانتهاء / الصلاحية"),
-            "currency": _("العملة"),
-            "notes": _("ملاحظات داخلية"),
-            "customer_notes": _("ملاحظات العميل (تظهر في المستند)"),
+            "contact": forms.Select(attrs={"class": "form-select"}),
+            "date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+            "due_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+            "notes": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
+            "customer_notes": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-class SalesLineForm(forms.ModelForm):
+        # لو مستند جديد → ثبّت النوع كعرض سعر قبل الفالديشن
+        if not self.instance.pk:
+            self.instance.kind = SalesDocument.Kind.QUOTATION
+
+
+
+class DeliveryNoteForm(forms.ModelForm):
     """
-    Line form used in inline formset for SalesDocument.
+    فورم مذكرة التسليم.
+    (order يُحدد من الـ URL وليس من الفورم)
     """
 
     class Meta:
-        model = SalesLine
-        fields = [
-            "product",
-            "description",
-            "quantity",
-            "unit_price",
-            "discount_percent",
-        ]
+        model = DeliveryNote
+        fields = ["date", "notes"]
         widgets = {
-            "description": forms.TextInput(attrs={"class": "form-control form-control-sm"}),
+            "date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+            "notes": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
         }
-        labels = {
-            "product": _("المنتج"),
-            "description": _("الوصف"),
-            "quantity": _("الكمية"),
-            "unit_price": _("سعر الوحدة"),
-            "discount_percent": _("نسبة الخصم %"),
-        }
-
-
-SalesLineFormSet = inlineformset_factory(
-    parent_model=SalesDocument,
-    model=SalesLine,
-    form=SalesLineForm,
-    extra=3,
-    can_delete=True,
-)

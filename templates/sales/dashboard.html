@@ -14,18 +14,21 @@
         {% trans "لوحة التحكم - المبيعات" %}
       </h1>
       <p class="text-muted small mb-0">
-        {% trans "نظرة سريعة على عروض الأسعار، أوامر البيع، مذكرات التسليم، وأفضل العملاء." %}
+        {% trans "نظرة سريعة على عروض الأسعار، أوامر البيع، ومذكرات التسليم." %}
       </p>
     </div>
 
     <div class="d-flex flex-wrap gap-2">
-      <a href="{% url 'sales:quotation_create' %}" class="btn btn-primary btn-sm">
+      {# مستند جديد (عرض أو أمر) #}
+      <a href="{% url 'sales:sales_create' %}" class="btn btn-primary btn-sm">
         <i class="bi bi-file-earmark-plus ms-1"></i>
-        {% trans "عرض سعر جديد" %}
+        {% trans "مستند مبيعات جديد" %}
       </a>
-      <a href="{% url 'sales:order_create' %}" class="btn btn-outline-primary btn-sm">
-        <i class="bi bi-bag-plus ms-1"></i>
-        {% trans "طلب بيع جديد" %}
+
+      {# كل مستندات المبيعات #}
+      <a href="{% url 'sales:sales_list' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-list-ul ms-1"></i>
+        {% trans "كل مستندات المبيعات" %}
       </a>
     </div>
   </div>
@@ -143,7 +146,7 @@
 
   <div class="col-md-3 col-sm-6">
     <div class="kpi-card h-100 d-flex flex-column justify-content-between">
-      <div class="d-flex justify-content-between.align-items-center mb-1">
+      <div class="d-flex justify-content-between align-items-center mb-1">
         <div class="feature-icon">
           <i class="bi bi-check2-square"></i>
         </div>
@@ -162,7 +165,7 @@
 
   <div class="col-md-3 col-sm-6">
     <div class="kpi-card h-100 d-flex flex-column justify-content-between">
-      <div class="d-flex justify-content-betweenalign-items-center mb-1">
+      <div class="d-flex justify-content-between align-items-center mb-1">
         <div class="feature-icon">
           <i class="bi bi-box-arrow-down"></i>
         </div>
@@ -219,7 +222,7 @@
             </p>
           </div>
         </div>
-        <a href="{% url 'sales:quotation_list' %}" class="btn btn-sm btn-outline-secondary">
+        <a href="{% url 'sales:sales_list' %}" class="btn btn-sm btn-outline-secondary">
           <i class="bi bi-list-ul ms-1"></i>
           {% trans "عرض الكل" %}
         </a>
@@ -240,7 +243,7 @@
                 {% for q in recent_quotations %}
                   <tr>
                     <td class="small text-nowrap">
-                      <a href="{% url 'sales:quotation_detail' q.pk %}"
+                      <a href="{% url 'sales:sales_detail' q.pk %}"
                          class="text-mazoon text-decoration-none"
                          dir="ltr">
                         {{ q.display_number }}
@@ -290,7 +293,7 @@
             </p>
           </div>
         </div>
-        <a href="{% url 'sales:order_list' %}" class="btn btn-sm btn-outline-secondary">
+        <a href="{% url 'sales:sales_list' %}" class="btn btn-sm btn-outline-secondary">
           <i class="bi bi-list-ul ms-1"></i>
           {% trans "عرض الكل" %}
         </a>
@@ -311,7 +314,7 @@
                 {% for o in recent_orders %}
                   <tr>
                     <td class="small text-nowrap">
-                      <a href="{% url 'sales:order_detail' o.pk %}"
+                      <a href="{% url 'sales:sales_detail' o.pk %}"
                          class="text-mazoon text-decoration-none"
                          dir="ltr">
                         {{ o.display_number }}
@@ -362,7 +365,7 @@
             </p>
           </div>
         </div>
-        <a href="{% url 'sales:delivery_list' %}" class="btn btn-sm btn-outline-secondary">
+        <a href="{% url 'sales:delivery_note_list' %}" class="btn btn-sm btn-outline-secondary">
           <i class="bi bi-list-ul ms-1"></i>
           {% trans "عرض الكل" %}
         </a>
@@ -376,14 +379,13 @@
                   <th class="small text-muted">{% trans "الرقم" %}</th>
                   <th class="small text-muted">{% trans "التاريخ" %}</th>
                   <th class="small text-muted">{% trans "العميل" %}</th>
-                  <th class="small text-muted text-end">{% trans "الإجمالي" %}</th>
                 </tr>
               </thead>
               <tbody>
                 {% for d in recent_deliveries %}
                   <tr>
                     <td class="small text-nowrap">
-                      <a href="{% url 'sales:delivery_detail' d.pk %}"
+                      <a href="{% url 'sales:delivery_note_detail' d.pk %}"
                          class="text-mazoon text-decoration-none"
                          dir="ltr">
                         {{ d.display_number }}
@@ -393,14 +395,11 @@
                       {{ d.date|date:"Y-m-d" }}
                     </td>
                     <td class="small">
-                      {% if d.contact %}
-                        {{ d.contact.name }}
+                      {% if d.order and d.order.contact %}
+                        {{ d.order.contact.name }}
                       {% else %}
                         <span class="text-muted">—</span>
                       {% endif %}
-                    </td>
-                    <td class="small text-end text-nowrap">
-                      {{ d.total_amount }} OMR
                     </td>
                   </tr>
                 {% endfor %}
@@ -470,17 +469,17 @@
       {% trans "إجراءات سريعة" %}
     </span>
 
-    <a href="{% url 'sales:quotation_list' %}" class="btn btn-sm btn-outline-primary">
-      <i class="bi bi-file-earmark-text me-1"></i>
-      {% trans "عروض الأسعار" %}
+    <a href="{% url 'sales:sales_create' %}" class="btn btn-sm btn-outline-primary">
+      <i class="bi bi-file-earmark-plus me-1"></i>
+      {% trans "مستند مبيعات جديد" %}
     </a>
 
-    <a href="{% url 'sales:order_list' %}" class="btn btn-sm btn-outline-primary">
-      <i class="bi bi-bag-check me-1"></i>
-      {% trans "أوامر البيع" %}
+    <a href="{% url 'sales:sales_list' %}" class="btn btn-sm btn-outline-primary">
+      <i class="bi bi-list-ul me-1"></i>
+      {% trans "كل مستندات المبيعات" %}
     </a>
 
-    <a href="{% url 'sales:delivery_list' %}" class="btn btn-sm btn-outline-primary">
+    <a href="{% url 'sales:delivery_note_list' %}" class="btn btn-sm btn-outline-primary">
       <i class="bi bi-truck me-1"></i>
       {% trans "مذكرات التسليم" %}
     </a>

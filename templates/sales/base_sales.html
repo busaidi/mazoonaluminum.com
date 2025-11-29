@@ -23,8 +23,6 @@
 
     <ul class="nav nav-pills mazoon-nav bg-mazoon-card p-2 rounded-3 shadow-sm mb-2">
 
-
-
       {# --- لوحة التحكم --- #}
       <li class="nav-item">
         <a class="nav-link px-3 py-1 {% if sales_section == 'dashboard' %}active{% endif %}"
@@ -33,34 +31,26 @@
         </a>
       </li>
 
-          {# --- رابط جهات الاتصال --- #}
-          <li class="nav-item">
+      {# --- رابط جهات الاتصال --- #}
+      <li class="nav-item">
         <a class="nav-link px-3 py-1 {% if sales_section == 'contacts' %}active{% endif %}"
            href="{% url 'contacts:contact_list' %}">
           {% trans "جهات الاتصال" %}
         </a>
       </li>
 
-      {# --- عروض الأسعار --- #}
+      {# --- مستندات المبيعات (قائمة موحدة) --- #}
       <li class="nav-item">
-        <a class="nav-link px-3 py-1 {% if sales_section == 'quotations' %}active{% endif %}"
-           href="{% url 'sales:quotation_list' %}">
-          {% trans "عروض الأسعار" %}
-        </a>
-      </li>
-
-      {# --- أوامر البيع --- #}
-      <li class="nav-item">
-        <a class="nav-link px-3 py-1 {% if sales_section == 'orders' %}active{% endif %}"
-           href="{% url 'sales:order_list' %}">
-          {% trans "أوامر البيع" %}
+        <a class="nav-link px-3 py-1 {% if sales_section == 'sales_list' or sales_section == 'sales_create' or sales_section == 'sales_edit' or sales_section == 'sales_detail' %}active{% endif %}"
+           href="{% url 'sales:sales_list' %}">
+          {% trans "مستندات المبيعات" %}
         </a>
       </li>
 
       {# --- مذكرات التسليم --- #}
       <li class="nav-item">
         <a class="nav-link px-3 py-1 {% if sales_section == 'deliveries' %}active{% endif %}"
-           href="{% url 'sales:delivery_list' %}">
+           href="{% url 'sales:delivery_note_list' %}">
           {% trans "مذكرات التسليم" %}
         </a>
       </li>
@@ -71,12 +61,16 @@
       <p class="text-muted small mb-0">
         {% if sales_section == 'dashboard' %}
           {% trans "نظرة عامة على مستندات المبيعات وحالة سير العمل." %}
-        {% elif sales_section == 'quotations' %}
-          {% trans "إدارة عروض الأسعار المقدمة للعملاء وتحويلها إلى أوامر بيع." %}
-        {% elif sales_section == 'orders' %}
-          {% trans "متابعة أوامر البيع من التأكيد وحتى التسليم والفوترة." %}
+        {% elif sales_section == 'sales_list' %}
+          {% trans "قائمة بجميع مستندات المبيعات (عروض الأسعار وأوامر البيع)." %}
+        {% elif sales_section == 'sales_create' %}
+          {% trans "إنشاء مستند مبيعات جديد كعرض سعر أو أمر بيع." %}
+        {% elif sales_section == 'sales_edit' or sales_section == 'sales_detail' %}
+          {% trans "عرض وتعديل تفاصيل مستند المبيعات المختار." %}
         {% elif sales_section == 'deliveries' %}
-          {% trans "إدارة مذكرات التسليم وربطها بأوامر البيع والفواتير." %}
+          {% trans "إدارة مذكرات التسليم وربطها بأوامر البيع." %}
+        {% elif sales_section == 'contacts' %}
+          {% trans "إدارة جهات الاتصال المرتبطة بعمليات المبيعات." %}
         {% else %}
           {% trans "اختر إحدى الشاشات أعلاه لإدارة بيانات المبيعات." %}
         {% endif %}
@@ -91,4 +85,4 @@
   </div>
 
 </div>
-{% endblock %}
+{% endblock content %}

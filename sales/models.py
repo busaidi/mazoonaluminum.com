@@ -5,55 +5,30 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from contacts.models import Contact
-from core.models import NumberedModel
 from inventory.models import Product
 
-
-class SalesDocumentQuerySet(models.QuerySet):
-    """QuerySet مخصص لمستندات المبيعات مع فلاتر جاهزة."""
-
-    def quotations(self):
-        return self.filter(kind=SalesDocument.Kind.QUOTATION)
-
-    def orders(self):
-        return self.filter(kind=SalesDocument.Kind.ORDER)
-
-    def deliveries(self):
-        return self.filter(kind=SalesDocument.Kind.DELIVERY_NOTE)
-
-    def for_contact(self, contact: Contact | int):
-        """فلتر بحسب جهة الاتصال (كائن أو id)."""
-        contact_id = contact.pk if isinstance(contact, Contact) else contact
-        return self.filter(contact_id=contact_id)
+from .managers import SalesDocumentQuerySet
 
 
 class SalesDocument(models.Model):
-    """مستند مبيعات عام.
+    """
+    مستند مبيعات:
+    - عرض سعر
+    - أمر بيع
 
-    يمكن أن يكون:
-    - عرض سعر QUOTATION
-    - طلب بيع ORDER
-    - مذكرة تسليم DELIVERY_NOTE
-
-    المنطق الخاص بالتحويل بين الأنواع (عرض → طلب → مذكرة → فاتورة)
-    موجود في طبقة الخدمات (sales.services) وليس هنا، للحفاظ على
-    نظافة طبقة الموديل.
+    نفس السجل يمكن أن يتحول من عرض إلى أمر بدون إنشاء وثيقة جديدة.
     """
 
     class Kind(models.TextChoices):
         QUOTATION = "quotation", _("عرض سعر")
-        ORDER = "order", _("طلب بيع")
-        DELIVERY_NOTE = "delivery_note", _("مذكرة تسليم")
+        ORDER = "order", _("أمر بيع")
 
     class Status(models.TextChoices):
         DRAFT = "draft", _("مسودة")
-        SENT = "sent", _("تم الإرسال")
         CONFIRMED = "confirmed", _("مؤكد")
-        DELIVERED = "delivered", _("تم التسليم")
         CANCELLED = "cancelled", _("ملغي")
-        INVOICED = "invoiced", _("مفوتر")
 
-    # ====== تعريف الحقول الأساسية ======
+    # ========== الحقول الأساسية ==========
 
     kind = models.CharField(
         max_length=20,
@@ -78,7 +53,7 @@ class SalesDocument(models.Model):
         blank=True,
         related_name="child_documents",
         verbose_name=_("المستند الأصلي"),
-        help_text=_("مثال: عرض السعر الذي تم إنشاء هذا الطلب منه."),
+        help_text=_("يُستخدم لاحقاً للتسليم أو النسخ."),
     )
 
     contact = models.ForeignKey(
@@ -93,27 +68,29 @@ class SalesDocument(models.Model):
         verbose_name=_("التاريخ"),
         db_index=True,
     )
+
     due_date = models.DateField(
         null=True,
         blank=True,
-        verbose_name=_("تاريخ الانتهاء / صلاحية العرض"),
-        help_text=_("اختياري: تاريخ صلاحية عرض السعر أو تاريخ الاستحقاق."),
+        verbose_name=_("تاريخ الانتهاء"),
     )
 
-    # ====== الحقول المالية الأساسية ======
-    # يمكن حسابها تلقائياً من الأسطر عبر recompute_totals()
+    # ========== المبالغ ==========
+
     total_before_tax = models.DecimalField(
         max_digits=14,
         decimal_places=3,
         default=Decimal("0.000"),
         verbose_name=_("الإجمالي قبل الضريبة"),
     )
+
     total_tax = models.DecimalField(
         max_digits=14,
         decimal_places=3,
         default=Decimal("0.000"),
         verbose_name=_("إجمالي الضريبة"),
     )
+
     total_amount = models.DecimalField(
         max_digits=14,
         decimal_places=3,
@@ -127,23 +104,37 @@ class SalesDocument(models.Model):
         verbose_name=_("العملة"),
     )
 
+    # ========== فوترة أمر البيع ==========
+
+    is_invoiced = models.BooleanField(
+        default=False,
+        verbose_name=_("مفوتر"),
+        help_text=_("يشير إلى أن أمر البيع تم فوترته."),
+    )
+
+    # ========== ملاحظات ==========
+
     notes = models.TextField(
         blank=True,
         verbose_name=_("ملاحظات داخلية"),
     )
+
     customer_notes = models.TextField(
         blank=True,
-        verbose_name=_("ملاحظات تظهر للعميل في المستند"),
+        verbose_name=_("ملاحظات للعميل"),
     )
 
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_("تاريخ الإنشاء"),
     )
+
     updated_at = models.DateTimeField(
         auto_now=True,
         verbose_name=_("آخر تحديث"),
     )
+
+    # ========== Manager ==========
 
     objects = SalesDocumentQuerySet.as_manager()
 
@@ -152,36 +143,21 @@ class SalesDocument(models.Model):
         verbose_name = _("مستند مبيعات")
         verbose_name_plural = _("مستندات المبيعات")
 
-    # ====== تمثيل نصي ======
+    # ========== UI Helpers ==========
 
-    def __str__(self) -> str:
-        """تمثيل نصي قياسي للمستند."""
-        contact_name = self.contact.name if self.contact else "—"
+    def __str__(self):
+        contact_name = getattr(self.contact, "name", "—")
         return f"{self.display_number} - {contact_name}"
-
-    # ====== خصائص مساعدة للـ UI ======
 
     @property
     def display_number(self) -> str:
         """
-        رقم عرض بسيط يعتمد على نوع المستند + الـ PK بصيغة ثابتة.
-
-        مثال:
-        - QUOTATION -> Q-0005
-        - ORDER -> SO-0012
-        - DELIVERY_NOTE -> DN-0003
+        رقم موحّد لجميع مستندات المبيعات.
+        مثال: SO-0009
         """
-        prefix_map = {
-            self.Kind.QUOTATION: "Q",
-            self.Kind.ORDER: "SO",
-            self.Kind.DELIVERY_NOTE: "DN",
-        }
-
-        prefix = prefix_map.get(self.kind, "SD")  # SD = Sales Document افتراضي
-
-        # قبل الحفظ ما يكون فيه pk
+        prefix = "SO"  # رقم موحّد لكل المستندات
         if self.pk:
-            return f"{prefix}-{self.pk:04d}"  # تعبئة إلى 4 أرقام
+            return f"{prefix}-{self.pk:04d}"
         return f"{prefix}-DRAFT"
 
     @property
@@ -193,76 +169,35 @@ class SalesDocument(models.Model):
         return self.kind == self.Kind.ORDER
 
     @property
-    def is_delivery_note(self) -> bool:
-        return self.kind == self.Kind.DELIVERY_NOTE
+    def is_cancelled(self) -> bool:
+        return self.status == self.Status.CANCELLED
 
-    @property
-    def kind_label(self) -> str:
-        """النص المعروض لنوع المستند (استخدامه في التمبلت أسهل)."""
-        return self.get_kind_display()
+    # ========== المنطق البسيط ==========
 
-    @property
-    def status_label(self) -> str:
-        return self.get_status_display()
-
-    # ====== منطق الأعمال الخفيف على مستوى الموديل ======
-
-    def recompute_totals(self, save: bool = True) -> None:
-        """يعيد حساب الإجماليات من بنود المبيعات المرتبطة.
-
-        هذه الدالة لا تتعامل مع الضرائب المعقدة حالياً:
-        - الإجمالي قبل الضريبة = مجموع line_total
-        - الضريبة = 0
-        - الإجمالي النهائي = الإجمالي قبل الضريبة
-        """
+    def recompute_totals(self, save: bool = True):
         agg = self.lines.aggregate(s=models.Sum("line_total"))
-        total_before_tax = agg["s"] or Decimal("0.000")
+        total = agg["s"] or Decimal("0.000")
 
-        self.total_before_tax = total_before_tax
+        self.total_before_tax = total
         self.total_tax = Decimal("0.000")
-        self.total_amount = total_before_tax
+        self.total_amount = total
 
         if save:
-            self.save(
-                update_fields=["total_before_tax", "total_tax", "total_amount"]
-            )
+            self.save(update_fields=["total_before_tax", "total_tax", "total_amount"])
 
     def can_be_converted_to_order(self) -> bool:
-        """هل يمكن تحويل هذا المستند إلى طلب بيع؟"""
-        return self.is_quotation and self.status != self.Status.CANCELLED
-
-    def can_be_converted_to_delivery(self) -> bool:
-        """هل يمكن تحويل هذا المستند إلى مذكرة تسليم؟"""
-        return self.is_order and self.status not in {
-            self.Status.CANCELLED,
-            self.Status.DELIVERED,
-        }
+        return self.is_quotation and not self.is_cancelled
 
     def can_be_converted_to_invoice(self) -> bool:
-        """هل يمكن تحويل هذا المستند إلى فاتورة؟ (يستخدم في الأزرار)."""
-        return (
-            self.kind in {self.Kind.ORDER, self.Kind.DELIVERY_NOTE}
-            and self.status not in {self.Status.CANCELLED, self.Status.INVOICED}
-        )
-
-    # ====== URL helper ======
+        return self.is_order and not self.is_cancelled and not self.is_invoiced
 
     def get_absolute_url(self):
-        """يعيد رابط التفاصيل المناسب حسب نوع المستند."""
-        from django.urls import reverse  # import داخلي لتجنب الدوائر
-
-        if self.is_quotation:
-            name = "sales:quotation_detail"
-        elif self.is_order:
-            name = "sales:order_detail"
-        else:
-            name = "sales:delivery_detail"
-
-        return reverse(name, kwargs={"pk": self.pk})
+        from django.urls import reverse
+        return reverse("sales:sales_detail", kwargs={"pk": self.pk})
 
 
 class SalesLine(models.Model):
-    """بند مبيعات (سطر) مرتبط بمستند مبيعات واحد."""
+    """بند مبيعات مرتبط بمستند واحد."""
 
     document = models.ForeignKey(
         SalesDocument,
@@ -282,9 +217,9 @@ class SalesLine(models.Model):
 
     description = models.CharField(
         max_length=255,
-        verbose_name=_("الوصف"),
-        help_text=_("يمكن تركه فارغاً ليتم استخدام اسم المنتج."),
         blank=True,
+        help_text=_("يُستخدم اسم المنتج إذا تُرك فارغًا."),
+        verbose_name=_("الوصف"),
     )
 
     quantity = models.DecimalField(
@@ -306,14 +241,13 @@ class SalesLine(models.Model):
         decimal_places=2,
         default=Decimal("0.00"),
         verbose_name=_("نسبة الخصم"),
-        help_text=_("بالنسبة المئوية %"),
     )
 
     line_total = models.DecimalField(
         max_digits=14,
         decimal_places=3,
         default=Decimal("0.000"),
-        verbose_name=_("الإجمالي للسطر"),
+        verbose_name=_("إجمالي السطر"),
     )
 
     class Meta:
@@ -321,30 +255,151 @@ class SalesLine(models.Model):
         verbose_name = _("بند مبيعات")
         verbose_name_plural = _("بنود المبيعات")
 
-    def __str__(self) -> str:  # pragma: no cover - تمثيل نصي بسيط
-        return f"{self.document} - {self.display_name}"
+    def __str__(self):
+        return f"{self.document.display_number} - {self.display_name}"
 
     @property
-    def display_name(self) -> str:
-        """اسم مناسب للعرض في الجداول والتقارير."""
+    def display_name(self):
         if self.description:
             return self.description
-        if self.product_id:
+        if self.product:
             return self.product.name
         return f"Line #{self.pk}"
 
     def compute_line_total(self) -> Decimal:
-        """حساب إجمالي السطر مع أخذ الخصم في الاعتبار."""
         qty = self.quantity or Decimal("0")
         price = self.unit_price or Decimal("0")
         base = qty * price
-
         if self.discount_percent:
             return base * (Decimal("1.00") - self.discount_percent / Decimal("100"))
-
         return base
 
     def save(self, *args, **kwargs):
-        """حساب line_total تلقائياً في كل عملية حفظ."""
         self.line_total = self.compute_line_total()
         super().save(*args, **kwargs)
+
+
+# ========== موديل مذكرة التسليم المبسّط ==========
+
+
+class DeliveryNote(models.Model):
+    """
+    مذكرة تسليم مرتبطة بأمر بيع واحد.
+    يمكن أن يكون لأمر البيع عدة مذكرات.
+    """
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", _("مسودة")
+        CONFIRMED = "confirmed", _("مؤكد")
+        CANCELLED = "cancelled", _("ملغي")
+
+    order = models.ForeignKey(
+        SalesDocument,
+        on_delete=models.PROTECT,
+        related_name="delivery_notes",
+        limit_choices_to={"kind": SalesDocument.Kind.ORDER},
+        verbose_name=_("أمر البيع"),
+    )
+
+    date = models.DateField(
+        default=timezone.localdate,
+        verbose_name=_("تاريخ التسليم"),
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.DRAFT,
+        verbose_name=_("الحالة"),
+    )
+
+    notes = models.TextField(
+        blank=True,
+        verbose_name=_("ملاحظات"),
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("تاريخ الإنشاء"),
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("آخر تحديث"),
+    )
+
+    class Meta:
+        ordering = ("-date", "-id")
+        verbose_name = _("مذكرة تسليم")
+        verbose_name_plural = _("مذكرات التسليم")
+
+    def __str__(self):
+        return f"{self.display_number} – {self.order.display_number}"
+
+    @property
+    def display_number(self) -> str:
+        """
+        رقم بسيط مثل:
+        DN-0003
+        """
+        if self.pk:
+            return f"DN-{self.pk:04d}"
+        return "DN-DRAFT"
+
+    @property
+    def is_confirmed(self) -> bool:
+        return self.status == self.Status.CONFIRMED
+
+
+class DeliveryLine(models.Model):
+    """
+    بند تسليم بسيط ضمن مذكرة تسليم.
+    (بدون ربط إلزامي بسطر أمر البيع حالياً)
+    """
+
+    delivery = models.ForeignKey(
+        DeliveryNote,
+        on_delete=models.CASCADE,
+        related_name="lines",
+        verbose_name=_("مذكرة التسليم"),
+    )
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="delivery_lines",
+        verbose_name=_("المنتج"),
+    )
+
+    description = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("الوصف"),
+        help_text=_("يُستخدم اسم المنتج إذا تُرك فارغًا."),
+    )
+
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=Decimal("1.000"),
+        verbose_name=_("الكمية المسلّمة"),
+    )
+
+    class Meta:
+        ordering = ("id",)
+        verbose_name = _("بند تسليم")
+        verbose_name_plural = _("بنود التسليم")
+
+    def __str__(self):
+        name = self.description or (self.product.name if self.product else "—")
+        return f"{self.delivery.display_number} – {name}"
+
+    @property
+    def display_name(self):
+        if self.description:
+            return self.description
+        if self.product:
+            return self.product.name
+        return f"Line #{self.pk}"

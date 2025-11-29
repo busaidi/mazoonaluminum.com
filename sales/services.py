@@ -1,220 +1,153 @@
 # sales/services.py
-from decimal import Decimal
 
-from django.db import transaction
 from django.utils import timezone
+from django.db import transaction
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
-from .models import SalesDocument, SalesLine
-
-# نحاول استيراد نماذج الفواتير من تطبيق المحاسبة (accounting)
-try:
-    from accounting.models import Invoice
-except Exception:  # pragma: no cover - في حال عدم وجود تطبيق المحاسبة
-    Invoice = None
-    InvoiceLine = None
-else:
-    try:
-        from accounting.models import InvoiceLine
-    except Exception:  # pragma: no cover - في حال عدم وجود InvoiceLine
-        InvoiceLine = None
+from .models import SalesDocument, SalesLine, DeliveryNote, DeliveryLine
 
 
-# ============================================================
-# تحويل عرض السعر → طلب بيع
-# ============================================================
+# ========== عروض الأسعار وأوامر البيع ==========
+
+def create_quotation(contact, date=None, **kwargs) -> SalesDocument:
+    """
+    إنشاء عرض سعر بسيط.
+    """
+    if date is None:
+        date = timezone.localdate()
+
+    doc = SalesDocument.objects.create(
+        kind=SalesDocument.Kind.QUOTATION,
+        status=SalesDocument.Status.DRAFT,
+        contact=contact,
+        date=date,
+        **kwargs,
+    )
+    return doc
 
 
 @transaction.atomic
-def convert_quotation_to_order(quotation: SalesDocument) -> SalesDocument:
+def convert_quotation_to_order(document: SalesDocument) -> SalesDocument:
     """
-    يحوّل عرض سعر (QUOTATION) إلى طلب بيع (ORDER).
-
-    - لو تم التحويل سابقاً يرجّع نفس الطلب القديم.
-    - ينسخ كل البنود كما هي.
-    - يعيد حساب الإجمالي باستخدام recompute_totals().
-    - يحدّث حالة عرض السعر إلى "مؤكد".
+    تحويل عرض سعر إلى أمر بيع على نفس السجل.
+    لا ينشئ مستند جديد، فقط يغير kind و status.
     """
+    if not document.is_quotation:
+        raise ValidationError("هذا المستند ليس عرض سعر.")
 
-    if not quotation.is_quotation:
-        raise ValueError("Sales document is not a quotation.")
+    if document.is_cancelled:
+        raise ValidationError("لا يمكن تحويل مستند ملغي إلى أمر بيع.")
 
-    if not quotation.can_be_converted_to_order():
-        raise ValueError("This quotation cannot be converted to an order.")
+    document.kind = SalesDocument.Kind.ORDER
+    document.status = SalesDocument.Status.CONFIRMED
+    document.save(update_fields=["kind", "status"])
 
-    # لو تم تحويله سابقاً، رجّع نفس الأوردر
-    existing_order = quotation.child_documents.filter(
-        kind=SalesDocument.Kind.ORDER
-    ).first()
-    if existing_order:
-        return existing_order
+    return document
 
-    # إنشاء طلب جديد مبني على عرض السعر
-    order = SalesDocument.objects.create(
-        kind=SalesDocument.Kind.ORDER,
-        status=SalesDocument.Status.CONFIRMED,
-        contact=quotation.contact,
-        date=timezone.localdate(),
-        due_date=quotation.due_date,
-        currency=quotation.currency,
-        notes=quotation.notes,
-        customer_notes=quotation.customer_notes,
-        source_document=quotation,
-    )
 
-    # نسخ البنود
-    for line in quotation.lines.all():
-        SalesLine.objects.create(
-            document=order,
-            product=line.product,
-            description=line.description,
-            quantity=line.quantity,
-            unit_price=line.unit_price,
-            discount_percent=line.discount_percent,
-            # لا نمرر line_total، يُحسب تلقائياً في save()
-        )
+def mark_order_invoiced(order: SalesDocument) -> SalesDocument:
+    """
+    تعليم أمر البيع كمفوتر.
+    (الربط مع فاتورة المحاسبة يصير في تطبيق المحاسبة لاحقاً)
+    """
+    if not order.is_order:
+        raise ValidationError("هذا المستند ليس أمر بيع.")
 
-    # إعادة حساب الإجماليات باستخدام منطق الموديل
-    order.recompute_totals()
+    if order.is_cancelled:
+        raise ValidationError("لا يمكن فوتر أمر بيع ملغي.")
 
-    # نعتبر عرض السعر "مؤكد" بعد التحويل
-    quotation.status = SalesDocument.Status.CONFIRMED
-    quotation.save(update_fields=["status"])
+    if order.is_invoiced:
+        return order  # لا شيء لتغييره
 
+    order.is_invoiced = True
+    order.save(update_fields=["is_invoiced"])
     return order
 
 
-# ============================================================
-# تحويل طلب بيع → مذكرة تسليم
-# ============================================================
-
+# ========== مذكرات التسليم ==========
 
 @transaction.atomic
-def convert_order_to_delivery(order: SalesDocument) -> SalesDocument:
+def create_delivery_note_for_order(order: SalesDocument, date=None, notes: str = "") -> DeliveryNote:
     """
-    يحوّل طلب بيع (ORDER) إلى مذكرة تسليم (DELIVERY_NOTE).
-
-    - لو تم التحويل سابقاً يرجّع مذكرة التسليم الموجودة.
-    - ينسخ البنود كما هي.
-    - يعيد حساب الإجماليات.
-    - يحدّث حالة الطلب إلى "تم التسليم".
+    إنشاء مذكرة تسليم جديدة مرتبطة بأمر بيع.
+    حالياً لا تنسخ بنود أمر البيع، فقط تنشئ الرأس (الهيدر).
+    لاحقاً ممكن نضيف خيار لنسخ البنود تلقائياً.
     """
-
     if not order.is_order:
-        raise ValueError("Sales document is not an order.")
+        raise ValidationError("لا يمكن إنشاء مذكرة تسليم إلا لأمر بيع.")
 
-    if not order.can_be_converted_to_delivery():
-        raise ValueError("This order cannot be converted to a delivery note.")
+    if order.is_cancelled:
+        raise ValidationError("لا يمكن إنشاء مذكرة تسليم لأمر بيع ملغي.")
 
-    existing_delivery = order.child_documents.filter(
-        kind=SalesDocument.Kind.DELIVERY_NOTE
-    ).first()
-    if existing_delivery:
-        return existing_delivery
+    if date is None:
+        date = timezone.localdate()
 
-    delivery = SalesDocument.objects.create(
-        kind=SalesDocument.Kind.DELIVERY_NOTE,
-        status=SalesDocument.Status.DELIVERED,
-        contact=order.contact,
-        date=timezone.localdate(),
-        due_date=order.due_date,
-        currency=order.currency,
-        notes=order.notes,
-        customer_notes=order.customer_notes,
-        source_document=order,
+    dn = DeliveryNote.objects.create(
+        order=order,
+        date=date,
+        status=DeliveryNote.Status.DRAFT,
+        notes=notes,
     )
-
-    for line in order.lines.all():
-        SalesLine.objects.create(
-            document=delivery,
-            product=line.product,
-            description=line.description,
-            quantity=line.quantity,
-            unit_price=line.unit_price,
-            discount_percent=line.discount_percent,
-            # line_total يتحسب تلقائياً
-        )
-
-    # إعادة الحساب من خلال الموديل
-    delivery.recompute_totals()
-
-    # نعتبر الطلب "تم تسليمه" بعد إنشاء مذكرة تسليم
-    order.status = SalesDocument.Status.DELIVERED
-    order.save(update_fields=["status"])
-
-    return delivery
+    return dn
 
 
-# ============================================================
-# تحويل طلب / مذكرة تسليم → فاتورة
-# ============================================================
-
-
-@transaction.atomic
-def convert_sales_document_to_invoice(doc: SalesDocument):
+def add_delivery_line(delivery: DeliveryNote, product, quantity, description: str = "") -> DeliveryLine:
     """
-    يحوّل طلب بيع أو مذكرة تسليم إلى فاتورة.
+    إضافة بند تسليم بسيط إلى مذكرة تسليم.
+    حالياً لا يتحقق من الكميات مقابل أمر البيع.
+    """
+    if delivery.status == DeliveryNote.Status.CANCELLED:
+        raise ValidationError("لا يمكن إضافة بنود لمذكرة تسليم ملغاة.")
 
-    - يحتاج وجود نموذج Invoice في تطبيق accounting.
-    - لو وجد InvoiceLine يتم نسخ البنود أيضاً، وإلا تُنشأ فاتورة بدون أسطر.
-    - لو تم التحويل سابقاً يرجّع الفاتورة الموجودة.
+    line = DeliveryLine.objects.create(
+        delivery=delivery,
+        product=product,
+        quantity=quantity,
+        description=description or (product.name if product else ""),
+    )
+    return line
+
+
+def cancel_sales_document(document: SalesDocument):
+    """
+    يلغي المستند بشكل آمن.
     """
 
-    if Invoice is None:
-        raise RuntimeError("Invoice model not available (accounting app missing).")
+    # ممنوع إلغاء مستند مفوتر
+    if document.is_invoiced:
+        raise Exception("لا يمكن إلغاء مستند مفوتر.")
 
-    if not doc.can_be_converted_to_invoice():
-        raise ValueError("This sales document cannot be converted to an invoice.")
+    # إذا أمر بيع وله مذكرات تسليم → ممنوع
+    if document.is_order and document.delivery_notes.exists():
+        raise Exception("لا يمكن إلغاء أمر بيع لديه مذكرات تسليم.")
 
-    # لو فيه علاقة صريحة في Invoice مثل: source_sales_document = FK
-    existing_invoice = None
-    if hasattr(Invoice, "source_sales_document"):
-        existing_invoice = (
-            Invoice.objects.filter(source_sales_document=doc).first()
-        )
+    # تغيير الحالة
+    document.status = SalesDocument.Status.CANCELLED
+    document.save()
 
-    # أو لو فيه OneToOne من ناحية SalesDocument (مثلاً doc.invoice)
-    if existing_invoice is None and hasattr(doc, "invoice"):
-        existing_invoice = getattr(doc, "invoice", None)
 
-    if existing_invoice:
-        return existing_invoice
+def reset_sales_document_to_draft(document: SalesDocument):
+    """
+    إعادة المستند إلى حالة المسودة (Draft) بشكل آمن.
 
-    # بناء بيانات الفاتورة الأساسية
-    invoice_data = {
-        "customer": doc.contact,
-        "issued_at": timezone.now(),
-        "due_date": doc.due_date,
-        "currency": getattr(doc, "currency", "OMR"),
-        "total_amount": getattr(doc, "total_amount", Decimal("0.000")),
-        "total_before_tax": getattr(
-            doc, "total_before_tax", getattr(doc, "total_amount", Decimal("0.000"))
-        ),
-        "total_tax": getattr(doc, "total_tax", Decimal("0.000")),
-    }
+    القيود المقترحة:
+    - لا يمكن إعادة مستند مفوتر إلى مسودة.
+    - لا يمكن إعادة أمر بيع له مذكرات تسليم إلى مسودة.
+    """
 
-    # لو في حقل source_sales_document في Invoice نمرّره
-    if hasattr(Invoice, "source_sales_document"):
-        invoice_data["source_sales_document"] = doc
+    # ممنوع إعادة مستند مفوتر إلى مسودة
+    if document.is_invoiced:
+        raise Exception(_("لا يمكن إعادة مستند مفوتر إلى حالة المسودة."))
 
-    invoice = Invoice.objects.create(**invoice_data)
+    # إذا أمر بيع وله مذكرات تسليم → ممنوع
+    if document.is_order and document.delivery_notes.exists():
+        raise Exception(_("لا يمكن إعادة أمر بيع يملك مذكرات تسليم إلى حالة المسودة."))
 
-    # لو عندنا InvoiceLine ننسخ البنود
-    if InvoiceLine is not None:
-        for line in doc.lines.all():
-            InvoiceLine.objects.create(
-                invoice=invoice,
-                product=line.product,
-                description=line.description,
-                quantity=line.quantity,
-                unit_price=line.unit_price,
-                discount_percent=line.discount_percent,
-                line_total=line.line_total,
-            )
+    # إذا كان ملغي، ممكن تخليه ممنوع أو مسموح
+    # هنا بمنطق محافظ: لا نعيد الملغي لمسودة
+    if document.is_cancelled:
+        raise Exception(_("لا يمكن إعادة مستند ملغي إلى حالة المسودة."))
 
-    # تحديث حالة مستند المبيعات
-    doc.status = SalesDocument.Status.INVOICED
-    doc.save(update_fields=["status"])
-
-    # لو حاب تخزن العكس (مثلاً doc.invoice = invoice)
-    # تحتاج حقل FK أو OneToOne في Invoice أو SalesDocument وتضبطه هنا.
-    return invoice
+    document.status = SalesDocument.Status.DRAFT
+    document.save()
