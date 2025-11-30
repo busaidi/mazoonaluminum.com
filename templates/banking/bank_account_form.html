@@ -7,7 +7,9 @@
   <h2 class="h5 mb-0">
     {{ title|default:_("حساب بنكي") }}
   </h2>
+
   <a href="{% url 'banking:bank_account_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-right"></i>
     {% trans "رجوع إلى الحسابات البنكية" %}
   </a>
 </div>
@@ -19,13 +21,14 @@
       {% csrf_token %}
 
       {% if form.non_field_errors %}
-        <div class="alert alert-danger">
+        <div class="alert alert-danger small mb-3">
           {{ form.non_field_errors }}
         </div>
       {% endif %}
 
       <div class="row g-3">
 
+        <!-- الاسم -->
         <div class="col-md-6">
           <label class="form-label" for="{{ form.name.id_for_label }}">
             {{ form.name.label }}
@@ -34,9 +37,10 @@
           {% if form.name.help_text %}
             <div class="form-text">{{ form.name.help_text }}</div>
           {% endif %}
-          {{ form.name.errors }}
+          <div class="text-danger small">{{ form.name.errors }}</div>
         </div>
 
+        <!-- حساب دليل المحاسبة -->
         <div class="col-md-6">
           <label class="form-label" for="{{ form.account.id_for_label }}">
             {{ form.account.label }}
@@ -45,56 +49,60 @@
           {% if form.account.help_text %}
             <div class="form-text">{{ form.account.help_text }}</div>
           {% endif %}
-          {{ form.account.errors }}
+          <div class="text-danger small">{{ form.account.errors }}</div>
         </div>
 
+        <!-- اسم البنك -->
         <div class="col-md-6">
           <label class="form-label" for="{{ form.bank_name.id_for_label }}">
             {{ form.bank_name.label }}
           </label>
           {{ form.bank_name }}
-          {{ form.bank_name.errors }}
+          <div class="text-danger small">{{ form.bank_name.errors }}</div>
         </div>
 
+        <!-- رقم الحساب -->
         <div class="col-md-6">
           <label class="form-label" for="{{ form.account_number.id_for_label }}">
             {{ form.account_number.label }}
           </label>
           {{ form.account_number }}
-          {{ form.account_number.errors }}
+          <div class="text-danger small">{{ form.account_number.errors }}</div>
         </div>
 
+        <!-- IBAN -->
         <div class="col-md-6">
           <label class="form-label" for="{{ form.iban.id_for_label }}">
             {{ form.iban.label }}
           </label>
           {{ form.iban }}
-          {{ form.iban.errors }}
+          <div class="text-danger small">{{ form.iban.errors }}</div>
         </div>
 
+        <!-- العملة -->
         <div class="col-md-3">
           <label class="form-label" for="{{ form.currency.id_for_label }}">
             {{ form.currency.label }}
           </label>
           {{ form.currency }}
-          {{ form.currency.errors }}
+          <div class="text-danger small">{{ form.currency.errors }}</div>
         </div>
 
+        <!-- الحالة -->
         <div class="col-md-3 d-flex align-items-center">
           <div class="form-check mt-3">
             {{ form.is_active }}
             <label class="form-check-label ms-1" for="{{ form.is_active.id_for_label }}">
               {{ form.is_active.label }}
             </label>
-            {{ form.is_active.errors }}
+            <div class="text-danger small">{{ form.is_active.errors }}</div>
           </div>
         </div>
 
       </div>
 
       <div class="mt-4 d-flex justify-content-end gap-2">
-        <a href="{% url 'banking:bank_account_list' %}"
-           class="btn btn-outline-secondary">
+        <a href="{% url 'banking:bank_account_list' %}" class="btn btn-outline-secondary">
           {% trans "إلغاء" %}
         </a>
         <button type="submit" class="btn btn-primary">

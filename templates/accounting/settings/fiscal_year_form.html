@@ -1,10 +1,18 @@
 {% extends "accounting/base_accounting.html" %}
 {% load i18n %}
 
+{% block title %}
+  {% if form.instance.pk %}
+    {% trans "تعديل السنة المالية" %}
+  {% else %}
+    {% trans "إنشاء سنة مالية جديدة" %}
+  {% endif %}
+{% endblock %}
+
 {% block accounting_content %}
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
-    <h2 class="h5 mb-1">
+    <h2 class="h5 fw-bold mb-1">
       {% if form.instance.pk %}
         {% trans "تعديل السنة المالية" %}
       {% else %}
@@ -16,15 +24,19 @@
     </p>
   </div>
   <div>
-    <a href="{% url 'accounting:fiscal_year_list' %}" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-arrow-right"></i> {% trans "رجوع إلى قائمة السنوات" %}
+    <a href="{% url 'accounting:fiscal_year_list' %}"
+       class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-right"></i>
+      {% trans "رجوع إلى قائمة السنوات" %}
     </a>
   </div>
 </div>
 
 <form method="post" class="card shadow-sm border-0">
   {% csrf_token %}
+
   <div class="card-body">
+
     {% if form.non_field_errors %}
       <div class="alert alert-danger small mb-3">
         {% for error in form.non_field_errors %}
@@ -34,6 +46,7 @@
     {% endif %}
 
     <div class="row g-4 small">
+
       {# الحقول الأساسية #}
       <div class="col-lg-8">
         <div class="row g-3">
@@ -41,7 +54,7 @@
           <div class="col-md-4">
             <label class="form-label form-label-sm fw-semibold mb-1"
                    for="{{ form.year.id_for_label }}">
-              {% trans "السنة" %}
+              {{ form.year.label }}
             </label>
             {{ form.year }}
             <div class="form-text small text-muted">
@@ -55,7 +68,7 @@
           <div class="col-md-4">
             <label class="form-label form-label-sm fw-semibold mb-1"
                    for="{{ form.start_date.id_for_label }}">
-              {% trans "تاريخ البداية" %}
+              {{ form.start_date.label }}
             </label>
             {{ form.start_date }}
             <div class="form-text small text-muted">
@@ -69,7 +82,7 @@
           <div class="col-md-4">
             <label class="form-label form-label-sm fw-semibold mb-1"
                    for="{{ form.end_date.id_for_label }}">
-              {% trans "تاريخ النهاية" %}
+              {{ form.end_date.label }}
             </label>
             {{ form.end_date }}
             <div class="form-text small text-muted">
@@ -141,10 +154,12 @@
   <div class="card-footer bg-white d-flex justify-content-between align-items-center">
     <a href="{% url 'accounting:fiscal_year_list' %}"
        class="btn btn-sm btn-light">
-      <i class="bi bi-arrow-right"></i> {% trans "رجوع إلى قائمة السنوات" %}
+      <i class="bi bi-arrow-right"></i>
+      {% trans "رجوع إلى قائمة السنوات" %}
     </a>
     <button type="submit" class="btn btn-primary btn-sm">
-      <i class="bi bi-check2-circle"></i> {% trans "حفظ" %}
+      <i class="bi bi-check2-circle"></i>
+      {% trans "حفظ" %}
     </button>
   </div>
 </form>

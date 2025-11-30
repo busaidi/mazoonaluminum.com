@@ -1,9 +1,12 @@
 {% extends "accounting/base_ledger.html" %}
 {% load i18n %}
 
+{% block title %}{% trans "إعداد السنة المالية الأولى" %}{% endblock %}
+
 {% block ledger_content %}
 <div class="py-4">
 
+  {# ===== الهيدر ===== #}
   <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <div>
       <h1 class="h5 fw-bold mb-1">
@@ -14,8 +17,10 @@
       </p>
     </div>
     <div>
-      <a href="{% url 'accounting:dashboard' %}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-right"></i> {% trans "رجوع للوحة دفتر الأستاذ" %}
+      <a href="{% url 'accounting:dashboard' %}"
+         class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-right"></i>
+        {% trans "رجوع للوحة دفتر الأستاذ" %}
       </a>
     </div>
   </div>
@@ -26,6 +31,7 @@
       <form method="post" class="row g-3 small">
         {% csrf_token %}
 
+        {# أخطاء عامة للفورم #}
         {% if form.non_field_errors %}
           <div class="col-12">
             <div class="alert alert-danger small">
@@ -43,7 +49,9 @@
           </label>
           {{ form.year }}
           {% if form.year.help_text %}
-            <div class="form-text small text-muted">{{ form.year.help_text }}</div>
+            <div class="form-text small text-muted">
+              {{ form.year.help_text }}
+            </div>
           {% endif %}
           {% for error in form.year.errors %}
             <div class="text-danger small mt-1">{{ error }}</div>
@@ -57,7 +65,9 @@
           </label>
           {{ form.start_date }}
           {% if form.start_date.help_text %}
-            <div class="form-text small text-muted">{{ form.start_date.help_text }}</div>
+            <div class="form-text small text-muted">
+              {{ form.start_date.help_text }}
+            </div>
           {% endif %}
           {% for error in form.start_date.errors %}
             <div class="text-danger small mt-1">{{ error }}</div>
@@ -71,7 +81,9 @@
           </label>
           {{ form.end_date }}
           {% if form.end_date.help_text %}
-            <div class="form-text small text-muted">{{ form.end_date.help_text }}</div>
+            <div class="form-text small text-muted">
+              {{ form.end_date.help_text }}
+            </div>
           {% endif %}
           {% for error in form.end_date.errors %}
             <div class="text-danger small mt-1">{{ error }}</div>

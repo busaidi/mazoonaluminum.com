@@ -4,10 +4,15 @@
 {% block accounting_content %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h2 class="h5 mb-0">
-    {% trans "كشوفات البنك" %}
-  </h2>
+  <div>
+    <h2 class="h5 mb-1">{% trans "كشوفات البنك" %}</h2>
+    <p class="text-muted small mb-0">
+      {% trans "إدارة كشوف البنك المسجلة مع مقارنة الأرصدة والتحقق من التطابق." %}
+    </p>
+  </div>
+
   <a href="{% url 'banking:bank_statement_upload' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i>
     {% trans "رفع كشف جديد" %}
   </a>
 </div>
@@ -20,7 +25,7 @@
         <table class="table table-hover table-sm align-middle mb-0">
           <thead class="table-light">
             <tr>
-              <th>#</th>
+              <th class="text-center">#</th>
               <th>{% trans "الحساب البنكي" %}</th>
               <th>{% trans "مرجع الكشف" %}</th>
               <th>{% trans "تاريخ الكشف" %}</th>
@@ -31,107 +36,115 @@
               <th class="text-end">{% trans "إجراءات" %}</th>
             </tr>
           </thead>
+
           <tbody>
             {% for st in statements %}
-              {% with computed=st.computed_balance %}
-              <tr>
-                <td class="text-muted small">
-                  {{ forloop.counter }}
-                </td>
+            {% with computed=st.computed_balance %}
+            <tr>
 
-                <td class="small">
-                  <strong>{{ st.bank_account.name }}</strong><br>
-                  <span class="text-muted">
-                    {{ st.bank_account.account.code }} – {{ st.bank_account.account.name }}
+              <td class="text-center text-muted small">
+                {{ forloop.counter }}
+              </td>
+
+              <td class="small">
+                <strong>{{ st.bank_account.name }}</strong><br>
+                <span class="text-muted small">
+                  {{ st.bank_account.account.code }} – {{ st.bank_account.account.name }}
+                </span>
+              </td>
+
+              <td class="small">
+                {{ st.name }}
+              </td>
+
+              <td class="small">
+                {{ st.date|date:"Y-m-d" }}
+              </td>
+
+              <td class="text-end">
+                {{ st.start_balance }}
+              </td>
+
+              <td class="text-end">
+                {{ st.end_balance }}
+              </td>
+
+              <td class="text-end">
+                {{ computed }}
+              </td>
+
+              <td class="text-center">
+                {% if st.is_valid %}
+                  <span class="badge bg-success-subtle text-success-emphasis">
+                    {% trans "متطابق" %}
                   </span>
-                </td>
+                {% else %}
+                  <span class="badge bg-danger-subtle text-danger-emphasis">
+                    {% trans "غير متطابق" %}
+                  </span>
+                {% endif %}
+              </td>
 
-                <td class="small">
-                  {{ st.name }}
-                </td>
+              <td class="text-end">
+                <a href="{% url 'banking:bank_statement_detail' pk=st.id %}"
+                   class="btn btn-outline-primary btn-sm me-1">
+                  <i class="bi bi-eye"></i>
+                  {% trans "تفاصيل" %}
+                </a>
 
-                <td>
-                  {{ st.date|date:"Y-m-d" }}
-                </td>
+                <a href="{% url 'banking:bank_statement_edit' pk=st.id %}"
+                   class="btn btn-outline-secondary btn-sm me-1">
+                  <i class="bi bi-pencil"></i>
+                  {% trans "تعديل" %}
+                </a>
 
-                <td class="text-end">
-                  {{ st.start_balance }}
-                </td>
+                <a href="{% url 'banking:bank_statement_delete' pk=st.id %}"
+                   class="btn btn-outline-danger btn-sm">
+                  <i class="bi bi-trash"></i>
+                  {% trans "حذف" %}
+                </a>
+              </td>
 
-                <td class="text-end">
-                  {{ st.end_balance }}
-                </td>
-
-                <td class="text-end">
-                  {{ computed }}
-                </td>
-
-                <td class="text-center">
-                  {% if st.is_valid %}
-                    <span class="badge bg-success-subtle text-success-emphasis">
-                      {% trans "متطابق" %}
-                    </span>
-                  {% else %}
-                    <span class="badge bg-danger-subtle text-danger-emphasis">
-                      {% trans "غير متطابق" %}
-                    </span>
-                  {% endif %}
-                </td>
-
-                <td class="text-end">
-                  <a href="{% url 'banking:bank_statement_detail' pk=st.id %}"
-                     class="btn btn-outline-primary btn-sm me-1">
-                    {% trans "تفاصيل" %}
-                  </a>
-
-                  <a href="{% url 'banking:bank_statement_edit' pk=st.id %}"
-                     class="btn btn-outline-secondary btn-sm me-1">
-                    {% trans "تعديل" %}
-                  </a>
-
-                  <a href="{% url 'banking:bank_statement_delete' pk=st.id %}"
-                     class="btn btn-outline-danger btn-sm">
-                    {% trans "حذف" %}
-                  </a>
-                </td>
-              </tr>
-              {% endwith %}
+            </tr>
+            {% endwith %}
             {% endfor %}
           </tbody>
         </table>
       </div>
 
-      {# في حال عندك paginate_by في الـ view #}
+      {# ================= Pagination ================ #}
       {% if is_paginated %}
-        <div class="card-footer bg-transparent border-0 py-2">
-          <nav aria-label="{% trans 'صفحات' %}">
-            <ul class="pagination pagination-sm mb-0 justify-content-center">
-              {% if page_obj.has_previous %}
+      <div class="card-footer bg-transparent border-0 py-2">
+        <nav aria-label="{% trans 'الصفحات' %}">
+          <ul class="pagination pagination-sm mb-0 justify-content-center">
+
+            {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a>
+              </li>
+            {% endif %}
+
+            {% for num in paginator.page_range %}
+              {% if num == page_obj.number %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}</span>
+                </li>
+              {% else %}
                 <li class="page-item">
-                  <a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a>
+                  <a class="page-link" href="?page={{ num }}">{{ num }}</a>
                 </li>
               {% endif %}
+            {% endfor %}
 
-              {% for num in paginator.page_range %}
-                {% if num == page_obj.number %}
-                  <li class="page-item active">
-                    <span class="page-link">{{ num }}</span>
-                  </li>
-                {% else %}
-                  <li class="page-item">
-                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                  </li>
-                {% endif %}
-              {% endfor %}
+            {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a>
+              </li>
+            {% endif %}
 
-              {% if page_obj.has_next %}
-                <li class="page-item">
-                  <a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a>
-                </li>
-              {% endif %}
-            </ul>
-          </nav>
-        </div>
+          </ul>
+        </nav>
+      </div>
       {% endif %}
 
     {% else %}

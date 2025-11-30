@@ -7,222 +7,227 @@
 
 {% block accounting_content %}
 <div class="py-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-10">
 
-    {# --- Header --- #}
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <div>
-        <h4 class="fw-bold text-dark mb-1">
-          {% if is_update %}
-            {% trans "تعديل القيد" %}
-            {% if entry %}
-              <span class="text-muted">{{ entry.display_number }}</span>
+      {# --- Header --- #}
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h4 class="fw-bold text-dark mb-1">
+            {% if is_update %}
+              {% trans "تعديل القيد" %}
+              {% if entry %}
+                <span class="text-muted">{{ entry.display_number }}</span>
+              {% endif %}
+            {% else %}
+              {% trans "إنشاء قيد يومية جديد" %}
             {% endif %}
-          {% else %}
-            {% trans "إنشاء قيد يومية جديد" %}
-          {% endif %}
-        </h4>
-        <p class="text-muted small mb-0">
-          {% trans "الرجاء التأكد من توازن القيد (المدين = الدائن) قبل الحفظ." %}
-        </p>
+          </h4>
+          <p class="text-muted small mb-0">
+            {% trans "الرجاء التأكد من توازن القيد (المدين = الدائن) قبل الحفظ." %}
+          </p>
+        </div>
+        <a href="{% url 'accounting:journal_entry_list' %}"
+           class="btn btn-outline-secondary btn-sm">
+          {% trans "إلغاء" %}
+        </a>
       </div>
-      <a href="{% url 'accounting:journal_entry_list' %}"
-         class="btn btn-outline-secondary btn-sm">
-        {% trans "إلغاء" %}
-      </a>
-    </div>
 
-    <form method="post" class="card border-0 shadow-sm">
-      {% csrf_token %}
-      <div class="card-body p-4">
+      <form method="post" class="card border-0 shadow-sm">
+        {% csrf_token %}
+        <div class="card-body p-4">
 
-        {# عرض الأخطاء العامة #}
-        {% if form.errors or line_formset.non_form_errors %}
-          <div class="alert alert-danger shadow-sm mb-4">
-            <h6 class="alert-heading fw-bold">
-              {% trans "تنبيه" %}
-            </h6>
-            {{ form.non_field_errors }}
-            {{ line_formset.non_form_errors }}
+          {# عرض الأخطاء العامة #}
+          {% if form.errors or line_formset.non_form_errors %}
+            <div class="alert alert-danger shadow-sm mb-4">
+              <h6 class="alert-heading fw-bold">
+                {% trans "تنبيه" %}
+              </h6>
+              {{ form.non_field_errors }}
+              {{ line_formset.non_form_errors }}
 
-            {% if form.errors %}
-              <ul class="mb-0 mt-2">
-                {% for field, errors in form.errors.items %}
-                  <li><strong>{{ field }}:</strong> {{ errors|join:", " }}</li>
-                {% endfor %}
-              </ul>
-            {% endif %}
-          </div>
-        {% endif %}
+              {% if form.errors %}
+                <ul class="mb-0 mt-2">
+                  {% for field, errors in form.errors.items %}
+                    <li><strong>{{ field }}:</strong> {{ errors|join:", " }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+          {% endif %}
 
-        {# --- بيانات الرأس --- #}
-        <h6 class="text-uppercase text-muted small fw-bold mb-3">
-          {% trans "بيانات القيد" %}
-        </h6>
-        <div class="row g-3 mb-4">
-          <div class="col-md-3">
-            <label class="form-label small text-muted mb-1">
-              {{ form.date.label }}
-            </label>
-            {{ form.date }}
-            {{ form.date.errors }}
-          </div>
-          <div class="col-md-3">
-            <label class="form-label small text-muted mb-1">
-              {{ form.journal.label }}
-            </label>
-            {{ form.journal }}
-            {{ form.journal.errors }}
-          </div>
-          <div class="col-md-6">
-            <label class="form-label small text-muted mb-1">
-              {{ form.reference.label }}
-            </label>
-            {{ form.reference }}
-            {{ form.reference.errors }}
-          </div>
-          <div class="col-12">
-            <label class="form-label small text-muted mb-1">
-              {{ form.description.label }}
-            </label>
-            {{ form.description }}
-            {{ form.description.errors }}
-          </div>
-        </div>
-
-        <hr class="my-4 text-muted opacity-25">
-
-        {# --- الأسطر --- #}
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h6 class="text-uppercase text-muted small fw-bold mb-0">
-            {% trans "أسطر القيد" %}
+          {# --- بيانات الرأس --- #}
+          <h6 class="text-uppercase text-muted small fw-bold mb-3">
+            {% trans "بيانات القيد" %}
           </h6>
-          <button type="button"
-                  class="btn btn-sm btn-outline-dark"
-                  id="add-line">
-            + {% trans "إضافة سطر" %}
-          </button>
-        </div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-3">
+              <label class="form-label small text-muted mb-1">
+                {{ form.date.label }}
+              </label>
+              {{ form.date }}
+              {{ form.date.errors }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small text-muted mb-1">
+                {{ form.journal.label }}
+              </label>
+              {{ form.journal }}
+              {{ form.journal.errors }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small text-muted mb-1">
+                {{ form.reference.label }}
+              </label>
+              {{ form.reference }}
+              {{ form.reference.errors }}
+            </div>
+            <div class="col-12">
+              <label class="form-label small text-muted mb-1">
+                {{ form.description.label }}
+              </label>
+              {{ form.description }}
+              {{ form.description.errors }}
+            </div>
+          </div>
 
-        {# مهم جداً للـ formset #}
-        {{ line_formset.management_form }}
+          <hr class="my-4 text-muted opacity-25">
 
-        {# --- القالب المخفي للسطر الجديد (Hidden Empty Form) --- #}
-        <div id="empty-form" class="d-none">
-          <table>
-            <tr class="journal-line-row">
-              {% for hidden in line_formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
-              <td class="p-1">
-                {{ line_formset.empty_form.account }}
-              </td>
-              <td class="p-1">
-                {{ line_formset.empty_form.description }}
-              </td>
-              <td class="p-1">
-                {{ line_formset.empty_form.debit }}
-              </td>
-              <td class="p-1">
-                {{ line_formset.empty_form.credit }}
-              </td>
-              <td class="text-center p-1">
-                <div class="d-none">{{ line_formset.empty_form.DELETE }}</div>
-                <button type="button"
-                        class="btn btn-outline-danger btn-sm border-0 py-0 delete-row-btn">
-                  ×
-                </button>
-              </td>
-            </tr>
-          </table>
-        </div>
+          {# --- الأسطر --- #}
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="text-uppercase text-muted small fw-bold mb-0">
+              {% trans "أسطر القيد" %}
+            </h6>
+            <button type="button"
+                    class="btn btn-sm btn-outline-dark"
+                    id="add-line">
+              + {% trans "إضافة سطر" %}
+            </button>
+          </div>
 
-        <div class="table-responsive">
-          <table class="table table-bordered table-sm align-middle mb-0 journal-lines-table">
-            <thead class="bg-light">
-              <tr>
-                <th style="width: 35%">{% trans "الحساب" %}</th>
-                <th style="width: 25%">{% trans "البيان" %}</th>
-                <th style="width: 15%" class="text-center">{% trans "مدين" %}</th>
-                <th style="width: 15%" class="text-center">{% trans "دائن" %}</th>
-                <th style="width: 10%" class="text-center">{% trans "حذف" %}</th>
+          {# مهم جداً للـ formset #}
+          {{ line_formset.management_form }}
+
+          {# --- القالب المخفي للسطر الجديد (Hidden Empty Form) --- #}
+          <div id="empty-form" class="d-none">
+            <table>
+              <tr class="journal-line-row">
+                {% for hidden in line_formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+                <td class="p-1">
+                  {{ line_formset.empty_form.account }}
+                </td>
+                <td class="p-1">
+                  {{ line_formset.empty_form.description }}
+                </td>
+                <td class="p-1">
+                  {{ line_formset.empty_form.debit }}
+                </td>
+                <td class="p-1">
+                  {{ line_formset.empty_form.credit }}
+                </td>
+                <td class="text-center p-1">
+                  <div class="d-none">{{ line_formset.empty_form.DELETE }}</div>
+                  <button type="button"
+                          class="btn btn-outline-danger btn-sm border-0 py-0 delete-row-btn">
+                    ×
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody id="journal-lines-body">
-              {% for row_form in line_formset %}
-                <tr class="journal-line-row">
-                  {% for hidden in row_form.hidden_fields %}{{ hidden }}{% endfor %}
-                  <td class="p-1">
-                    {{ row_form.account }}
-                    {% if row_form.account.errors %}
-                      <div class="text-danger small">
-                        {{ row_form.account.errors|join:", " }}
-                      </div>
-                    {% endif %}
-                  </td>
-                  <td class="p-1">
-                    {{ row_form.description }}
-                  </td>
-                  <td class="p-1">
-                    {{ row_form.debit }}
-                  </td>
-                  <td class="p-1">
-                    {{ row_form.credit }}
-                  </td>
-                  <td class="text-center p-1">
-                    <div class="d-none">{{ row_form.DELETE }}</div>
-                    {% if line_formset.can_delete %}
-                      <button type="button"
-                              class="btn btn-outline-danger btn-sm border-0 py-0 delete-row-btn">
-                        ×
-                      </button>
-                    {% endif %}
-                  </td>
+            </table>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-bordered table-sm align-middle mb-0">
+              <thead class="bg-light">
+                <tr>
+                  <th style="width: 35%">{% trans "الحساب" %}</th>
+                  <th style="width: 25%">{% trans "البيان" %}</th>
+                  <th style="width: 15%" class="text-center">{% trans "مدين" %}</th>
+                  <th style="width: 15%" class="text-center">{% trans "دائن" %}</th>
+                  <th style="width: 10%" class="text-center">{% trans "حذف" %}</th>
                 </tr>
-                {# عرض أخطاء السطر إن وجدت #}
-                {% if row_form.non_field_errors %}
-                  <tr>
-                    <td colspan="5" class="text-danger small">
-                      {{ row_form.non_field_errors }}
+              </thead>
+              <tbody id="journal-lines-body">
+                {% for row_form in line_formset %}
+                  <tr class="journal-line-row">
+                    {% for hidden in row_form.hidden_fields %}{{ hidden }}{% endfor %}
+                    <td class="p-1">
+                      {{ row_form.account }}
+                      {% if row_form.account.errors %}
+                        <div class="text-danger small">
+                          {{ row_form.account.errors|join:", " }}
+                        </div>
+                      {% endif %}
+                    </td>
+                    <td class="p-1">
+                      {{ row_form.description }}
+                    </td>
+                    <td class="p-1">
+                      {{ row_form.debit }}
+                    </td>
+                    <td class="p-1">
+                      {{ row_form.credit }}
+                    </td>
+                    <td class="text-center p-1">
+                      <div class="d-none">{{ row_form.DELETE }}</div>
+                      {% if line_formset.can_delete %}
+                        <button type="button"
+                                class="btn btn-outline-danger btn-sm border-0 py-0 delete-row-btn">
+                          ×
+                        </button>
+                      {% endif %}
                     </td>
                   </tr>
-                {% endif %}
-              {% endfor %}
-            </tbody>
-            <tfoot class="bg-light fw-bold text-dark">
-              <tr>
-                <td colspan="2" class="text-end py-2 pe-3">
-                  {% trans "الإجمالي" %}
-                </td>
-                <td class="text-center py-2 bg-white border">
-                  <span id="total-debit">0.000</span>
-                </td>
-                <td class="text-center py-2 bg-white border">
-                  <span id="total-credit">0.000</span>
-                </td>
-                <td></td>
-              </tr>
-              <tr id="balance-row">
-                <td colspan="2" class="text-end py-2 pe-3 border-0">
-                  {% trans "الفرق" %}
-                </td>
-                <td colspan="2" class="text-center py-2 border-0">
-                  <span id="balance-diff"
-                        class="badge rounded-pill bg-success w-100 py-2 fs-6">
-                    0.000
-                  </span>
-                </td>
-                <td class="border-0"></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+                  {# عرض أخطاء السطر إن وجدت #}
+                  {% if row_form.non_field_errors %}
+                    <tr>
+                      <td colspan="5" class="text-danger small">
+                        {{ row_form.non_field_errors }}
+                      </td>
+                    </tr>
+                  {% endif %}
+                {% endfor %}
+              </tbody>
+              <tfoot class="bg-light fw-bold text-dark">
+                <tr>
+                  <td colspan="2" class="text-end py-2 pe-3">
+                    {% trans "الإجمالي" %}
+                  </td>
+                  <td class="text-center py-2 bg-white border">
+                    <span id="total-debit">0.000</span>
+                  </td>
+                  <td class="text-center py-2 bg-white border">
+                    <span id="total-credit">0.000</span>
+                  </td>
+                  <td></td>
+                </tr>
+                <tr id="balance-row">
+                  <td colspan="2" class="text-end py-2 pe-3 border-0">
+                    {% trans "الفرق" %}
+                  </td>
+                  <td colspan="2" class="text-center py-2 border-0">
+                    <span id="balance-diff"
+                          class="badge rounded-pill bg-success w-100 py-2 fs-6">
+                      0.000
+                    </span>
+                  </td>
+                  <td class="border-0"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
 
-        <div class="mt-4 d-flex justify-content-end">
-          <button type="submit" class="btn btn-primary px-5" id="submit-btn">
-            {% trans "حفظ القيد" %}
-          </button>
-        </div>
+          <div class="mt-4 d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary px-5" id="submit-btn">
+              {% trans "حفظ القيد" %}
+            </button>
+          </div>
 
-      </div>
-    </form>
+        </div>
+      </form>
+
+    </div>
+  </div>
 </div>
 
 <script>

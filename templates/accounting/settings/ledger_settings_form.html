@@ -1,6 +1,10 @@
 {% extends "accounting/base_accounting.html" %}
 {% load i18n %}
 
+{% block title %}
+  {% trans "إعدادات دفتر الأستاذ" %}
+{% endblock %}
+
 {% block accounting_content %}
 <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
   <div>
@@ -11,9 +15,17 @@
   </div>
 </div>
 
-<form method="post" class="card card-body shadow-sm">
+<form method="post" class="card card-body shadow-sm border-0">
   {% csrf_token %}
-  {{ form.non_field_errors }}
+
+  {# أخطاء عامة للفورم إن وجدت #}
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger small mb-3">
+      {% for error in form.non_field_errors %}
+        <div>{{ error }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
 
   {# ===================== قسم دفاتر اليومية ===================== #}
   <div class="mb-4">
@@ -22,82 +34,131 @@
       {% trans "اختر الدفتر المناسب لكل عملية، مثل القيود اليدوية والمبيعات والمشتريات والبنك والصندوق." %}
     </p>
 
-    <div class="row g-3">
+    <div class="row g-3 small">
       <div class="col-md-6">
-        <label class="form-label" for="{{ form.default_manual_journal.id_for_label }}">
+        <label class="form-label form-label-sm fw-semibold mb-1"
+               for="{{ form.default_manual_journal.id_for_label }}">
           {{ form.default_manual_journal.label }}
         </label>
         {{ form.default_manual_journal }}
         {% if form.default_manual_journal.help_text %}
           <div class="form-text">{{ form.default_manual_journal.help_text }}</div>
         {% endif %}
-        {{ form.default_manual_journal.errors }}
+        {% if form.default_manual_journal.errors %}
+          <div class="text-danger mt-1">
+            {% for error in form.default_manual_journal.errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
 
       <div class="col-md-6">
-        <label class="form-label" for="{{ form.sales_journal.id_for_label }}">
+        <label class="form-label form-label-sm fw-semibold mb-1"
+               for="{{ form.sales_journal.id_for_label }}">
           {{ form.sales_journal.label }}
         </label>
         {{ form.sales_journal }}
         {% if form.sales_journal.help_text %}
           <div class="form-text">{{ form.sales_journal.help_text }}</div>
         {% endif %}
-        {{ form.sales_journal.errors }}
+        {% if form.sales_journal.errors %}
+          <div class="text-danger mt-1">
+            {% for error in form.sales_journal.errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
 
       <div class="col-md-6">
-        <label class="form-label" for="{{ form.purchase_journal.id_for_label }}">
+        <label class="form-label form-label-sm fw-semibold mb-1"
+               for="{{ form.purchase_journal.id_for_label }}">
           {{ form.purchase_journal.label }}
         </label>
         {{ form.purchase_journal }}
         {% if form.purchase_journal.help_text %}
           <div class="form-text">{{ form.purchase_journal.help_text }}</div>
         {% endif %}
-        {{ form.purchase_journal.errors }}
+        {% if form.purchase_journal.errors %}
+          <div class="text-danger mt-1">
+            {% for error in form.purchase_journal.errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
 
       <div class="col-md-6">
-        <label class="form-label" for="{{ form.cash_journal.id_for_label }}">
+        <label class="form-label form-label-sm fw-semibold mb-1"
+               for="{{ form.cash_journal.id_for_label }}">
           {{ form.cash_journal.label }}
         </label>
         {{ form.cash_journal }}
         {% if form.cash_journal.help_text %}
           <div class="form-text">{{ form.cash_journal.help_text }}</div>
         {% endif %}
-        {{ form.cash_journal.errors }}
+        {% if form.cash_journal.errors %}
+          <div class="text-danger mt-1">
+            {% for error in form.cash_journal.errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
 
       <div class="col-md-6">
-        <label class="form-label" for="{{ form.bank_journal.id_for_label }}">
+        <label class="form-label form-label-sm fw-semibold mb-1"
+               for="{{ form.bank_journal.id_for_label }}">
           {{ form.bank_journal.label }}
         </label>
         {{ form.bank_journal }}
         {% if form.bank_journal.help_text %}
           <div class="form-text">{{ form.bank_journal.help_text }}</div>
         {% endif %}
-        {{ form.bank_journal.errors }}
+        {% if form.bank_journal.errors %}
+          <div class="text-danger mt-1">
+            {% for error in form.bank_journal.errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
 
       <div class="col-md-6">
-        <label class="form-label" for="{{ form.opening_balance_journal.id_for_label }}">
+        <label class="form-label form-label-sm fw-semibold mb-1"
+               for="{{ form.opening_balance_journal.id_for_label }}">
           {{ form.opening_balance_journal.label }}
         </label>
         {{ form.opening_balance_journal }}
         {% if form.opening_balance_journal.help_text %}
           <div class="form-text">{{ form.opening_balance_journal.help_text }}</div>
         {% endif %}
-        {{ form.opening_balance_journal.errors }}
+        {% if form.opening_balance_journal.errors %}
+          <div class="text-danger mt-1">
+            {% for error in form.opening_balance_journal.errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
 
       <div class="col-md-6">
-        <label class="form-label" for="{{ form.closing_journal.id_for_label }}">
+        <label class="form-label form-label-sm fw-semibold mb-1"
+               for="{{ form.closing_journal.id_for_label }}">
           {{ form.closing_journal.label }}
         </label>
         {{ form.closing_journal }}
         {% if form.closing_journal.help_text %}
           <div class="form-text">{{ form.closing_journal.help_text }}</div>
         {% endif %}
-        {{ form.closing_journal.errors }}
+        {% if form.closing_journal.errors %}
+          <div class="text-danger mt-1">
+            {% for error in form.closing_journal.errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -105,55 +166,83 @@
   <hr class="my-3">
 
   {# ===================== قسم الحسابات الافتراضية للمبيعات ===================== #}
-  <div class="mb-3">
+  <div class="mb-2">
     <h5 class="h6 mb-2">{% trans "الحسابات الافتراضية للمبيعات والدفعات المقدّمة" %}</h5>
     <p class="text-muted small mb-3">
       {% trans "تُستخدم هذه الحسابات عند ترحيل فواتير المبيعات والدفعات المقدّمة إلى دفتر الأستاذ بشكل تلقائي." %}
     </p>
 
-    <div class="row g-3">
+    <div class="row g-3 small">
       <div class="col-md-6">
-        <label class="form-label" for="{{ form.sales_receivable_account.id_for_label }}">
+        <label class="form-label form-label-sm fw-semibold mb-1"
+               for="{{ form.sales_receivable_account.id_for_label }}">
           {{ form.sales_receivable_account.label }}
         </label>
         {{ form.sales_receivable_account }}
         {% if form.sales_receivable_account.help_text %}
           <div class="form-text">{{ form.sales_receivable_account.help_text }}</div>
         {% endif %}
-        {{ form.sales_receivable_account.errors }}
+        {% if form.sales_receivable_account.errors %}
+          <div class="text-danger mt-1">
+            {% for error in form.sales_receivable_account.errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
 
       <div class="col-md-6">
-        <label class="form-label" for="{{ form.sales_revenue_0_account.id_for_label }}">
+        <label class="form-label form-label-sm fw-semibold mb-1"
+               for="{{ form.sales_revenue_0_account.id_for_label }}">
           {{ form.sales_revenue_0_account.label }}
         </label>
         {{ form.sales_revenue_0_account }}
         {% if form.sales_revenue_0_account.help_text %}
           <div class="form-text">{{ form.sales_revenue_0_account.help_text }}</div>
         {% endif %}
-        {{ form.sales_revenue_0_account.errors }}
+        {% if form.sales_revenue_0_account.errors %}
+          <div class="text-danger mt-1">
+            {% for error in form.sales_revenue_0_account.errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
 
       <div class="col-md-6">
-        <label class="form-label" for="{{ form.sales_vat_output_account.id_for_label }}">
+        <label class="form-label form-label-sm fw-semibold mb-1"
+               for="{{ form.sales_vat_output_account.id_for_label }}">
           {{ form.sales_vat_output_account.label }}
         </label>
         {{ form.sales_vat_output_account }}
         {% if form.sales_vat_output_account.help_text %}
           <div class="form-text">{{ form.sales_vat_output_account.help_text }}</div>
         {% endif %}
-        {{ form.sales_vat_output_account.errors }}
+        {% if form.sales_vat_output_account.errors %}
+          <div class="text-danger mt-1">
+            {% for error in form.sales_vat_output_account.errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
 
       <div class="col-md-6">
-        <label class="form-label" for="{{ form.sales_advance_account.id_for_label }}">
+        <label class="form-label form-label-sm fw-semibold mb-1"
+               for="{{ form.sales_advance_account.id_for_label }}">
           {{ form.sales_advance_account.label }}
         </label>
         {{ form.sales_advance_account }}
         {% if form.sales_advance_account.help_text %}
           <div class="form-text">{{ form.sales_advance_account.help_text }}</div>
         {% endif %}
-        {{ form.sales_advance_account.errors }}
+        {% if form.sales_advance_account.errors %}
+          <div class="text-danger mt-1">
+            {% for error in form.sales_advance_account.errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
     </div>
   </div>

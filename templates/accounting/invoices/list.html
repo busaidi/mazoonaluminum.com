@@ -2,9 +2,13 @@
 {% load i18n humanize %}
 
 {% block title %}
-  {% if invoice_type == 'sales' %}{% trans "فواتير المبيعات" %}
-  {% elif invoice_type == 'purchase' %}{% trans "فواتير المشتريات" %}
-  {% else %}{% trans "سجل الفواتير" %}{% endif %}
+  {% if invoice_type == 'sales' %}
+    {% trans "فواتير المبيعات" %}
+  {% elif invoice_type == 'purchase' %}
+    {% trans "فواتير المشتريات" %}
+  {% else %}
+    {% trans "سجل الفواتير" %}
+  {% endif %}
 {% endblock %}
 
 {% block accounting_content %}
@@ -13,25 +17,35 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
   <div>
     <h4 class="fw-bold text-dark mb-1">
-      {% if invoice_type == 'sales' %}{% trans "فواتير المبيعات" %}
-      {% elif invoice_type == 'purchase' %}{% trans "فواتير المشتريات" %}
-      {% else %}{% trans "سجل الفواتير" %}{% endif %}
+      {% if invoice_type == 'sales' %}
+        {% trans "فواتير المبيعات" %}
+      {% elif invoice_type == 'purchase' %}
+        {% trans "فواتير المشتريات" %}
+      {% else %}
+        {% trans "سجل الفواتير" %}
+      {% endif %}
     </h4>
-    <p class="text-muted small mb-0">{% trans "عرض ومتابعة كافة الفواتير وحالات الدفع." %}</p>
+    <p class="text-muted small mb-0">
+      {% trans "عرض ومتابعة كافة الفواتير وحالات الدفع." %}
+    </p>
   </div>
-  
-  <div>
+
+  <div class="d-flex gap-2">
     {% if invoice_type == 'sales' %}
-        <a href="{% url 'accounting:sales_invoice_create' %}" class="btn btn-dark btn-sm px-3">
-            {% trans "فاتورة مبيعات جديدة" %}
-        </a>
+      <a href="{% url 'accounting:sales_invoice_create' %}" class="btn btn-dark btn-sm px-3">
+        {% trans "فاتورة مبيعات جديدة" %}
+      </a>
     {% elif invoice_type == 'purchase' %}
-        <a href="{% url 'accounting:purchase_invoice_create' %}" class="btn btn-dark btn-sm px-3">
-            {% trans "فاتورة مشتريات جديدة" %}
-        </a>
+      <a href="{% url 'accounting:purchase_invoice_create' %}" class="btn btn-dark btn-sm px-3">
+        {% trans "فاتورة مشتريات جديدة" %}
+      </a>
     {% else %}
-        <a href="{% url 'accounting:sales_invoice_create' %}" class="btn btn-outline-dark btn-sm">{% trans "مبيعات" %}</a>
-        <a href="{% url 'accounting:purchase_invoice_create' %}" class="btn btn-outline-dark btn-sm">{% trans "مشتريات" %}</a>
+      <a href="{% url 'accounting:sales_invoice_create' %}" class="btn btn-outline-dark btn-sm">
+        {% trans "مبيعات" %}
+      </a>
+      <a href="{% url 'accounting:purchase_invoice_create' %}" class="btn btn-outline-dark btn-sm">
+        {% trans "مشتريات" %}
+      </a>
     {% endif %}
   </div>
 </div>
@@ -40,15 +54,30 @@
 <div class="card border-0 shadow-sm mb-4">
   <div class="card-body p-2">
     <form method="get" class="d-flex align-items-center gap-2">
-        <label class="small fw-bold text-muted text-nowrap">{% trans "تصفية الحالة:" %}</label>
-        <select name="status" class="form-select form-select-sm" style="max-width: 200px;" onchange="this.form.submit()">
-            <option value="">{% trans "الكل" %}</option>
-            <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>{% trans "مسودة" %}</option>
-            <option value="sent" {% if status_filter == 'sent' %}selected{% endif %}>{% trans "مرسلة" %}</option>
-            <option value="partially_paid" {% if status_filter == 'partially_paid' %}selected{% endif %}>{% trans "مدفوعة جزئياً" %}</option>
-            <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>{% trans "مدفوعة" %}</option>
-            <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>{% trans "ملغاة" %}</option>
-        </select>
+      <label class="small fw-bold text-muted text-nowrap">
+        {% trans "تصفية الحالة:" %}
+      </label>
+      <select name="status"
+              class="form-select form-select-sm"
+              style="max-width: 200px;"
+              onchange="this.form.submit()">
+        <option value="">{% trans "الكل" %}</option>
+        <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>
+          {% trans "مسودة" %}
+        </option>
+        <option value="sent" {% if status_filter == 'sent' %}selected{% endif %}>
+          {% trans "مرسلة" %}
+        </option>
+        <option value="partially_paid" {% if status_filter == 'partially_paid' %}selected{% endif %}>
+          {% trans "مدفوعة جزئياً" %}
+        </option>
+        <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>
+          {% trans "مدفوعة" %}
+        </option>
+        <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>
+          {% trans "ملغاة" %}
+        </option>
+      </select>
     </form>
   </div>
 </div>
@@ -79,13 +108,13 @@
 
           <tr onclick="window.location='{{ detail_url }}';" style="cursor: pointer;">
             <td>
-                <span class="fw-bold text-dark">{{ inv.display_number }}</span>
-                {% if not invoice_type %}
-                    <br>
-                    <span class="badge bg-light text-secondary border fw-normal" style="font-size: 0.65rem;">
-                      {{ inv.get_type_display }}
-                    </span>
-                {% endif %}
+              <span class="fw-bold text-dark">{{ inv.display_number }}</span>
+              {% if not invoice_type %}
+                <br>
+                <span class="badge bg-light text-secondary border fw-normal" style="font-size: 0.65rem;">
+                  {{ inv.get_type_display }}
+                </span>
+              {% endif %}
             </td>
             <td>
               {% if inv.customer %}
@@ -95,39 +124,51 @@
               {% endif %}
             </td>
             <td class="text-muted small">
-                {{ inv.issued_at|date:"Y-m-d" }}
+              {{ inv.issued_at|date:"Y-m-d" }}
             </td>
             <td class="text-end fw-bold text-dark">
-                {{ inv.total_amount|intcomma }}
+              {{ inv.total_amount|intcomma }}
             </td>
             <td class="text-end text-success small">
-                {{ inv.allocated_amount|intcomma }}
+              {{ inv.allocated_amount|intcomma }}
             </td>
             <td class="text-end">
-                {% if inv.balance > 0 %}
-                    <span class="fw-bold text-danger">{{ inv.balance|intcomma }}</span>
-                {% else %}
-                    <span class="text-muted">-</span>
-                {% endif %}
+              {% if inv.balance > 0 %}
+                <span class="fw-bold text-danger">
+                  {{ inv.balance|intcomma }}
+                </span>
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
             </td>
             <td class="text-center">
-                {% if inv.status == 'paid' %}
-                    <span class="badge bg-dark">{% trans "مدفوعة" %}</span>
-                {% elif inv.status == 'partially_paid' %}
-                    <span class="badge bg-warning text-dark">{% trans "جزئي" %}</span>
-                {% elif inv.status == 'sent' %}
-                    <span class="badge bg-primary">{% trans "مرسلة" %}</span>
-                {% elif inv.status == 'cancelled' %}
-                    <span class="badge bg-danger">{% trans "ملغاة" %}</span>
-                {% else %}
-                    <span class="badge bg-secondary">{% trans "مسودة" %}</span>
-                {% endif %}
+              {% if inv.status == 'paid' %}
+                <span class="badge bg-dark">
+                  {% trans "مدفوعة" %}
+                </span>
+              {% elif inv.status == 'partially_paid' %}
+                <span class="badge bg-warning text-dark">
+                  {% trans "جزئي" %}
+                </span>
+              {% elif inv.status == 'sent' %}
+                <span class="badge bg-primary">
+                  {% trans "مرسلة" %}
+                </span>
+              {% elif inv.status == 'cancelled' %}
+                <span class="badge bg-danger">
+                  {% trans "ملغاة" %}
+                </span>
+              {% else %}
+                <span class="badge bg-secondary">
+                  {% trans "مسودة" %}
+                </span>
+              {% endif %}
             </td>
           </tr>
         {% empty %}
           <tr>
             <td colspan="7" class="text-center p-5 text-muted">
-                {% trans "لا توجد فواتير مطابقة للعرض." %}
+              {% trans "لا توجد فواتير مطابقة للعرض." %}
             </td>
           </tr>
         {% endfor %}
@@ -137,33 +178,35 @@
 
   {# Pagination #}
   {% if is_paginated %}
-  <div class="card-footer bg-white border-top py-3">
-    <nav>
+    <div class="card-footer bg-white border-top py-3">
+      <nav>
         <ul class="pagination justify-content-center mb-0 small">
-            {% if page_obj.has_previous %}
-                <li class="page-item">
-                  <a class="page-link text-dark"
-                     href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}">
-                    {% trans "السابق" %}
-                  </a>
-                </li>
-            {% endif %}
-            <li class="page-item disabled">
-              <span class="page-link text-muted">
-                {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
-              </span>
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link text-dark"
+                 href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}">
+                {% trans "السابق" %}
+              </a>
             </li>
-            {% if page_obj.has_next %}
-                <li class="page-item">
-                  <a class="page-link text-dark"
-                     href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}">
-                    {% trans "التالي" %}
-                  </a>
-                </li>
-            {% endif %}
+          {% endif %}
+
+          <li class="page-item disabled">
+            <span class="page-link text-muted">
+              {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+            </span>
+          </li>
+
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link text-dark"
+                 href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}">
+                {% trans "التالي" %}
+              </a>
+            </li>
+          {% endif %}
         </ul>
-    </nav>
-  </div>
+      </nav>
+    </div>
   {% endif %}
 </div>
 

@@ -40,26 +40,36 @@
 
         {% for field in form %}
           <div class="mb-3">
-            <label class="form-label form-label-sm fw-semibold mb-1"
-                   for="{{ field.id_for_label }}">
-              {{ field.label }}
-              {% if field.field.required %}
-                <span class="text-danger">*</span>
-              {% endif %}
-            </label>
 
-            {# حقل تشيك بوكس نعطيه ستايل مختلف #}
             {% if field.field.widget.input_type == "checkbox" %}
               <div class="form-check">
                 {{ field }}
-                <label class="form-check-label ms-1" for="{{ field.id_for_label }}">
-                  {{ field.help_text }}
+                <label class="form-check-label ms-1"
+                       for="{{ field.id_for_label }}">
+                  {{ field.label }}
+                  {% if field.field.required %}
+                    <span class="text-danger">*</span>
+                  {% endif %}
                 </label>
               </div>
+              {% if field.help_text %}
+                <div class="form-text small text-muted mt-1">
+                  {{ field.help_text }}
+                </div>
+              {% endif %}
             {% else %}
+              <label class="form-label form-label-sm fw-semibold mb-1"
+                     for="{{ field.id_for_label }}">
+                {{ field.label }}
+                {% if field.field.required %}
+                  <span class="text-danger">*</span>
+                {% endif %}
+              </label>
               {{ field }}
               {% if field.help_text %}
-                <div class="form-text small text-muted">{{ field.help_text }}</div>
+                <div class="form-text small text-muted">
+                  {{ field.help_text }}
+                </div>
               {% endif %}
             {% endif %}
 

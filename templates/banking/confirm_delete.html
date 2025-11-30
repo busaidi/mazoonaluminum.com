@@ -1,6 +1,10 @@
 {% extends "accounting/base_accounting.html" %}
 {% load i18n %}
 
+{% block title %}
+  {% trans "تأكيد الحذف" %}
+{% endblock %}
+
 {% block accounting_content %}
 
 <div class="row justify-content-center">
@@ -14,9 +18,13 @@
         </h2>
 
         <p class="mb-3">
-          {% blocktrans with obj=object %}
-          هل أنت متأكد أنك تريد حذف هذا السجل؟
-          {% endblocktrans %}
+          {% if object.name %}
+            {% blocktrans with name=object.name %}
+            هل أنت متأكد أنك تريد حذف السجل: "{{ name }}"؟
+            {% endblocktrans %}
+          {% else %}
+            {% trans "هل أنت متأكد أنك تريد حذف هذا السجل؟" %}
+          {% endif %}
         </p>
 
         <div class="alert alert-warning small">
@@ -24,8 +32,8 @@
             {# في حالة حذف كشف بنك #}
             {% trans "سيتم حذف هذا الكشف وجميع البيانات المرتبطة به. لا يمكن التراجع عن هذه العملية." %}
           {% else %}
-            {# في حالة حذف حساب بنكي #}
-            {% trans "سيتم حذف هذا الحساب البنكي. تأكد من عدم وجود اعتمادات عليه قبل المتابعة. لا يمكن التراجع عن هذه العملية." %}
+            {# في حالة حذف حساب بنكي أو كيان آخر #}
+            {% trans "سيتم حذف هذا الحساب البنكي أو السجل المحدد. تأكد من عدم وجود اعتمادات عليه قبل المتابعة. لا يمكن التراجع عن هذه العملية." %}
           {% endif %}
         </div>
 

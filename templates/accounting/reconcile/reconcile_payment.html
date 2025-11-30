@@ -7,10 +7,20 @@
 
 {% block accounting_content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+{# ====== HEADER ====== #}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
     <h1 class="h5 fw-bold mb-1">
       {% trans "تسوية الدفعة" %} {{ payment.display_number }}
+      {% if payment.type == "receipt" %}
+        <span class="badge bg-success-subtle text-success border border-success-subtle ms-1">
+          {% trans "سند قبض" %}
+        </span>
+      {% else %}
+        <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">
+          {% trans "سند صرف" %}
+        </span>
+      {% endif %}
     </h1>
     <p class="text-muted small mb-0">
       {% if payment.contact %}
@@ -25,18 +35,22 @@
   <div class="d-flex flex-wrap gap-2">
     <a href="{% url 'accounting:payment_detail' payment.pk %}"
        class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-right-circle"></i>
       {% trans "رجوع للسند" %}
     </a>
   </div>
 </div>
 
 <div class="row g-3">
+
+  {# ====== SUMMARY CARD ====== #}
   <div class="col-lg-4">
-    <div class="card border-0 shadow-sm mb-3">
+    <div class="card border-0 shadow-sm h-100">
       <div class="card-body small">
+
         <h2 class="h6 fw-semibold mb-3">{% trans "ملخص الدفعة" %}</h2>
 
-        <dl class="row mb-0">
+        <dl class="row mb-3">
           <dt class="col-5 text-muted">{% trans "رقم السند" %}</dt>
           <dd class="col-7 fw-semibold">{{ payment.display_number }}</dd>
 
@@ -62,22 +76,51 @@
 
           <dt class="col-5 text-muted">{% trans "المبلغ المخصص" %}</dt>
           <dd class="col-7 fw-semibold">
-            {{ payment.allocated_amount }} {{ payment.currency }}
+            {{ payment.allocated_amount|default:"0.000" }} {{ payment.currency }}
           </dd>
 
           <dt class="col-5 text-muted">{% trans "المبلغ المتبقي" %}</dt>
           <dd class="col-7 fw-semibold">
-            {{ payment.unallocated_amount }} {{ payment.currency }}
+            {% if payment.unallocated_amount > 0 %}
+              <span class="text-danger">{{ payment.unallocated_amount }} {{ payment.currency }}</span>
+            {% else %}
+              <span class="text-success">{{ payment.unallocated_amount }} {{ payment.currency }}</span>
+            {% endif %}
           </dd>
         </dl>
+
+        {% if payment.unallocated_amount <= 0 %}
+          <div class="alert alert-success small mb-0">
+            {% trans "تم تخصيص كامل مبلغ الدفعة، لا يوجد رصيد متبقي للتسوية." %}
+          </div>
+        {% else %}
+          <div class="alert alert-info small mb-0">
+            {% trans "أدخل مبالغ في الأعمدة أدناه لتوزيع الرصيد المتبقي على الفواتير المفتوحة." %}
+          </div>
+        {% endif %}
+
       </div>
     </div>
   </div>
 
+  {# ====== INVOICE RECONCILIATION TABLE ====== #}
   <div class="col-lg-8">
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-body small">
-        <h2 class="h6 fw-semibold mb-3">{% trans "تسوية مع الفواتير المفتوحة" %}</h2>
+
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <h2 class="h6 fw-semibold mb-0">
+            {% trans "تسوية مع الفواتير المفتوحة" %}
+          </h2>
+          {% if payment.unallocated_amount > 0 and invoice_rows %}
+            <span class="badge bg-light text-muted border">
+              {% trans "الرصيد المتاح للتسوية" %}:
+              <span class="fw-semibold text-dark">
+                {{ payment.unallocated_amount }} {{ payment.currency }}
+              </span>
+            </span>
+          {% endif %}
+        </div>
 
         <form method="post" class="vstack gap-3">
           {% csrf_token %}
@@ -95,51 +138,71 @@
                 <thead class="table-light">
                   <tr>
                     <th>{% trans "الفاتورة" %}</th>
-                    <th>{% trans "تاريخ الفاتورة" %}</th>
-                    <th class="text-end">{% trans "الإجمالي" %}</th>
-                    <th class="text-end">{% trans "المخصص سابقًا" %}</th>
-                    <th class="text-end">{% trans "الرصيد" %}</th>
-                    <th style="width: 160px;" class="text-end">
+                    <th class="text-nowrap">{% trans "تاريخ الفاتورة" %}</th>
+                    <th class="text-end text-nowrap">{% trans "الإجمالي" %}</th>
+                    <th class="text-end text-nowrap">{% trans "المخصص سابقًا" %}</th>
+                    <th class="text-end text-nowrap">{% trans "الرصيد" %}</th>
+                    <th style="width: 170px;" class="text-end text-nowrap">
                       {% trans "المبلغ للتسوية" %}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                {% for row in invoice_rows %}
-                  {% with invoice=row.invoice field=row.field %}
-                    <tr>
-                      <td>
-                        {{ invoice.display_number }}<br>
-                        <span class="badge bg-light text-muted border small">
-                          {{ invoice.get_status_display }}
-                        </span>
-                      </td>
-                      <td>{{ invoice.issued_at|date:"Y-m-d" }}</td>
-                      <td class="text-end">{{ invoice.total_amount }}</td>
-                      <td class="text-end">
-                        {{ invoice.allocated_amount|default:"0.000" }}
-                      </td>
-                      <td class="text-end">{{ invoice.balance }}</td>
-                      <td class="text-end">
-                        <div class="text-end">
-                          {{ field }}
-                          {% if field.errors %}
-                            <div class="text-danger small">{{ field.errors }}</div>
+                  {% for row in invoice_rows %}
+                    {% with invoice=row.invoice field=row.field %}
+                      <tr>
+                        <td>
+                          <div class="fw-semibold">
+                            {{ invoice.display_number }}
+                          </div>
+                          <div class="small text-muted">
+                            {{ invoice.get_type_display }}
+                          </div>
+                        </td>
+                        <td class="text-nowrap">
+                          {{ invoice.issued_at|date:"Y-m-d" }}
+                        </td>
+                        <td class="text-end text-nowrap">
+                          {{ invoice.total_amount }}
+                        </td>
+                        <td class="text-end text-nowrap">
+                          {{ invoice.allocated_amount|default:"0.000" }}
+                        </td>
+                        <td class="text-end text-nowrap">
+                          {% if invoice.balance > 0 %}
+                            <span class="text-danger fw-semibold">
+                              {{ invoice.balance }}
+                            </span>
+                          {% else %}
+                            <span class="text-muted">0.000</span>
                           {% endif %}
-                        </div>
-                      </td>
-                    </tr>
-                  {% endwith %}
-                {% endfor %}
+                        </td>
+                        <td class="text-end">
+                          <div class="text-end">
+                            {{ field }}
+                            {% if field.errors %}
+                              <div class="text-danger small mt-1">
+                                {{ field.errors }}
+                              </div>
+                            {% endif %}
+                          </div>
+                        </td>
+                      </tr>
+                    {% endwith %}
+                  {% endfor %}
                 </tbody>
               </table>
             </div>
 
-            <div class="text-end mt-3">
-              <button type="submit" class="btn btn-primary btn-sm">
+            <div class="d-flex justify-content-end mt-3">
+              <button type="submit"
+                      class="btn btn-primary btn-sm px-4"
+                      {% if payment.unallocated_amount <= 0 %}disabled{% endif %}>
+                <i class="bi bi-check2-circle"></i>
                 {% trans "حفظ التسوية" %}
               </button>
             </div>
+
           {% else %}
             <p class="text-muted mb-0">
               {% trans "لا توجد فواتير مفتوحة لهذا الطرف يمكن تسوية هذه الدفعة معها." %}

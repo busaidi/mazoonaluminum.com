@@ -12,164 +12,180 @@
 {% block accounting_content %}
 <div class="py-4">
 
-    {# --- Header --- #}
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <div>
-        <h4 class="fw-bold text-dark mb-1">
-          {% if form.instance.pk %}
-            {% trans "تعديل الفاتورة" %} <span class="text-muted">{{ form.instance.display_number }}</span>
-          {% else %}
-            {% if invoice_type == 'purchase' %}
-              {% trans "فاتورة مشتريات جديدة" %}
-            {% elif invoice_type == 'sales' %}
-              {% trans "فاتورة مبيعات جديدة" %}
-            {% else %}
-              {% trans "فاتورة جديدة" %}
-            {% endif %}
-          {% endif %}
-        </h4>
-        <p class="text-muted small mb-0">
-          {% trans "الرجاء تعبئة البيانات بدقة. الحقول المميزة بعلامة * إجبارية." %}
-        </p>
-      </div>
-      <div>
-        {% if invoice_type == 'purchase' %}
-          <a href="{% url 'accounting:purchase_invoice_list' %}" class="btn btn-outline-secondary btn-sm">
-            {% trans "إلغاء" %}
-          </a>
+  {# --- Header --- #}
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="fw-bold text-dark mb-1">
+        {% if form.instance.pk %}
+          {% trans "تعديل الفاتورة" %} <span class="text-muted">{{ form.instance.display_number }}</span>
         {% else %}
-          <a href="{% url 'accounting:sales_invoice_list' %}" class="btn btn-outline-secondary btn-sm">
-            {% trans "إلغاء" %}
-          </a>
-        {% endif %}
-      </div>
-    </div>
-
-    {# --- Form Card --- #}
-    <div class="card border-0 shadow-sm">
-      <div class="card-body p-4">
-        
-        <form method="post" novalidate>
-          {% csrf_token %}
-
-          {% if form.non_field_errors %}
-            <div class="alert alert-danger mb-4">
-              {% for error in form.non_field_errors %}
-                <div>{{ error }}</div>
-              {% endfor %}
-            </div>
+          {% if invoice_type == 'purchase' %}
+            {% trans "فاتورة مشتريات جديدة" %}
+          {% elif invoice_type == 'sales' %}
+            {% trans "فاتورة مبيعات جديدة" %}
+          {% else %}
+            {% trans "فاتورة جديدة" %}
           {% endif %}
-
-          {# القسم الأول: المعلومات الأساسية #}
-          <h6 class="text-uppercase text-muted small fw-bold mb-3">{% trans "بيانات أساسية" %}</h6>
-          <div class="row g-3 mb-4">
-            <div class="col-md-6">
-              <label class="form-label small text-muted mb-1">{{ form.customer.label }}</label>
-              {{ form.customer }}
-              {{ form.customer.errors }}
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label small text-muted mb-1">{{ form.status.label }}</label>
-              {{ form.status }}
-              {{ form.status.errors }}
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label small text-muted mb-1">{{ form.issued_at.label }}</label>
-              {{ form.issued_at }}
-              {{ form.issued_at.errors }}
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label small text-muted mb-1">{{ form.due_date.label }}</label>
-              {{ form.due_date }}
-              {{ form.due_date.errors }}
-            </div>
-          </div>
-
-          <hr class="my-4 text-muted opacity-25">
-
-          {# القسم الثاني: البنود #}
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="text-uppercase text-muted small fw-bold mb-0">{% trans "بنود الفاتورة" %}</h6>
-          </div>
-
-          {{ item_formset.management_form }}
-          
-          <div class="table-responsive mb-3">
-            <table class="table table-bordered table-sm align-middle invoice-items-table">
-              <thead class="bg-light">
-                <tr>
-                  <th style="width: 25%;">{% trans "المنتج" %}</th>
-                  <th style="width: 30%;">{% trans "الوصف" %}</th>
-                  <th style="width: 10%;" class="text-center">{% trans "الكمية" %}</th>
-                  <th style="width: 15%;" class="text-center">{% trans "السعر" %}</th>
-                  <th style="width: 15%;" class="text-end">{% trans "الإجمالي" %}</th>
-                  <th style="width: 5%;" class="text-center">x</th>
-                </tr>
-              </thead>
-              <tbody id="invoice-items-body">
-                {% for f in item_formset %}
-                  {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
-                  <tr class="invoice-item-row">
-                    <td>
-                      {{ f.product }}
-                      {{ f.product.errors }}
-                    </td>
-                    <td>
-                      {{ f.description }}
-                      {{ f.description.errors }}
-                    </td>
-                    <td>
-                      {{ f.quantity }}
-                      {{ f.quantity.errors }}
-                    </td>
-                    <td>
-                      {{ f.unit_price }}
-                      {{ f.unit_price.errors }}
-                    </td>
-                    <td class="text-end bg-light fw-bold text-dark">
-                      <span class="invoice-line-total">0.000</span>
-                    </td>
-                    <td class="text-center">
-                      {% if item_formset.can_delete %}
-                        {{ f.DELETE }}
-                      {% endif %}
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-
-          <button type="button" class="btn btn-sm btn-outline-dark mb-4" id="add-item-row">
-            + {% trans "إضافة بند" %}
-          </button>
-
-          <hr class="my-4 text-muted opacity-25">
-
-          {# القسم الثالث: ملاحظات وشروط #}
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label small text-muted mb-1">{{ form.description.label }}</label>
-              {{ form.description }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label small text-muted mb-1">{{ form.terms.label }}</label>
-              {{ form.terms }}
-            </div>
-          </div>
-
-          <div class="mt-5 d-flex justify-content-end gap-2">
-            <button type="submit" class="btn btn-primary px-4">
-              {% trans "حفظ البيانات" %}
-            </button>
-          </div>
-
-        </form>
-      </div>
+        {% endif %}
+      </h4>
+      <p class="text-muted small mb-0">
+        {% trans "الرجاء تعبئة البيانات بدقة. الحقول المميزة بعلامة * إجبارية." %}
+      </p>
     </div>
+    <div>
+      {% if invoice_type == 'purchase' %}
+        <a href="{% url 'accounting:purchase_invoice_list' %}" class="btn btn-outline-secondary btn-sm">
+          {% trans "إلغاء" %}
+        </a>
+      {% else %}
+        <a href="{% url 'accounting:sales_invoice_list' %}" class="btn btn-outline-secondary btn-sm">
+          {% trans "إلغاء" %}
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {# --- Form Card --- #}
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger mb-4">
+            {% for error in form.non_field_errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {# القسم الأول: المعلومات الأساسية #}
+        <h6 class="text-uppercase text-muted small fw-bold mb-3">
+          {% trans "بيانات أساسية" %}
+        </h6>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="form-label small text-muted mb-1">
+              {{ form.customer.label }}
+            </label>
+            {{ form.customer }}
+            {{ form.customer.errors }}
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small text-muted mb-1">
+              {{ form.status.label }}
+            </label>
+            {{ form.status }}
+            {{ form.status.errors }}
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small text-muted mb-1">
+              {{ form.issued_at.label }}
+            </label>
+            {{ form.issued_at }}
+            {{ form.issued_at.errors }}
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small text-muted mb-1">
+              {{ form.due_date.label }}
+            </label>
+            {{ form.due_date }}
+            {{ form.due_date.errors }}
+          </div>
+        </div>
+
+        <hr class="my-4 text-muted opacity-25">
+
+        {# القسم الثاني: البنود #}
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="text-uppercase text-muted small fw-bold mb-0">
+            {% trans "بنود الفاتورة" %}
+          </h6>
+        </div>
+
+        {{ item_formset.management_form }}
+
+        <div class="table-responsive mb-3">
+          <table class="table table-bordered table-sm align-middle">
+            <thead class="bg-light">
+              <tr>
+                <th style="width: 25%;">{% trans "المنتج" %}</th>
+                <th style="width: 30%;">{% trans "الوصف" %}</th>
+                <th style="width: 10%;" class="text-center">{% trans "الكمية" %}</th>
+                <th style="width: 15%;" class="text-center">{% trans "السعر" %}</th>
+                <th style="width: 15%;" class="text-end">{% trans "الإجمالي" %}</th>
+                <th style="width: 5%;" class="text-center">x</th>
+              </tr>
+            </thead>
+            <tbody id="invoice-items-body">
+              {% for f in item_formset %}
+                {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+                <tr class="invoice-item-row">
+                  <td>
+                    {{ f.product }}
+                    {{ f.product.errors }}
+                  </td>
+                  <td>
+                    {{ f.description }}
+                    {{ f.description.errors }}
+                  </td>
+                  <td>
+                    {{ f.quantity }}
+                    {{ f.quantity.errors }}
+                  </td>
+                  <td>
+                    {{ f.unit_price }}
+                    {{ f.unit_price.errors }}
+                  </td>
+                  <td class="text-end bg-light fw-bold text-dark">
+                    <span class="invoice-line-total">0.000</span>
+                  </td>
+                  <td class="text-center">
+                    {% if item_formset.can_delete %}
+                      {{ f.DELETE }}
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <button type="button" class="btn btn-sm btn-outline-dark mb-4" id="add-item-row">
+          + {% trans "إضافة بند" %}
+        </button>
+
+        <hr class="my-4 text-muted opacity-25">
+
+        {# القسم الثالث: ملاحظات وشروط #}
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label small text-muted mb-1">
+              {{ form.description.label }}
+            </label>
+            {{ form.description }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small text-muted mb-1">
+              {{ form.terms.label }}
+            </label>
+            {{ form.terms }}
+          </div>
+        </div>
+
+        <div class="mt-5 d-flex justify-content-end gap-2">
+          <button type="submit" class="btn btn-primary px-4">
+            {% trans "حفظ البيانات" %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
 
 </div>
 

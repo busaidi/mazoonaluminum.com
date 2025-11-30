@@ -75,7 +75,6 @@
         {% trans "تعديل الفاتورة" %}
       </a>
 
-
       <a href="{{ print_url }}" class="btn btn-outline-secondary btn-sm" target="_blank">
         {% trans "طباعة / PDF" %}
       </a>
@@ -119,7 +118,9 @@
     <div class="col-md-6">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-body">
-          <h5 class="card-title mb-3 text-muted small fw-bold text-uppercase">{% trans "تفاصيل الفاتورة" %}</h5>
+          <h5 class="card-title mb-3 text-muted small fw-bold text-uppercase">
+            {% trans "تفاصيل الفاتورة" %}
+          </h5>
           <p class="mb-1 small">
             <span class="text-muted">{% trans "التاريخ:" %}</span>
             <span class="fw-semibold">{{ invoice.issued_at|date:"d/m/Y" }}</span>
@@ -137,15 +138,15 @@
           <p class="mb-0 small">
             <span class="text-muted">{% trans "الحالة:" %}</span>
             {% if invoice.status == 'paid' %}
-                <span class="badge bg-dark">{% trans "مدفوعة" %}</span>
+              <span class="badge bg-dark">{% trans "مدفوعة" %}</span>
             {% elif invoice.status == 'partially_paid' %}
-                <span class="badge bg-warning text-dark">{% trans "جزئي" %}</span>
+              <span class="badge bg-warning text-dark">{% trans "جزئي" %}</span>
             {% elif invoice.status == 'sent' %}
-                <span class="badge bg-primary">{% trans "مرسلة" %}</span>
+              <span class="badge bg-primary">{% trans "مرسلة" %}</span>
             {% elif invoice.status == 'cancelled' %}
-                <span class="badge bg-danger">{% trans "ملغاة" %}</span>
+              <span class="badge bg-danger">{% trans "ملغاة" %}</span>
             {% else %}
-                <span class="badge bg-secondary">{% trans "مسودة" %}</span>
+              <span class="badge bg-secondary">{% trans "مسودة" %}</span>
             {% endif %}
           </p>
         </div>
@@ -157,19 +158,30 @@
     <div class="card-body">
       <div class="row text-center">
         <div class="col-4 border-end">
-          <div class="small text-muted mb-1 text-uppercase fw-bold">{% trans "الإجمالي" %}</div>
-          <div class="fw-bold fs-5">{{ invoice.total_amount|intcomma }}</div>
+          <div class="small text-muted mb-1 text-uppercase fw-bold">
+            {% trans "الإجمالي" %}
+          </div>
+          <div class="fw-bold fs-5">
+            {{ invoice.total_amount|intcomma }}
+          </div>
         </div>
-       <div class="col-4 border-end">
-  <div class="small text-muted mb-1 text-uppercase fw-bold">{% trans "المدفوع" %}</div>
-  <div class="fw-bold fs-5 text-success">
-    {{ invoice.allocated_amount|intcomma }}
-  </div>
-</div>
+
+        <div class="col-4 border-end">
+          <div class="small text-muted mb-1 text-uppercase fw-bold">
+            {% trans "المدفوع" %}
+          </div>
+          <div class="fw-bold fs-5 text-success">
+            {{ invoice.allocated_amount|intcomma }}
+          </div>
+        </div>
 
         <div class="col-4">
-          <div class="small text-muted mb-1 text-uppercase fw-bold">{% trans "المتبقي" %}</div>
-          <div class="fw-bold fs-5 text-danger">{{ invoice.balance|intcomma }}</div>
+          <div class="small text-muted mb-1 text-uppercase fw-bold">
+            {% trans "المتبقي" %}
+          </div>
+          <div class="fw-bold fs-5 text-danger">
+            {{ invoice.balance|intcomma }}
+          </div>
         </div>
       </div>
     </div>
@@ -178,7 +190,7 @@
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table table-hover align-middle invoice-items-table mb-0">
+        <table class="table table-hover align-middle mb-0">
           <thead class="bg-light small text-muted">
             <tr>
               <th style="padding-left: 1.5rem;">{% trans "المنتج / الوصف" %}</th>
@@ -198,10 +210,14 @@
                     <small class="text-muted">{{ item.description }}</small>
                   {% endif %}
                 </td>
-                <td class="text-center">{{ item.quantity|stringformat:".2f" }}</td>
-                <td class="text-center">{{ item.unit_price|stringformat:".3f" }}</td>
+                <td class="text-center">
+                  {{ item.quantity|stringformat:".2f" }}
+                </td>
+                <td class="text-center">
+                  {{ item.unit_price|stringformat:".3f" }}
+                </td>
                 <td class="text-end fw-bold text-dark" style="padding-right: 1.5rem;">
-                    {{ item.subtotal|stringformat:".3f" }}
+                  {{ item.subtotal|stringformat:".3f" }}
                 </td>
               </tr>
             {% empty %}
@@ -218,7 +234,8 @@
                 {% trans "الإجمالي الكلي" %}
               </td>
               <td class="text-end fw-bold fs-5 text-dark py-3" style="padding-right: 1.5rem;">
-                {{ invoice.total_amount|intcomma }} <small class="fs-6 text-muted">OMR</small>
+                {{ invoice.total_amount|intcomma }}
+                <small class="fs-6 text-muted">OMR</small>
               </td>
             </tr>
           </tfoot>
@@ -230,32 +247,40 @@
   {% if invoice.description or invoice.terms %}
     <div class="row g-3">
       {% if invoice.description %}
-      <div class="col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body">
-            <h6 class="card-title text-muted small fw-bold mb-2">{% trans "ملاحظات" %}</h6>
-            <p class="mb-0 small text-dark">{{ invoice.description|linebreaksbr }}</p>
+        <div class="col-md-6">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <h6 class="card-title text-muted small fw-bold mb-2">
+                {% trans "ملاحظات" %}
+              </h6>
+              <p class="mb-0 small text-dark">
+                {{ invoice.description|linebreaksbr }}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
       {% endif %}
-      
+
       {% if invoice.terms %}
-      <div class="col-md-6">
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body">
-            <h6 class="card-title text-muted small fw-bold mb-2">{% trans "الشروط والأحكام" %}</h6>
-            <p class="mb-0 small text-dark">{{ invoice.terms|linebreaksbr }}</p>
+        <div class="col-md-6">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <h6 class="card-title text-muted small fw-bold mb-2">
+                {% trans "الشروط والأحكام" %}
+              </h6>
+              <p class="mb-0 small text-dark">
+                {{ invoice.terms|linebreaksbr }}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
       {% endif %}
     </div>
   {% endif %}
 
   {# المرفقات #}
   <div class="mt-4">
-      {% include "core/attachments/_panel.html" %}
+    {% include "core/attachments/_panel.html" %}
   </div>
 
 </div>

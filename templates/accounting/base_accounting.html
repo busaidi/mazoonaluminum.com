@@ -16,10 +16,10 @@
     </div>
   </div>
 
-  {# ======================= NAVIGATION BAR (ثيم مزون) ======================= #}
+  {# ======================= NAVIGATION BAR (Bootstrap فقط) ======================= #}
   <div class="mb-3">
-    <div class="bg-mazoon-card border rounded-3 shadow-sm px-2 py-2">
-      <ul class="nav nav-pills flex-wrap small mazoon-nav gap-1 align-items-center">
+    <div class="bg-body border rounded-3 shadow-sm px-2 py-2">
+      <ul class="nav nav-pills flex-wrap small gap-1 align-items-center">
 
         {# 1. الرئيسية / لوحة المحاسبة #}
         <li class="nav-item">
@@ -199,7 +199,7 @@
   </div>
 
   {# ======================= PAGE CONTENT ======================= #}
-  <div class="fade-in">
+  <div>
     {% block accounting_content %}{% endblock %}
   </div>
 

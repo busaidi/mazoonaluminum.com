@@ -1,24 +1,26 @@
 {% extends "accounting/base_accounting.html" %}
-{% load i18n %}
+{% load i18n humanize %}
 
 {# عنوان الصفحة في التبويب #}
-{% block meta_title %}Account Ledger | Mazoon Aluminum{% endblock %}
+{% block meta_title %}
+  {% trans "كشف حساب" %} | Mazoon Aluminum
+{% endblock %}
 
 {% block accounting_content %}
+
 {# ===== العنوان ===== #}
 <div class="mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
   <div>
-    <h2 class="h5 mb-1">{% trans "كشف حساب" %}</h2>
-    <p class="text-muted small mb-0">
+    <h2 class="h5 mb-1 fw-bold">{% trans "كشف حساب" %}</h2>
+    <p class="text-muted small mb-1">
       {% trans "عرض حركة الحساب ورصيده التراكمي حسب الفترة أو السنة المالية." %}
     </p>
-      {% if effective_fiscal_year %}
-  <p class="text-muted mb-2">
-    {% trans "السنة المالية:" %} {{ effective_fiscal_year.year }}
-    ({{ effective_fiscal_year.start_date }} — {{ effective_fiscal_year.end_date }})
-  </p>
-{% endif %}
-
+    {% if effective_fiscal_year %}
+      <p class="text-muted small mb-0">
+        {% trans "السنة المالية:" %} {{ effective_fiscal_year.year }}
+        ({{ effective_fiscal_year.start_date }} — {{ effective_fiscal_year.end_date }})
+      </p>
+    {% endif %}
   </div>
 </div>
 
@@ -27,28 +29,28 @@
   <div class="card-body">
     <form method="get" class="row g-2 align-items-end">
       <div class="col-md-3 col-sm-6">
-        <label class="form-label form-label-sm">
+        <label class="form-label form-label-sm mb-1">
           {% trans "الحساب" %}
         </label>
         {{ form.account }}
       </div>
 
       <div class="col-md-2 col-sm-6">
-        <label class="form-label form-label-sm">
+        <label class="form-label form-label-sm mb-1">
           {% trans "السنة المالية" %}
         </label>
         {{ form.fiscal_year }}
       </div>
 
       <div class="col-md-2 col-sm-6">
-        <label class="form-label form-label-sm">
+        <label class="form-label form-label-sm mb-1">
           {% trans "من تاريخ" %}
         </label>
         {{ form.date_from }}
       </div>
 
       <div class="col-md-2 col-sm-6">
-        <label class="form-label form-label-sm">
+        <label class="form-label form-label-sm mb-1">
           {% trans "إلى تاريخ" %}
         </label>
         {{ form.date_to }}
@@ -68,13 +70,14 @@
 </div>
 
 {% if account %}
+
   {# ===== كرت معلومات الحساب ===== #}
   <div class="card shadow-sm border-0 mb-3">
     <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
       <div>
-        <h3 class="h6 mb-1">
+        <h3 class="h6 mb-1 fw-bold">
           {% blocktrans with code=account.code name=account.name %}
-            الحساب: {{ code }} - {{ name }}
+            الحساب: {{ code }} – {{ name }}
           {% endblocktrans %}
         </h3>
         <p class="text-muted small mb-0">
@@ -85,17 +88,16 @@
         </p>
       </div>
 
-      <div class="small text-muted">
-        <span class="me-2">
+      <div class="small text-muted text-end">
+        <span class="d-block mb-1">
           <strong>{% trans "الرصيد الافتتاحي" %}:</strong>
-          {{ opening_balance }}
+          {{ opening_balance|intcomma }}
         </span>
         {% with last_line=lines|last %}
           {% if last_line %}
-            <span class="mx-1 text-muted">·</span>
             <span>
               <strong>{% trans "الرصيد الحالي" %}:</strong>
-              {{ last_line.balance }}
+              {{ last_line.balance|intcomma }}
             </span>
           {% endif %}
         {% endwith %}
@@ -108,12 +110,12 @@
     <div class="card shadow-sm border-0">
       <div class="card-body">
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
-          <h4 class="h6 mb-0">{% trans "تفاصيل الحركة" %}</h4>
+          <h4 class="h6 mb-0 fw-bold">{% trans "تفاصيل الحركة" %}</h4>
         </div>
 
         <div class="table-responsive">
           <table class="table table-sm table-striped align-middle mb-0">
-            <thead class="table-light">
+            <thead class="table-light small text-muted">
               <tr>
                 <th class="text-nowrap">{% trans "التاريخ" %}</th>
                 <th class="text-nowrap">{% trans "رقم القيد" %}</th>
@@ -125,59 +127,61 @@
               </tr>
             </thead>
             <tbody>
+
               {# صف الرصيد الافتتاحي #}
-              <tr class="table-secondary">
-                <td colspan="6" class="text-end small">
+              <tr class="table-secondary small">
+                <td colspan="6" class="text-end">
                   {% trans "رصيد افتتاحي" %}
                 </td>
-                <td class="text-end text-nowrap small">
-                  {{ opening_balance }}
+                <td class="text-end text-nowrap fw-semibold">
+                  {{ opening_balance|intcomma }}
                 </td>
               </tr>
 
               {# الحركات #}
               {% for item in lines %}
                 <tr>
-                  <td class="text-nowrap">{{ item.date }}</td>
-                  <td class="text-nowrap">
-                      <a href="{% url 'accounting:journalentry_detail' item.entry_id %}" class="text-decoration-none">
-                          {{ item.entry_number }}
-                      </a>
+                  <td class="text-nowrap small">{{ item.date }}</td>
+                  <td class="text-nowrap small">
+                    <a href="{% url 'accounting:journal_entry_detail' item.entry_id %}"
+                       class="text-decoration-none">
+                      {{ item.entry_number }}
+                    </a>
                   </td>
-                  <td class="text-nowrap">
+                  <td class="text-nowrap small">
                     {{ item.reference|default:"-" }}
                   </td>
                   <td class="small">
                     {{ item.description|default:"-" }}
                   </td>
-                  <td class="text-end text-nowrap">
-                    {{ item.debit }}
+                  <td class="text-end text-nowrap small">
+                    {{ item.debit|intcomma }}
                   </td>
-                  <td class="text-end text-nowrap">
-                    {{ item.credit }}
+                  <td class="text-end text-nowrap small">
+                    {{ item.credit|intcomma }}
                   </td>
-                  <td class="text-end text-nowrap">
-                    {{ item.balance }}
+                  <td class="text-end text-nowrap small fw-semibold">
+                    {{ item.balance|intcomma }}
                   </td>
                 </tr>
               {% endfor %}
             </tbody>
 
-            {# صف إجمالي مدين / دائن + رصيد ختامي (لو رجّعناه من الفيو) #}
+            {# إجماليات الفترة #}
             {% if totals %}
-              <tfoot>
+              <tfoot class="small">
                 <tr class="table-light fw-semibold">
                   <td colspan="4" class="text-end text-nowrap">
                     {% trans "الإجمالي للفترة" %}
                   </td>
                   <td class="text-end text-nowrap">
-                    {{ totals.total_debit }}
+                    {{ totals.total_debit|intcomma }}
                   </td>
                   <td class="text-end text-nowrap">
-                    {{ totals.total_credit }}
+                    {{ totals.total_credit|intcomma }}
                   </td>
                   <td class="text-end text-nowrap">
-                    {{ totals.closing_balance }}
+                    {{ totals.closing_balance|intcomma }}
                   </td>
                 </tr>
               </tfoot>
@@ -191,13 +195,15 @@
       </div>
     </div>
   {% else %}
-    <p class="text-muted small">
+    <p class="text-muted small mb-0">
       {% trans "لا توجد حركات لهذا الحساب في الفترة المحددة." %}
     </p>
   {% endif %}
+
 {% else %}
-  <p class="text-muted small">
+  <p class="text-muted small mb-0">
     {% trans "الرجاء اختيار حساب وتحديد الفترة (اختياري) ثم الضغط على زر التصفية لعرض كشف الحساب." %}
   </p>
 {% endif %}
+
 {% endblock %}

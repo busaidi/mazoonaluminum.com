@@ -1,17 +1,22 @@
 {% extends "accounting/base_accounting.html" %}
 {% load i18n %}
 
+{% block title %}{% trans "استيراد شجرة الحسابات" %}{% endblock %}
+
 {% block accounting_content %}
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
-    <h1 class="h5 fw-bold mb-1">{% trans "استيراد شجرة الحسابات من إكسل" %}</h1>
+    <h1 class="h5 fw-bold mb-1">
+      {% trans "استيراد شجرة الحسابات من إكسل" %}
+    </h1>
     <p class="text-muted small mb-0">
       {% trans "قم برفع ملف الإكسل لتحديث أو إنشاء دليل الحسابات، مع إمكانية تعيين الأرصدة الافتتاحية." %}
     </p>
   </div>
   <div>
     <a href="{% url 'accounting:account_list' %}" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-arrow-right"></i> {% trans "رجوع لدليل الحسابات" %}
+      <i class="bi bi-arrow-right"></i>
+      {% trans "رجوع لدليل الحسابات" %}
     </a>
   </div>
 </div>
@@ -37,14 +42,16 @@
     </label>
     {{ form.file }}
     {% if form.file.help_text %}
-      <div class="form-text small text-muted">{{ form.file.help_text }}</div>
+      <div class="form-text small text-muted">
+        {{ form.file.help_text }}
+      </div>
     {% endif %}
     {% for error in form.file.errors %}
       <div class="text-danger small mt-1">{{ error }}</div>
     {% endfor %}
   </div>
 
-  {# تعطيل/استبدال الحسابات الموجودة #}
+  {# استبدال الحسابات الموجودة #}
   <div class="form-check mb-3">
     {{ form.replace_existing }}
     <label class="form-check-label ms-1"
@@ -61,15 +68,17 @@
     {% endfor %}
   </div>
 
-  {# اختيار السنة المالية للرصد الافتتاحي #}
+  {# اختيار السنة المالية للأرصدة الافتتاحية #}
   <div class="mb-3">
     <label class="form-label form-label-sm fw-semibold mb-1"
            for="{{ form.fiscal_year.id_for_label }}">
-      {% trans "السنة المالية للرصد الافتتاحي" %}
+      {% trans "السنة المالية للأرصدة الافتتاحية" %}
     </label>
     {{ form.fiscal_year }}
     {% if form.fiscal_year.help_text %}
-      <div class="form-text small text-muted">{{ form.fiscal_year.help_text }}</div>
+      <div class="form-text small text-muted">
+        {{ form.fiscal_year.help_text }}
+      </div>
     {% endif %}
     {% for error in form.fiscal_year.errors %}
       <div class="text-danger small mt-1">{{ error }}</div>
@@ -78,22 +87,28 @@
 
   <div class="d-flex justify-content-end gap-2 mt-2">
     <a href="{% url 'accounting:account_list' %}" class="btn btn-light btn-sm">
-      <i class="bi bi-x-circle"></i> {% trans "إلغاء" %}
+      <i class="bi bi-x-circle"></i>
+      {% trans "إلغاء" %}
     </a>
     <button type="submit" class="btn btn-primary btn-sm">
-      <i class="bi bi-upload"></i> {% trans "استيراد" %}
+      <i class="bi bi-upload"></i>
+      {% trans "استيراد" %}
     </button>
   </div>
 </form>
 
-<div class="alert alert-secondary mt-4 small">
-  <p class="mb-1 fw-semibold">{% trans "تعليمات ملف الإكسل:" %}</p>
-  <ul class="mb-0 ps-3">
-    <li>{% trans "الصف الأول يحتوي على أسماء الأعمدة." %}</li>
-    <li>{% trans "type يجب أن تكون إحدى القيم التالية: asset, liability, equity, revenue, expense." %}</li>
-    <li>{% trans "parent_code هو كود الحساب الأب (اختياري)." %}</li>
-    <li>{% trans "allow_settlement و is_active يمكن أن تكون: 1 / 0 أو true / false." %}</li>
-    <li>{% trans "opening_debit و opening_credit تستخدم للأرصدة الافتتاحية (يجب أن يتوازن المجموع)." %}</li>
-  </ul>
+<div class="card shadow-sm border-0 mt-4 small">
+  <div class="card-body">
+    <p class="mb-1 fw-semibold">
+      {% trans "تعليمات ملف الإكسل:" %}
+    </p>
+    <ul class="mb-0 ps-3">
+      <li>{% trans "الصف الأول يحتوي على أسماء الأعمدة." %}</li>
+      <li>{% trans "type يجب أن تكون إحدى القيم التالية: asset, liability, equity, revenue, expense." %}</li>
+      <li>{% trans "parent_code هو كود الحساب الأب (اختياري)." %}</li>
+      <li>{% trans "allow_settlement و is_active يمكن أن تكون: 1 / 0 أو true / false." %}</li>
+      <li>{% trans "opening_debit و opening_credit تُستخدم للأرصدة الافتتاحية (يجب أن يتوازن المجموع)." %}</li>
+    </ul>
+  </div>
 </div>
 {% endblock %}

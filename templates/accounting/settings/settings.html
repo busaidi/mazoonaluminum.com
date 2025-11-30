@@ -1,11 +1,12 @@
 {% extends "accounting/base_accounting.html" %}
 {% load i18n %}
 
+{% block title %}{% trans "إعدادات المبيعات والفواتير" %}{% endblock %}
+
 {% block accounting_content %}
 <div class="py-4">
 
-
-  <!-- عنوان الصفحة ووصفها -->
+  {# عنوان الصفحة ووصفها #}
   <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
       <h1 class="h5 mb-1">{% trans "إعدادات المبيعات والفواتير" %}</h1>
@@ -17,11 +18,16 @@
 
   <form method="post" class="card card-body shadow-sm">
     {% csrf_token %}
-    {{ form.non_field_errors }}
 
-    <!-- ============================================
-         قسم ترقيم الطلبات
-         ============================================ -->
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger small mb-3">
+        {% for error in form.non_field_errors %}
+          <div>{{ error }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+
     <div class="mb-4">
       <h5 class="h6 mb-2">{% trans "ترقيم الطلبات" %}</h5>
       <p class="text-muted small mb-3">
@@ -30,75 +36,83 @@
 
       <div class="row g-3">
         <div class="col-md-3">
-          <label class="form-label" for="{{ form.order_prefix.id_for_label }}">
+          <label class="form-label form-label-sm" for="{{ form.order_prefix.id_for_label }}">
             {{ form.order_prefix.label }}
           </label>
           {{ form.order_prefix }}
-          {{ form.order_prefix.errors }}
           {% if form.order_prefix.help_text %}
-            <div class="form-text">{{ form.order_prefix.help_text }}</div>
+            <div class="form-text small">{{ form.order_prefix.help_text }}</div>
           {% endif %}
+          {% for error in form.order_prefix.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
 
         <div class="col-md-3">
-          <label class="form-label" for="{{ form.order_padding.id_for_label }}">
+          <label class="form-label form-label-sm" for="{{ form.order_padding.id_for_label }}">
             {{ form.order_padding.label }}
           </label>
           {{ form.order_padding }}
-          {{ form.order_padding.errors }}
           {% if form.order_padding.help_text %}
-            <div class="form-text">{{ form.order_padding.help_text }}</div>
+            <div class="form-text small">{{ form.order_padding.help_text }}</div>
           {% endif %}
+          {% for error in form.order_padding.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
 
         <div class="col-md-3">
-          <label class="form-label" for="{{ form.order_start_value.id_for_label }}">
+          <label class="form-label form-label-sm" for="{{ form.order_start_value.id_for_label }}">
             {{ form.order_start_value.label }}
           </label>
           {{ form.order_start_value }}
-          {{ form.order_start_value.errors }}
           {% if form.order_start_value.help_text %}
-            <div class="form-text">{{ form.order_start_value.help_text }}</div>
+            <div class="form-text small">{{ form.order_start_value.help_text }}</div>
           {% endif %}
+          {% for error in form.order_start_value.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
 
         <div class="col-md-3">
-          <label class="form-label" for="{{ form.order_reset_policy.id_for_label }}">
+          <label class="form-label form-label-sm" for="{{ form.order_reset_policy.id_for_label }}">
             {{ form.order_reset_policy.label }}
           </label>
           {{ form.order_reset_policy }}
-          {{ form.order_reset_policy.errors }}
           {% if form.order_reset_policy.help_text %}
-            <div class="form-text">{{ form.order_reset_policy.help_text }}</div>
+            <div class="form-text small">{{ form.order_reset_policy.help_text }}</div>
           {% endif %}
+          {% for error in form.order_reset_policy.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
       </div>
 
       <div class="row g-3 mt-3">
-        <div class="col-md-12">
-          <label class="form-label" for="{{ form.order_custom_pattern.id_for_label }}">
+        <div class="col-12">
+          <label class="form-label form-label-sm" for="{{ form.order_custom_pattern.id_for_label }}">
             {{ form.order_custom_pattern.label }}
           </label>
           {{ form.order_custom_pattern }}
-          {{ form.order_custom_pattern.errors }}
           {% if form.order_custom_pattern.help_text %}
-            <div class="form-text">
+            <div class="form-text small">
               {{ form.order_custom_pattern.help_text }}<br>
-              <span class="small text-muted">
+              <span class="text-muted">
                 {% trans "أمثلة:" %} <code>ORD-{year}-{seq:04d}</code>،
                 <code>SO-{year}-{month:02d}-{seq:03d}</code>
               </span>
             </div>
           {% endif %}
+          {% for error in form.order_custom_pattern.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
       </div>
     </div>
 
     <hr class="my-3">
 
-    <!-- ============================================
-         قسم ترقيم الفواتير
-         ============================================ -->
+
     <div class="mb-4">
       <h5 class="h6 mb-2">{% trans "ترقيم الفواتير" %}</h5>
       <p class="text-muted small mb-3">
@@ -107,75 +121,83 @@
 
       <div class="row g-3">
         <div class="col-md-3">
-          <label class="form-label" for="{{ form.invoice_prefix.id_for_label }}">
+          <label class="form-label form-label-sm" for="{{ form.invoice_prefix.id_for_label }}">
             {{ form.invoice_prefix.label }}
           </label>
           {{ form.invoice_prefix }}
-          {{ form.invoice_prefix.errors }}
           {% if form.invoice_prefix.help_text %}
-            <div class="form-text">{{ form.invoice_prefix.help_text }}</div>
+            <div class="form-text small">{{ form.invoice_prefix.help_text }}</div>
           {% endif %}
+          {% for error in form.invoice_prefix.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
 
         <div class="col-md-3">
-          <label class="form-label" for="{{ form.invoice_padding.id_for_label }}">
+          <label class="form-label form-label-sm" for="{{ form.invoice_padding.id_for_label }}">
             {{ form.invoice_padding.label }}
           </label>
           {{ form.invoice_padding }}
-          {{ form.invoice_padding.errors }}
           {% if form.invoice_padding.help_text %}
-            <div class="form-text">{{ form.invoice_padding.help_text }}</div>
+            <div class="form-text small">{{ form.invoice_padding.help_text }}</div>
           {% endif %}
+          {% for error in form.invoice_padding.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
 
         <div class="col-md-3">
-          <label class="form-label" for="{{ form.invoice_start_value.id_for_label }}">
+          <label class="form-label form-label-sm" for="{{ form.invoice_start_value.id_for_label }}">
             {{ form.invoice_start_value.label }}
           </label>
           {{ form.invoice_start_value }}
-          {{ form.invoice_start_value.errors }}
           {% if form.invoice_start_value.help_text %}
-            <div class="form-text">{{ form.invoice_start_value.help_text }}</div>
+            <div class="form-text small">{{ form.invoice_start_value.help_text }}</div>
           {% endif %}
+          {% for error in form.invoice_start_value.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
 
         <div class="col-md-3">
-          <label class="form-label" for="{{ form.invoice_reset_policy.id_for_label }}">
+          <label class="form-label form-label-sm" for="{{ form.invoice_reset_policy.id_for_label }}">
             {{ form.invoice_reset_policy.label }}
           </label>
           {{ form.invoice_reset_policy }}
-          {{ form.invoice_reset_policy.errors }}
           {% if form.invoice_reset_policy.help_text %}
-            <div class="form-text">{{ form.invoice_reset_policy.help_text }}</div>
+            <div class="form-text small">{{ form.invoice_reset_policy.help_text }}</div>
           {% endif %}
+          {% for error in form.invoice_reset_policy.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
       </div>
 
       <div class="row g-3 mt-3">
-        <div class="col-md-12">
-          <label class="form-label" for="{{ form.invoice_custom_pattern.id_for_label }}">
+        <div class="col-12">
+          <label class="form-label form-label-sm" for="{{ form.invoice_custom_pattern.id_for_label }}">
             {{ form.invoice_custom_pattern.label }}
           </label>
           {{ form.invoice_custom_pattern }}
-          {{ form.invoice_custom_pattern.errors }}
           {% if form.invoice_custom_pattern.help_text %}
-            <div class="form-text">
+            <div class="form-text small">
               {{ form.invoice_custom_pattern.help_text }}<br>
-              <span class="small text-muted">
+              <span class="text-muted">
                 {% trans "أمثلة:" %} <code>INV-{year}-{seq:04d}</code>،
                 <code>SO-{year}-{month:02d}-{seq:03d}</code>
               </span>
             </div>
           {% endif %}
+          {% for error in form.invoice_custom_pattern.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
       </div>
     </div>
 
     <hr class="my-3">
 
-    <!-- ============================================
-         قسم ترقيم الدفعات
-         ============================================ -->
+
     <div class="mb-4">
       <h5 class="h6 mb-2">{% trans "ترقيم الدفعات" %}</h5>
       <p class="text-muted small mb-3">
@@ -184,75 +206,83 @@
 
       <div class="row g-3">
         <div class="col-md-3">
-          <label class="form-label" for="{{ form.payment_prefix.id_for_label }}">
+          <label class="form-label form-label-sm" for="{{ form.payment_prefix.id_for_label }}">
             {{ form.payment_prefix.label }}
           </label>
           {{ form.payment_prefix }}
-          {{ form.payment_prefix.errors }}
           {% if form.payment_prefix.help_text %}
-            <div class="form-text">{{ form.payment_prefix.help_text }}</div>
+            <div class="form-text small">{{ form.payment_prefix.help_text }}</div>
           {% endif %}
+          {% for error in form.payment_prefix.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
 
         <div class="col-md-3">
-          <label class="form-label" for="{{ form.payment_padding.id_for_label }}">
+          <label class="form-label form-label-sm" for="{{ form.payment_padding.id_for_label }}">
             {{ form.payment_padding.label }}
           </label>
           {{ form.payment_padding }}
-          {{ form.payment_padding.errors }}
           {% if form.payment_padding.help_text %}
-            <div class="form-text">{{ form.payment_padding.help_text }}</div>
+            <div class="form-text small">{{ form.payment_padding.help_text }}</div>
           {% endif %}
+          {% for error in form.payment_padding.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
 
         <div class="col-md-3">
-          <label class="form-label" for="{{ form.payment_start_value.id_for_label }}">
+          <label class="form-label form-label-sm" for="{{ form.payment_start_value.id_for_label }}">
             {{ form.payment_start_value.label }}
           </label>
           {{ form.payment_start_value }}
-          {{ form.payment_start_value.errors }}
           {% if form.payment_start_value.help_text %}
-            <div class="form-text">{{ form.payment_start_value.help_text }}</div>
+            <div class="form-text small">{{ form.payment_start_value.help_text }}</div>
           {% endif %}
+          {% for error in form.payment_start_value.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
 
         <div class="col-md-3">
-          <label class="form-label" for="{{ form.payment_reset_policy.id_for_label }}">
+          <label class="form-label form-label-sm" for="{{ form.payment_reset_policy.id_for_label }}">
             {{ form.payment_reset_policy.label }}
           </label>
           {{ form.payment_reset_policy }}
-          {{ form.payment_reset_policy.errors }}
           {% if form.payment_reset_policy.help_text %}
-            <div class="form-text">{{ form.payment_reset_policy.help_text }}</div>
+            <div class="form-text small">{{ form.payment_reset_policy.help_text }}</div>
           {% endif %}
+          {% for error in form.payment_reset_policy.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
       </div>
 
       <div class="row g-3 mt-3">
-        <div class="col-md-12">
-          <label class="form-label" for="{{ form.payment_custom_pattern.id_for_label }}">
+        <div class="col-12">
+          <label class="form-label form-label-sm" for="{{ form.payment_custom_pattern.id_for_label }}">
             {{ form.payment_custom_pattern.label }}
           </label>
           {{ form.payment_custom_pattern }}
-          {{ form.payment_custom_pattern.errors }}
           {% if form.payment_custom_pattern.help_text %}
-            <div class="form-text">
+            <div class="form-text small">
               {{ form.payment_custom_pattern.help_text }}<br>
-              <span class="small text-muted">
+              <span class="text-muted">
                 {% trans "أمثلة:" %} <code>PAY-{year}-{seq:04d}</code>،
                 <code>RCPT-{year}-{month:02d}-{seq:03d}</code>
               </span>
             </div>
           {% endif %}
+          {% for error in form.payment_custom_pattern.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
       </div>
     </div>
 
     <hr class="my-3">
 
-    <!-- ============================================
-         قسم سلوك الفاتورة
-         ============================================ -->
+
     <div class="mb-4">
       <h5 class="h6 mb-2">{% trans "سلوك الفاتورة" %}</h5>
       <p class="text-muted small mb-3">
@@ -261,14 +291,16 @@
 
       <div class="row g-3">
         <div class="col-md-4">
-          <label class="form-label" for="{{ form.default_due_days.id_for_label }}">
+          <label class="form-label form-label-sm" for="{{ form.default_due_days.id_for_label }}">
             {{ form.default_due_days.label }}
           </label>
           {{ form.default_due_days }}
-          {{ form.default_due_days.errors }}
           {% if form.default_due_days.help_text %}
-            <div class="form-text">{{ form.default_due_days.help_text }}</div>
+            <div class="form-text small">{{ form.default_due_days.help_text }}</div>
           {% endif %}
+          {% for error in form.default_due_days.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
 
         <div class="col-md-4">
@@ -278,10 +310,12 @@
               {{ form.auto_confirm_invoice.label }}
             </label>
           </div>
-          {{ form.auto_confirm_invoice.errors }}
           {% if form.auto_confirm_invoice.help_text %}
-            <div class="form-text">{{ form.auto_confirm_invoice.help_text }}</div>
+            <div class="form-text small">{{ form.auto_confirm_invoice.help_text }}</div>
           {% endif %}
+          {% for error in form.auto_confirm_invoice.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
 
         <div class="col-md-4">
@@ -291,19 +325,19 @@
               {{ form.auto_post_to_ledger.label }}
             </label>
           </div>
-          {{ form.auto_post_to_ledger.errors }}
           {% if form.auto_post_to_ledger.help_text %}
-            <div class="form-text">{{ form.auto_post_to_ledger.help_text }}</div>
+            <div class="form-text small">{{ form.auto_post_to_ledger.help_text }}</div>
           {% endif %}
+          {% for error in form.auto_post_to_ledger.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
       </div>
     </div>
 
     <hr class="my-3">
 
-    <!-- ============================================
-         قسم ضريبة القيمة المضافة
-         ============================================ -->
+
     <div class="mb-4">
       <h5 class="h6 mb-2">{% trans "ضريبة القيمة المضافة (VAT)" %}</h5>
       <p class="text-muted small mb-3">
@@ -312,14 +346,16 @@
 
       <div class="row g-3">
         <div class="col-md-4">
-          <label class="form-label" for="{{ form.default_vat_rate.id_for_label }}">
+          <label class="form-label form-label-sm" for="{{ form.default_vat_rate.id_for_label }}">
             {{ form.default_vat_rate.label }}
           </label>
           {{ form.default_vat_rate }}
-          {{ form.default_vat_rate.errors }}
           {% if form.default_vat_rate.help_text %}
-            <div class="form-text">{{ form.default_vat_rate.help_text }}</div>
+            <div class="form-text small">{{ form.default_vat_rate.help_text }}</div>
           {% endif %}
+          {% for error in form.default_vat_rate.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
 
         <div class="col-md-4">
@@ -329,19 +365,19 @@
               {{ form.prices_include_vat.label }}
             </label>
           </div>
-          {{ form.prices_include_vat.errors }}
           {% if form.prices_include_vat.help_text %}
-            <div class="form-text">{{ form.prices_include_vat.help_text }}</div>
+            <div class="form-text small">{{ form.prices_include_vat.help_text }}</div>
           {% endif %}
+          {% for error in form.prices_include_vat.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
       </div>
     </div>
 
     <hr class="my-3">
 
-    <!-- ============================================
-         قسم النصوص الافتراضية
-         ============================================ -->
+
     <div class="mb-3">
       <h5 class="h6 mb-2">{% trans "النصوص الافتراضية" %}</h5>
       <p class="text-muted small mb-3">
@@ -349,25 +385,29 @@
       </p>
 
       <div class="mb-3">
-        <label class="form-label" for="{{ form.default_terms.id_for_label }}">
+        <label class="form-label form-label-sm" for="{{ form.default_terms.id_for_label }}">
           {{ form.default_terms.label }}
         </label>
         {{ form.default_terms }}
-        {{ form.default_terms.errors }}
         {% if form.default_terms.help_text %}
-          <div class="form-text">{{ form.default_terms.help_text }}</div>
+          <div class="form-text small">{{ form.default_terms.help_text }}</div>
         {% endif %}
+        {% for error in form.default_terms.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
       </div>
 
       <div class="mb-0">
-        <label class="form-label" for="{{ form.footer_notes.id_for_label }}">
+        <label class="form-label form-label-sm" for="{{ form.footer_notes.id_for_label }}">
           {{ form.footer_notes.label }}
         </label>
         {{ form.footer_notes }}
-        {{ form.footer_notes.errors }}
         {% if form.footer_notes.help_text %}
-          <div class="form-text">{{ form.footer_notes.help_text }}</div>
+          <div class="form-text small">{{ form.footer_notes.help_text }}</div>
         {% endif %}
+        {% for error in form.footer_notes.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
       </div>
     </div>
 

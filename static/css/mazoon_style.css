@@ -4,7 +4,7 @@
   --bs-primary-rgb: 17, 24, 39;
 
   /* الروابط العامة */
-  --bs-link-color: #005599;       /* نفس primary */
+  --bs-link-color: #1f1b1b;       /* نفس primary */
   --bs-link-hover-color: #020617; /* داكن أكثر */
 }
 

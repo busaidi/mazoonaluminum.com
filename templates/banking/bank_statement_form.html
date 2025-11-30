@@ -1,13 +1,23 @@
 {% extends "accounting/base_accounting.html" %}
 {% load i18n %}
 
+{% block title %}
+  {{ title|default:_("كشف بنكي") }}
+{% endblock %}
+
 {% block accounting_content %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h2 class="h5 mb-0">
-    {{ title|default:_("كشف بنكي") }}
-  </h2>
+  <div>
+    <h2 class="h5 mb-1">
+      {{ title|default:_("كشف بنكي") }}
+    </h2>
+    <p class="text-muted small mb-0">
+      {% trans "تعريف كشف بنك جديد مع الأرصدة الافتتاحية والختامية، مع إمكانية استيراد الحركات من ملف." %}
+    </p>
+  </div>
   <a href="{% url 'banking:bank_statement_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-right"></i>
     {% trans "رجوع إلى كشوفات البنك" %}
   </a>
 </div>
@@ -19,7 +29,7 @@
       {% csrf_token %}
 
       {% if form.non_field_errors %}
-        <div class="alert alert-danger">
+        <div class="alert alert-danger small mb-3">
           {{ form.non_field_errors }}
         </div>
       {% endif %}
@@ -31,7 +41,9 @@
             {{ form.bank_account.label }}
           </label>
           {{ form.bank_account }}
-          {{ form.bank_account.errors }}
+          <div class="text-danger small">
+            {{ form.bank_account.errors }}
+          </div>
         </div>
 
         <div class="col-md-6">
@@ -39,7 +51,9 @@
             {{ form.name.label }}
           </label>
           {{ form.name }}
-          {{ form.name.errors }}
+          <div class="text-danger small">
+            {{ form.name.errors }}
+          </div>
         </div>
 
         <div class="col-md-4">
@@ -47,7 +61,9 @@
             {{ form.date.label }}
           </label>
           {{ form.date }}
-          {{ form.date.errors }}
+          <div class="text-danger small">
+            {{ form.date.errors }}
+          </div>
         </div>
 
         <div class="col-md-4">
@@ -55,7 +71,9 @@
             {{ form.start_balance.label }}
           </label>
           {{ form.start_balance }}
-          {{ form.start_balance.errors }}
+          <div class="text-danger small">
+            {{ form.start_balance.errors }}
+          </div>
         </div>
 
         <div class="col-md-4">
@@ -63,7 +81,9 @@
             {{ form.end_balance.label }}
           </label>
           {{ form.end_balance }}
-          {{ form.end_balance.errors }}
+          <div class="text-danger small">
+            {{ form.end_balance.errors }}
+          </div>
         </div>
 
         <div class="col-12">
@@ -71,8 +91,9 @@
             {{ form.imported_file.label }}
           </label>
           {{ form.imported_file }}
+
           {% if form.imported_file.help_text %}
-            <div class="form-text">
+            <div class="form-text small">
               {{ form.imported_file.help_text }}
             </div>
           {% else %}
@@ -80,7 +101,10 @@
               {% trans "اختياري: ارفع ملف الحركات بصيغة CSV أو Excel ليتم استيراد السطور تلقائياً." %}
             </div>
           {% endif %}
-          {{ form.imported_file.errors }}
+
+          <div class="text-danger small">
+            {{ form.imported_file.errors }}
+          </div>
         </div>
 
       </div>

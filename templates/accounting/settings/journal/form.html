@@ -3,84 +3,102 @@
 
 {% block accounting_content %}
 
-<h2 class="h5 mb-3">
-  {{ title|default:_("دفتر اليومية") }}
-</h2>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h1 class="h5 fw-bold mb-1">
+      {{ title|default:_("دفتر اليومية") }}
+    </h1>
+    <p class="text-muted small mb-0">
+      {% trans "تعريف دفاتر اليومية المستخدمة في ترحيل القيود المحاسبية." %}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'accounting:journal_list' %}" class="btn btn-outline-secondary btn-sm">
+      {% trans "رجوع للقائمة" %}
+    </a>
+  </div>
+</div>
 
 <form method="post" class="card card-body shadow-sm border-0">
   {% csrf_token %}
 
   {% if form.non_field_errors %}
-    <div class="alert alert-danger small">
+    <div class="alert alert-danger small mb-3">
       {{ form.non_field_errors }}
     </div>
   {% endif %}
 
-  <div class="row g-3">
+  <div class="row g-3 small">
 
     <div class="col-md-3">
-      <label class="form-label" for="{{ form.code.id_for_label }}">
+      <label class="form-label form-label-sm fw-semibold mb-1"
+             for="{{ form.code.id_for_label }}">
         {{ form.code.label }}
       </label>
       {{ form.code }}
       {% for error in form.code.errors %}
-        <div class="text-danger small">{{ error }}</div>
+        <div class="text-danger small mt-1">{{ error }}</div>
       {% endfor %}
     </div>
 
     <div class="col-md-5">
-      <label class="form-label" for="{{ form.name.id_for_label }}">
+      <label class="form-label form-label-sm fw-semibold mb-1"
+             for="{{ form.name.id_for_label }}">
         {{ form.name.label }}
       </label>
       {{ form.name }}
       {% for error in form.name.errors %}
-        <div class="text-danger small">{{ error }}</div>
+        <div class="text-danger small mt-1">{{ error }}</div>
       {% endfor %}
     </div>
 
     <div class="col-md-4">
-      <label class="form-label" for="{{ form.type.id_for_label }}">
+      <label class="form-label form-label-sm fw-semibold mb-1"
+             for="{{ form.type.id_for_label }}">
         {{ form.type.label }}
       </label>
       {{ form.type }}
       {% for error in form.type.errors %}
-        <div class="text-danger small">{{ error }}</div>
+        <div class="text-danger small mt-1">{{ error }}</div>
       {% endfor %}
     </div>
 
     <div class="col-md-3 d-flex align-items-center">
       <div class="form-check mt-3">
         {{ form.is_default }}
-        <label class="form-check-label ms-1" for="{{ form.is_default.id_for_label }}">
+        <label class="form-check-label ms-1"
+               for="{{ form.is_default.id_for_label }}">
           {{ form.is_default.label }}
         </label>
       </div>
       {% for error in form.is_default.errors %}
-        <div class="text-danger small w-100">{{ error }}</div>
+        <div class="text-danger small w-100 mt-1">{{ error }}</div>
       {% endfor %}
     </div>
 
     <div class="col-md-3 d-flex align-items-center">
       <div class="form-check mt-3">
         {{ form.is_active }}
-        <label class="form-check-label ms-1" for="{{ form.is_active.id_for_label }}">
+        <label class="form-check-label ms-1"
+               for="{{ form.is_active.id_for_label }}">
           {{ form.is_active.label }}
         </label>
       </div>
       {% for error in form.is_active.errors %}
-        <div class="text-danger small w-100">{{ error }}</div>
+        <div class="text-danger small w-100 mt-1">{{ error }}</div>
       {% endfor %}
     </div>
 
   </div>
 
-  <div class="mt-4 d-flex gap-2">
+  <div class="mt-3 d-flex justify-content-end gap-2">
+    <a href="{% url 'accounting:journal_list' %}"
+       class="btn btn-light btn-sm">
+      {% trans "إلغاء" %}
+    </a>
     <button type="submit" class="btn btn-primary btn-sm">
       {% trans "حفظ" %}
     </button>
-    <a href="{% url 'accounting:journal_list' %}" class="btn btn-light btn-sm">
-      {% trans "إلغاء" %}
-    </a>
   </div>
 
 </form>

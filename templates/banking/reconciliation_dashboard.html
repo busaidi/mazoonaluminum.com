@@ -2,11 +2,28 @@
 {% extends "accounting/base_accounting.html" %}
 {% load i18n %}
 
+{% block title %}
+  {{ title|default:_("تسوية الحساب البنكي") }}
+{% endblock %}
+
 {% block accounting_content %}
 
-<h2 class="h5 mb-3">
-  {{ title|default:_("تسوية الحساب البنكي") }}
-</h2>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h2 class="h5 mb-1">
+      {{ title|default:_("تسوية الحساب البنكي") }}
+    </h2>
+    <p class="text-muted small mb-0">
+      {% trans "مطابقة حركات البنك مع قيود المحاسبة وربط المبالغ المتبقية تلقائيًا أو يدويًا." %}
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{% url 'banking:bank_account_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-bank"></i>
+      {% trans "الحسابات البنكية" %}
+    </a>
+  </div>
+</div>
 
 <div class="alert alert-info small">
   {% blocktrans %}
@@ -35,7 +52,7 @@
             <table class="table table-sm table-hover mb-0 align-middle" id="bank-lines-table">
               <thead class="table-light">
                 <tr>
-                  <th style="width: 1%;">#</th>
+                  <th class="text-center" style="width: 1%;">#</th>
                   <th>{% trans "التاريخ" %}</th>
                   <th>{% trans "الوصف" %}</th>
                   <th class="text-end">{% trans "المبلغ" %}</th>
@@ -50,8 +67,12 @@
                     data-bank-amount="{{ line.amount }}"
                     data-bank-residual="{{ line.amount_residual }}"
                   >
-                    <td class="text-muted small">{{ forloop.counter }}</td>
-                    <td>{{ line.date|date:"Y-m-d" }}</td>
+                    <td class="text-muted small text-center">
+                      {{ forloop.counter }}
+                    </td>
+                    <td class="small">
+                      {{ line.date|date:"Y-m-d" }}
+                    </td>
                     <td class="small">
                       {{ line.label }}
                       {% if line.ref %}
@@ -60,10 +81,10 @@
                         </div>
                       {% endif %}
                     </td>
-                    <td class="text-end">
+                    <td class="text-end small">
                       {{ line.amount }}
                     </td>
-                    <td class="text-end">
+                    <td class="text-end small">
                       <span class="bank-line-residual">
                         {{ line.amount_residual }}
                       </span>
@@ -101,7 +122,7 @@
             <table class="table table-sm table-hover mb-0 align-middle" id="journal-items-table">
               <thead class="table-light">
                 <tr>
-                  <th style="width: 1%;">#</th>
+                  <th class="text-center" style="width: 1%;">#</th>
                   <th>{% trans "التاريخ" %}</th>
                   <th>{% trans "القيد" %}</th>
                   <th>{% trans "الحساب" %}</th>
@@ -118,17 +139,25 @@
                     data-journal-open="{{ item.amount_open }}"
                     data-journal-signed="{{ item.signed_amount }}"
                   >
-                    <td class="text-muted small">{{ forloop.counter }}</td>
-                    <td>{{ item.entry.date|date:"Y-m-d" }}</td>
+                    <td class="text-muted small text-center">
+                      {{ forloop.counter }}
+                    </td>
+                    <td class="small">
+                      {{ item.entry.date|date:"Y-m-d" }}
+                    </td>
                     <td class="small">
                       {{ item.entry.display_number }}
                     </td>
                     <td class="small">
                       {{ item.account.code }} - {{ item.account.name }}
                     </td>
-                    <td class="text-end">{{ item.debit }}</td>
-                    <td class="text-end">{{ item.credit }}</td>
-                    <td class="text-end">
+                    <td class="text-end small">
+                      {{ item.debit }}
+                    </td>
+                    <td class="text-end small">
+                      {{ item.credit }}
+                    </td>
+                    <td class="text-end small">
                       <span class="journal-item-open">
                         {{ item.amount_open }}
                       </span>
@@ -154,7 +183,9 @@
 {# ---------------------------------------- #}
 <div class="card shadow-sm border-0 mt-3" id="reconciliation-panel">
   <div class="card-body">
-    <h3 class="h6 mb-3">{% trans "تنفيذ التسوية" %}</h3>
+    <h3 class="h6 mb-3">
+      {% trans "تنفيذ التسوية" %}
+    </h3>
 
     <div class="row g-3 align-items-end">
       <div class="col-md-4">
@@ -162,7 +193,9 @@
           {% trans "الحركة البنكية المختارة" %}
         </label>
         <div class="border rounded-3 p-2 small bg-light" id="selected-bank-line-info">
-          <span class="text-muted">{% trans "لم يتم اختيار حركة بنك بعد." %}</span>
+          <span class="text-muted">
+            {% trans "لم يتم اختيار حركة بنك بعد." %}
+          </span>
         </div>
       </div>
 
@@ -171,7 +204,9 @@
           {% trans "سطر القيد المختار" %}
         </label>
         <div class="border rounded-3 p-2 small bg-light" id="selected-journal-item-info">
-          <span class="text-muted">{% trans "لم يتم اختيار سطر قيد بعد." %}</span>
+          <span class="text-muted">
+            {% trans "لم يتم اختيار سطر قيد بعد." %}
+          </span>
         </div>
       </div>
 
@@ -224,6 +259,7 @@
     let selectedBank = null;
     let selectedJournal = null;
 
+    // --- CSRF Helper ---
     function getCookie(name) {
       let cookieValue = null;
       if (document.cookie && document.cookie !== "") {
@@ -267,6 +303,7 @@
       amountInput.value = suggested.toFixed(3);
     }
 
+    // --- اختيار حركة بنك ---
     if (bankTable) {
       bankTable.addEventListener("click", function(e) {
         const tr = e.target.closest("tr.bank-line-row");
@@ -289,6 +326,7 @@
       });
     }
 
+    // --- اختيار سطر قيد ---
     if (journalTable) {
       journalTable.addEventListener("click", function(e) {
         const tr = e.target.closest("tr.journal-item-row");
@@ -312,6 +350,7 @@
       });
     }
 
+    // --- تنفيذ التسوية ---
     submitBtn.addEventListener("click", function() {
       if (!selectedBank || !selectedJournal) {
         alert("يرجى اختيار حركة بنك وسطر قيد أولاً.");

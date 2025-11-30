@@ -1,14 +1,15 @@
 {% extends "accounting/base_accounting.html" %}
-{% load i18n %}
+{% load i18n humanize %}
 
 {# 👈 هذا البلوك هو اللي يغيّر <title> في الهيدر ويحقق التست #}
 {% block meta_title %}Trial Balance | Mazoon Aluminum{% endblock %}
 
 {% block accounting_content %}
+
 {# ===== العنوان ===== #}
 <div class="mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
   <div>
-    <h2 class="h5 mb-1">
+    <h2 class="h5 mb-1 fw-bold">
       {% trans "ميزان المراجعة" %}
       <span class="visually-hidden">Trial Balance</span>
     </h2>
@@ -44,21 +45,21 @@
     <form method="get" class="row g-2 align-items-end">
 
       <div class="col-md-3 col-sm-6">
-        <label class="form-label form-label-sm">
+        <label class="form-label form-label-sm mb-1">
           {% trans "السنة المالية" %}
         </label>
         {{ form.fiscal_year }}
       </div>
 
       <div class="col-md-3 col-sm-6">
-        <label class="form-label form-label-sm">
+        <label class="form-label form-label-sm mb-1">
           {% trans "من تاريخ" %}
         </label>
         {{ form.date_from }}
       </div>
 
       <div class="col-md-3 col-sm-6">
-        <label class="form-label form-label-sm">
+        <label class="form-label form-label-sm mb-1">
           {% trans "إلى تاريخ" %}
         </label>
         {{ form.date_to }}
@@ -84,7 +85,7 @@
     <div class="card-body">
       <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
         <div>
-          <h3 class="h6 mb-1">{% trans "نتائج ميزان المراجعة" %}</h3>
+          <h3 class="h6 mb-1 fw-bold">{% trans "نتائج ميزان المراجعة" %}</h3>
           <p class="text-muted small mb-0">
             {% blocktrans with count=rows|length %}
               عدد الحسابات في الميزان: {{ count }}
@@ -93,14 +94,14 @@
         </div>
 
         {% if totals %}
-          <div class="small">
+          <div class="small text-end">
             <span class="me-2">
               <strong>{% trans "إجمالي المدين" %}:</strong>
-              {{ totals.total_debit|default_if_none:"0.000" }}
+              {{ totals.total_debit|default_if_none:"0.000"|intcomma }}
             </span>
             <span class="me-2">
               <strong>{% trans "إجمالي الدائن" %}:</strong>
-              {{ totals.total_credit|default_if_none:"0.000" }}
+              {{ totals.total_credit|default_if_none:"0.000"|intcomma }}
             </span>
 
             {% if totals.total_debit == totals.total_credit %}
@@ -118,7 +119,7 @@
 
       <div class="table-responsive">
         <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="table-light">
+          <thead class="table-light small text-muted">
             <tr>
               <th class="text-nowrap">{% trans "الكود" %}</th>
               <th class="text-nowrap">{% trans "اسم الحساب" %}</th>
@@ -130,9 +131,13 @@
           <tbody>
           {% for row in rows %}
             <tr>
-              <td class="text-nowrap">{{ row.account__code }}</td>
-              <td class="text-nowrap">{{ row.account__name }}</td>
-              <td class="text-nowrap">
+              <td class="text-nowrap small">
+                {{ row.account__code }}
+              </td>
+              <td class="text-nowrap small">
+                {{ row.account__name }}
+              </td>
+              <td class="text-nowrap small">
                 {% if row.account__type == "asset" %}
                   {% trans "أصل" %}
                 {% elif row.account__type == "liability" %}
@@ -147,27 +152,27 @@
                   {{ row.account__type }}
                 {% endif %}
               </td>
-              <td class="text-end text-nowrap">
-                {{ row.debit|default_if_none:"0.000" }}
+              <td class="text-end text-nowrap small">
+                {{ row.debit|default_if_none:"0.000"|intcomma }}
               </td>
-              <td class="text-end text-nowrap">
-                {{ row.credit|default_if_none:"0.000" }}
+              <td class="text-end text-nowrap small">
+                {{ row.credit|default_if_none:"0.000"|intcomma }}
               </td>
             </tr>
           {% endfor %}
           </tbody>
 
           {% if totals %}
-            <tfoot>
+            <tfoot class="small">
               <tr class="table-light fw-semibold">
                 <td colspan="3" class="text-end text-nowrap">
                   {% trans "الإجمالي" %}
                 </td>
                 <td class="text-end text-nowrap">
-                  {{ totals.total_debit|default_if_none:"0.000" }}
+                  {{ totals.total_debit|default_if_none:"0.000"|intcomma }}
                 </td>
                 <td class="text-end text-nowrap">
-                  {{ totals.total_credit|default_if_none:"0.000" }}
+                  {{ totals.total_credit|default_if_none:"0.000"|intcomma }}
                 </td>
               </tr>
             </tfoot>
@@ -195,4 +200,5 @@
     {% trans "لا توجد بيانات للفترة المحددة. جرّب تغيير الفترة أو اختيار سنة مالية مختلفة." %}
   </p>
 {% endif %}
+
 {% endblock %}

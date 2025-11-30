@@ -8,458 +8,269 @@
   </title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <style>
-    :root {
-      --mazoon-bg-page: #f4f4f5;
-      --mazoon-card-bg: #ffffff;
-      --mazoon-text-main: #111827;
-      --mazoon-text-muted: #6b7280;
-      --mazoon-primary: #111827;
-      --mazoon-accent: #f59e0b;
-      --mazoon-border-soft: #e5e7eb;
-    }
-
-    * {
-      box-sizing: border-box;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-
-    body {
-      margin: 0;
-      padding: 20px;
-      background: var(--mazoon-bg-page);
-      color: var(--mazoon-text-main);
-    }
-
-    .invoice-wrapper {
-      max-width: 900px;
-      margin: 0 auto;
-      background: var(--mazoon-card-bg);
-      padding: 24px 28px;
-      border-radius: 8px;
-      border: 1px solid var(--mazoon-border-soft);
-      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 24px;
-      gap: 16px;
-    }
-
-    .company-block {
-      max-width: 55%;
-    }
-
-    .company-name {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 4px;
-      color: var(--mazoon-primary);
-    }
-
-    .company-details {
-      font-size: 12px;
-      color: var(--mazoon-text-muted);
-      line-height: 1.6;
-    }
-
-    .invoice-title {
-      text-align: right;
-      min-width: 200px;
-    }
-
-    [dir="ltr"] .invoice-title {
-      text-align: left;
-    }
-
-    .invoice-title h1 {
-      font-size: 20px;
-      margin: 0 0 6px 0;
-      color: var(--mazoon-primary);
-    }
-
-    .invoice-meta {
-      font-size: 12px;
-      color: var(--mazoon-text-muted);
-      line-height: 1.6;
-    }
-
-    .invoice-meta strong {
-      color: var(--mazoon-text-main);
-    }
-
-    .section-title {
-      font-weight: 600;
-      margin-bottom: 6px;
-      font-size: 14px;
-      color: var(--mazoon-primary);
-    }
-
-    .block {
-      margin-bottom: 18px;
-    }
-
-    .box {
-      border: 1px solid var(--mazoon-border-soft);
-      border-radius: 6px;
-      padding: 10px 12px;
-      font-size: 13px;
-      background: #f9fafb;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 8px;
-      font-size: 13px;
-    }
-
-    th,
-    td {
-      padding: 8px 6px;
-      border: 1px solid #e5e7eb;
-    }
-
-    th {
-      background: #f9fafb;
-      text-align: left;
-      color: var(--mazoon-text-main);
-    }
-
-    [dir="rtl"] th {
-      text-align: right;
-    }
-
-    .totals-table {
-      width: 50%;
-      margin-left: auto;
-      margin-top: 10px;
-    }
-
-    [dir="rtl"] .totals-table {
-      margin-left: 0;
-      margin-right: auto;
-    }
-
-    .totals-table th {
-      width: 50%;
-    }
-
-    .text-right {
-      text-align: right;
-    }
-
-    .text-center {
-      text-align: center;
-    }
-
-    .notes {
-      font-size: 12px;
-      color: #444;
-      white-space: pre-wrap;
-      line-height: 1.7;
-    }
-
-    .print-hint {
-      margin-top: 16px;
-      font-size: 11px;
-      color: #777;
-      text-align: center;
-    }
-
-    .badge-status {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      border: 1px solid var(--mazoon-border-soft);
-      background: #f9fafb;
-      margin-top: 4px;
-    }
-
-    .badge-status.paid {
-      border-color: #16a34a;
-      color: #15803d;
-      background: #dcfce7;
-    }
-
-    .badge-status.partial {
-      border-color: #f97316;
-      color: #c2410c;
-      background: #ffedd5;
-    }
-
-    .badge-status.cancelled {
-      border-color: #6b7280;
-      color: #4b5563;
-      background: #e5e7eb;
-    }
-
-    .items-table th,
-    .items-table td {
-      font-size: 12px;
-    }
-
-    .items-table .col-product {
-      width: 28%;
-    }
-
-    .items-table .col-desc {
-      width: 34%;
-    }
-
-    .items-table .col-qty,
-    .items-table .col-unit,
-    .items-table .col-total {
-      white-space: nowrap;
-      width: 12%;
-    }
-
-    .line-total {
-      font-weight: 600;
-      color: var(--mazoon-primary);
-    }
-
-    @media print {
-      body {
-        background: #fff;
-        padding: 0;
-      }
-      .invoice-wrapper {
-        border-radius: 0;
-        border: none;
-        box-shadow: none;
-      }
-      .print-hint {
-        display: none;
-      }
-    }
-  </style>
+  {# Bootstrap RTL #}
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.rtl.min.css">
 </head>
-<body>
+<body class="bg-light">
 
-<div class="invoice-wrapper">
+<div class="container my-4">
+  <div class="card shadow-sm">
+    <div class="card-body">
 
-  <!-- الهيدر -->
-  <div class="header">
-    <div class="company-block">
-      <div class="company-name">Mazoon Aluminum</div>
-      <div class="company-details">
-        {% trans "سلطنة عمان – ورشة/شركة الألمنيوم" %}<br>
-        {% trans "هاتف:" %} +968-00000000<br>
-        {% trans "بريد إلكتروني:" %} info@example.com
+      {# الهيدر #}
+      <div class="row mb-4">
+        <div class="col-md-7">
+          <h1 class="h4 fw-bold mb-1 text-dark">Mazoon Aluminum</h1>
+          <p class="mb-0 small text-muted">
+            {% trans "سلطنة عمان – ورشة/شركة الألمنيوم" %}<br>
+            {% trans "هاتف:" %} +968-00000000<br>
+            {% trans "بريد إلكتروني:" %} info@example.com
+          </p>
+        </div>
+
+        <div class="col-md-5 text-md-start text-end">
+          <h2 class="h5 fw-bold mb-2 text-dark">{% trans "فاتورة" %}</h2>
+          <div class="small text-muted">
+            <div class="mb-1">
+              <span class="fw-semibold text-dark">{% trans "رقم الفاتورة:" %}</span>
+              <span>{{ invoice.display_number }}</span>
+            </div>
+            <div class="mb-1">
+              <span class="fw-semibold text-dark">{% trans "تاريخ الإصدار:" %}</span>
+              <span>{{ invoice.issued_at }}</span>
+            </div>
+            <div class="mb-1">
+              <span class="fw-semibold text-dark">{% trans "تاريخ الاستحقاق:" %}</span>
+              <span>{{ invoice.due_date|default:"-" }}</span>
+            </div>
+            <div class="mb-1">
+              <span class="fw-semibold text-dark">{% trans "الحالة:" %}</span>
+              <span>{{ invoice.get_status_display }}</span>
+              {% if invoice.status == invoice.Status.PAID %}
+                <span class="badge bg-success ms-1">{% trans "مدفوعة" %}</span>
+              {% elif invoice.status == invoice.Status.PARTIALLY_PAID %}
+                <span class="badge bg-warning text-dark ms-1">{% trans "مدفوعة جزئياً" %}</span>
+              {% elif invoice.status == invoice.Status.CANCELLED %}
+                <span class="badge bg-secondary ms-1">{% trans "ملغاة" %}</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <div class="invoice-title">
-      <h1>{% trans "فاتورة" %}</h1>
-      <div class="invoice-meta">
-        <div>
-          <strong>{% trans "رقم الفاتورة:" %}</strong>
-          {{ invoice.display_number }}
-        </div>
-        <div>
-          <strong>{% trans "تاريخ الإصدار:" %}</strong>
-          {{ invoice.issued_at }}
-        </div>
-        <div>
-          <strong>{% trans "تاريخ الاستحقاق:" %}</strong>
-          {{ invoice.due_date|default:"-" }}
-        </div>
-        <div>
-          <strong>{% trans "الحالة:" %}</strong>
-          {{ invoice.get_status_display }}
-          {% if invoice.status == invoice.Status.PAID %}
-            <span class="badge-status paid">{% trans "مدفوعة" %}</span>
-          {% elif invoice.status == invoice.Status.PARTIALLY_PAID %}
-            <span class="badge-status partial">{% trans "مدفوعة جزئياً" %}</span>
-          {% elif invoice.status == invoice.Status.CANCELLED %}
-            <span class="badge-status cancelled">{% trans "ملغاة" %}</span>
+      {# بيانات العميل / المورد #}
+      <div class="mb-4">
+        <h6 class="fw-bold small text-dark mb-2">
+          {% if invoice.type == "purchase" %}
+            {% trans "بيانات المورد" %}
+          {% else %}
+            {% trans "بيانات العميل" %}
+          {% endif %}
+        </h6>
+
+        <div class="border rounded-3 p-3 bg-light small">
+          {% if invoice.customer %}
+            <div class="mb-1">
+              <span class="fw-semibold">{% trans "الاسم:" %}</span>
+              <span>{{ invoice.customer.name }}</span>
+            </div>
+            {% if invoice.customer.company_name %}
+              <div class="mb-1">
+                <span class="fw-semibold">{% trans "الشركة:" %}</span>
+                <span>{{ invoice.customer.company_name }}</span>
+              </div>
+            {% endif %}
+            {% if invoice.customer.tax_number %}
+              <div class="mb-1">
+                <span class="fw-semibold">{% trans "الرقم الضريبي:" %}</span>
+                <span>{{ invoice.customer.tax_number }}</span>
+              </div>
+            {% endif %}
+            {% if invoice.customer.phone %}
+              <div class="mb-0">
+                <span class="fw-semibold">{% trans "الهاتف:" %}</span>
+                <span>{{ invoice.customer.phone }}</span>
+              </div>
+            {% endif %}
+          {% else %}
+            <p class="mb-0 text-muted">
+              {% trans "لم يتم ربط الفاتورة بأي عميل/مورد." %}
+            </p>
           {% endif %}
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- بيانات العميل / المورد -->
-  <div class="block">
-    <div class="section-title">
-      {% if invoice.type == "purchase" %}
-        {% trans "بيانات المورد" %}
-      {% else %}
-        {% trans "بيانات العميل" %}
-      {% endif %}
-    </div>
+      {# ملخص الفاتورة #}
+      <div class="mb-4">
+        <h6 class="fw-bold small text-dark mb-2">
+          {% trans "ملخص الفاتورة" %}
+        </h6>
 
-    <div class="box">
-      {% if invoice.customer %}
-        <div><strong>{% trans "الاسم:" %}</strong> {{ invoice.customer.name }}</div>
-        {% if invoice.customer.company_name %}
-          <div><strong>{% trans "الشركة:" %}</strong> {{ invoice.customer.company_name }}</div>
-        {% endif %}
-        {% if invoice.customer.tax_number %}
-          <div><strong>{% trans "الرقم الضريبي:" %}</strong> {{ invoice.customer.tax_number }}</div>
-        {% endif %}
-        {% if invoice.customer.phone %}
-          <div><strong>{% trans "الهاتف:" %}</strong> {{ invoice.customer.phone }}</div>
-        {% endif %}
-      {% else %}
-        <div class="company-details">
-          {% trans "لم يتم ربط الفاتورة بأي عميل/مورد." %}
+        <div class="row justify-content-end">
+          <div class="col-md-6 col-lg-5">
+            <table class="table table-sm mb-0">
+              <tbody>
+                <tr>
+                  <th class="small text-muted">{% trans "إجمالي الفاتورة" %}</th>
+                  <td class="text-end fw-semibold">{{ invoice.total_amount }}</td>
+                </tr>
+                <tr>
+                  <th class="small text-muted">{% trans "إجمالي المدفوع" %}</th>
+                  <td class="text-end fw-semibold">{{ invoice.paid_amount }}</td>
+                </tr>
+                <tr>
+                  <th class="small text-muted">{% trans "المتبقي" %}</th>
+                  <td class="text-end fw-semibold">{{ invoice.balance }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {# بنود الفاتورة #}
+      <div class="mb-4">
+        <h6 class="fw-bold small text-dark mb-2">
+          {% trans "بنود الفاتورة" %}
+        </h6>
+
+        <div class="table-responsive">
+          <table class="table table-bordered table-sm align-middle mb-0">
+            <thead class="table-light small text-muted">
+              <tr>
+                <th>{% trans "المنتج" %}</th>
+                <th>{% trans "الوصف" %}</th>
+                <th class="text-center">{% trans "الكمية" %}</th>
+                <th class="text-center">{% trans "سعر الوحدة" %}</th>
+                <th class="text-end">{% trans "الإجمالي" %}</th>
+              </tr>
+            </thead>
+            <tbody class="small">
+              {% for item in invoice.items.all %}
+                <tr>
+                  <td>
+                    {% if item.product %}
+                      {{ item.product.name }}
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if item.description %}
+                      {{ item.description }}
+                    {% elif item.product %}
+                      {{ item.product.description }}
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    {{ item.quantity }}
+                  </td>
+                  <td class="text-center">
+                    {{ item.unit_price }}
+                  </td>
+                  <td class="text-end fw-semibold">
+                    {{ item.subtotal }}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="5" class="text-center text-muted py-4">
+                    {% trans "لا توجد بنود في هذه الفاتورة." %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {# الوصف / الشروط #}
+      {% if invoice.description or invoice.terms %}
+        <div class="row mb-4 small">
+          {% if invoice.description %}
+            <div class="col-md-6 mb-3 mb-md-0">
+              <h6 class="fw-bold small text-dark mb-2">
+                {% trans "الوصف / التفاصيل" %}
+              </h6>
+              <div class="border rounded-3 p-3 bg-light">
+                {{ invoice.description|linebreaksbr }}
+              </div>
+            </div>
+          {% endif %}
+          {% if invoice.terms %}
+            <div class="col-md-6">
+              <h6 class="fw-bold small text-dark mb-2">
+                {% trans "الشروط والأحكام" %}
+              </h6>
+              <div class="border rounded-3 p-3 bg-light">
+                {{ invoice.terms|linebreaksbr }}
+              </div>
+            </div>
+          {% endif %}
         </div>
       {% endif %}
-    </div>
-  </div>
 
-  <!-- ملخص الفاتورة -->
-  <div class="block">
-    <div class="section-title">{% trans "ملخص الفاتورة" %}</div>
-
-    <table class="totals-table">
-      <tbody>
-        <tr>
-          <th>{% trans "إجمالي الفاتورة" %}</th>
-          <td class="text-right">{{ invoice.total_amount }}</td>
-        </tr>
-        <tr>
-          <th>{% trans "إجمالي المدفوع" %}</th>
-          <td class="text-right">{{ invoice.paid_amount }}</td>
-        </tr>
-        <tr>
-          <th>{% trans "المتبقي" %}</th>
-          <td class="text-right">{{ invoice.balance }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- بنود الفاتورة -->
-  <div class="block">
-    <div class="section-title">{% trans "بنود الفاتورة" %}</div>
-
-    <table class="items-table">
-      <thead>
-        <tr>
-          <th class="col-product">{% trans "المنتج" %}</th>
-          <th class="col-desc">{% trans "الوصف" %}</th>
-          <th class="col-qty text-center">{% trans "الكمية" %}</th>
-          <th class="col-unit text-center">{% trans "سعر الوحدة" %}</th>
-          <th class="col-total text-right">{% trans "الإجمالي" %}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in invoice.items.all %}
-          <tr>
-            <td class="col-product">
-              {% if item.product %}
-                {{ item.product.name }}
-              {% else %}
-                <span class="text-muted">—</span>
-              {% endif %}
-            </td>
-            <td class="col-desc">
-              {% if item.description %}
-                {{ item.description }}
-              {% elif item.product %}
-                {{ item.product.description }}
-              {% else %}
-                <span class="text-muted">—</span>
-              {% endif %}
-            </td>
-            <td class="col-qty text-center">
-              {{ item.quantity }}
-            </td>
-            <td class="col-unit text-center">
-              {{ item.unit_price }}
-            </td>
-            <td class="col-total text-right">
-              <span class="line-total">{{ item.subtotal }}</span>
-            </td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="5" class="text-center">
-              {% trans "لا توجد بنود في هذه الفاتورة." %}
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  {% if invoice.description %}
-    <div class="block">
-      <div class="section-title">{% trans "الوصف / التفاصيل" %}</div>
-      <div class="box notes">
-        {{ invoice.description|linebreaksbr }}
+      {# جدول الدفعات #}
+      <div class="mb-3">
+        <h6 class="fw-bold small text-dark mb-2">
+          {% trans "الدفعات على هذه الفاتورة" %}
+        </h6>
+        <div class="table-responsive">
+          <table class="table table-bordered table-sm align-middle mb-0">
+            <thead class="table-light small text-muted">
+              <tr>
+                <th>{% trans "التاريخ" %}</th>
+                <th>{% trans "المبلغ" %}</th>
+                <th>{% trans "الطريقة" %}</th>
+                <th>{% trans "ملاحظات" %}</th>
+              </tr>
+            </thead>
+            <tbody class="small">
+              {% for p in invoice.payments.all %}
+                <tr>
+                  <td>{{ p.date }}</td>
+                  <td>{{ p.amount }}</td>
+                  <td>
+                    {% if p.method %}
+                      {{ p.method.name }}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if p.description %}
+                      {{ p.description }}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center text-muted py-4">
+                    {% trans "لا توجد دفعات مسجلة على هذه الفاتورة." %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      <p class="small text-muted text-center mt-3 d-print-none">
+        {% trans "يمكنك استخدام أمر الطباعة في المتصفح (Ctrl + P) ثم اختيار" %}
+        <strong>Save as PDF</strong>.
+      </p>
+
     </div>
-  {% endif %}
-
-  {% if invoice.terms %}
-    <div class="block">
-      <div class="section-title">{% trans "الشروط والأحكام" %}</div>
-      <div class="box notes">
-        {{ invoice.terms|linebreaksbr }}
-      </div>
-    </div>
-  {% endif %}
-
-  <!-- جدول الدفعات -->
-  <div class="block">
-    <div class="section-title">{% trans "الدفعات على هذه الفاتورة" %}</div>
-    <table>
-      <thead>
-        <tr>
-          <th>{% trans "التاريخ" %}</th>
-          <th>{% trans "المبلغ" %}</th>
-          <th>{% trans "الطريقة" %}</th>
-          <th>{% trans "ملاحظات" %}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for p in invoice.payments.all %}
-          <tr>
-            <td>{{ p.date }}</td>
-            <td>{{ p.amount }}</td>
-            <td>
-              {% if p.method %}
-                {{ p.method.name }}
-              {% else %}
-                <span class="text-muted">-</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if p.description %}
-                {{ p.description }}
-              {% else %}
-                <span class="text-muted">-</span>
-              {% endif %}
-            </td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="4" class="text-center">
-              {% trans "لا توجد دفعات مسجلة على هذه الفاتورة." %}
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <div class="print-hint">
-    {% trans "يمكنك استخدام أمر الطباعة في المتصفح (Ctrl + P) ثم اختيار" %}
-    <strong>Save as PDF</strong>.
   </div>
 </div>
 
-<script>
-  // window.print();  // فعّلها لو تحب تفتح الطباعة مباشرة
-</script>
+{# فعّل السطر التالي لو تحب تفتح نافذة الطباعة مباشرة #}
+{# <script>window.print();</script> #}
 
 </body>
 </html>

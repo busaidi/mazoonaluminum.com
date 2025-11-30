@@ -12,312 +12,161 @@
   </title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <style>
-    :root {
-      --mazoon-bg-page: #f4f4f5;
-      --mazoon-card-bg: #ffffff;
-      --mazoon-text-main: #111827;
-      --mazoon-text-muted: #6b7280;
-      --mazoon-primary: #111827;
-      --mazoon-accent: #f59e0b;
-      --mazoon-border-soft: #e5e7eb;
-    }
-
-    * {
-      box-sizing: border-box;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-
-    body {
-      margin: 0;
-      padding: 20px;
-      background: var(--mazoon-bg-page);
-      color: var(--mazoon-text-main);
-    }
-
-    .doc-wrapper {
-      max-width: 900px;
-      margin: 0 auto;
-      background: var(--mazoon-card-bg);
-      padding: 24px 28px;
-      border-radius: 8px;
-      border: 1px solid var(--mazoon-border-soft);
-      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 24px;
-      gap: 16px;
-    }
-
-    .company-block {
-      max-width: 55%;
-    }
-
-    .company-name {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 4px;
-      color: var(--mazoon-primary);
-    }
-
-    .company-details {
-      font-size: 12px;
-      color: var(--mazoon-text-muted);
-      line-height: 1.6;
-    }
-
-    .doc-title {
-      text-align: right;
-      min-width: 220px;
-    }
-
-    [dir="ltr"] .doc-title {
-      text-align: left;
-    }
-
-    .doc-title h1 {
-      font-size: 20px;
-      margin: 0 0 6px 0;
-      color: var(--mazoon-primary);
-    }
-
-    .doc-meta {
-      font-size: 12px;
-      color: var(--mazoon-text-muted);
-      line-height: 1.6;
-    }
-
-    .doc-meta strong {
-      color: var(--mazoon-text-main);
-    }
-
-    .section-title {
-      font-weight: 600;
-      margin-bottom: 6px;
-      font-size: 14px;
-      color: var(--mazoon-primary);
-    }
-
-    .block {
-      margin-bottom: 18px;
-    }
-
-    .box {
-      border: 1px solid var(--mazoon-border-soft);
-      border-radius: 6px;
-      padding: 10px 12px;
-      font-size: 13px;
-      background: #f9fafb;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 8px;
-      font-size: 13px;
-    }
-
-    th,
-    td {
-      padding: 8px 6px;
-      border: 1px solid #e5e7eb;
-    }
-
-    th {
-      background: #f9fafb;
-      text-align: left;
-      color: var(--mazoon-text-main);
-    }
-
-    [dir="rtl"] th {
-      text-align: right;
-    }
-
-    .text-right {
-      text-align: right;
-    }
-
-    .text-center {
-      text-align: center;
-    }
-
-    .notes {
-      font-size: 12px;
-      color: #444;
-      white-space: pre-wrap;
-      line-height: 1.7;
-    }
-
-    .print-hint {
-      margin-top: 16px;
-      font-size: 11px;
-      color: #777;
-      text-align: center;
-    }
-
-    .badge-type {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      border: 1px solid var(--mazoon-border-soft);
-      background: #f9fafb;
-      margin-top: 4px;
-    }
-
-    .badge-type.receipt {
-      border-color: #16a34a;
-      color: #15803d;
-      background: #dcfce7;
-    }
-
-    .badge-type.payment {
-      border-color: #b91c1c;
-      color: #b91c1c;
-      background: #fee2e2;
-    }
-
-    @media print {
-      body {
-        background: #fff;
-        padding: 0;
-      }
-      .doc-wrapper {
-        border-radius: 0;
-        border: none;
-        box-shadow: none;
-      }
-      .print-hint {
-        display: none;
-      }
-    }
-  </style>
+  {# Bootstrap فقط، RTL للعربي، LTR لغيره #}
+  {% if LANGUAGE_CODE == 'ar' %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.rtl.min.css"
+          rel="stylesheet"
+          integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM"
+          crossorigin="anonymous">
+  {% else %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+          crossorigin="anonymous">
+  {% endif %}
 </head>
-<body>
+<body class="bg-light">
 
-<div class="doc-wrapper">
+<div class="container my-4">
+  <div class="card shadow-sm">
+    <div class="card-body">
 
-  <!-- الهيدر -->
-  <div class="header">
-    <div class="company-block">
-      <div class="company-name">Mazoon Aluminum</div>
-      <div class="company-details">
-        {% trans "سلطنة عمان – ورشة/شركة الألمنيوم" %}<br>
-        {% trans "هاتف:" %} +968-00000000<br>
-        {% trans "بريد إلكتروني:" %} info@example.com
+      {# ========= الهيدر ========= #}
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <h1 class="h4 fw-bold mb-1">Mazoon Aluminum</h1>
+          <div class="text-muted small">
+            {% trans "سلطنة عمان – ورشة/شركة الألمنيوم" %}<br>
+            {% trans "هاتف:" %} +968-00000000<br>
+            {% trans "بريد إلكتروني:" %} info@example.com
+          </div>
+        </div>
+        <div class="col-md-6 text-md-end mt-3 mt-md-0">
+          <h2 class="h5 fw-bold mb-2">
+            {% if payment.type == "receipt" %}
+              {% trans "سند قبض" %}
+            {% else %}
+              {% trans "سند صرف" %}
+            {% endif %}
+          </h2>
+          <div class="small">
+            <div class="mb-1">
+              <span class="text-muted">{% trans "رقم السند:" %}</span>
+              <span class="fw-semibold">{{ payment.display_number }}</span>
+            </div>
+            <div class="mb-1">
+              <span class="text-muted">{% trans "التاريخ:" %}</span>
+              <span class="fw-semibold">{{ payment.date|date:"Y-m-d" }}</span>
+            </div>
+            <div class="mb-1">
+              <span class="text-muted">{% trans "القيمة:" %}</span>
+              <span class="fw-semibold">{{ payment.amount }} {{ payment.currency }}</span>
+            </div>
+            <div class="mb-1">
+              <span class="text-muted">{% trans "النوع:" %}</span>
+              {% if payment.type == "receipt" %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                  {% trans "سند قبض" %}
+                </span>
+              {% else %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                  {% trans "سند صرف" %}
+                </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <div class="doc-title">
-      <h1>
-        {% if payment.type == "receipt" %}
-          {% trans "سند قبض" %}
-        {% else %}
-          {% trans "سند صرف" %}
-        {% endif %}
-      </h1>
-      <div class="doc-meta">
-        <div>
-          <strong>{% trans "رقم السند:" %}</strong>
-          {{ payment.display_number }}
-        </div>
-        <div>
-          <strong>{% trans "التاريخ:" %}</strong>
-          {{ payment.date|date:"Y-m-d" }}
-        </div>
-        <div>
-          <strong>{% trans "القيمة:" %}</strong>
-          {{ payment.amount }} {{ payment.currency }}
-        </div>
-        <div>
-          <strong>{% trans "النوع:" %}</strong>
-          {% if payment.type == "receipt" %}
-            {% trans "سند قبض" %}
-            <span class="badge-type receipt">{% trans "قبض" %}</span>
+      {# ========= بيانات الطرف ========= #}
+      <div class="mb-3">
+        <h6 class="fw-bold mb-2">{% trans "بيانات الطرف" %}</h6>
+        <div class="border rounded-3 p-3 bg-light">
+          {% if payment.contact %}
+            <div class="small mb-1">
+              <span class="text-muted">{% trans "الاسم:" %}</span>
+              <span class="fw-semibold">{{ payment.contact.name }}</span>
+            </div>
+            {% if payment.contact.company_name %}
+              <div class="small mb-1">
+                <span class="text-muted">{% trans "الشركة:" %}</span>
+                <span class="fw-semibold">{{ payment.contact.company_name }}</span>
+              </div>
+            {% endif %}
+            {% if payment.contact.tax_number %}
+              <div class="small mb-1">
+                <span class="text-muted">{% trans "الرقم الضريبي:" %}</span>
+                <span class="fw-semibold">{{ payment.contact.tax_number }}</span>
+              </div>
+            {% endif %}
+            {% if payment.contact.phone %}
+              <div class="small mb-0">
+                <span class="text-muted">{% trans "الهاتف:" %}</span>
+                <span class="fw-semibold">{{ payment.contact.phone }}</span>
+              </div>
+            {% endif %}
           {% else %}
-            {% trans "سند صرف" %}
-            <span class="badge-type payment">{% trans "صرف" %}</span>
+            <div class="small text-muted mb-0">
+              {% trans "لم يتم ربط السند بأي عميل/مورد." %}
+            </div>
           {% endif %}
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- بيانات الطرف -->
-  <div class="block">
-    <div class="section-title">{% trans "بيانات الطرف" %}</div>
-    <div class="box">
-      {% if payment.contact %}
-        <div><strong>{% trans "الاسم:" %}</strong> {{ payment.contact.name }}</div>
-        {% if payment.contact.company_name %}
-          <div><strong>{% trans "الشركة:" %}</strong> {{ payment.contact.company_name }}</div>
-        {% endif %}
-        {% if payment.contact.tax_number %}
-          <div><strong>{% trans "الرقم الضريبي:" %}</strong> {{ payment.contact.tax_number }}</div>
-        {% endif %}
-        {% if payment.contact.phone %}
-          <div><strong>{% trans "الهاتف:" %}</strong> {{ payment.contact.phone }}</div>
-        {% endif %}
-      {% else %}
-        <div class="notes">
-          {% trans "لم يتم ربط السند بأي عميل/مورد." %}
+      {# ========= تفاصيل السند ========= #}
+      <div class="mb-3">
+        <h6 class="fw-bold mb-2">{% trans "تفاصيل السند" %}</h6>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <tbody class="small">
+              <tr>
+                <th class="w-25 text-muted fw-normal">{% trans "طريقة الدفع" %}</th>
+                <td class="fw-semibold">
+                  {% if payment.method %}
+                    {{ payment.method.name }}
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th class="text-muted fw-normal">{% trans "المرجع الخارجي" %}</th>
+                <td class="fw-semibold">
+                  {{ payment.reference|default:"—" }}
+                </td>
+              </tr>
+              <tr>
+                <th class="text-muted fw-normal">{% trans "المبلغ" %}</th>
+                <td class="fw-semibold">
+                  {{ payment.amount }} {{ payment.currency }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {# ========= الملاحظات ========= #}
+      {% if payment.notes %}
+        <div class="mb-3">
+          <h6 class="fw-bold mb-2">{% trans "الملاحظات" %}</h6>
+          <div class="border rounded-3 p-3 bg-light small">
+            {{ payment.notes|linebreaksbr }}
+          </div>
         </div>
       {% endif %}
+
+      <p class="text-center text-muted small d-print-none mt-4 mb-0">
+        {% trans "يمكنك استخدام أمر الطباعة في المتصفح (Ctrl + P) ثم اختيار" %}
+        <strong>Save as PDF</strong>.
+      </p>
+
     </div>
-  </div>
-
-  <!-- تفاصيل السند -->
-  <div class="block">
-    <div class="section-title">{% trans "تفاصيل السند" %}</div>
-
-    <table>
-      <tbody>
-        <tr>
-          <th style="width: 30%;">{% trans "طريقة الدفع" %}</th>
-          <td>
-            {% if payment.method %}
-              {{ payment.method.name }}
-            {% else %}
-              <span class="text-muted">—</span>
-            {% endif %}
-          </td>
-        </tr>
-        <tr>
-          <th>{% trans "المرجع الخارجي" %}</th>
-          <td>{{ payment.reference|default:"—" }}</td>
-        </tr>
-        <tr>
-          <th>{% trans "المبلغ" %}</th>
-          <td>{{ payment.amount }} {{ payment.currency }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  {% if payment.notes %}
-    <!-- الملاحظات -->
-    <div class="block">
-      <div class="section-title">{% trans "الملاحظات" %}</div>
-      <div class="box notes">
-        {{ payment.notes|linebreaksbr }}
-      </div>
-    </div>
-  {% endif %}
-
-  <div class="print-hint">
-    {% trans "يمكنك استخدام أمر الطباعة في المتصفح (Ctrl + P) ثم اختيار" %}
-    <strong>Save as PDF</strong>.
   </div>
 </div>
 
-<script>
-  // لو حاب تطبع مباشرة عند فتح الصفحة فعّل السطر التالي:
-  // window.print();
-</script>
+{# لو حاب تطبع مباشرة فعّل السطر التالي #}
+{# <script>window.print();</script> #}
 
 </body>
 </html>
