@@ -1,13 +1,14 @@
 /* ========================================
    Mazoon Aluminum – Global Theme
    يعتمد على Bootstrap (آخر إصدار)
+   ثيم: أسود لايت
    ======================================== */
 
 /* 0) استيراد خط Ubuntu (اختياري من Google Fonts) */
 @import url("https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap");
 
 /* ============================
-   1) ألوان الهوية العامة
+   1) ألوان الهوية العامة + متغيرات مساعدة
    ============================ */
 
 :root {
@@ -28,13 +29,18 @@
   /* ألوان الروابط */
   --mazoon-link: #f59e0b;         /* ذهبي واضح للرابط */
   --mazoon-link-hover: #b45309;   /* ذهبي أغمق عند المرور */
+
+  /* ظلال و radius موحَّد */
+  --mazoon-radius-sm: 5px;
+  --mazoon-radius-md: 8px;
+  --mazoon-shadow-soft: 0 4px 12px rgba(15, 23, 42, 0.03);
+  --mazoon-shadow-strong: 0 16px 40px rgba(15, 23, 42, 0.08);
 }
 
 /* ============================
    2) الأساسيات – Body & Typography
    ============================ */
 
-/* نخلي كل شيء يمشي على Ubuntu */
 html,
 body,
 button,
@@ -63,32 +69,27 @@ h6 {
   color: var(--mazoon-text-muted) !important;
 }
 
-/* تحسين الـ alerts */
+/* alerts أبسط شوي */
 .alert {
-  border-radius: 6px;
+  border-radius: var(--mazoon-radius-sm);
 }
 
 /* ============================
    3) Layout – Main / Container
    ============================ */
 
-/*
-  ملاحظة:
-  لا نلمس .container من ناحية العرض.
-  نخلي Bootstrap يتحكم في الـ width عشان يكون الهيدر والمحتوى متطابقين.
-*/
-
+/* نخلي المحتوى داخل main على خلفية كرت */
 main {
-  background-color: var(--mazoon-card-bg); /* أبيض ناعم للمحتوى */
-  padding-block: 2.5rem;                  /* مسافة فوق وتحت المحتوى */
+  background-color: var(--mazoon-card-bg);
+  padding-block: 2.5rem;
 }
 
-/* تخفيف المسافات الأفقية داخل المحتوى بدون تغيير عرض الكونتينر */
+/* تخفيف الحشوة الأفقية بدون لمس عرض container */
 main .container {
   padding-inline: 0.75rem;
 }
 
-/* إزالة الفراغ الزائد أول وآخر عنصر داخل الكونتينر */
+/* إزالة الفراغ الزايد أول وآخر عنصر */
 main .container > *:first-child {
   margin-top: 0;
 }
@@ -112,6 +113,10 @@ main .container > *:last-child {
   font-size: 0.9rem;
   background-color: var(--mazoon-primary);
   color: #ffffff;
+  border-radius: var(--mazoon-radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mazoon-navbar .navbar-brand .brand-text {
@@ -126,7 +131,7 @@ main .container > *:last-child {
   position: relative;
   font-size: 0.95rem;
   padding-inline: 0.75rem !important;
-  color: #4b5563 !important; /* رمادي أنيق */
+  color: #4b5563 !important;
 }
 
 .mazoon-navbar .nav-link:hover {
@@ -215,23 +220,23 @@ a:not(.btn):not(.nav-link):focus {
 .product-card,
 .blog-card {
   background-color: var(--mazoon-card-bg) !important;
-  border-radius: 6px;
+  border-radius: var(--mazoon-radius-sm);
   border: 1px solid var(--mazoon-border-soft) !important;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+  box-shadow: var(--mazoon-shadow-soft);
 }
 
-/* Hero Card */
+/* Hero Card رئيسية */
 .hero-card {
   background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 50%, #ffffff 100%);
-  border-radius: 8px;
+  border-radius: var(--mazoon-radius-md);
   border: 1px solid #e5e7eb;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--mazoon-shadow-strong);
 }
 
 .hero-image-card {
   background-color: #f3f4f6;
   padding: 1.25rem;
-  border-radius: 8px;
+  border-radius: var(--mazoon-radius-md);
   border: 1px solid #e5e7eb;
 }
 
@@ -239,14 +244,29 @@ a:not(.btn):not(.nav-link):focus {
   object-fit: cover;
 }
 
+/* كروت KPI صغيرة */
+.kpi-card {
+  border-radius: var(--mazoon-radius-md);
+  background-color: var(--mazoon-card-bg);
+  border: 1px solid var(--mazoon-border-soft);
+  padding: 0.5rem;
+  box-shadow: var(--mazoon-shadow-soft);
+}
+.kpi-card .h3 {
+  color: var(--mazoon-primary) !important;
+}
+
 /* ============================
-   7) Buttons – Primary / Outline
+   7) Buttons – Bootstrap Overrides
    ============================ */
+
+/* أزرار Bootstrap الافتراضية بنفس روح الثيم */
 
 .btn-primary {
   background-color: var(--mazoon-primary) !important;
   border-color: var(--mazoon-primary) !important;
   color: #ffffff !important;
+  border-radius: var(--mazoon-radius-sm);
 }
 
 .btn-primary:hover,
@@ -258,6 +278,7 @@ a:not(.btn):not(.nav-link):focus {
 .btn-outline-primary {
   color: var(--mazoon-primary) !important;
   border-color: var(--mazoon-primary) !important;
+  border-radius: var(--mazoon-radius-sm);
 }
 
 .btn-outline-primary:hover,
@@ -266,6 +287,7 @@ a:not(.btn):not(.nav-link):focus {
   color: #ffffff !important;
 }
 
+/* لون مختصر للنصوص */
 .text-mazoon {
   color: var(--mazoon-primary) !important;
 }
@@ -275,7 +297,79 @@ a:not(.btn):not(.nav-link):focus {
 }
 
 /* ============================
-   8) Footer
+   8) Mazoon Buttons (موحدة – بدون راوند مبالغ)
+   ============================ */
+
+/* قاعدة عامة لكل أزرار Mazoon */
+.btn-mazoon,
+.btn-mazoon-primary,
+.btn-mazoon-outline,
+.btn-mazoon-warning,
+.btn-mazoon-danger {
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.35rem 0.95rem;
+  line-height: 1.3;
+  border-radius: var(--mazoon-radius-sm);
+  border-width: 1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Primary */
+.btn-mazoon-primary {
+  background-color: var(--mazoon-primary);
+  border-color: var(--mazoon-primary);
+  color: #fff;
+}
+.btn-mazoon-primary:hover {
+  background-color: var(--mazoon-primary-soft);
+  border-color: var(--mazoon-primary-soft);
+}
+
+/* Outline */
+.btn-mazoon-outline {
+  background-color: transparent;
+  border-color: var(--mazoon-primary-soft);
+  color: var(--mazoon-primary);
+}
+.btn-mazoon-outline:hover {
+  background-color: rgba(17, 24, 39, 0.06);
+  border-color: var(--mazoon-primary);
+}
+
+/* Warning */
+.btn-mazoon-warning {
+  background-color: transparent;
+  border-color: #eab308;
+  color: #eab308;
+}
+.btn-mazoon-warning:hover {
+  background-color: #eab308;
+  color: #1c1c1c;
+}
+
+/* Danger */
+.btn-mazoon-danger {
+  background-color: transparent;
+  border-color: #ef4444;
+  color: #ef4444;
+}
+.btn-mazoon-danger:hover {
+  background-color: #ef4444;
+  color: #ffffff;
+}
+
+/* Actionbar موحّد */
+.mazoon-actionbar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ============================
+   9) Footer
    ============================ */
 
 .mazoon-footer {
@@ -284,7 +378,7 @@ a:not(.btn):not(.nav-link):focus {
 }
 
 /* ============================
-   9) Tables
+   10) Tables
    ============================ */
 
 .table thead tr {
@@ -296,7 +390,7 @@ a:not(.btn):not(.nav-link):focus {
 }
 
 /* ============================
-   10) Invoice / Order Items Table
+   11) Invoice / Order Items Table
    ============================ */
 
 .invoice-items-table td,
@@ -334,7 +428,7 @@ a:not(.btn):not(.nav-link):focus {
 }
 
 /* ============================
-   11) Badges – حالات الفواتير والطلبات
+   12) Badges – حالات الفواتير والطلبات
    ============================ */
 
 .badge-mazoon {
@@ -382,7 +476,7 @@ a:not(.btn):not(.nav-link):focus {
 }
 
 /* ============================
-   12) Mazoon Accounting Nav
+   13) Mazoon Section Nav (مثل المحاسبة / المبيعات)
    ============================ */
 
 .bg-mazoon-card {
@@ -390,7 +484,7 @@ a:not(.btn):not(.nav-link):focus {
 }
 
 .mazoon-nav .nav-link {
-  border-radius: 5px;
+  border-radius: var(--mazoon-radius-sm);
   color: var(--mazoon-text-muted);
   font-weight: 500;
   transition:
@@ -412,7 +506,7 @@ a:not(.btn):not(.nav-link):focus {
 }
 
 /* ============================
-   13) Home Page Tweaks
+   14) Home Page Tweaks
    ============================ */
 
 .home-section {
@@ -439,7 +533,7 @@ a:not(.btn):not(.nav-link):focus {
 .hero-kpi-card {
   min-width: 110px;
   padding: 0.6rem 0.9rem;
-  border-radius: 8px;
+  border-radius: var(--mazoon-radius-md);
   background-color: #f9fafb;
   border: 1px solid var(--mazoon-border-soft);
 }
@@ -471,22 +565,4 @@ a:not(.btn):not(.nav-link):focus {
   background-color: #f3f4f6;
   color: var(--mazoon-primary);
   font-size: 1rem;
-}
-.kpi-card {
-  border-radius: 8px;
-  background-color: var(--mazoon-card-bg);
-  border: 1px solid var(--mazoon-border-soft);
-  padding: 0.5rem;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
-}
-.kpi-card .h3 {
-  color: var(--mazoon-primary) !important;
-}
-.btn-mazoon-danger {
-    background-color: #b91c1c !important;    /* أحمر داكن */
-    border-color: #7f1d1d !important;
-    color: #fff !important;
-}
-.btn-mazoon-danger:hover {
-    background-color: #991b1b !important;
 }

@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .views import SalesDocumentPrintView
 
 app_name = "sales"
 
@@ -26,6 +27,7 @@ urlpatterns = [
     # تعليم أمر البيع كمفوتر
     path("sales/<int:pk>/mark-invoiced/", views.MarkOrderInvoicedView.as_view(), name="order_mark_invoiced"),
     path("api/product-uom/<int:pk>/", views.product_uom_info, name="product_uom_info"),
+    path("sales/<int:pk>/print/", SalesDocumentPrintView.as_view(), name="sales_print"),
 
     # مذكرات التسليم
     path("sales/<int:order_pk>/delivery/new/", views.DeliveryNoteCreateView.as_view(), name="delivery_note_create"),

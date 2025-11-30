@@ -494,3 +494,26 @@ def product_uom_info(request, pk):
         "alt_price": str(alt_price) if alt_price is not None else "",
     }
     return JsonResponse(data)
+
+
+class SalesDocumentPrintView(SalesBaseView, DetailView):
+    """
+    Printable read-only view for a sales document (quotation or order).
+    Uses a clean template optimized for printing.
+    """
+    model = SalesDocument
+    template_name = "sales/sales/print.html"
+    context_object_name = "document"
+
+    def get_queryset(self):
+        """
+        Optimize queries for print:
+        - contact (customer)
+        - lines + related products
+        - delivery notes if needed
+        """
+        return (
+            SalesDocument.objects
+            .select_related("contact")
+            .prefetch_related("lines__product", "delivery_notes")
+        )

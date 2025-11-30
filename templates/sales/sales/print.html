@@ -1,0 +1,333 @@
+{# templates/sales/sales/print.html #}
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}
+  {{ document.display_number }} – {% trans "طباعة مستند مبيعات" %}
+{% endblock %}
+
+{% block content %}
+
+<div class="container my-3 my-md-4">
+
+  {# أزرار أعلى الصفحة (تظهر فقط على الشاشة، تختفي في الطباعة) #}
+  <div class="d-flex justify-content-between align-items-center mb-3 d-print-none">
+    <div>
+      <h1 class="h5 fw-bold mb-0">
+        {% trans "طباعة مستند مبيعات" %}
+      </h1>
+      <p class="text-muted small mb-0">
+        {% trans "عرض نسخة جاهزة للطباعة من عرض السعر أو أمر البيع." %}
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'sales:sales_detail' document.pk %}"
+         class="btn btn-light btn-sm">
+        <i class="bi bi-arrow-right"></i>
+        {% trans "رجوع للمستند" %}
+      </a>
+      <button type="button"
+              class="btn btn-primary btn-sm"
+              onclick="window.print()">
+        <i class="bi bi-printer ms-1"></i>
+        {% trans "طباعة" %}
+      </button>
+    </div>
+  </div>
+
+  {# صفحة الطباعة نفسها #}
+  <div class="card shadow-sm border-0 print-page mx-auto">
+    <div class="card-body">
+
+      {# ================== رأس الشركة / الهيدر ================== #}
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+          <h2 class="h5 fw-bold mb-1 text-mazoon">
+            Mazoon Aluminum
+          </h2>
+          <p class="small text-muted mb-0">
+            {% trans "أنظمة نوافذ وأبواب ألومنيوم عالية الجودة" %}
+          </p>
+          {# لاحقاً يمكن إضافة العنوان / الهاتف / الضريبة #}
+        </div>
+
+        <div class="text-end">
+          <div class="small text-muted mb-1">
+            {% if document.is_quotation %}
+              {% trans "عرض سعر" %}
+            {% else %}
+              {% trans "أمر بيع" %}
+            {% endif %}
+          </div>
+          <div class="fs-5 fw-bold text-mazoon" dir="ltr">
+            {{ document.display_number }}
+          </div>
+          <div class="small text-muted mt-1">
+            {% trans "التاريخ" %}:
+            <span class="fw-semibold">
+              {{ document.date|date:"Y-m-d" }}
+            </span>
+          </div>
+          {% if document.due_date %}
+            <div class="small text-muted">
+              {% if document.is_quotation %}
+                {% trans "صالح حتى" %}:
+              {% else %}
+                {% trans "تاريخ الاستحقاق" %}:
+              {% endif %}
+              <span class="fw-semibold">
+                {{ document.due_date|date:"Y-m-d" }}
+              </span>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <hr class="my-3">
+
+      {# ================== بيانات العميل ================== #}
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <h3 class="h6 fw-bold mb-2">
+            {% trans "بيانات العميل" %}
+          </h3>
+
+          {% if document.contact %}
+            <p class="mb-0 fw-semibold">
+              {{ document.contact.name }}
+            </p>
+            {% if document.contact.company_name %}
+              <p class="mb-0 small">
+                {{ document.contact.company_name }}
+              </p>
+            {% endif %}
+            {% if document.contact.phone or document.contact.mobile %}
+              <p class="mb-0 small">
+                {% trans "هاتف" %}:
+                <span class="fw-semibold">
+                  {{ document.contact.phone|default:document.contact.mobile }}
+                </span>
+              </p>
+            {% endif %}
+            {% if document.contact.email %}
+              <p class="mb-0 small">
+                {% trans "البريد الإلكتروني" %}:
+                <span class="fw-semibold">
+                  {{ document.contact.email }}
+                </span>
+              </p>
+            {% endif %}
+          {% else %}
+            <p class="text-muted small mb-0">
+              {% trans "لا توجد بيانات عميل مرتبطة بهذا المستند." %}
+            </p>
+          {% endif %}
+        </div>
+
+        <div class="col-md-6 text-md-end mt-3 mt-md-0">
+          <h3 class="h6 fw-bold mb-2">
+            {% trans "معلومات المستند" %}
+          </h3>
+          <p class="small mb-1">
+            {% trans "العملة" %}:
+            <span class="fw-semibold">{{ document.currency }}</span>
+          </p>
+          <p class="small mb-1">
+            {% trans "الحالة" %}:
+            <span class="fw-semibold">
+              {{ document.get_status_display }}
+            </span>
+          </p>
+          {% if document.is_order %}
+            <p class="small mb-0">
+              {% trans "حالة الفوترة" %}:
+              {% if document.is_invoiced %}
+                <span class="fw-semibold">
+                  {% trans "مفوتر" %}
+                </span>
+              {% else %}
+                <span class="fw-semibold">
+                  {% trans "غير مفوتر" %}
+                </span>
+              {% endif %}
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      {# ================== جدول البنود ================== #}
+      <div class="table-responsive mb-3">
+        <table class="table table-sm align-middle mb-0 invoice-items-table">
+          <thead>
+            <tr>
+              <th class="small text-muted">{% trans "م" %}</th>
+              <th class="small text-muted">{% trans "المنتج" %}</th>
+              <th class="small text-muted">{% trans "الوصف" %}</th>
+              <th class="small text-muted text-end">{% trans "الكمية" %}</th>
+              <th class="small text-muted text-center">{% trans "الوحدة" %}</th>
+              <th class="small text-muted text-end">{% trans "سعر الوحدة" %}</th>
+              <th class="small text-muted text-end">{% trans "الخصم %" %}</th>
+              <th class="small text-muted text-end">{% trans "إجمالي السطر" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% with lines=document.lines.all %}
+              {% if lines %}
+                {% for line in lines %}
+                  <tr>
+                    <td class="small">
+                      {{ forloop.counter }}
+                    </td>
+                    <td class="small">
+                      {% if line.product %}
+                        {{ line.product.code }} – {{ line.product.name }}
+                      {% else %}
+                        <span class="text-muted">—</span>
+                      {% endif %}
+                    </td>
+                    <td class="small">
+                      {{ line.display_name }}
+                    </td>
+                    <td class="small text-end">
+                      {{ line.quantity }}
+                    </td>
+                    <td class="small text-center">
+                      {% if line.uom %}
+                        {{ line.uom }}
+                      {% elif line.uom_type == "ALT" %}
+                        {% if line.product and line.product.alt_uom %}
+                          {{ line.product.alt_uom }}
+                        {% else %}
+                          <span class="text-muted">—</span>
+                        {% endif %}
+                      {% else %}
+                        {% if line.product and line.product.base_uom %}
+                          {{ line.product.base_uom }}
+                        {% else %}
+                          <span class="text-muted">—</span>
+                        {% endif %}
+                      {% endif %}
+                    </td>
+                    <td class="small text-end">
+                      {{ line.unit_price }}
+                    </td>
+                    <td class="small text-end">
+                      {{ line.discount_percent }}
+                    </td>
+                    <td class="small text-end">
+                      {{ line.line_total }}
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="8" class="text-center text-muted small py-3">
+                    {% trans "لا توجد بنود مضافة لهذا المستند." %}
+                  </td>
+                </tr>
+              {% endif %}
+            {% endwith %}
+          </tbody>
+        </table>
+      </div>
+
+      {# ================== الإجمالي ================== #}
+      <div class="row justify-content-end mb-3">
+        <div class="col-md-5">
+          <table class="table table-sm mb-0">
+            <tbody>
+              <tr>
+                <th class="small text-muted">
+                  {% trans "الإجمالي" %}
+                </th>
+                <td class="small text-end fw-semibold">
+                  {{ document.total_amount }} {{ document.currency }}
+                </td>
+              </tr>
+              {# لاحقاً: ضريبة / خصم / صافي #}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {# ================== الملاحظات ================== #}
+      <div class="row g-3">
+
+        <div class="col-md-6">
+          <h3 class="h6 fw-bold mb-2">
+            {% trans "ملاحظات للعميل" %}
+          </h3>
+          {% if document.customer_notes %}
+            <p class="small mb-0">{{ document.customer_notes|linebreaksbr }}</p>
+          {% else %}
+            <p class="text-muted small mb-0">
+              {% trans "لا توجد ملاحظات ظاهرة للعميل." %}
+            </p>
+          {% endif %}
+        </div>
+
+        <div class="col-md-6">
+          <h3 class="h6 fw-bold mb-2">
+            {% trans "ملاحظات داخلية" %}
+          </h3>
+          {% if document.notes %}
+            <p class="small mb-0">{{ document.notes|linebreaksbr }}</p>
+          {% else %}
+            <p class="text-muted small mb-0">
+              {% trans "لا توجد ملاحظات داخلية." %}
+            </p>
+          {% endif %}
+        </div>
+
+      </div>
+
+      {# ================== توقيع ================== #}
+      <div class="row mt-5">
+        <div class="col-md-6">
+          <p class="small text-muted mb-1">
+            {% trans "المُعد" %}
+          </p>
+          <div style="min-height: 40px; border-bottom: 1px solid #e5e7eb;"></div>
+        </div>
+        <div class="col-md-6 text-md-end mt-4 mt-md-0">
+          <p class="small text-muted mb-1">
+            {% trans "توقيع العميل" %}
+          </p>
+          <div style="min-height: 40px; border-bottom: 1px solid #e5e7eb;"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_body %}
+<style>
+  @media print {
+    body {
+      background-color: #ffffff !important;
+    }
+    .navbar,
+    .mazoon-footer,
+    .d-print-none {
+      display: none !important;
+    }
+    .print-page {
+      box-shadow: none !important;
+      border: none !important;
+    }
+    .container {
+      max-width: 100% !important;
+      margin: 0;
+      padding: 0;
+    }
+  }
+
+  .print-page {
+    max-width: 900px;
+  }
+</style>
+{% endblock %}
