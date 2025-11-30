@@ -236,57 +236,60 @@
   </div>
   <div class="card-body pt-2">
 
-    {% if document.lines.all %}
-      <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
-          <thead class="table-light">
-            <tr>
-              <th class="small text-muted">{% trans "المنتج" %}</th>
-              <th class="small text-muted">{% trans "الوصف" %}</th>
-              <th class="small text-muted text-end">{% trans "الكمية" %}</th>
-              <th class="small text-muted text-end">{% trans "سعر الوحدة" %}</th>
-              <th class="small text-muted text-end">{% trans "الخصم %" %}</th>
-              <th class="small text-muted text-end">{% trans "إجمالي السطر" %}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for line in document.lines.all %}
+    {% with lines=document.lines.all %}
+      {% if lines %}
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
               <tr>
-                <td class="small">
-                  {% if line.product %}
-                    {{ line.product.name }}
-                  {% else %}
-                    <span class="text-muted">—</span>
-                  {% endif %}
-                </td>
-                <td class="small">
-                  {{ line.display_name }}
-                </td>
-                <td class="small text-end">
-                  {{ line.quantity }}
-                </td>
-                <td class="small text-end">
-                  {{ line.unit_price }}
-                </td>
-                <td class="small text-end">
-                  {{ line.discount_percent }}
-                </td>
-                <td class="small text-end">
-                  {{ line.line_total }}
-                </td>
+                <th class="small text-muted">{% trans "المنتج" %}</th>
+                <th class="small text-muted">{% trans "الوصف" %}</th>
+                <th class="small text-muted text-end">{% trans "الكمية" %}</th>
+                <th class="small text-muted text-end">{% trans "سعر الوحدة" %}</th>
+                <th class="small text-muted text-end">{% trans "الخصم %" %}</th>
+                <th class="small text-muted text-end">{% trans "إجمالي السطر" %}</th>
               </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <p class="text-muted small mb-0">
-        {% trans "لا توجد بنود مضافة لهذا المستند." %}
-      </p>
-    {% endif %}
+            </thead>
+            <tbody>
+              {% for line in lines %}
+                <tr>
+                  <td class="small">
+                    {% if line.product %}
+                      {{ line.product.name }}
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                  <td class="small">
+                    {{ line.display_name }}
+                  </td>
+                  <td class="small text-end">
+                    {{ line.quantity }}
+                  </td>
+                  <td class="small text-end">
+                    {{ line.unit_price }}
+                  </td>
+                  <td class="small text-end">
+                    {{ line.discount_percent }}
+                  </td>
+                  <td class="small text-end">
+                    {{ line.line_total }}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-muted small mb-0">
+          {% trans "لا توجد بنود مضافة لهذا المستند." %}
+        </p>
+      {% endif %}
+    {% endwith %}
 
   </div>
 </div>
+
 
 {# ================== الملاحظات ================== #}
 <div class="row g-3">

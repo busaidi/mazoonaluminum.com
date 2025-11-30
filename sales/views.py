@@ -14,7 +14,7 @@ from django.views.generic import (
     ListView, DetailView, CreateView, TemplateView, UpdateView
 )
 
-from .forms import SalesDocumentForm, DeliveryNoteForm
+from .forms import SalesDocumentForm, DeliveryNoteForm, SalesLineFormSet
 from .models import SalesDocument, DeliveryNote
 from . import services
 from .services import reopen_cancelled_sales_document
@@ -157,13 +157,38 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
     template_name = "sales/sales/form.html"
     sales_section = "sales_create"
 
+    # --------------------------------------------------
+    # Inject lines formset into context
+    # --------------------------------------------------
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        if self.request.method == "POST":
+            context["lines_formset"] = SalesLineFormSet(self.request.POST)
+        else:
+            context["lines_formset"] = SalesLineFormSet()
+
+        return context
+
+    # --------------------------------------------------
+    # Handle main form + lines formset together
+    # --------------------------------------------------
     def form_valid(self, form):
         """
         عند إنشاء مستند جديد:
         - نجبر النوع يكون QUOTATION دائماً (عرض سعر).
         - نثبت الحالة كمسودة.
+        - نحفظ البنود من الـ inline formset.
         - نعيد احتساب الإجماليات بعد الحفظ.
         """
+
+        context = self.get_context_data()
+        lines_formset = context["lines_formset"]
+
+        # Validate formset first
+        if not lines_formset.is_valid():
+            # لو البنود فيها أخطاء نرجع نفس الصفحة مع الأخطاء
+            return self.render_to_response(self.get_context_data(form=form))
 
         # نجبر النوع يكون عرض سعر دائماً، ولا نعتمد على أي قيمة من الفورم
         form.instance.kind = SalesDocument.Kind.QUOTATION
@@ -171,16 +196,22 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
         # الحالة الافتراضية للمستند الجديد
         form.instance.status = SalesDocument.Status.DRAFT
 
-        response = super().form_valid(form)
+        # Save main document
+        self.object = form.save()
 
-        # إعادة احتساب الإجماليات بعد الحفظ
+        # Bind lines to this document and save them
+        lines_formset.instance = self.object
+        lines_formset.save()
+
+        # إعادة احتساب الإجماليات بعد حفظ البنود
         self.object.recompute_totals(save=True)
 
         messages.success(self.request, _("تم إنشاء عرض السعر بنجاح."))
-        return response
+        return redirect(self.get_success_url())
 
     def get_success_url(self):
         return reverse("sales:sales_detail", args=[self.object.pk])
+
 
 
 
@@ -204,14 +235,51 @@ class SalesDocumentUpdateView(SalesBaseView, UpdateView):
     template_name = "sales/sales/form.html"
     sales_section = "sales_edit"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # علشان التمبلت يستخدم {{ document }}
+        context.setdefault("document", self.object)
+
+        if self.request.method == "POST":
+            context["lines_formset"] = SalesLineFormSet(
+                self.request.POST,
+                instance=self.object,
+            )
+        else:
+            context["lines_formset"] = SalesLineFormSet(
+                instance=self.object,
+            )
+
+        return context
+
     def form_valid(self, form):
-        response = super().form_valid(form)
+        """
+        تحديث مستند المبيعات + تحديث بنود المبيعات (inline formset).
+        """
+        context = self.get_context_data()
+        lines_formset = context["lines_formset"]
+
+        # إذا الفورمست فيه أخطاء نرجع نفس الصفحة مع الأخطاء
+        if not lines_formset.is_valid():
+            return self.render_to_response(self.get_context_data(form=form))
+
+        # حفظ الهيدر
+        self.object = form.save()
+
+        # حفظ البنود المرتبطة
+        lines_formset.instance = self.object
+        lines_formset.save()
+
+        # إعادة احتساب الإجماليات بعد تعديل البنود
         self.object.recompute_totals(save=True)
+
         messages.success(self.request, _("تم تحديث المستند بنجاح."))
-        return response
+        return redirect(self.get_success_url())
 
     def get_success_url(self):
         return reverse("sales:sales_detail", args=[self.object.pk])
+
 
 
 # ======================================================================

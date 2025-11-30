@@ -10,6 +10,11 @@ from inventory.models import Product
 from .managers import SalesDocumentQuerySet
 
 
+# ===================================================================
+# SalesDocument
+# ===================================================================
+
+
 class SalesDocument(models.Model):
     """
     مستند مبيعات:
@@ -124,6 +129,8 @@ class SalesDocument(models.Model):
         verbose_name=_("ملاحظات للعميل"),
     )
 
+    # ========== تتبع الإنشاء والتحديث ==========
+
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_("تاريخ الإنشاء"),
@@ -143,7 +150,7 @@ class SalesDocument(models.Model):
         verbose_name = _("مستند مبيعات")
         verbose_name_plural = _("مستندات المبيعات")
 
-    # ========== UI Helpers ==========
+    # ========== تمثيل وخصائص مساعدة للـ UI ==========
 
     def __str__(self):
         contact_name = getattr(self.contact, "name", "—")
@@ -175,6 +182,9 @@ class SalesDocument(models.Model):
     # ========== المنطق البسيط ==========
 
     def recompute_totals(self, save: bool = True):
+        """
+        إعادة احتساب إجماليات المستند بناءً على بنوده.
+        """
         agg = self.lines.aggregate(s=models.Sum("line_total"))
         total = agg["s"] or Decimal("0.000")
 
@@ -194,6 +204,11 @@ class SalesDocument(models.Model):
     def get_absolute_url(self):
         from django.urls import reverse
         return reverse("sales:sales_detail", kwargs={"pk": self.pk})
+
+
+# ===================================================================
+# SalesLine
+# ===================================================================
 
 
 class SalesLine(models.Model):
@@ -267,19 +282,42 @@ class SalesLine(models.Model):
         return f"Line #{self.pk}"
 
     def compute_line_total(self) -> Decimal:
+        """
+        يحسب إجمالي السطر مع الخصم.
+        لا يغيّر السطر نفسه، فقط يرجع القيمة.
+        """
         qty = self.quantity or Decimal("0")
         price = self.unit_price or Decimal("0")
         base = qty * price
+
         if self.discount_percent:
-            return base * (Decimal("1.00") - self.discount_percent / Decimal("100"))
-        return base
+            discount_factor = Decimal("1.00") - (self.discount_percent / Decimal("100"))
+            total = base * discount_factor
+        else:
+            total = base
+
+        # تأكد أنه ما يصير رقم سالب بالغلط (لو دخل خصم أكبر من 100%)
+        if total < Decimal("0"):
+            total = Decimal("0.000")
+
+        # نرجعه بثلاث خانات (نفس الحقل)
+        return total.quantize(Decimal("0.001"))
 
     def save(self, *args, **kwargs):
+        """
+        قبل الحفظ نحسب إجمالي السطر،
+        وبعد الحفظ نعيد حساب إجمالي المستند.
+        """
         self.line_total = self.compute_line_total()
         super().save(*args, **kwargs)
 
+        if self.document_id:
+            self.document.recompute_totals(save=True)
 
-# ========== موديل مذكرة التسليم المبسّط ==========
+
+# ===================================================================
+# DeliveryNote
+# ===================================================================
 
 
 class DeliveryNote(models.Model):
@@ -349,6 +387,11 @@ class DeliveryNote(models.Model):
     @property
     def is_confirmed(self) -> bool:
         return self.status == self.Status.CONFIRMED
+
+
+# ===================================================================
+# DeliveryLine
+# ===================================================================
 
 
 class DeliveryLine(models.Model):
