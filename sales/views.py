@@ -457,12 +457,26 @@ def product_uom_info(request, pk):
     - الوحدة الأساسية
     - الوحدة البديلة (إن وجدت)
     - عامل التحويل بينهما
+    - سعر البيع لكل وحدة (أساسية وبديلة)
     """
     product = get_object_or_404(Product, pk=pk)
 
     base_uom = product.base_uom          # حقل إجباري في الموديل
     alt_uom = product.alt_uom           # قد يكون None
     alt_factor = product.alt_factor     # قد يكون None
+
+    # أسعار البيع حسب الوحدة
+    base_price = product.get_price_for_uom(
+        uom=base_uom,
+        kind="sale",
+    )
+
+    alt_price = None
+    if alt_uom and alt_factor:
+        alt_price = product.get_price_for_uom(
+            uom=alt_uom,
+            kind="sale",
+        )
 
     # نفترض أن UnitOfMeasure فيه حقل name
     def uom_label(uom):
@@ -476,5 +490,7 @@ def product_uom_info(request, pk):
         "alt_uom": uom_label(alt_uom),
         "has_alt": bool(alt_uom),
         "alt_factor": str(alt_factor) if alt_uom and alt_factor else "",
+        "base_price": str(base_price) if base_price is not None else "",
+        "alt_price": str(alt_price) if alt_price is not None else "",
     }
     return JsonResponse(data)

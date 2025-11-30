@@ -393,6 +393,41 @@ class Product(TimeStampedModel):
 
         raise ValueError("وحدة الهدف غير مدعومة لهذا المنتج.")
 
+    def get_price_for_uom(self, uom=None, kind="sale") -> Decimal:
+        """
+        ترجع السعر حسب نوعه (بيع أو تكلفة) وبحسب وحدة القياس:
+
+        - kind = "sale": يرجع default_sale_price
+        - kind = "cost": يرجع default_cost_price
+
+        القواعد:
+        1) إذا لم تُمرّر uom → نفترض وحدة الأساس.
+        2) إذا uom == base_uom → يرجع السعر كما هو.
+        3) إذا uom == alt_uom → يتم ضرب السعر في alt_factor.
+           (لأن 1 وحدة بديلة = alt_factor من الأساس)
+        """
+
+        # --- اختيار نوع السعر (بيع أو تكلفة) ---
+        if kind == "sale":
+            base_price = self.default_sale_price
+        elif kind == "cost":
+            base_price = self.default_cost_price
+        else:
+            raise ValueError("kind يجب أن يكون 'sale' أو 'cost'.")
+
+        # --- إذا الوحدة الأساسية → نرجع السعر مباشرة ---
+        if uom is None or uom == self.base_uom:
+            return Decimal(base_price)
+
+        # --- إذا الوحدة البديلة → نطبّق alt_factor ---
+        if uom == self.alt_uom:
+            if not self.alt_factor:
+                raise ValueError("لم يتم ضبط عامل التحويل للوحدة البديلة لهذا المنتج.")
+            return Decimal(base_price) * Decimal(self.alt_factor)
+
+        # --- وحدة غير مرتبطة بالمنتج ---
+        raise ValueError("وحدة القياس المطلوبة غير مرتبطة بهذا المنتج.")
+
     # ============================
     # دوال مساعدة للمخزون
     # ============================

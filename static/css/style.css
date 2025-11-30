@@ -482,3 +482,11 @@ a:not(.btn):not(.nav-link):focus {
 .kpi-card .h3 {
   color: var(--mazoon-primary) !important;
 }
+.btn-mazoon-danger {
+    background-color: #b91c1c !important;    /* أحمر داكن */
+    border-color: #7f1d1d !important;
+    color: #fff !important;
+}
+.btn-mazoon-danger:hover {
+    background-color: #991b1b !important;
+}

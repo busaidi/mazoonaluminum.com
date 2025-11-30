@@ -217,13 +217,16 @@
 {% block extra_body %}
 <script>
   (function () {
-    // Django سيرندر هذا لشيء مثل: "/ar/inventory/api/product-uom/0/"
+    // Django سيرندر هذا لشيء مثل: "/ar/sales/api/product-uom/0/"
     const productUomUrlTemplate = "{% url 'sales:product_uom_info' 0 %}";
     const productUomBaseUrl = productUomUrlTemplate.replace(/0\/?$/, "");
 
     function resetUomSelect(uomSelect) {
       if (!uomSelect) return;
       uomSelect.innerHTML = "";
+      uomSelect.dataset.basePrice = "";
+      uomSelect.dataset.altPrice = "";
+
       const opt = document.createElement("option");
       opt.value = "";
       opt.textContent = "—";
@@ -234,10 +237,13 @@
       if (!uomSelect) return;
 
       uomSelect.innerHTML = "";
+      uomSelect.dataset.basePrice = data.base_price || "";
+      uomSelect.dataset.altPrice = data.alt_price || "";
 
       const hasBase = !!data.base_uom;
       const hasAlt = !!data.alt_uom;
 
+      // لا توجد وحدات معرّفة
       if (!hasBase && !hasAlt) {
         const opt = document.createElement("option");
         opt.value = "";
@@ -246,6 +252,7 @@
         return;
       }
 
+      // نضيف الأساس أولاً
       if (hasBase) {
         const baseOpt = document.createElement("option");
         baseOpt.value = "base";
@@ -253,11 +260,48 @@
         uomSelect.appendChild(baseOpt);
       }
 
+      // ثم البديلة (إن وجدت)
       if (hasAlt) {
         const altOpt = document.createElement("option");
         altOpt.value = "alt";
         altOpt.textContent = data.alt_uom + " – {% trans 'بديلة' %}";
         uomSelect.appendChild(altOpt);
+      }
+
+      // اختيار افتراضي: الأساس إن وُجدت، وإلا البديلة
+      if (hasBase) {
+        uomSelect.value = "base";
+      } else if (hasAlt) {
+        uomSelect.value = "alt";
+      }
+
+      // بعد ما نضبط الوحدات، نحدّث السعر في السطر
+      updateUnitPriceFromUom(uomSelect);
+    }
+
+    function updateUnitPriceFromUom(uomSelect) {
+      if (!uomSelect) return;
+
+      const row = uomSelect.closest("tr");
+      if (!row) return;
+
+      const unitPriceInput = row.querySelector("input[name$='-unit_price']");
+      if (!unitPriceInput) return;
+
+      const selected = uomSelect.value; // "base" | "alt" | ""
+      const basePrice = uomSelect.dataset.basePrice || "";
+      const altPrice = uomSelect.dataset.altPrice || "";
+
+      let priceToUse = "";
+
+      if (selected === "base") {
+        priceToUse = basePrice;
+      } else if (selected === "alt") {
+        priceToUse = altPrice || basePrice; // لو ما فيه سعر بديل نرجع للأساس
+      }
+
+      if (priceToUse !== "") {
+        unitPriceInput.value = priceToUse;
       }
     }
 
@@ -300,9 +344,14 @@
         resetUomSelect(uomSelect);
       }
 
-      // عند تغيير المنتج
+      // عند تغيير المنتج → نعيد جلب الوحدات والسعر
       productSelect.addEventListener("change", function (e) {
         fetchAndUpdateUom(e.target.value);
+      });
+
+      // عند تغيير الوحدة في نفس السطر → نغيّر السعر
+      uomSelect.addEventListener("change", function () {
+        updateUnitPriceFromUom(uomSelect);
       });
     }
 
