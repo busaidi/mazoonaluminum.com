@@ -245,6 +245,10 @@
                 <th class="small text-muted">{% trans "المنتج" %}</th>
                 <th class="small text-muted">{% trans "الوصف" %}</th>
                 <th class="small text-muted text-end">{% trans "الكمية" %}</th>
+                {# <<< العمود الجديد للوحدة >>> #}
+                <th class="small text-muted text-center">
+                  {% trans "الوحدة" %}
+                </th>
                 <th class="small text-muted text-end">{% trans "سعر الوحدة" %}</th>
                 <th class="small text-muted text-end">{% trans "الخصم %" %}</th>
                 <th class="small text-muted text-end">{% trans "إجمالي السطر" %}</th>
@@ -265,6 +269,27 @@
                   </td>
                   <td class="small text-end">
                     {{ line.quantity }}
+                  </td>
+                  {# <<< خلية عرض الوحدة (أساسي / بديل) >>> #}
+                  <td class="small text-center">
+                    {# لو عندك حقل uom مباشر في السطر، استخدمه #}
+                    {% if line.uom %}
+                      {{ line.uom }}
+                    {% elif line.uom_type == "ALT" %}
+                      {# وحدة بديلة #}
+                      {% if line.product and line.product.alt_uom %}
+                        {{ line.product.alt_uom }}
+                      {% else %}
+                        <span class="text-muted">—</span>
+                      {% endif %}
+                    {% else %}
+                      {# افتراضي: وحدة أساسية #}
+                      {% if line.product and line.product.base_uom %}
+                        {{ line.product.base_uom }}
+                      {% else %}
+                        <span class="text-muted">—</span>
+                      {% endif %}
+                    {% endif %}
                   </td>
                   <td class="small text-end">
                     {{ line.unit_price }}

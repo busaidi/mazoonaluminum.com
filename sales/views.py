@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
+from django.http.response import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.db.models import Sum, Q
 from django.utils import timezone
@@ -14,6 +15,7 @@ from django.views.generic import (
     ListView, DetailView, CreateView, TemplateView, UpdateView
 )
 
+from inventory.models import Product
 from .forms import SalesDocumentForm, DeliveryNoteForm, SalesLineFormSet
 from .models import SalesDocument, DeliveryNote
 from . import services
@@ -446,3 +448,33 @@ def sales_reopen_view(request, pk):
         )
 
     return redirect("sales:sales_detail", pk=document.pk)
+
+
+
+def product_uom_info(request, pk):
+    """
+    ترجع معلومات وحدات القياس المرتبطة بالمنتج:
+    - الوحدة الأساسية
+    - الوحدة البديلة (إن وجدت)
+    - عامل التحويل بينهما
+    """
+    product = get_object_or_404(Product, pk=pk)
+
+    base_uom = product.base_uom          # حقل إجباري في الموديل
+    alt_uom = product.alt_uom           # قد يكون None
+    alt_factor = product.alt_factor     # قد يكون None
+
+    # نفترض أن UnitOfMeasure فيه حقل name
+    def uom_label(uom):
+        if not uom:
+            return ""
+        # لو عندك name_ar / name_en غيّرها هنا
+        return getattr(uom, "name", str(uom))
+
+    data = {
+        "base_uom": uom_label(base_uom),
+        "alt_uom": uom_label(alt_uom),
+        "has_alt": bool(alt_uom),
+        "alt_factor": str(alt_factor) if alt_uom and alt_factor else "",
+    }
+    return JsonResponse(data)

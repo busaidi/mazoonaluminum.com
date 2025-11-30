@@ -112,6 +112,7 @@
               <tr>
                 <th class="small text-muted">{% trans "المنتج" %}</th>
                 <th class="small text-muted">{% trans "الوصف" %}</th>
+                <th class="small text-muted">{% trans "الوحدات" %}</th>
                 <th class="small text-muted text-end">{% trans "الكمية" %}</th>
                 <th class="small text-muted text-end">{% trans "سعر الوحدة" %}</th>
                 <th class="small text-muted text-end">{% trans "الخصم %" %}</th>
@@ -139,6 +140,13 @@
                     <div class="text-danger small">
                       {{ line_form.description.errors }}
                     </div>
+                  </td>
+
+                  {# الوحدة الأساسية / البديلة (UI فقط حالياً) #}
+                  <td class="small">
+                    <select class="form-select form-select-sm uom-select">
+                      <option value="">{{ "—" }}</option>
+                    </select>
                   </td>
 
                   <td class="small text-end">
@@ -203,4 +211,105 @@
   </div>
 </div>
 
+{% endblock %}
+
+{# سكربت الوحدات – Vanilla JS #}
+{% block extra_body %}
+<script>
+  (function () {
+    // Django سيرندر هذا لشيء مثل: "/ar/inventory/api/product-uom/0/"
+    const productUomUrlTemplate = "{% url 'sales:product_uom_info' 0 %}";
+    const productUomBaseUrl = productUomUrlTemplate.replace(/0\/?$/, "");
+
+    function resetUomSelect(uomSelect) {
+      if (!uomSelect) return;
+      uomSelect.innerHTML = "";
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "—";
+      uomSelect.appendChild(opt);
+    }
+
+    function fillUomSelect(uomSelect, data) {
+      if (!uomSelect) return;
+
+      uomSelect.innerHTML = "";
+
+      const hasBase = !!data.base_uom;
+      const hasAlt = !!data.alt_uom;
+
+      if (!hasBase && !hasAlt) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "—";
+        uomSelect.appendChild(opt);
+        return;
+      }
+
+      if (hasBase) {
+        const baseOpt = document.createElement("option");
+        baseOpt.value = "base";
+        baseOpt.textContent = data.base_uom + " – {% trans 'أساسية' %}";
+        uomSelect.appendChild(baseOpt);
+      }
+
+      if (hasAlt) {
+        const altOpt = document.createElement("option");
+        altOpt.value = "alt";
+        altOpt.textContent = data.alt_uom + " – {% trans 'بديلة' %}";
+        uomSelect.appendChild(altOpt);
+      }
+    }
+
+    function setupRow(row, index) {
+      const productSelect = row.querySelector("select[name$='-product']");
+      const uomSelect = row.querySelector(".uom-select");
+
+      if (!productSelect || !uomSelect) {
+        return;
+      }
+
+      function fetchAndUpdateUom(productId) {
+        if (!productId) {
+          resetUomSelect(uomSelect);
+          return;
+        }
+
+        const url = productUomBaseUrl + productId + "/";
+
+        fetch(url)
+          .then((res) => {
+            if (!res.ok) {
+              throw new Error("HTTP " + res.status);
+            }
+            return res.json();
+          })
+          .then((data) => {
+            fillUomSelect(uomSelect, data);
+          })
+          .catch((err) => {
+            console.error("[UoM] Error fetching UoM for product", productId, err);
+            resetUomSelect(uomSelect);
+          });
+      }
+
+      // تحميل أولي (لو السطر محفوظ وعنده منتج)
+      if (productSelect.value) {
+        fetchAndUpdateUom(productSelect.value);
+      } else {
+        resetUomSelect(uomSelect);
+      }
+
+      // عند تغيير المنتج
+      productSelect.addEventListener("change", function (e) {
+        fetchAndUpdateUom(e.target.value);
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      const rows = document.querySelectorAll("table tbody tr");
+      rows.forEach((row, idx) => setupRow(row, idx));
+    });
+  })();
+</script>
 {% endblock %}
