@@ -53,8 +53,8 @@
           </span>
         {% else %}
           <span class="badge text-muted border border-secondary bg-white">
-  {% trans "غير مفوتر" %}
-</span>
+            {% trans "غير مفوتر" %}
+          </span>
         {% endif %}
       {% endif %}
     </div>
@@ -66,90 +66,107 @@
 
   <div class="d-flex flex-wrap gap-2">
 
-  
+    {# لو المستند ملغي: إظهار زر إعادة فتح فقط #}
+    {% if document.is_cancelled %}
 
-    {# تعديل المستند #}
-    <a href="{% url 'sales:sales_edit' document.pk %}" class="btn btn-outline-primary btn-sm">
-      <i class="bi bi-pencil ms-1"></i>
-      {% trans "تعديل" %}
-    </a>
-
-    {# تحويل عرض → أمر بيع #}
-    {% if document.is_quotation and not document.is_cancelled %}
       <form method="post"
-            action="{% url 'sales:quotation_convert' document.pk %}"
+            action="{% url 'sales:sales_reopen' document.pk %}"
             class="d-inline">
         {% csrf_token %}
-        <button type="submit" class="btn btn-success btn-sm">
-  <i class="bi bi-check-circle"></i>
-  {% trans "تأكيد" %}
-</button>
-      </form>
-    {% endif %}
-
-    {# تعليم أمر البيع كمفوتر #}
-    {% if document.is_order and not document.is_cancelled and not document.is_invoiced %}
-      <form method="post"
-            action="{% url 'sales:order_mark_invoiced' document.pk %}"
-            class="d-inline">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-outline-success btn-sm">
-          <i class="bi bi-receipt ms-1"></i>
-          {% trans "تعليم كمفوتر" %}
+        <button type="submit"
+                class="btn btn-outline-warning btn-sm"
+                onclick="return confirm('{% trans "هل أنت متأكد من إعادة فتح هذا المستند وإرجاعه إلى حالة المسودة؟" %}');">
+          <i class="bi bi-arrow-counterclockwise ms-1"></i>
+          {% trans "إعادة فتح المستند" %}
         </button>
       </form>
-    {% endif %}
 
-    {# إنشاء مذكرة تسليم مرتبطة بأمر البيع #}
-    {% if document.is_order and not document.is_cancelled %}
-      <a href="{% url 'sales:delivery_note_create' order_pk=document.pk %}"
-         class="btn btn-outline-dark btn-sm">
-        <i class="bi bi-truck ms-1"></i>
-        {% trans "مذكرة تسليم جديدة" %}
+    {% else %}
+
+      {# تعديل المستند (مسموح فقط إذا غير ملغي) #}
+      <a href="{% url 'sales:sales_edit' document.pk %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-pencil ms-1"></i>
+        {% trans "تعديل" %}
       </a>
-    {% endif %}
 
-    {# Dropdown لإجراءات أخرى: إلغاء + Reset to Draft #}
-    {% if not document.is_invoiced and not document.is_cancelled %}
-      <div class="dropdown">
-        <button class="btn btn-outline-secondary btn-sm dropdown-toggle"
-                type="button"
-                id="salesActionsDropdown"
-                data-bs-toggle="dropdown"
-                aria-expanded="false">
-          <i class="bi bi-three-dots-vertical ms-1"></i>
-          {% trans "إجراءات أخرى" %}
-        </button>
-        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="salesActionsDropdown">
+      {# تحويل عرض → أمر بيع #}
+      {% if document.is_quotation %}
+        <form method="post"
+              action="{% url 'sales:quotation_convert' document.pk %}"
+              class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-success btn-sm">
+            <i class="bi bi-check-circle"></i>
+            {% trans "تأكيد" %}
+          </button>
+        </form>
+      {% endif %}
 
-          {# إلغاء المستند #}
-          <form method="post"
-                action="{% url 'sales:sales_cancel' document.pk %}">
-            {% csrf_token %}
-            <button type="submit"
-                    class="dropdown-item text-danger"
-                    onclick="return confirm('{% trans "هل أنت متأكد من إلغاء هذا المستند؟" %}');">
-              <i class="bi bi-x-circle ms-1"></i>
-              {% trans "إلغاء المستند" %}
-            </button>
-          </form>
+      {# تعليم أمر البيع كمفوتر #}
+      {% if document.is_order and not document.is_invoiced %}
+        <form method="post"
+              action="{% url 'sales:order_mark_invoiced' document.pk %}"
+              class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-receipt ms-1"></i>
+            {% trans "تعليم كمفوتر" %}
+          </button>
+        </form>
+      {% endif %}
 
-          {# إعادة إلى مسودة (Reset to Draft) #}
-          {% if document.status != document.Status.DRAFT %}
+      {# إنشاء مذكرة تسليم مرتبطة بأمر البيع #}
+      {% if document.is_order %}
+        <a href="{% url 'sales:delivery_note_create' order_pk=document.pk %}"
+           class="btn btn-outline-dark btn-sm">
+          <i class="bi bi-truck ms-1"></i>
+          {% trans "مذكرة تسليم جديدة" %}
+        </a>
+      {% endif %}
+
+
+      {% if not document.is_invoiced %}
+        <div class="dropdown">
+          <button class="btn btn-outline-secondary btn-sm dropdown-toggle"
+                  type="button"
+                  id="salesActionsDropdown"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false">
+            <i class="bi bi-three-dots-vertical ms-1"></i>
+            {% trans "إجراءات أخرى" %}
+          </button>
+          <div class="dropdown-menu dropdown-menu-end" aria-labelledby="salesActionsDropdown">
+
+            {# إلغاء المستند #}
             <form method="post"
-                  action="{% url 'sales:sales_reset' document.pk %}">
+                  action="{% url 'sales:sales_cancel' document.pk %}">
               {% csrf_token %}
               <button type="submit"
-                      class="dropdown-item text-warning"
-                      onclick="return confirm('{% trans "هل أنت متأكد من إعادة هذا المستند إلى حالة المسودة؟" %}');">
-                <i class="bi bi-arrow-counterclockwise ms-1"></i>
-                {% trans "إعادة إلى مسودة" %}
+                      class="dropdown-item text-danger"
+                      onclick="return confirm('{% trans "هل أنت متأكد من إلغاء هذا المستند؟" %}');">
+                <i class="bi bi-x-circle ms-1"></i>
+                {% trans "إلغاء المستند" %}
               </button>
             </form>
-          {% endif %}
 
+            {# إعادة إلى مسودة (Reset to Draft) #}
+            {% if document.status != document.Status.DRAFT %}
+              <form method="post"
+                    action="{% url 'sales:sales_reset' document.pk %}">
+                {% csrf_token %}
+                <button type="submit"
+                        class="dropdown-item text-warning"
+                        onclick="return confirm('{% trans "هل أنت متأكد من إعادة هذا المستند إلى حالة المسودة؟" %}');">
+                  <i class="bi bi-arrow-counterclockwise ms-1"></i>
+                  {% trans "إعادة إلى مسودة" %}
+                </button>
+              </form>
+            {% endif %}
+
+          </div>
         </div>
-      </div>
+      {% endif %}
+
     {% endif %}
 
   </div>

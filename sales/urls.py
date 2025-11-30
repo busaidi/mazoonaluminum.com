@@ -19,8 +19,9 @@ urlpatterns = [
     # تحويل عرض السعر → أمر بيع
     path("sales/<int:pk>/convert/", views.ConvertQuotationToOrderView.as_view(), name="quotation_convert"),
     path("sales/<int:pk>/cancel/", views.CancelSalesDocumentView.as_view(), name="sales_cancel"),
-    path("sales/<int:pk>/reset/", views.ResetSalesDocumentToDraftView.as_view(), name="sales_reset",
-),
+    path("sales/<int:pk>/reset/", views.ResetSalesDocumentToDraftView.as_view(), name="sales_reset"),
+    path("sales/<int:pk>/reopen/", views.sales_reopen_view, name="sales_reopen"),
+
 
     # تعليم أمر البيع كمفوتر
     path("sales/<int:pk>/mark-invoiced/", views.MarkOrderInvoicedView.as_view(), name="order_mark_invoiced"),

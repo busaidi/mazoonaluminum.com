@@ -5,248 +5,261 @@
 
 {% block sales_content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
 
-  <div>
-    <h1 class="h5 fw-bold mb-1">
-      {% trans "مستندات المبيعات" %}
-    </h1>
-    <p class="text-muted small mb-0">
-      {% trans "عروض الأسعار وأوامر البيع في قائمة واحدة مع إمكانية التصفية والبحث." %}
-    </p>
-  </div>
-
-  <div class="d-flex flex-wrap gap-2">
-    <a href="{% url 'sales:sales_create' %}" class="btn btn-primary btn-sm">
-      <i class="bi bi-plus-lg ms-1"></i>
-      {% trans "إنشاء مستند" %}
-    </a>
-  </div>
-
-</div>
-
-<div class="card shadow-sm border-0">
-  <div class="card-body">
-
-    {# ================== شريط الفلاتر والبحث ================== #}
-    <div class="mb-3">
-      <form method="get" class="row g-2 align-items-center">
-
-        {# فلتر النوع #}
-        <div class="col-auto">
-          <select name="kind"
-                  class="form-select form-select-sm"
-                  onchange="this.form.submit()">
-            <option value="">{% trans "كل الأنواع" %}</option>
-            <option value="quotation" {% if current_kind == "quotation" %}selected{% endif %}>
-              {% trans "عروض الأسعار" %}
-            </option>
-            <option value="order" {% if current_kind == "order" %}selected{% endif %}>
-              {% trans "أوامر البيع" %}
-            </option>
-          </select>
+        <div>
+            <h1 class="h5 fw-bold mb-1">
+                {% trans "مستندات المبيعات" %}
+            </h1>
+            <p class="text-muted small mb-0">
+                {% trans "عروض الأسعار وأوامر البيع في قائمة واحدة مع إمكانية التصفية والبحث." %}
+            </p>
         </div>
 
-        {# فلتر الفوترة #}
-        <div class="col-auto">
-          <select name="invoiced"
-                  class="form-select form-select-sm"
-                  onchange="this.form.submit()">
-            <option value="">{% trans "كل الحالات" %}</option>
-            <option value="yes" {% if current_invoiced == "yes" %}selected{% endif %}>
-              {% trans "مفوتر" %}
-            </option>
-            <option value="no" {% if current_invoiced == "no" %}selected{% endif %}>
-              {% trans "غير مفوتر" %}
-            </option>
-          </select>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'sales:sales_create' %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-lg ms-1"></i>
+                {% trans "إنشاء مستند" %}
+            </a>
         </div>
 
-        {# البحث بالعميل #}
-        <div class="col-auto flex-grow-1">
-          <input type="text"
-                 name="q"
-                 value="{{ current_q }}"
-                 class="form-control form-control-sm"
-                 placeholder="{% trans 'بحث بالعميل...' %}"
-                 onkeydown="if(event.key==='Enter'){this.form.submit();}">
-        </div>
-
-        {# زر مسح الفلاتر #}
-        <div class="col-auto">
-          <a href="{% url 'sales:sales_list' %}"
-             class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-x-lg"></i>
-            {% trans "مسح الفلاتر" %}
-          </a>
-        </div>
-
-      </form>
     </div>
 
-    {% if documents %}
-      <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
-          <thead class="table-light">
-            <tr>
-              <th class="small text-muted">{% trans "الرقم" %}</th>
-              <th class="small text-muted">{% trans "التاريخ" %}</th>
-              <th class="small text-muted">{% trans "العميل" %}</th>
-              <th class="small text-muted">{% trans "الحالة" %}</th>
-              <th class="small text-muted text-end">{% trans "الإجمالي" %}</th>
-              <th class="small text-muted">{% trans "النوع" %}</th>
-              <th class="small text-muted">{% trans "الفوترة" %}</th>
-            </tr>
-          </thead>
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
 
-          <tbody>
-            {% for doc in documents %}
-              <tr class="align-middle">
+            {# ================== شريط الفلاتر والبحث ================== #}
+            <div class="mb-3">
+                <form method="get" class="row g-2 align-items-center">
 
-                {# الرقم #}
-                <td class="small text-nowrap">
-                  <a href="{% url 'sales:sales_detail' doc.pk %}"
-                     class="text-mazoon text-decoration-none fw-semibold"
-                     dir="ltr">
-                    {{ doc.display_number }}
-                  </a>
-                </td>
-
-                {# التاريخ #}
-                <td class="small text-nowrap">
-                  {{ doc.date|date:"Y-m-d" }}
-                </td>
-
-                {# العميل #}
-                <td class="small">
-                  {% if doc.contact %}
-                    <a href="{% url 'sales:sales_detail' doc.pk %}"
-                       class="text-decoration-none">
-                      {{ doc.contact.name }}
-                    </a>
-                  {% else %}
-                    <span class="text-muted">—</span>
-                  {% endif %}
-                </td>
-
-                {# الحالة + حالة الفوترة #}
-                <td class="small">
-                  <div class="d-flex flex-column gap-1">
-                    <div>
-                      {% if doc.status == doc.Status.DRAFT %}
-                        <span class="badge bg-secondary">
-                          {{ doc.get_status_display }}
-                        </span>
-                      {% elif doc.status == doc.Status.CONFIRMED %}
-                        <span class="badge bg-success">
-                          {{ doc.get_status_display }}
-                        </span>
-                      {% elif doc.status == doc.Status.CANCELLED %}
-                        <span class="badge bg-danger">
-                          {{ doc.get_status_display }}
-                        </span>
-                      {% else %}
-                        <span class="badge bg-light text-muted">
-                          {{ doc.get_status_display }}
-                        </span>
-                      {% endif %}
+                    {# فلتر النوع #}
+                    <div class="col-auto">
+                        <select name="kind"
+                                class="form-select form-select-sm"
+                                onchange="this.form.submit()">
+                            <option value="">{% trans "كل الأنواع" %}</option>
+                            <option value="quotation" {% if current_kind == "quotation" %}selected{% endif %}>
+                                {% trans "عروض الأسعار" %}
+                            </option>
+                            <option value="order" {% if current_kind == "order" %}selected{% endif %}>
+                                {% trans "أوامر البيع" %}
+                            </option>
+                        </select>
                     </div>
-                  </div>
-                </td>
 
-                {# الإجمالي #}
-                <td class="small text-end text-nowrap">
-                  <span class="fw-semibold">{{ doc.total_amount }}</span>
-                  <span class="text-muted">{{ doc.currency }}</span>
-                </td>
+                    {# فلتر الفوترة #}
+                    <div class="col-auto">
+                        <select name="invoiced"
+                                class="form-select form-select-sm"
+                                onchange="this.form.submit()">
+                            <option value="">{% trans "كل الحالات" %}</option>
+                            <option value="yes" {% if current_invoiced == "yes" %}selected{% endif %}>
+                                {% trans "مفوتر" %}
+                            </option>
+                            <option value="no" {% if current_invoiced == "no" %}selected{% endif %}>
+                                {% trans "غير مفوتر" %}
+                            </option>
+                        </select>
+                    </div>
 
-                {# النوع (آخر عمود) #}
-                <td class="small">
-                  {% if doc.is_quotation %}
-                    <span class="badge rounded-pill bg-info text-dark">
-                      <i class="bi bi-file-earmark-text ms-1"></i>
-                      {% trans "عرض سعر" %}
-                    </span>
-                  {% else %}
-                    <span class="badge rounded-pill bg-primary">
-                      <i class="bi bi-bag-check ms-1"></i>
-                      {% trans "أمر بيع" %}
-                    </span>
-                  {% endif %}
-                
-                </td>
-<td>
-    {% if doc.is_order %}
-                      <div>
-                        {% if doc.is_invoiced %}
-                          <span class="badge bg-success-subtle text-success border border-success-subtle">
-                            <i class="bi bi-receipt ms-1"></i>
-                            {% trans "مفوتر" %}
-                          </span>
-                        {% else %}
-                          <span class="badge bg-light text-muted border">
-                            <i class="bi bi-receipt ms-1"></i>
-                            {% trans "غير مفوتر" %}
-                          </span>
-                        {% endif %}
-                      </div>
-                    {% endif %}
-</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+                    {# البحث بالعميل #}
+                    <div class="col-auto flex-grow-1">
+                        <input type="text"
+                               name="q"
+                               value="{{ current_q }}"
+                               class="form-control form-control-sm"
+                               placeholder="{% trans 'بحث بالعميل...' %}"
+                               onkeydown="if(event.key==='Enter'){this.form.submit();}">
+                    </div>
 
-      {# ================== Pagination ================== #}
-      {% if is_paginated %}
-        <nav class="mt-3">
-          <ul class="pagination pagination-sm justify-content-center mb-0">
+                    {# زر مسح الفلاتر #}
+                    <div class="col-auto">
+                        <a href="{% url 'sales:sales_list' %}"
+                           class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-x-lg"></i>
+                            {% trans "مسح الفلاتر" %}
+                        </a>
+                    </div>
 
-            {% if page_obj.has_previous %}
-              <li class="page-item">
-                <a class="page-link"
-                   href="?page={{ page_obj.previous_page_number }}{% if current_kind %}&kind={{ current_kind }}{% endif %}{% if current_invoiced %}&invoiced={{ current_invoiced }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}">
-                  &laquo;
-                </a>
-              </li>
+                </form>
+            </div>
+
+            {% if documents %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light">
+                        <tr>
+                            <th class="small text-muted">{% trans "الرقم" %}</th>
+                            <th class="small text-muted">{% trans "التاريخ" %}</th>
+                            <th class="small text-muted">{% trans "العميل" %}</th>
+                            <th class="small text-muted">{% trans "الحالة" %}</th>
+                            <th class="small text-muted text-end">{% trans "الإجمالي" %}</th>
+                            <th class="small text-muted">{% trans "النوع" %}</th>
+                            <th class="small text-muted">{% trans "الفوترة" %}</th>
+                        </tr>
+                        </thead>
+
+                        <tbody>
+                        {% for doc in documents %}
+                            <tr class="align-middle">
+
+                                {# الرقم #}
+                                <td class="small text-nowrap">
+                                    <a href="{% url 'sales:sales_detail' doc.pk %}"
+                                       class="text-mazoon text-decoration-none fw-semibold"
+                                       dir="ltr">
+                                        {{ doc.display_number }}
+                                    </a>
+                                </td>
+
+                                {# التاريخ #}
+                                <td class="small text-nowrap">
+                                    {{ doc.date|date:"Y-m-d" }}
+                                </td>
+
+                                {# العميل #}
+                                <td class="small">
+                                    {% if doc.contact %}
+                                        <a href="{% url 'sales:sales_detail' doc.pk %}"
+                                           class="text-decoration-none">
+                                            {{ doc.contact.name }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+
+                                {# الحالة + حالة الفوترة #}
+                                <td class="small">
+                                    <div class="d-flex flex-column gap-1">
+                                        <div>
+                                            {% if doc.status == doc.Status.DRAFT %}
+                                                <span class="badge bg-secondary">
+                          {{ doc.get_status_display }}
+                        </span>
+                                            {% elif doc.status == doc.Status.CONFIRMED %}
+                                                <span class="badge bg-success">
+                          {{ doc.get_status_display }}
+                        </span>
+                                            {% elif doc.status == doc.Status.CANCELLED %}
+                                                <span class="badge bg-danger">
+                          {{ doc.get_status_display }}
+                        </span>
+                                            {% else %}
+                                                <span class="badge bg-light text-muted">
+                          {{ doc.get_status_display }}
+                        </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+
+                                {# الإجمالي #}
+                                <td class="small text-end text-nowrap">
+                                    <span class="fw-semibold">{{ doc.total_amount }}</span>
+                                    <span class="text-muted">{{ doc.currency }}</span>
+                                </td>
+
+                                {# النوع (آخر عمود) #}
+                                {# النوع #}
+                                <td class="small">
+                                    {% if doc.is_quotation %}
+                                        <span class="badge rounded-pill bg-info text-dark">
+                                            <i class="bi bi-file-earmark-text ms-1"></i>
+                                            {% trans "عرض سعر" %}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge rounded-pill bg-primary">
+                                            <i class="bi bi-bag-check ms-1"></i>
+                                            {% trans "أمر بيع" %}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                {# حالة الفوترة (تنطبق على الأوامر فقط) #}
+                                <td class="small">
+                                    {% if doc.is_order %}
+                                        {% if doc.is_invoiced %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                <i class="bi bi-receipt ms-1"></i>
+                                                {% trans "مفوتر" %}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-light text-muted border">
+                                                <i class="bi bi-receipt ms-1"></i>
+                                                {% trans "غير مفوتر" %}
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-light text-muted border">
+                                            {% trans "غير مطبق" %}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {# ================== Pagination ================== #}
+                {% if is_paginated %}
+                    <nav class="mt-3">
+                        <ul class="pagination pagination-sm justify-content-center mb-0">
+
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?page=
+
+
+                                               {{ page_obj.previous_page_number }}{% if current_kind %}&kind={{ current_kind }}{% endif %}{% if current_invoiced %}&invoiced={{ current_invoiced }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}">
+                                        &laquo;
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for num in paginator.page_range %}
+                                {% if num == page_obj.number %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page=
+
+
+                                                   {{ num }}{% if current_kind %}&kind={{ current_kind }}{% endif %}{% if current_invoiced %}&invoiced={{ current_invoiced }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}">
+                                            {{ num }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?page=
+
+
+                                               {{ page_obj.next_page_number }}{% if current_kind %}&kind={{ current_kind }}{% endif %}{% if current_invoiced %}&invoiced={{ current_invoiced }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}">
+                                        &raquo;
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                        </ul>
+                    </nav>
+                {% endif %}
+
+            {% else %}
+                <p class="text-muted small mb-0">
+                    {% trans "لا توجد مستندات حتى الآن." %}
+                </p>
             {% endif %}
 
-            {% for num in paginator.page_range %}
-              {% if num == page_obj.number %}
-                <li class="page-item active">
-                  <span class="page-link">{{ num }}</span>
-                </li>
-              {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
-                <li class="page-item">
-                  <a class="page-link"
-                     href="?page={{ num }}{% if current_kind %}&kind={{ current_kind }}{% endif %}{% if current_invoiced %}&invoiced={{ current_invoiced }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}">
-                    {{ num }}
-                  </a>
-                </li>
-              {% endif %}
-            {% endfor %}
-
-            {% if page_obj.has_next %}
-              <li class="page-item">
-                <a class="page-link"
-                   href="?page={{ page_obj.next_page_number }}{% if current_kind %}&kind={{ current_kind }}{% endif %}{% if current_invoiced %}&invoiced={{ current_invoiced }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}">
-                  &raquo;
-                </a>
-              </li>
-            {% endif %}
-
-          </ul>
-        </nav>
-      {% endif %}
-
-    {% else %}
-      <p class="text-muted small mb-0">
-        {% trans "لا توجد مستندات حتى الآن." %}
-      </p>
-    {% endif %}
-
-  </div>
-</div>
+        </div>
+    </div>
 
 {% endblock %}

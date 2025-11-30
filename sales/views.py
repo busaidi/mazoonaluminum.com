@@ -1,7 +1,9 @@
 # sales/views.py
 from decimal import Decimal
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect
 from django.db.models import Sum, Q
 from django.utils import timezone
@@ -15,6 +17,7 @@ from django.views.generic import (
 from .forms import SalesDocumentForm, DeliveryNoteForm
 from .models import SalesDocument, DeliveryNote
 from . import services
+from .services import reopen_cancelled_sales_document
 
 
 # ======================================================================
@@ -342,4 +345,36 @@ class ResetSalesDocumentToDraftView(SalesBaseView, View):
             return redirect(document.get_absolute_url())
 
         messages.success(request, _("تمت إعادة المستند إلى حالة المسودة بنجاح."))
+
         return redirect(document.get_absolute_url())
+
+
+@login_required
+def sales_reopen_view(request, pk):
+    """
+    إعادة فتح مستند ملغي وإرجاعه إلى حالة المسودة (Draft + Quotation)
+    باستخدام service: reopen_cancelled_sales_document
+    """
+    document = get_object_or_404(SalesDocument, pk=pk)
+
+    # نسمح فقط عبر POST (عشان زر الفورم في القالب)
+    if request.method != "POST":
+        return redirect("sales:sales_detail", pk=document.pk)
+
+    try:
+        reopen_cancelled_sales_document(document)
+        messages.success(
+            request,
+            _("تمت إعادة فتح المستند وإرجاعه إلى حالة المسودة (عرض سعر)."),
+        )
+    except ValidationError as e:
+        # الأخطاء القادمة من السيرفس
+        messages.error(request, " ".join(e.messages))
+    except Exception:
+        # في حال أي خطأ غير متوقع
+        messages.error(
+            request,
+            _("حدث خطأ غير متوقع أثناء إعادة فتح المستند."),
+        )
+
+    return redirect("sales:sales_detail", pk=document.pk)
