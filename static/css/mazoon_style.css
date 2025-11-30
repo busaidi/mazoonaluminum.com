@@ -1,0 +1,82 @@
+:root,
+[data-bs-theme="light"] {
+  --bs-primary: #111827;
+  --bs-primary-rgb: 17, 24, 39;
+
+  /* الروابط العامة */
+  --bs-link-color: #005599;       /* نفس primary */
+  --bs-link-hover-color: #020617; /* داكن أكثر */
+}
+
+
+
+/* زر primary أسود/داكن */
+.btn-primary {
+  --bs-btn-color: #ffffff;
+  --bs-btn-bg: #111827;              /* الخلفية الأساسية */
+  --bs-btn-border-color: #111827;
+
+  --bs-btn-hover-color: #ffffff;
+  --bs-btn-hover-bg: #020617;        /* عند المرور */
+  --bs-btn-hover-border-color: #020617;
+
+  --bs-btn-focus-shadow-rgb: 17, 24, 39;
+
+  --bs-btn-active-color: #ffffff;
+  --bs-btn-active-bg: #020617;
+  --bs-btn-active-border-color: #020617;
+
+  --bs-btn-disabled-color: #ffffff;
+  --bs-btn-disabled-bg: #111827;
+  --bs-btn-disabled-border-color: #111827;
+}
+
+/* زر outline-primary بنفس اللون لكن شفاف */
+.btn-outline-primary {
+  --bs-btn-color: #111827;
+  --bs-btn-border-color: #111827;
+  --bs-btn-hover-color: #ffffff;
+  --bs-btn-hover-bg: #111827;
+  --bs-btn-hover-border-color: #111827;
+  --bs-btn-active-bg: #020617;
+  --bs-btn-active-border-color: #020617;
+  --bs-btn-disabled-color: #111827;
+}
+
+/* الروابط العادية داخل الناف */
+/*.nav-link {*/
+/*  color: var(--bs-primary);*/
+/*}*/
+
+/*.nav-link:hover {*/
+/*}*/
+
+/*.nav-link:hover {*/
+/*    color: var(--bs-link-hover-color);*/
+/*}*/
+
+/* الروابط النشطة داخل nav-pills */
+.nav-pills .nav-link.active {
+  --bs-nav-pills-link-active-bg: #111827;     /* الخلفية */
+  --bs-nav-pills-link-active-color: #ffffff;  /* لون النص */
+}
+
+/* الاختيارية: حدود خفيفة للناف */
+.nav-pills {
+  --bs-nav-pills-border-color: transparent;
+}
+
+
+/*customize
+ */
+.navbar-logo {
+  height: 28px;  /* كان أكبر، صغّرناه */
+  width: auto;
+  display: block;
+}
+
+/* ممكن تخفف padding للبراند لو حاب */
+.navbar-brand {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}

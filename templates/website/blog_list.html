@@ -93,12 +93,12 @@
 
 {# ========= PAGE CONTENT ========= #}
 {% block content %}
-<div class="row g-4 blog-list-page">
+<div class="row g-4">
 
   {# ===== العمود الرئيسي (قائمة التدوينات) ===== #}
   <div class="col-lg-8">
     <header class="mb-3">
-      <h1 class="h3 fw-bold mb-1 text-mazoon">
+      <h1 class="h3 fw-bold mb-1 text-body">
         {% if current_category %}
           {{ current_category.name }}
         {% elif current_tag %}
@@ -120,11 +120,11 @@
     {% if posts %}
       <div class="vstack gap-3">
         {% for post in posts %}
-          <article class="card blog-card border-0 shadow-sm">
+          <article class="card border-0 shadow-sm">
             <div class="card-body d-flex flex-column">
 
               <h2 class="h5 mb-1">
-                <a href="{{ post.get_absolute_url }}" class="text-decoration-none text-mazoon">
+                <a href="{{ post.get_absolute_url }}" class="text-decoration-none text-body">
                   {{ post.title }}
                 </a>
               </h2>
@@ -214,7 +214,7 @@
       {# البحث #}
       <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
-          <h2 class="h6 mb-2 fw-bold text-mazoon">{% trans "بحث في المدونة" %}</h2>
+          <h2 class="h6 mb-2 fw-bold text-body">{% trans "بحث في المدونة" %}</h2>
           <form method="get" class="d-flex gap-2">
             <input type="text"
                    name="q"
@@ -232,15 +232,15 @@
       {% if categories %}
         <div class="card border-0 shadow-sm mb-3">
           <div class="card-body">
-            <h2 class="h6 mb-2 fw-bold text-mazoon">{% trans "التصنيفات" %}</h2>
+            <h2 class="h6 mb-2 fw-bold text-body">{% trans "التصنيفات" %}</h2>
             <div class="vstack gap-1 small">
               <a href="{% url 'blog_list' %}"
-                 class="text-decoration-none {% if not current_category and not current_tag %}fw-bold text-mazoon{% else %}text-muted{% endif %}">
+                 class="text-decoration-none {% if not current_category and not current_tag %}fw-bold text-body{% else %}text-muted{% endif %}">
                 {% trans "كل التدوينات" %}
               </a>
               {% for c in categories %}
                 <a href="{% url 'blog_category' category_slug=c.slug %}"
-                   class="text-decoration-none {% if current_category and current_category.slug == c.slug %}fw-bold text-mazoon{% else %}text-muted{% endif %}">
+                   class="text-decoration-none {% if current_category and current_category.slug == c.slug %}fw-bold text-body{% else %}text-muted{% endif %}">
                   {{ c.name }}
                 </a>
               {% endfor %}
@@ -251,7 +251,7 @@
 
       <div class="card border-0 shadow-sm">
         <div class="card-body small text-muted">
-          <strong class="d-block mb-1 text-mazoon">{% trans "ملاحظة" %}:</strong>
+          <strong class="d-block mb-1 text-body">{% trans "ملاحظة" %}:</strong>
           <p class="mb-0">
             {% trans "هذه صفحة قائمة التدوينات، ويمكن تطويرها لاحقاً لإضافة وسوم، مقالات مميزة، أو آخر الأخبار." %}
           </p>

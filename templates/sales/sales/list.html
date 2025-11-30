@@ -8,7 +8,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
 
   <div>
-    <h1 class="h5 fw-bold mb-1 text-mazoon">
+    <h1 class="h5 fw-bold mb-1 text-body">
       {% trans "مستندات المبيعات" %}
     </h1>
     <p class="text-muted small mb-0">
@@ -17,7 +17,7 @@
   </div>
 
   <div class="d-flex flex-wrap gap-2">
-    <a href="{% url 'sales:sales_create' %}" class="btn-mazoon btn-mazoon-primary">
+    <a href="{% url 'sales:sales_create' %}" class="btn btn-sm btn-primary">
       <i class="bi bi-plus-lg ms-1"></i>
       {% trans "إنشاء مستند" %}
     </a>
@@ -75,7 +75,7 @@
         {# زر مسح الفلاتر #}
         <div class="col-auto">
           <a href="{% url 'sales:sales_list' %}"
-             class="btn-mazoon btn-mazoon-outline">
+             class="btn btn-sm btn-outline-secondary">
             <i class="bi bi-x-lg"></i>
             {% trans "مسح الفلاتر" %}
           </a>
@@ -106,7 +106,7 @@
               {# الرقم #}
               <td class="small text-nowrap">
                 <a href="{% url 'sales:sales_detail' doc.pk %}"
-                   class="text-mazoon text-decoration-none fw-semibold"
+                   class="text-body text-decoration-none fw-semibold"
                    dir="ltr">
                   {{ doc.display_number }}
                 </a>
@@ -129,18 +129,18 @@
                 {% endif %}
               </td>
 
-              {# الحالة – باستخدام badge-mazoon من الثيم #}
+              {# الحالة #}
               <td class="small">
                 {% if doc.status == doc.Status.DRAFT %}
-                  <span class="badge badge-mazoon badge-draft">
+                  <span class="badge bg-secondary-subtle text-secondary-emphasis">
                     {{ doc.get_status_display }}
                   </span>
                 {% elif doc.status == doc.Status.CONFIRMED %}
-                  <span class="badge badge-mazoon badge-confirmed">
+                  <span class="badge bg-success-subtle text-success-emphasis">
                     {{ doc.get_status_display }}
                   </span>
                 {% elif doc.status == doc.Status.CANCELLED %}
-                  <span class="badge badge-mazoon badge-cancelled">
+                  <span class="badge bg-danger-subtle text-danger-emphasis">
                     {{ doc.get_status_display }}
                   </span>
                 {% else %}
@@ -159,12 +159,12 @@
               {# النوع #}
               <td class="small">
                 {% if doc.is_quotation %}
-                  <span class="badge badge-mazoon badge-draft">
+                  <span class="badge bg-info-subtle text-info-emphasis">
                     <i class="bi bi-file-earmark-text ms-1"></i>
                     {% trans "عرض سعر" %}
                   </span>
                 {% else %}
-                  <span class="badge badge-mazoon badge-confirmed">
+                  <span class="badge bg-success-subtle text-success-emphasis">
                     <i class="bi bi-bag-check ms-1"></i>
                     {% trans "أمر بيع" %}
                   </span>
@@ -181,10 +181,11 @@
                     {% if doc.is_cancelled %}
                       {# عرض سعر ملغي: زر إعادة فتح #}
                       <form method="post"
-                            action="{% url 'sales:sales_reopen' doc.pk %}">
+                            action="{% url 'sales:sales_reopen' doc.pk %}"
+                            class="d-inline">
                         {% csrf_token %}
                         <button type="submit"
-                                class="btn-mazoon btn-mazoon-warning"
+                                class="btn btn-sm btn-outline-warning"
                                 data-bs-toggle="tooltip"
                                 data-bs-title="{% trans 'إعادة فتح المستند' %}">
                           <i class="bi bi-arrow-counterclockwise"></i>
@@ -195,10 +196,11 @@
                       {# عرض سعر مسودة: تأكيد + إلغاء #}
 
                       <form method="post"
-                            action="{% url 'sales:quotation_convert' doc.pk %}">
+                            action="{% url 'sales:quotation_convert' doc.pk %}"
+                            class="d-inline">
                         {% csrf_token %}
                         <button type="submit"
-                                class="btn-mazoon btn-mazoon-primary"
+                                class="btn btn-sm btn-success"
                                 data-bs-toggle="tooltip"
                                 data-bs-title="{% trans 'تأكيد عرض السعر' %}">
                           <i class="bi bi-check-circle"></i>
@@ -206,10 +208,11 @@
                       </form>
 
                       <form method="post"
-                            action="{% url 'sales:sales_cancel' doc.pk %}">
+                            action="{% url 'sales:sales_cancel' doc.pk %}"
+                            class="d-inline">
                         {% csrf_token %}
                         <button type="submit"
-                                class="btn-mazoon btn-mazoon-danger"
+                                class="btn btn-sm btn-outline-danger"
                                 onclick="return confirm('{% trans "هل أنت متأكد من إلغاء هذا المستند؟" %}');"
                                 data-bs-toggle="tooltip"
                                 data-bs-title="{% trans 'إلغاء المستند' %}">
@@ -227,7 +230,7 @@
                   {% elif doc.is_order %}
                     {% with dn_list=doc.delivery_notes.all %}
                       {% if doc.is_cancelled %}
-                        <span class="badge badge-mazoon badge-cancelled">
+                        <span class="badge bg-danger-subtle text-danger-emphasis">
                           {% trans "ملغي" %}
                         </span>
 
@@ -235,17 +238,19 @@
 
                         {# فوترة #}
                         {% if doc.is_invoiced %}
-                          <span class="btn-mazoon btn-mazoon-primary disabled"
-                                data-bs-toggle="tooltip"
-                                data-bs-title="{% trans 'المستند مفوتر' %}">
+                          <button type="button"
+                                  class="btn btn-sm btn-primary disabled"
+                                  data-bs-toggle="tooltip"
+                                  data-bs-title="{% trans 'المستند مفوتر' %}">
                             <i class="bi bi-receipt"></i>
-                          </span>
+                          </button>
                         {% else %}
                           <form method="post"
-                                action="{% url 'sales:order_mark_invoiced' doc.pk %}">
+                                action="{% url 'sales:order_mark_invoiced' doc.pk %}"
+                                class="d-inline">
                             {% csrf_token %}
                             <button type="submit"
-                                    class="btn-mazoon btn-mazoon-outline"
+                                    class="btn btn-sm btn-outline-primary"
                                     data-bs-toggle="tooltip"
                                     data-bs-title="{% trans 'فوترة أمر البيع' %}">
                               <i class="bi bi-receipt"></i>
@@ -257,7 +262,7 @@
                         {% if dn_list %}
                           {% with first_dn=dn_list.0 %}
                             <a href="{% url 'sales:delivery_note_detail' first_dn.pk %}"
-                               class="btn-mazoon btn-mazoon-outline"
+                               class="btn btn-sm btn-outline-secondary"
                                data-bs-toggle="tooltip"
                                data-bs-title="{% trans 'عرض مذكرة التسليم' %}">
                               <i class="bi bi-truck"></i>
@@ -265,7 +270,7 @@
                           {% endwith %}
                         {% else %}
                           <a href="{% url 'sales:delivery_note_create' order_pk=doc.pk %}"
-                             class="btn-mazoon btn-mazoon-outline"
+                             class="btn btn-sm btn-outline-secondary"
                              data-bs-toggle="tooltip"
                              data-bs-title="{% trans 'إنشاء مذكرة تسليم جديدة' %}">
                             <i class="bi bi-truck"></i>
@@ -275,10 +280,11 @@
                         {# إلغاء أمر البيع (فقط إذا لا توجد DN) #}
                         {% if dn_list|length == 0 %}
                           <form method="post"
-                                action="{% url 'sales:sales_cancel' doc.pk %}">
+                                action="{% url 'sales:sales_cancel' doc.pk %}"
+                                class="d-inline">
                             {% csrf_token %}
                             <button type="submit"
-                                    class="btn-mazoon btn-mazoon-danger"
+                                    class="btn btn-sm btn-outline-danger"
                                     onclick="return confirm('{% trans "هل أنت متأكد من إلغاء هذا المستند؟" %}');"
                                     data-bs-toggle="tooltip"
                                     data-bs-title="{% trans 'إلغاء أمر البيع' %}">

@@ -28,60 +28,71 @@
 {% block content %}
 
 {# ======================= HERO SECTION ======================= #}
-<section class="home-section mb-5">
-  <div class="hero-card p-4 p-lg-5">
-    <div class="row align-items-center g-4">
-      <div class="col-lg-6 order-2 order-lg-1">
-        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-          <span class="badge rounded-pill bg-mazoon-accent text-dark fw-semibold px-3 py-2">
-            {% trans "علامة تجارية عمانية متخصصة في أنظمة الألمنيوم" %}
-          </span>
-          <span class="badge-mazoon badge-staff">
-            {% trans "منذ 2015" %}
-          </span>
+<section class="mb-5">
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-4 p-lg-5">
+      <div class="row align-items-center g-4">
+        {# النص #}
+        <div class="col-lg-6 order-2 order-lg-1">
+
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <span class="badge rounded-pill bg-warning-subtle text-body fw-semibold px-3 py-2">
+              {% trans "علامة تجارية عمانية متخصصة في أنظمة الألمنيوم" %}
+            </span>
+            <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis px-3 py-2">
+              {% trans "منذ 2015" %}
+            </span>
+          </div>
+
+          <h1 class="display-5 fw-bold mb-3 text-body">
+            {% trans "أنظمة ألمنيوم مبتكرة للنوافذ والأبواب" %}
+          </h1>
+
+          <p class="lead text-muted mb-4">
+            {% trans "Mazoon Aluminum تطوّر أنظمة نوافذ وأبواب متكاملة من الألمنيوم والألمنيوم العازل للحرارة، مع تركيز على الأداء المعتمد، سهولة التصنيع، وتجربة مستخدم مدروسة للورش والمشاريع." %}
+          </p>
+
+          <div class="d-flex flex-wrap gap-2 mb-4">
+            <a href="{% url 'product_list' %}" class="btn btn-primary btn-lg">
+              {% trans "استكشف أنظمة مزون" %}
+            </a>
+            <a href="{% url 'about' %}" class="btn btn-outline-primary btn-lg">
+              {% trans "تعرّف علينا أكثر" %}
+            </a>
+          </div>
+
+          {# أرقام سريعة عن مزون #}
+          <div class="row row-cols-2 row-cols-md-3 g-3">
+            <div class="col">
+              <div class="border rounded-3 p-3 h-100 text-center">
+                <div class="fs-4 fw-bold">10+</div>
+                <div class="small text-muted">{% trans "سنوات خبرة" %}</div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="border rounded-3 p-3 h-100 text-center">
+                <div class="fs-4 fw-bold">3</div>
+                <div class="small text-muted">{% trans "أنظمة مفصلية رئيسية" %}</div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="border rounded-3 p-3 h-100 text-center">
+                <div class="fs-4 fw-bold">ISO</div>
+                <div class="small text-muted">{% trans "أداء واختبارات معتمدة" %}</div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <h1 class="display-5 fw-bold mb-3 home-hero-title text-mazoon">
-          {% trans "أنظمة ألمنيوم مبتكرة للنوافذ والأبواب" %}
-        </h1>
-
-        <p class="lead text-muted mb-4 home-hero-subtitle">
-          {% trans "Mazoon Aluminum تطوّر أنظمة نوافذ وأبواب متكاملة من الألمنيوم والألمنيوم العازل للحرارة، مع تركيز على الأداء المعتمد، سهولة التصنيع، وتجربة مستخدم مدروسة للورش والمشاريع." %}
-        </p>
-
-        <div class="d-flex flex-wrap gap-2 mb-4">
-          <a href="{% url 'product_list' %}" class="btn btn-primary px-4">
-            {% trans "استكشف أنظمة مزون" %}
-          </a>
-          <a href="{% url 'about' %}" class="btn btn-outline-primary px-4">
-            {% trans "تعرّف علينا أكثر" %}
-          </a>
-        </div>
-
-        {# أرقام سريعة عن مزون #}
-        <div class="d-flex flex-wrap hero-kpis">
-          <div class="hero-kpi-card">
-            <div class="hero-kpi-number">10+</div>
-            <div class="hero-kpi-label">{% trans "سنوات خبرة" %}</div>
+        {# الصورة #}
+        <div class="col-lg-6 order-1 order-lg-2 d-flex justify-content-center">
+          <div class="w-100 w-lg-75">
+            <img
+              src="{% static 'img/mazoon/system-hero-placeholder.webp' %}"
+              alt="{% trans 'أنظمة مزون للنوافذ والأبواب' %}"
+              class="img-fluid rounded-4"
+            >
           </div>
-          <div class="hero-kpi-card">
-            <div class="hero-kpi-number">3</div>
-            <div class="hero-kpi-label">{% trans "أنظمة مفصلية رئيسية" %}</div>
-          </div>
-          <div class="hero-kpi-card">
-            <div class="hero-kpi-number">ISO</div>
-            <div class="hero-kpi-label">{% trans "أداء واختبارات معتمدة" %}</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-lg-6 order-1 order-lg-2 d-flex justify-content-center">
-        <div class="hero-image-card rounded-4">
-          <img
-            src="{% static 'img/mazoon/system-hero-placeholder.webp' %}"
-            alt="{% trans 'أنظمة مزون للنوافذ والأبواب' %}"
-            class="img-fluid rounded-4 hero-main-image"
-          >
         </div>
       </div>
     </div>
@@ -89,19 +100,20 @@
 </section>
 
 {# ======================= محاور التميز ======================= #}
-<section class="home-section mb-5">
+<section class="mb-5">
   <div class="text-center mb-4">
-    <h2 class="h3 fw-bold mb-2 text-mazoon">{% trans "محاور التميّز في مزون ألمنيوم" %}</h2>
-    <p class="text-muted mb-0 section-subtitle">
+    <h2 class="h3 fw-bold mb-2 text-body">{% trans "محاور التميّز في مزون ألمنيوم" %}</h2>
+    <p class="text-muted mb-0">
       {% trans "أنظمة متطورة · أداء مُعتمد · ابتكار مستمر · شراكات ومشاريع" %}
     </p>
   </div>
 
-  <div class="row g-3">
-    <div class="col-md-6 col-lg-3">
-      <div class="card h-100 feature-card">
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
+    <div class="col">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
-          <div class="feature-icon mb-2">
+          <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-body-secondary mb-2"
+               style="width: 2.5rem; height: 2.5rem;">
             <i class="bi bi-grid-3x3-gap-fill"></i>
           </div>
           <h3 class="h6 fw-bold mb-2">{% trans "أنظمة مزون" %}</h3>
@@ -112,10 +124,11 @@
       </div>
     </div>
 
-    <div class="col-md-6 col-lg-3">
-      <div class="card h-100 feature-card">
+    <div class="col">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
-          <div class="feature-icon mb-2">
+          <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-body-secondary mb-2"
+               style="width: 2.5rem; height: 2.5rem;">
             <i class="bi bi-shield-check"></i>
           </div>
           <h3 class="h6 fw-bold mb-2">{% trans "أداء مُعتمد" %}</h3>
@@ -126,10 +139,11 @@
       </div>
     </div>
 
-    <div class="col-md-6 col-lg-3">
-      <div class="card h-100 feature-card">
+    <div class="col">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
-          <div class="feature-icon mb-2">
+          <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-body-secondary mb-2"
+               style="width: 2.5rem; height: 2.5rem;">
             <i class="bi bi-cpu"></i>
           </div>
           <h3 class="h6 fw-bold mb-2">{% trans "البحث والتطوير" %}</h3>
@@ -140,10 +154,11 @@
       </div>
     </div>
 
-    <div class="col-md-6 col-lg-3">
-      <div class="card h-100 feature-card">
+    <div class="col">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
-          <div class="feature-icon mb-2">
+          <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-body-secondary mb-2"
+               style="width: 2.5rem; height: 2.5rem;">
             <i class="bi bi-people"></i>
           </div>
           <h3 class="h6 fw-bold mb-2">{% trans "المشاريع والشركاء" %}</h3>
@@ -157,11 +172,11 @@
 </section>
 
 {# ======================= أنظمة مزون (ثابتة) ======================= #}
-<section class="home-section mb-5">
+<section class="mb-5">
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
-      <h2 class="h4 fw-bold mb-1 text-mazoon">{% trans "أنظمة مزون للنوافذ والأبواب" %}</h2>
-      <p class="text-muted mb-0 section-subtitle">
+      <h2 class="h4 fw-bold mb-1 text-body">{% trans "أنظمة مزون للنوافذ والأبواب" %}</h2>
+      <p class="text-muted mb-0">
         {% trans "جيل متطور من الأنظمة المفصلية، مع خيارات للعزل الحراري وتعدد غرف العزل." %}
       </p>
     </div>
@@ -174,12 +189,12 @@
 
   <div class="row g-4 align-items-stretch">
     <div class="col-lg-4">
-      <div class="card h-100 system-card">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body d-flex flex-column">
-          <span class="badge-mazoon badge-draft mb-2">
+          <span class="badge bg-secondary-subtle text-secondary-emphasis mb-2">
             {% trans "نظام مفصلي أساسي" %}
           </span>
-          <h3 class="h5 fw-bold mb-2 text-mazoon">{% trans "مزون 45 – نظام مفصلي" %}</h3>
+          <h3 class="h5 fw-bold mb-2 text-body">{% trans "مزون 45 – نظام مفصلي" %}</h3>
           <p class="small text-muted mb-3 flex-grow-1">
             {% trans "نظام مفصلي يجمع بين سهولة التصنيع وجودة الإنتاج مع تصميم أنيق يناسب الواجهات الحديثة والفتحات السكنية." %}
           </p>
@@ -191,12 +206,12 @@
     </div>
 
     <div class="col-lg-4">
-      <div class="card h-100 system-card">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body d-flex flex-column">
-          <span class="badge-mazoon badge-partially-paid mb-2">
+          <span class="badge bg-info-subtle text-info-emphasis mb-2">
             {% trans "تطوير محسّن" %}
           </span>
-          <h3 class="h5 fw-bold mb-2 text-mazoon">{% trans "مزون 46 – تطوير مزون 45" %}</h3>
+          <h3 class="h5 fw-bold mb-2 text-body">{% trans "مزون 46 – تطوير مزون 45" %}</h3>
           <p class="small text-muted mb-3 flex-grow-1">
             {% trans "يضيف غرف عزل إضافية لتحسين الأداء الصوتي والهوائي مع الحفاظ على سهولة التصنيع والمتانة العالية، لورش تبحث عن مستوى أعلى من الأداء." %}
           </p>
@@ -208,12 +223,12 @@
     </div>
 
     <div class="col-lg-4">
-      <div class="card h-100 system-card">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body d-flex flex-column">
-          <span class="badge-mazoon badge-paid mb-2">
+          <span class="badge bg-success-subtle text-success-emphasis mb-2">
             {% trans "عزل حراري" %}
           </span>
-          <h3 class="h5 fw-bold mb-2 text-mazoon">{% trans "مزون 56 – نظام مفصلي عازل للحرارة" %}</h3>
+          <h3 class="h5 fw-bold mb-2 text-body">{% trans "مزون 56 – نظام مفصلي عازل للحرارة" %}</h3>
           <p class="small text-muted mb-3 flex-grow-1">
             {% trans "نظام ثيرمال بريك يوفر عزلًا حراريًا متقدمًا وترشيدًا في استهلاك الطاقة مع الحفاظ على جماليات التصميم وراحة الاستخدام." %}
           </p>
@@ -227,11 +242,11 @@
 </section>
 
 {# ======================= CTA لأصحاب الورش ======================= #}
-<section class="home-section mb-5">
-  <div class="card border-0 bg-mazoon-card">
+<section class="mb-5">
+  <div class="card border-0 bg-body-secondary shadow-sm">
     <div class="card-body d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
       <div>
-        <h2 class="h5 fw-bold mb-1 text-mazoon">
+        <h2 class="h5 fw-bold mb-1 text-body">
           {% trans "هل تمتلك ورشة ألمنيوم وتبحث عن نظام ثابت وواضح؟" %}
         </h2>
         <p class="text-muted small mb-0">
@@ -251,10 +266,10 @@
 </section>
 
 {# ======================= منتجات مختارة (ديناميكي) ======================= #}
-<section class="home-section mb-5">
+<section class="mb-5">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="h4 fw-bold mb-0 text-mazoon">{% trans "منتجات مختارة" %}</h2>
-    <a href="{% url 'product_list' %}" class="small text-muted">
+    <h2 class="h4 fw-bold mb-0 text-body">{% trans "منتجات مختارة" %}</h2>
+    <a href="{% url 'product_list' %}" class="small text-muted text-decoration-none">
       {% trans "عرض جميع المنتجات" %} &rarr;
     </a>
   </div>
@@ -262,8 +277,7 @@
   <div class="row row-cols-1 row-cols-md-3 g-3">
     {% for product in featured_products %}
       <div class="col">
-        <div class="card h-100 product-card">
-          {# صورة المنتج إن وجدت #}
+        <div class="card h-100 border-0 shadow-sm">
           {% if product.image %}
             <div class="ratio ratio-16x9">
               <img
@@ -274,8 +288,8 @@
             </div>
           {% endif %}
           <div class="card-body d-flex flex-column">
-            <h3 class="h6 card-title fw-bold mb-2 text-mazoon">
-              <a href="{{ product.get_absolute_url }}" class="stretched-link text-decoration-none text-mazoon">
+            <h3 class="h6 card-title fw-bold mb-2 text-body">
+              <a href="{{ product.get_absolute_url }}" class="stretched-link text-decoration-none link-body-emphasis">
                 {{ product.name }}
               </a>
             </h3>
@@ -284,7 +298,7 @@
             </p>
             <div class="d-flex justify-content-between align-items-center mt-auto small">
               {% if product.price and product.price > 0 %}
-                <span class="fw-bold text-mazoon">
+                <span class="fw-bold text-primary">
                   {{ product.price }} {% trans "ر.ع" %}
                 </span>
               {% else %}
@@ -303,10 +317,10 @@
 </section>
 
 {# ======================= أحدث التدوينات ======================= #}
-<section class="home-section mb-5">
+<section class="mb-5">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="h4 fw-bold mb-0 text-mazoon">{% trans "أحدث من المدونة" %}</h2>
-    <a href="{% url 'blog_list' %}" class="small text-muted">
+    <h2 class="h4 fw-bold mb-0 text-body">{% trans "أحدث من المدونة" %}</h2>
+    <a href="{% url 'blog_list' %}" class="small text-muted text-decoration-none">
       {% trans "الانتقال إلى المدونة" %} &rarr;
     </a>
   </div>
@@ -314,8 +328,7 @@
   <div class="row row-cols-1 row-cols-md-3 g-3">
     {% for post in latest_posts %}
       <article class="col">
-        <div class="card h-100 blog-card">
-          {# صورة التدوينة إن وجدت #}
+        <div class="card h-100 border-0 shadow-sm">
           {% if post.thumbnail %}
             <div class="ratio ratio-16x9">
               <img
@@ -327,7 +340,7 @@
           {% endif %}
           <div class="card-body d-flex flex-column">
             <h3 class="h6 fw-bold mb-2">
-              <a href="{% url 'blog_detail' slug=post.slug %}" class="stretched-link text-mazoon text-decoration-none">
+              <a href="{% url 'blog_detail' slug=post.slug %}" class="stretched-link text-decoration-none link-body-emphasis">
                 {{ post.title }}
               </a>
             </h3>
@@ -349,49 +362,49 @@
 </section>
 
 {# ======================= شركاؤنا المحليون ======================= #}
-<section class="home-section mb-3">
+<section class="mb-3">
   <div class="mb-3 text-center">
-    <h2 class="h5 fw-bold mb-1 text-mazoon">{% trans "شركاؤنا المحليون الموثوقون" %}</h2>
-    <p class="text-muted small mb-0 section-subtitle">
+    <h2 class="h5 fw-bold mb-1 text-body">{% trans "شركاؤنا المحليون الموثوقون" %}</h2>
+    <p class="text-muted small mb-0">
       {% trans "سحب الألمنيوم · الزجاج · الأجهزة والاكسسوارات · باودر الصبغ" %}
     </p>
   </div>
 
-  <div class="row g-3 text-center text-md-start">
-    <div class="col-md-6 col-lg-3">
-      <div class="card partner-card h-100">
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3 text-center text-md-start">
+    <div class="col">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
-          <h3 class="h6 fw-bold mb-1 text-mazoon">{% trans "نابكو عمان لسحب الألمنيوم" %}</h3>
+          <h3 class="h6 fw-bold mb-1 text-body">{% trans "نابكو عمان لسحب الألمنيوم" %}</h3>
           <p class="small text-muted mb-0">
             {% trans "شريك سحب مقاطع الألمنيوم المعتمدة بمعايير ISO." %}
           </p>
         </div>
       </div>
     </div>
-    <div class="col-md-6 col-lg-3">
-      <div class="card partner-card h-100">
+    <div class="col">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
-          <h3 class="h6 fw-bold mb-1 text-mazoon">{% trans "مصنع التسنيم لمعالجة الزجاج" %}</h3>
+          <h3 class="h6 fw-bold mb-1 text-body">{% trans "مصنع التسنيم لمعالجة الزجاج" %}</h3>
           <p class="small text-muted mb-0">
             {% trans "توريد، معالجة، وتقسية الزجاج لمشاريع مزون." %}
           </p>
         </div>
       </div>
     </div>
-    <div class="col-md-6 col-lg-3">
-      <div class="card partner-card h-100">
+    <div class="col">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
-          <h3 class="h6 fw-bold mb-1 text-mazoon">{% trans "بهوان لهندسة المعادن والزجاج" %}</h3>
+          <h3 class="h6 fw-bold mb-1 text-body">{% trans "بهوان لهندسة المعادن والزجاج" %}</h3>
           <p class="small text-muted mb-0">
             {% trans "حلول زجاج متقدمة للمشاريع الخاصة." %}
           </p>
         </div>
       </div>
     </div>
-    <div class="col-md-6 col-lg-3">
-      <div class="card partner-card h-100">
+    <div class="col">
+      <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
-          <h3 class="h6 fw-bold mb-1 text-mazoon">{% trans "مجموعة تاول – باودر كوتنج" %}</h3>
+          <h3 class="h6 fw-bold mb-1 text-body">{% trans "مجموعة تاول – باودر كوتنج" %}</h3>
           <p class="small text-muted mb-0">
             {% trans "الوكيل الرسمي لباودر الصبغ جوتن (جوتن عمان)." %}
           </p>

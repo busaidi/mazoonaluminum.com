@@ -1,127 +1,9 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{# ============ STYLE (خاصة بهذه الصفحة) ============ #}
+{# ============ STYLE / EXTRA HEAD (Bootstrap فقط) ============ #}
 {% block extra_head %}
   {{ block.super }}
-  <style>
-    .about-hero {
-      background:
-        radial-gradient(circle at top left, rgba(245, 158, 11, 0.18), transparent 55%),
-        linear-gradient(135deg, var(--mazoon-primary), #020617);
-      color: #f9fafb;
-      border-radius: 1.75rem;
-    }
-
-    .about-hero-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      padding: 0.2rem 0.9rem;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #e5e7eb;
-      background-color: rgba(15, 23, 42, 0.6);
-      backdrop-filter: blur(8px);
-    }
-
-    .about-hero-dot {
-      width: 0.5rem;
-      height: 0.5rem;
-      border-radius: 999px;
-      background-color: var(--mazoon-accent);
-    }
-
-    .about-hero-kpi {
-      border-radius: 1.25rem;
-      background-color: rgba(15, 23, 42, 0.82);
-      border: 1px solid rgba(148, 163, 184, 0.4);
-    }
-
-    .about-hero-kpi span.value {
-      font-size: 1.8rem;
-      font-weight: 700;
-      line-height: 1;
-    }
-
-    .about-hero-kpi span.label {
-      font-size: 0.8rem;
-      color: #9ca3af;
-    }
-
-    .about-section-card {
-      border-radius: 1.5rem;
-    }
-
-    .about-section-card .card-header {
-      background-color: transparent;
-      border-bottom: 0;
-      padding-bottom: 0;
-    }
-
-    .about-section-card .card-title {
-      font-size: 1rem;
-      font-weight: 700;
-    }
-
-    .about-timeline {
-      position: relative;
-      padding-inline-start: 1.8rem;
-    }
-
-    [dir="rtl"] .about-timeline {
-      padding-inline-start: 0;
-      padding-inline-end: 1.8rem;
-    }
-
-    .about-timeline::before {
-      content: "";
-      position: absolute;
-      top: 0.2rem;
-      bottom: 0.2rem;
-      width: 2px;
-      background: linear-gradient(to bottom, var(--mazoon-accent), rgba(148, 163, 184, 0.2));
-      left: 0.35rem;
-    }
-
-    [dir="rtl"] .about-timeline::before {
-      left: auto;
-      right: 0.35rem;
-    }
-
-    .about-timeline-item {
-      position: relative;
-      margin-bottom: 1.5rem;
-    }
-
-    .about-timeline-badge {
-      position: absolute;
-      top: 0.2rem;
-      left: -0.1rem;
-      width: 0.8rem;
-      height: 0.8rem;
-      border-radius: 999px;
-      background-color: var(--mazoon-bg-page);
-      border: 2px solid var(--mazoon-accent);
-    }
-
-    [dir="rtl"] .about-timeline-badge {
-      left: auto;
-      right: -0.1rem;
-    }
-
-    .about-list-bullet {
-      width: 0.5rem;
-      height: 0.5rem;
-      border-radius: 999px;
-      margin-inline-end: 0.4rem;
-      background: radial-gradient(circle at center, var(--mazoon-accent), #b45309);
-      flex-shrink: 0;
-    }
-  </style>
 {% endblock %}
 
 {# ============ SEO ============ #}
@@ -171,70 +53,83 @@
 {# ============ CONTENT ============ #}
 {% block content %}
 
+{# ========== HERO CARD (Bootstrap فقط) ========== #}
 <div class="mb-4 mb-md-5">
-  <div class="about-hero shadow-sm p-4 p-md-5">
-    <div class="row g-4 align-items-center">
-      <div class="col-lg-8">
-        <div class="about-hero-pill mb-3">
-          <span class="about-hero-dot"></span>
-          <span>{% trans "علامة عُمانية متخصصة في أنظمة الألمنيوم" %}</span>
-        </div>
+  <div class="card border-0 shadow-sm bg-primary text-light">
+    <div class="card-body p-4 p-md-5">
+      <div class="row g-4 align-items-center">
 
-        <h1 class="h3 h2-md fw-bold mb-3">
-          {% trans "حول مزون المنيوم" %}
-        </h1>
-
-        <p class="mb-3 mb-md-4" style="line-height: 1.9;">
-          {% blocktrans trimmed %}
-            مزون المنيوم هي علامة تجارية عُمانية رائدة ومتفردة في مجال تطوير وتصنيع أنظمة النوافذ والأبواب من الألمنيوم والألمنيوم العازل للحرارة. أنظمتنا ثمرة تجربة عملية بدأت منذ التأسيس في عام 2016 وتطورت إلى تصميم أنظمة خاصة بنا بشكل مستقل منذ عام 2021، مع تركيز واضح على الجودة، والأداء المعتمد، والملاءمة للمناخ العُماني.
-          {% endblocktrans %}
-        </p>
-
-        <div class="d-flex flex-wrap gap-2">
-          <span class="badge rounded-pill text-bg-light text-dark border-0">
-            {% trans "أنظمة مفصلية وعازلة للحرارة" %}
-          </span>
-          <span class="badge rounded-pill text-bg-light text-dark border-0">
-            {% trans "تصميم هندسي + مختبر مزون" %}
-          </span>
-          <span class="badge rounded-pill text-bg-light text-dark border-0">
-            {% trans "شركاء محليون موثوقون" %}
-          </span>
-        </div>
-      </div>
-
-      <div class="col-lg-4">
-        <div class="d-flex flex-column gap-3">
-          <div class="about-hero-kpi p-3">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <span class="value">2016</span>
-              <small class="text-uppercase">{% trans "منذ" %}</small>
-            </div>
-            <span class="label">
-              {% trans "بداية رحلة مزون المنيوم في السوق العماني" %}
-            </span>
+        <div class="col-lg-8">
+          <div class="d-inline-flex align-items-center gap-2 mb-3 px-3 py-1 rounded-pill border border-light border-opacity-50 small text-uppercase">
+            <span class="badge rounded-pill bg-warning text-dark"></span>
+            <span>{% trans "علامة عُمانية متخصصة في أنظمة الألمنيوم" %}</span>
           </div>
 
-          <div class="about-hero-kpi p-3">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <span class="value">2021</span>
-              <small class="text-uppercase">{% trans "أنظمة مزون" %}</small>
-            </div>
-            <span class="label">
-              {% trans "الانتقال لتطوير أنظمة متكاملة خاصة بمزون المنيوم" %}
-            </span>
-          </div>
+          <h1 class="h3 h2 mb-3 fw-bold">
+            {% trans "حول مزون المنيوم" %}
+          </h1>
 
-          <div class="about-hero-kpi p-3">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <span class="value">3+</span>
-              <small class="text-uppercase">{% trans "أنظمة رئيسية" %}</small>
-            </div>
-            <span class="label">
-              {% trans "مزون 45 · مزون 46 · مزون 56 العازل حرارياً" %}
+          <p class="mb-3 mb-md-4 small" style="line-height: 1.9;">
+            {% blocktrans trimmed %}
+              مزون المنيوم هي علامة تجارية عُمانية رائدة ومتفردة في مجال تطوير وتصنيع أنظمة النوافذ والأبواب من الألمنيوم والألمنيوم العازل للحرارة. أنظمتنا ثمرة تجربة عملية بدأت منذ التأسيس في عام 2016 وتطورت إلى تصميم أنظمة خاصة بنا بشكل مستقل منذ عام 2021، مع تركيز واضح على الجودة، والأداء المعتمد، والملاءمة للمناخ العُماني.
+            {% endblocktrans %}
+          </p>
+
+          <div class="d-flex flex-wrap gap-2">
+            <span class="badge rounded-pill text-bg-light text-dark">
+              {% trans "أنظمة مفصلية وعازلة للحرارة" %}
+            </span>
+            <span class="badge rounded-pill text-bg-light text-dark">
+              {% trans "تصميم هندسي + مختبر مزون" %}
+            </span>
+            <span class="badge rounded-pill text-bg-light text-dark">
+              {% trans "شركاء محليون موثوقون" %}
             </span>
           </div>
         </div>
+
+        <div class="col-lg-4">
+          <div class="d-flex flex-column gap-3">
+
+            <div class="card border border-light border-opacity-50 bg-transparent text-light">
+              <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span class="fs-3 fw-bold">2016</span>
+                  <small class="text-uppercase">{% trans "منذ" %}</small>
+                </div>
+                <p class="mb-0 small">
+                  {% trans "بداية رحلة مزون المنيوم في السوق العماني" %}
+                </p>
+              </div>
+            </div>
+
+            <div class="card border border-light border-opacity-50 bg-transparent text-light">
+              <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span class="fs-3 fw-bold">2021</span>
+                  <small class="text-uppercase">{% trans "أنظمة مزون" %}</small>
+                </div>
+                <p class="mb-0 small">
+                  {% trans "الانتقال لتطوير أنظمة متكاملة خاصة بمزون المنيوم" %}
+                </p>
+              </div>
+            </div>
+
+            <div class="card border border-light border-opacity-50 bg-transparent text-light">
+              <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span class="fs-3 fw-bold">3+</span>
+                  <small class="text-uppercase">{% trans "أنظمة رئيسية" %}</small>
+                </div>
+                <p class="mb-0 small">
+                  {% trans "مزون 45 · مزون 46 · مزون 56 العازل حرارياً" %}
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -242,9 +137,10 @@
 
 <div class="row g-4">
 
+  {# ========= العمود الأيسر (القصة + الرحلة) ========= #}
   <div class="col-lg-8">
 
-    <div class="card about-section-card border-0 shadow-sm mb-3">
+    <div class="card border-0 shadow-sm mb-3">
       <div class="card-body">
         <h2 class="h5 fw-bold mb-3">
           {% trans "قصتنا ورؤيتنا" %}
@@ -269,53 +165,44 @@
       </div>
     </div>
 
-    <div class="card about-section-card border-0 shadow-sm mb-3">
+    <div class="card border-0 shadow-sm mb-3">
       <div class="card-body">
         <h2 class="h5 fw-bold mb-3">
           {% trans "رحلة مزون المنيوم" %}
         </h2>
 
-        <div class="small text-muted about-timeline" style="line-height: 1.9;">
-          <div class="about-timeline-item">
-            <span class="about-timeline-badge"></span>
-            <div class="ms-3 me-3">
-              <div class="fw-semibold mb-1">
-                {% trans "2016 – مرحلة التأسيس والانطلاق" %}
-              </div>
-              <p class="mb-0">
-                {% blocktrans trimmed %}
-                  انطلقت مزون المنيوم كمشروع عُماني يركز على تقديم حلول نوافذ وأبواب بمعايير جودة أعلى، مع فهم عميق لطبيعة المشاريع السكنية والتجارية في السوق المحلي.
-                {% endblocktrans %}
-              </p>
+        <div class="small text-muted" style="line-height: 1.9;">
+          <div class="mb-3">
+            <div class="fw-semibold mb-1">
+              {% trans "2016 – مرحلة التأسيس والانطلاق" %}
             </div>
+            <p class="mb-0">
+              {% blocktrans trimmed %}
+                انطلقت مزون المنيوم كمشروع عُماني يركز على تقديم حلول نوافذ وأبواب بمعايير جودة أعلى، مع فهم عميق لطبيعة المشاريع السكنية والتجارية في السوق المحلي.
+              {% endblocktrans %}
+            </p>
           </div>
 
-          <div class="about-timeline-item">
-            <span class="about-timeline-badge"></span>
-            <div class="ms-3 me-3">
-              <div class="fw-semibold mb-1">
-                {% trans "2021 – تطوير الأنظمة الخاصة" %}
-              </div>
-              <p class="mb-0">
-                {% blocktrans trimmed %}
-                  مع تطور الخبرة، انتقلت الشركة إلى تصميم أنظمتها الخاصة للنوافذ والأبواب، بما في ذلك الأنظمة العازلة حرارياً، مع اعتماد معايير تصميم واختبارات أكثر صرامة.
-                {% endblocktrans %}
-              </p>
+          <div class="mb-3">
+            <div class="fw-semibold mb-1">
+              {% trans "2021 – تطوير الأنظمة الخاصة" %}
             </div>
+            <p class="mb-0">
+              {% blocktrans trimmed %}
+                مع تطور الخبرة، انتقلت الشركة إلى تصميم أنظمتها الخاصة للنوافذ والأبواب، بما في ذلك الأنظمة العازلة حرارياً، مع اعتماد معايير تصميم واختبارات أكثر صرامة.
+              {% endblocktrans %}
+            </p>
           </div>
 
-          <div class="about-timeline-item mb-0">
-            <span class="about-timeline-badge"></span>
-            <div class="ms-3 me-3">
-              <div class="fw-semibold mb-1">
-                {% trans "2025 – بحث وتطوير مستمر" %}
-              </div>
-              <p class="mb-0">
-                {% blocktrans trimmed %}
-                  تستمر مزون المنيوم في تطوير نماذج جديدة للسحاب والمفصلي، وتوحيد الإكسسوارات، وبناء منصات اختبار متقدمة، إلى جانب توثيق تقني ثنائي اللغة لضمان ريادة مستدامة في الابتكار والجودة.
-                {% endblocktrans %}
-              </p>
+          <div class="mb-0">
+            <div class="fw-semibold mb-1">
+              {% trans "2025 – بحث وتطوير مستمر" %}
             </div>
+            <p class="mb-0">
+              {% blocktrans trimmed %}
+                تستمر مزون المنيوم في تطوير نماذج جديدة للسحاب والمفصلي، وتوحيد الإكسسوارات، وبناء منصات اختبار متقدمة، إلى جانب توثيق تقني ثنائي اللغة لضمان ريادة مستدامة في الابتكار والجودة.
+              {% endblocktrans %}
+            </p>
           </div>
         </div>
       </div>
@@ -323,19 +210,19 @@
 
   </div>
 
+  {# ========= العمود الأيمن (محاور التميز + الشركاء) ========= #}
   <div class="col-lg-4">
 
-    <div class="card about-section-card border-0 shadow-sm mb-3">
+    <div class="card border-0 shadow-sm mb-3">
       <div class="card-body small text-muted">
-        <div class="card-header px-0 pt-0">
-          <h2 class="card-title mb-3">
-            {% trans "محاور التميز في مزون المنيوم" %}
-          </h2>
-        </div>
+        <h2 class="h6 fw-bold mb-3">
+          {% trans "محاور التميز في مزون المنيوم" %}
+        </h2>
 
-        <ul class="mb-0 list-unstyled">
+        <ul class="list-unstyled mb-0">
+
           <li class="mb-3 d-flex">
-            <span class="about-list-bullet mt-2"></span>
+            <i class="bi bi-circle-fill me-2 mt-1 small"></i>
             <div>
               <div class="fw-semibold mb-1">
                 {% trans "أنظمة مزون" %}
@@ -349,7 +236,7 @@
           </li>
 
           <li class="mb-3 d-flex">
-            <span class="about-list-bullet mt-2"></span>
+            <i class="bi bi-circle-fill me-2 mt-1 small"></i>
             <div>
               <div class="fw-semibold mb-1">
                 {% trans "أداء مُعتمد" %}
@@ -363,7 +250,7 @@
           </li>
 
           <li class="mb-3 d-flex">
-            <span class="about-list-bullet mt-2"></span>
+            <i class="bi bi-circle-fill me-2 mt-1 small"></i>
             <div>
               <div class="fw-semibold mb-1">
                 {% trans "البحث والتطوير والنماذج الأولية" %}
@@ -377,7 +264,7 @@
           </li>
 
           <li class="d-flex">
-            <span class="about-list-bullet mt-2"></span>
+            <i class="bi bi-circle-fill me-2 mt-1 small"></i>
             <div>
               <div class="fw-semibold mb-1">
                 {% trans "المشاريع والشركاء" %}
@@ -389,63 +276,67 @@
               </p>
             </div>
           </li>
+
         </ul>
       </div>
     </div>
 
-    <div class="card about-section-card border-0 shadow-sm mb-3">
+    <div class="card border-0 shadow-sm mb-3">
       <div class="card-body small text-muted">
-        <div class="card-header px-0 pt-0">
-          <h2 class="card-title mb-3">
-            {% trans "شركاؤنا المحليون الموثوقون" %}
-          </h2>
-        </div>
-        <ul class="mb-0 list-unstyled">
+        <h2 class="h6 fw-bold mb-3">
+          {% trans "شركاؤنا المحليون الموثوقون" %}
+        </h2>
+
+        <ul class="list-unstyled mb-0">
           <li class="mb-2">
             <span class="fw-semibold d-block">
               {% trans "نابكو عمان لسحب مقاطع الألمنيوم" %}
             </span>
-            <span class="text-muted d-block">
+            <span class="d-block">
               {% blocktrans trimmed %}
                 شريكنا في سحب المقاطع وفق معايير جودة معتمدة، لضمان ثبات الأبعاد وجودة السبيكة.
               {% endblocktrans %}
             </span>
           </li>
+
           <li class="mb-2">
             <span class="fw-semibold d-block">
               {% trans "مصنع التسنيم لمعالجة الزجاج" %}
             </span>
-            <span class="text-muted d-block">
+            <span class="d-block">
               {% blocktrans trimmed %}
                 لتوريد ومعالجة وتقسية الزجاج لمشاريعنا بنطاق واسع من السماكات والأنواع.
               {% endblocktrans %}
             </span>
           </li>
+
           <li class="mb-2">
             <span class="fw-semibold d-block">
               {% trans "بهوان لهندسة المعادن والزجاج" %}
             </span>
-            <span class="text-muted d-block">
+            <span class="d-block">
               {% blocktrans trimmed %}
                 لدعم حلول الزجاج والمعادن المتقدمة في المشاريع الخاصة والمشاريع الكبيرة.
               {% endblocktrans %}
             </span>
           </li>
+
           <li class="mb-2">
             <span class="fw-semibold d-block">
               {% trans "الموثوق العالمية" %}
             </span>
-            <span class="text-muted d-block">
+            <span class="d-block">
               {% blocktrans trimmed %}
                 لتوريد أجهزة وإكسسوارات النوافذ وتقديم الدعم الفني في اختيار الهاردوير المناسب لكل نظام.
               {% endblocktrans %}
             </span>
           </li>
+
           <li>
             <span class="fw-semibold d-block">
               {% trans "مجموعة تاول – بودرة صبغ جوتن" %}
             </span>
-            <span class="text-muted d-block">
+            <span class="d-block">
               {% blocktrans trimmed %}
                 الوكيل الرسمي لمساحيق الصبغ (Powder Coating) من جوتن عمان، لضمان ألوان وتشطيبات عالية الجودة لأنظمة مزون.
               {% endblocktrans %}
@@ -455,13 +346,11 @@
       </div>
     </div>
 
-    <div class="card about-section-card border-0 shadow-sm">
+    <div class="card border-0 shadow-sm">
       <div class="card-body small text-muted">
-        <div class="card-header px-0 pt-0">
-          <h2 class="card-title mb-2">
-            {% trans "مشغل بواسطة مؤسسة استثمار" %}
-          </h2>
-        </div>
+        <h2 class="h6 fw-bold mb-2">
+          {% trans "مشغل بواسطة مؤسسة استثمار" %}
+        </h2>
         <p class="mb-0" style="line-height: 1.9;">
           {% blocktrans trimmed %}
             مزون المنيوم هي علامة تجارية مملوكة ومشغلة من قبل مؤسسة استثمار، مع تركيز على بناء علامة عُمانية متخصصة في أنظمة الألمنيوم للنوافذ والأبواب، تجمع بين الخبرة الفنية والإدارة المستدامة للمشاريع، وتطوير أنظمة يمكن للورش اعتمادها بثقة على المدى الطويل.
