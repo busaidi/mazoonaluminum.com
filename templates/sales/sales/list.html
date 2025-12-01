@@ -5,7 +5,8 @@
 
 {% block sales_content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+{# ================== Header ================== #}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
 
   <div>
     <h1 class="h5 fw-bold mb-1 text-body">
@@ -25,6 +26,7 @@
 
 </div>
 
+{# ================== Card: Filters + Table ================== #}
 <div class="card shadow-sm border-0">
   <div class="card-body">
 
@@ -33,7 +35,10 @@
       <form method="get" class="row g-2 align-items-center">
 
         {# فلتر النوع #}
-        <div class="col-auto">
+        <div class="col-md-2 col-sm-4">
+          <label class="form-label small mb-1">
+            {% trans "النوع" %}
+          </label>
           <select name="kind"
                   class="form-select form-select-sm"
                   onchange="this.form.submit()">
@@ -48,7 +53,10 @@
         </div>
 
         {# فلتر الفوترة #}
-        <div class="col-auto">
+        <div class="col-md-2 col-sm-4">
+          <label class="form-label small mb-1">
+            {% trans "حالة الفوترة" %}
+          </label>
           <select name="invoiced"
                   class="form-select form-select-sm"
                   onchange="this.form.submit()">
@@ -63,45 +71,53 @@
         </div>
 
         {# البحث بالعميل #}
-        <div class="col-auto flex-grow-1">
+        <div class="col-md-5 col-sm-8">
+          <label class="form-label small mb-1" for="id_q">
+            {% trans "بحث" %}
+          </label>
           <input type="text"
+                 id="id_q"
                  name="q"
                  value="{{ current_q }}"
                  class="form-control form-control-sm"
-                 placeholder="{% trans 'بحث بالعميل...' %}"
-                 onkeydown="if(event.key==='Enter'){this.form.submit();}">
+                 placeholder="{% trans 'بحث بالعميل...' %}">
         </div>
 
         {# زر مسح الفلاتر #}
-        <div class="col-auto">
+        <div class="col-md-3 col-sm-4 d-flex align-items-end gap-2">
+          <button type="submit" class="btn btn-sm btn-outline-primary flex-grow-1">
+            <i class="bi bi-search ms-1"></i>
+            {% trans "تصفية" %}
+          </button>
           <a href="{% url 'sales:sales_list' %}"
-             class="btn btn-sm btn-outline-secondary">
+             class="btn btn-sm btn-outline-secondary"
+             title="{% trans 'مسح الفلاتر' %}">
             <i class="bi bi-x-lg"></i>
-            {% trans "مسح الفلاتر" %}
           </a>
         </div>
 
       </form>
     </div>
 
+    {# ================== Table ================== #}
     {% if documents %}
       <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
+        <table class="table table-sm table-hover align-middle mb-0">
           <thead class="table-light">
             <tr>
-              <th class="small text-muted">{% trans "الرقم" %}</th>
-              <th class="small text-muted">{% trans "التاريخ" %}</th>
+              <th class="small text-muted text-nowrap">{% trans "الرقم" %}</th>
+              <th class="small text-muted text-nowrap">{% trans "التاريخ" %}</th>
               <th class="small text-muted">{% trans "العميل" %}</th>
-              <th class="small text-muted">{% trans "الحالة" %}</th>
-              <th class="small text-muted text-end">{% trans "الإجمالي" %}</th>
-              <th class="small text-muted">{% trans "النوع" %}</th>
+              <th class="small text-muted text-nowrap">{% trans "الحالة" %}</th>
+              <th class="small text-muted text-end text-nowrap">{% trans "الإجمالي" %}</th>
+              <th class="small text-muted text-nowrap">{% trans "النوع" %}</th>
               <th class="small text-muted text-nowrap">{% trans "الفوترة والتسليم" %}</th>
             </tr>
           </thead>
 
           <tbody>
           {% for doc in documents %}
-            <tr class="align-middle">
+            <tr>
 
               {# الرقم #}
               <td class="small text-nowrap">
@@ -130,7 +146,7 @@
               </td>
 
               {# الحالة #}
-              <td class="small">
+              <td class="small text-nowrap">
                 {% if doc.status == doc.Status.DRAFT %}
                   <span class="badge bg-secondary-subtle text-secondary-emphasis">
                     {{ doc.get_status_display }}
@@ -157,7 +173,7 @@
               </td>
 
               {# النوع #}
-              <td class="small">
+              <td class="small text-nowrap">
                 {% if doc.is_quotation %}
                   <span class="badge bg-info-subtle text-info-emphasis">
                     <i class="bi bi-file-earmark-text ms-1"></i>
@@ -179,22 +195,12 @@
                   {% if doc.is_quotation %}
 
                     {% if doc.is_cancelled %}
-                      {# عرض سعر ملغي: زر إعادة فتح #}
-                      <form method="post"
-                            action="{% url 'sales:sales_reopen' doc.pk %}"
-                            class="d-inline">
-                        {% csrf_token %}
-                        <button type="submit"
-                                class="btn btn-sm btn-outline-warning"
-                                data-bs-toggle="tooltip"
-                                data-bs-title="{% trans 'إعادة فتح المستند' %}">
-                          <i class="bi bi-arrow-counterclockwise"></i>
-                        </button>
-                      </form>
+                      <span class="badge bg-danger-subtle text-danger-emphasis">
+                        {% trans "ملغي" %}
+                      </span>
 
                     {% elif doc.status == doc.Status.DRAFT %}
-                      {# عرض سعر مسودة: تأكيد + إلغاء #}
-
+                      {# تأكيد + إلغاء #}
                       <form method="post"
                             action="{% url 'sales:quotation_convert' doc.pk %}"
                             class="d-inline">
@@ -233,7 +239,6 @@
                         <span class="badge bg-danger-subtle text-danger-emphasis">
                           {% trans "ملغي" %}
                         </span>
-
                       {% else %}
 
                         {# فوترة #}
@@ -358,9 +363,15 @@
       {% endif %}
 
     {% else %}
-      <p class="text-muted small mb-0">
-        {% trans "لا توجد مستندات حتى الآن." %}
-      </p>
+      <div class="text-center py-4">
+        <p class="text-muted small mb-1">
+          {% trans "لا توجد مستندات حتى الآن." %}
+        </p>
+        <a href="{% url 'sales:sales_create' %}" class="btn btn-sm btn-primary">
+          <i class="bi bi-plus-lg ms-1"></i>
+          {% trans "إنشاء أول مستند مبيعات" %}
+        </a>
+      </div>
     {% endif %}
 
   </div>

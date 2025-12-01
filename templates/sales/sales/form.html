@@ -7,9 +7,10 @@
 
 {% block sales_content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+{# ================== Header ================== #}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
-    <h1 class="h5 fw-bold mb-1">
+    <h1 class="h5 fw-bold mb-1 text-body">
       {% if document %}
         {% trans "تعديل مستند مبيعات" %}
       {% else %}
@@ -20,72 +21,98 @@
       {% trans "إدارة عروض الأسعار وأوامر البيع." %}
     </p>
   </div>
+  <div>
+    <a href="{% url 'sales:sales_list' %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-right ms-1"></i>
+      {% trans "رجوع لقائمة المستندات" %}
+    </a>
+  </div>
 </div>
 
+{# ================== Card: Form ================== #}
 <div class="card shadow-sm border-0">
   <div class="card-body">
 
     <form method="post" novalidate>
       {% csrf_token %}
 
-      {{ form.non_field_errors }}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger small">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
 
       {# ================== Header fields ================== #}
-      <div class="row g-3">
+      <div class="row g-3 mb-3">
 
-        <!-- العميل -->
+        {# العميل #}
         <div class="col-md-8">
-          <label for="{{ form.contact.id_for_label }}" class="form-label small fw-bold">
-            {% trans "العميل" %}
+          <label for="{{ form.contact.id_for_label }}" class="form-label small fw-semibold">
+            {{ form.contact.label|default:_("العميل") }}
           </label>
           {{ form.contact }}
-          <div class="text-danger small">
-            {{ form.contact.errors }}
-          </div>
+          {% if form.contact.help_text %}
+            <div class="form-text small text-muted">
+              {{ form.contact.help_text }}
+            </div>
+          {% endif %}
+          {% if form.contact.errors %}
+            <div class="text-danger small">
+              {{ form.contact.errors }}
+            </div>
+          {% endif %}
         </div>
 
-        <!-- التاريخ -->
+        {# التاريخ #}
         <div class="col-md-4">
-          <label for="{{ form.date.id_for_label }}" class="form-label small fw-bold">
-            {% trans "التاريخ" %}
+          <label for="{{ form.date.id_for_label }}" class="form-label small fw-semibold">
+            {{ form.date.label|default:_("التاريخ") }}
           </label>
           {{ form.date }}
-          <div class="text-danger small">
-            {{ form.date.errors }}
-          </div>
+          {% if form.date.errors %}
+            <div class="text-danger small">
+              {{ form.date.errors }}
+            </div>
+          {% endif %}
         </div>
 
-        <!-- تاريخ الانتهاء -->
+        {# تاريخ الانتهاء #}
         <div class="col-md-4">
-          <label for="{{ form.due_date.id_for_label }}" class="form-label small fw-bold">
-            {% trans "تاريخ الانتهاء" %}
+          <label for="{{ form.due_date.id_for_label }}" class="form-label small fw-semibold">
+            {{ form.due_date.label|default:_("تاريخ الانتهاء") }}
           </label>
           {{ form.due_date }}
-          <div class="text-danger small">
-            {{ form.due_date.errors }}
-          </div>
+          {% if form.due_date.errors %}
+            <div class="text-danger small">
+              {{ form.due_date.errors }}
+            </div>
+          {% endif %}
         </div>
 
-        <!-- ملاحظات داخلية -->
+        {# ملاحظات داخلية #}
         <div class="col-12">
-          <label for="{{ form.notes.id_for_label }}" class="form-label small fw-bold">
-            {% trans "ملاحظات داخلية" %}
+          <label for="{{ form.notes.id_for_label }}" class="form-label small fw-semibold">
+            {{ form.notes.label|default:_("ملاحظات داخلية") }}
           </label>
           {{ form.notes }}
-          <div class="text-danger small">
-            {{ form.notes.errors }}
-          </div>
+          {% if form.notes.errors %}
+            <div class="text-danger small">
+              {{ form.notes.errors }}
+            </div>
+          {% endif %}
         </div>
 
-        <!-- ملاحظات للعميل -->
+        {# ملاحظات للعميل #}
         <div class="col-12">
-          <label for="{{ form.customer_notes.id_for_label }}" class="form-label small fw-bold">
-            {% trans "ملاحظات للعميل" %}
+          <label for="{{ form.customer_notes.id_for_label }}" class="form-label small fw-semibold">
+            {{ form.customer_notes.label|default:_("ملاحظات للعميل") }}
           </label>
           {{ form.customer_notes }}
-          <div class="text-danger small">
-            {{ form.customer_notes.errors }}
-          </div>
+          {% if form.customer_notes.errors %}
+            <div class="text-danger small">
+              {{ form.customer_notes.errors }}
+            </div>
+          {% endif %}
         </div>
 
       </div>
@@ -93,10 +120,12 @@
       {# ================== Lines formset ================== #}
       <hr class="my-4">
 
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h2 class="h6 fw-bold mb-0">
-          {% trans "بنود المستند" %}
-        </h2>
+      <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-1">
+        <div>
+          <h2 class="h6 fw-bold mb-0">
+            {% trans "بنود المستند" %}
+          </h2>
+        </div>
         <p class="text-muted small mb-0">
           {% trans "أضف المنتجات والكميات والأسعار لهذا المستند." %}
         </p>
@@ -104,7 +133,12 @@
 
       {% if lines_formset %}
         {{ lines_formset.management_form }}
-        {{ lines_formset.non_form_errors }}
+
+        {% if lines_formset.non_form_errors %}
+          <div class="alert alert-danger small">
+            {{ lines_formset.non_form_errors }}
+          </div>
+        {% endif %}
 
         <div class="table-responsive">
           <table class="table table-sm align-middle mb-0">
@@ -112,7 +146,7 @@
               <tr>
                 <th class="small text-muted">{% trans "المنتج" %}</th>
                 <th class="small text-muted">{% trans "الوصف" %}</th>
-                <th class="small text-muted">{% trans "الوحدات" %}</th>
+                <th class="small text-muted">{% trans "الوحدة" %}</th>
                 <th class="small text-muted text-end">{% trans "الكمية" %}</th>
                 <th class="small text-muted text-end">{% trans "سعر الوحدة" %}</th>
                 <th class="small text-muted text-end">{% trans "الخصم %" %}</th>
@@ -130,48 +164,57 @@
 
                   <td class="small">
                     {{ line_form.product }}
-                    <div class="text-danger small">
-                      {{ line_form.product.errors }}
-                    </div>
+                    {% if line_form.product.errors %}
+                      <div class="text-danger small">
+                        {{ line_form.product.errors }}
+                      </div>
+                    {% endif %}
                   </td>
 
                   <td class="small">
                     {{ line_form.description }}
-                    <div class="text-danger small">
-                      {{ line_form.description.errors }}
-                    </div>
+                    {% if line_form.description.errors %}
+                      <div class="text-danger small">
+                        {{ line_form.description.errors }}
+                      </div>
+                    {% endif %}
                   </td>
 
                   {# الوحدة الأساسية / البديلة (UI فقط حالياً) #}
                   <td class="small">
                     <select class="form-select form-select-sm uom-select">
-                      <option value="">{{ "—" }}</option>
+                      <option value="">{% trans "—" %}</option>
                     </select>
                   </td>
 
                   <td class="small text-end">
                     {{ line_form.quantity }}
-                    <div class="text-danger small">
-                      {{ line_form.quantity.errors }}
-                    </div>
+                    {% if line_form.quantity.errors %}
+                      <div class="text-danger small">
+                        {{ line_form.quantity.errors }}
+                      </div>
+                    {% endif %}
                   </td>
 
                   <td class="small text-end">
                     {{ line_form.unit_price }}
-                    <div class="text-danger small">
-                      {{ line_form.unit_price.errors }}
-                    </div>
+                    {% if line_form.unit_price.errors %}
+                      <div class="text-danger small">
+                        {{ line_form.unit_price.errors }}
+                      </div>
+                    {% endif %}
                   </td>
 
                   <td class="small text-end">
                     {{ line_form.discount_percent }}
-                    <div class="text-danger small">
-                      {{ line_form.discount_percent.errors }}
-                    </div>
+                    {% if line_form.discount_percent.errors %}
+                      <div class="text-danger small">
+                        {{ line_form.discount_percent.errors }}
+                      </div>
+                    {% endif %}
                   </td>
 
                   <td class="small text-end">
-                    {# line_total is read-only (computed on model) #}
                     {% if line_form.instance.pk %}
                       {{ line_form.instance.line_total }}
                     {% else %}
@@ -213,7 +256,7 @@
 
 {% endblock %}
 
-{# سكربت الوحدات – Vanilla JS #}
+{# ================== سكربت الوحدات – Vanilla JS ================== #}
 {% block extra_body %}
 <script>
   (function () {
@@ -252,7 +295,7 @@
         return;
       }
 
-      // نضيف الأساس أولاً
+      // الأساس
       if (hasBase) {
         const baseOpt = document.createElement("option");
         baseOpt.value = "base";
@@ -260,7 +303,7 @@
         uomSelect.appendChild(baseOpt);
       }
 
-      // ثم البديلة (إن وجدت)
+      // البديلة
       if (hasAlt) {
         const altOpt = document.createElement("option");
         altOpt.value = "alt";
@@ -268,14 +311,13 @@
         uomSelect.appendChild(altOpt);
       }
 
-      // اختيار افتراضي: الأساس إن وُجدت، وإلا البديلة
+      // اختيار افتراضي
       if (hasBase) {
         uomSelect.value = "base";
       } else if (hasAlt) {
         uomSelect.value = "alt";
       }
 
-      // بعد ما نضبط الوحدات، نحدّث السعر في السطر
       updateUnitPriceFromUom(uomSelect);
     }
 
@@ -297,7 +339,7 @@
       if (selected === "base") {
         priceToUse = basePrice;
       } else if (selected === "alt") {
-        priceToUse = altPrice || basePrice; // لو ما فيه سعر بديل نرجع للأساس
+        priceToUse = altPrice || basePrice;
       }
 
       if (priceToUse !== "") {
@@ -305,13 +347,11 @@
       }
     }
 
-    function setupRow(row, index) {
+    function setupRow(row) {
       const productSelect = row.querySelector("select[name$='-product']");
       const uomSelect = row.querySelector(".uom-select");
 
-      if (!productSelect || !uomSelect) {
-        return;
-      }
+      if (!productSelect || !uomSelect) return;
 
       function fetchAndUpdateUom(productId) {
         if (!productId) {
@@ -337,19 +377,19 @@
           });
       }
 
-      // تحميل أولي (لو السطر محفوظ وعنده منتج)
+      // تحميل أولي
       if (productSelect.value) {
         fetchAndUpdateUom(productSelect.value);
       } else {
         resetUomSelect(uomSelect);
       }
 
-      // عند تغيير المنتج → نعيد جلب الوحدات والسعر
+      // عند تغيير المنتج
       productSelect.addEventListener("change", function (e) {
         fetchAndUpdateUom(e.target.value);
       });
 
-      // عند تغيير الوحدة في نفس السطر → نغيّر السعر
+      // عند تغيير الوحدة
       uomSelect.addEventListener("change", function () {
         updateUnitPriceFromUom(uomSelect);
       });
@@ -357,7 +397,7 @@
 
     document.addEventListener("DOMContentLoaded", function () {
       const rows = document.querySelectorAll("table tbody tr");
-      rows.forEach((row, idx) => setupRow(row, idx));
+      rows.forEach((row) => setupRow(row));
     });
   })();
 </script>
