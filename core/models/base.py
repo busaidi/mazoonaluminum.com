@@ -1,17 +1,25 @@
 import uuid
+
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
+from django.utils.translation import gettext_lazy as _
 
 
 class TimeStampedModel(models.Model):
     """
     Adds created_at / updated_at fields.
+    Use this for almost all models.
     """
-    created_at = models.DateTimeField(default=timezone.now, editable=False)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(
+        default=timezone.now,
+        editable=False,
+        verbose_name=_("تاريخ الإنشاء"),
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("آخر تحديث"),
+    )
 
     class Meta:
         abstract = True
@@ -20,21 +28,23 @@ class TimeStampedModel(models.Model):
 class UserStampedModel(models.Model):
     """
     Adds created_by / updated_by fields.
-    These are optional and can be filled in views.
+    These are optional and can be filled in views/services.
     """
     created_by = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="%(class)s_created",
+        related_name="%(app_label)s_%(class)s_created",
+        verbose_name=_("أنشئ بواسطة"),
     )
     updated_by = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="%(class)s_updated",
+        related_name="%(app_label)s_%(class)s_updated",
+        verbose_name=_("آخر تعديل بواسطة"),
     )
 
     class Meta:
@@ -47,29 +57,40 @@ class SoftDeleteModel(models.Model):
     - is_deleted: mark record as deleted without actually removing it
     - deleted_at / deleted_by: track who deleted and when
     """
-    is_deleted = models.BooleanField(default=False)
-    deleted_at = models.DateTimeField(null=True, blank=True)
+    is_deleted = models.BooleanField(
+        default=False,
+        verbose_name=_("محذوف؟"),
+    )
+    deleted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("تاريخ الحذف"),
+    )
     deleted_by = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="%(class)s_deleted",
+        related_name="%(app_label)s_%(class)s_deleted",
+        verbose_name=_("حُذف بواسطة"),
     )
 
     class Meta:
         abstract = True
 
-    def soft_delete(self, user=None):
+    def soft_delete(self, user=None, save=True):
         """
         Mark the object as deleted without actually removing it from DB.
+        Call this from services instead of obj.delete().
         """
         if not self.is_deleted:
             self.is_deleted = True
             self.deleted_at = timezone.now()
             if user is not None:
                 self.deleted_by = user
-            self.save(update_fields=["is_deleted", "deleted_at", "deleted_by"])
+
+            if save:
+                self.save(update_fields=["is_deleted", "deleted_at", "deleted_by"])
 
 
 class BaseModel(TimeStampedModel, UserStampedModel, SoftDeleteModel):
@@ -90,32 +111,8 @@ class BaseModel(TimeStampedModel, UserStampedModel, SoftDeleteModel):
         unique=True,
         editable=False,
         db_index=True,
-        verbose_name="Public ID",
+        verbose_name=_("المعرّف العام (UUID)"),
     )
 
     class Meta:
         abstract = True
-
-
-class NumberedModel(models.Model):
-    """
-    Abstract base class that automatically generates a serial
-    using core.services.numbering.generate_number_for_instance.
-    """
-
-    serial = models.CharField(
-        max_length=64,
-        unique=True,
-        blank=True,
-        verbose_name="رقم",
-    )
-
-    class Meta:
-        abstract = True
-
-    def save(self, *args, **kwargs):
-        # Import here to avoid circular imports
-        if not self.serial:
-            from core.services.numbering import generate_number_for_instance
-            self.serial = generate_number_for_instance(self)
-        super().save(*args, **kwargs)

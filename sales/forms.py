@@ -43,6 +43,20 @@ class SalesDocumentForm(forms.ModelForm):
             self.instance.kind = SalesDocument.Kind.QUOTATION
 
 
+    def clean(self):
+        """
+        التحقق من أن تاريخ الانتهاء لا يسبق تاريخ المستند.
+        """
+        cleaned_data = super().clean()
+        date = cleaned_data.get("date")
+        due_date = cleaned_data.get("due_date")
+
+        if date and due_date and due_date < date:
+            self.add_error("due_date", _("Due date cannot be before document date."))
+
+        return cleaned_data
+
+
 # ===================================================================
 # DeliveryNoteForm
 # ===================================================================

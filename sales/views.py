@@ -1,4 +1,5 @@
 # sales/views.py
+
 from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -6,7 +7,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
 from django.http.response import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
-from django.db.models import Sum, Q
+from django.db.models import Sum
 from django.utils import timezone
 from django.urls import reverse
 from django.utils.translation import gettext as _
@@ -16,6 +17,9 @@ from django.views.generic import (
 )
 
 from inventory.models import Product
+# من الأفضل عدم استخدام UserStampedMixin هنا لأن عندنا form_valid مخصص
+# from core.mixins import UserStampedMixin
+
 from .forms import SalesDocumentForm, DeliveryNoteForm, SalesLineFormSet
 from .models import SalesDocument, DeliveryNote
 from . import services
@@ -37,12 +41,28 @@ class SalesBaseView(LoginRequiredMixin):
 # ======================================================================
 # Dashboard
 # ======================================================================
+from decimal import Decimal
+from django.db.models import Sum
+
 class SalesDashboardView(SalesBaseView, TemplateView):
     template_name = "sales/dashboard.html"
     sales_section = "dashboard"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+
+        def _q3(value):
+            """
+            Helper بسيط يضمن:
+            - لو القيمة None → تصبح 0
+            - يرجع Decimal بثلاث خانات عشرية ثابتة
+            """
+            if value is None:
+                value = Decimal("0")
+            # نتأكد إنها Decimal
+            if not isinstance(value, Decimal):
+                value = Decimal(str(value))
+            return value.quantize(Decimal("0.000"))
 
         quotations_qs = SalesDocument.objects.quotations().select_related("contact")
         orders_qs = SalesDocument.objects.orders().select_related("contact")
@@ -51,25 +71,41 @@ class SalesDashboardView(SalesBaseView, TemplateView):
 
         # إجماليات
         ctx["total_sales_docs"] = docs_qs.count()
-        ctx["total_sales_amount"] = docs_qs.aggregate(s=Sum("total_amount"))["s"] or 0
+        ctx["total_sales_amount"] = _q3(
+            docs_qs.aggregate(s=Sum("total_amount"))["s"]
+        )
 
         # عروض الأسعار
         ctx["quotation_count"] = quotations_qs.count()
-        ctx["total_quotation_amount"] = quotations_qs.aggregate(s=Sum("total_amount"))["s"] or 0
+        ctx["total_quotation_amount"] = _q3(
+            quotations_qs.aggregate(s=Sum("total_amount"))["s"]
+        )
 
         # أوامر البيع
         ctx["order_count"] = orders_qs.count()
-        ctx["total_order_amount"] = orders_qs.aggregate(s=Sum("total_amount"))["s"] or 0
+        ctx["total_order_amount"] = _q3(
+            orders_qs.aggregate(s=Sum("total_amount"))["s"]
+        )
 
         # مذكرات التسليم
         ctx["delivery_count"] = deliveries_qs.count()
-        ctx["total_delivery_amount"] = deliveries_qs.aggregate(s=Sum("order__total_amount"))["s"] or 0
+        ctx["total_delivery_amount"] = _q3(
+            deliveries_qs.aggregate(s=Sum("order__total_amount"))["s"]
+        )
 
         # workflow
-        ctx["draft_count"] = docs_qs.filter(status=SalesDocument.Status.DRAFT).count()
-        ctx["confirmed_count"] = docs_qs.filter(status=SalesDocument.Status.CONFIRMED).count()
-        ctx["invoiced_count"] = docs_qs.filter(is_invoiced=True).count()
-        ctx["delivered_count"] = deliveries_qs.filter(status=DeliveryNote.Status.CONFIRMED).count()
+        ctx["draft_count"] = docs_qs.filter(
+            status=SalesDocument.Status.DRAFT
+        ).count()
+        ctx["confirmed_count"] = docs_qs.filter(
+            status=SalesDocument.Status.CONFIRMED
+        ).count()
+        ctx["invoiced_count"] = docs_qs.filter(
+            is_invoiced=True
+        ).count()
+        ctx["delivered_count"] = deliveries_qs.filter(
+            status=DeliveryNote.Status.CONFIRMED
+        ).count()
 
         # recent
         ctx["recent_quotations"] = quotations_qs.order_by("-date", "-id")[:5]
@@ -77,14 +113,24 @@ class SalesDashboardView(SalesBaseView, TemplateView):
         ctx["recent_deliveries"] = deliveries_qs.order_by("-date", "-id")[:5]
 
         # أفضل العملاء
-        ctx["top_customers"] = (
+        raw_top_customers = (
             orders_qs.filter(status=SalesDocument.Status.CONFIRMED)
             .values("contact_id", "contact__name")
             .annotate(total=Sum("total_amount"))
             .order_by("-total")[:5]
         )
 
+        # نطبّق _q3 على total لكل عميل
+        top_customers = []
+        for row in raw_top_customers:
+            row = dict(row)  # نحوله dict عادي لو حاب تعدله بحرية
+            row["total"] = _q3(row["total"])
+            top_customers.append(row)
+
+        ctx["top_customers"] = top_customers
+
         return ctx
+
 
 
 # ======================================================================
@@ -154,14 +200,17 @@ class SalesDocumentListView(SalesBaseView, ListView):
 
 
 class SalesDocumentCreateView(SalesBaseView, CreateView):
+    """
+    إنشاء مستند مبيعات:
+    - يثبت kind = QUOTATION و status = DRAFT.
+    - يتعامل مع الـ header + lines معًا.
+    - يضبط created_by / updated_by يدويًا من request.user.
+    """
     model = SalesDocument
     form_class = SalesDocumentForm
     template_name = "sales/sales/form.html"
     sales_section = "sales_create"
 
-    # --------------------------------------------------
-    # Inject lines formset into context
-    # --------------------------------------------------
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
@@ -172,14 +221,12 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
 
         return context
 
-    # --------------------------------------------------
-    # Handle main form + lines formset together
-    # --------------------------------------------------
     def form_valid(self, form):
         """
         عند إنشاء مستند جديد:
         - نجبر النوع يكون QUOTATION دائماً (عرض سعر).
         - نثبت الحالة كمسودة.
+        - نضبط created_by / updated_by.
         - نحفظ البنود من الـ inline formset.
         - نعيد احتساب الإجماليات بعد الحفظ.
         """
@@ -189,19 +236,24 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
 
         # Validate formset first
         if not lines_formset.is_valid():
-            # لو البنود فيها أخطاء نرجع نفس الصفحة مع الأخطاء
             return self.render_to_response(self.get_context_data(form=form))
 
-        # نجبر النوع يكون عرض سعر دائماً، ولا نعتمد على أي قيمة من الفورم
+        # نوع المستند والحالة
         form.instance.kind = SalesDocument.Kind.QUOTATION
-
-        # الحالة الافتراضية للمستند الجديد
         form.instance.status = SalesDocument.Status.DRAFT
 
-        # Save main document
+        # تعبئة created_by / updated_by
+        user = self.request.user
+        if user.is_authenticated:
+            if hasattr(form.instance, "created_by") and not form.instance.pk:
+                form.instance.created_by = user
+            if hasattr(form.instance, "updated_by"):
+                form.instance.updated_by = user
+
+        # حفظ الهيدر
         self.object = form.save()
 
-        # Bind lines to this document and save them
+        # حفظ البنود
         lines_formset.instance = self.object
         lines_formset.save()
 
@@ -213,8 +265,6 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
 
     def get_success_url(self):
         return reverse("sales:sales_detail", args=[self.object.pk])
-
-
 
 
 class SalesDocumentDetailView(SalesBaseView, DetailView):
@@ -232,6 +282,11 @@ class SalesDocumentDetailView(SalesBaseView, DetailView):
 
 
 class SalesDocumentUpdateView(SalesBaseView, UpdateView):
+    """
+    تحديث مستند المبيعات:
+    - يضبط updated_by يدويًا.
+    - يحدّث الهيدر + البنود + الإجماليات.
+    """
     model = SalesDocument
     form_class = SalesDocumentForm
     template_name = "sales/sales/form.html"
@@ -262,9 +317,13 @@ class SalesDocumentUpdateView(SalesBaseView, UpdateView):
         context = self.get_context_data()
         lines_formset = context["lines_formset"]
 
-        # إذا الفورمست فيه أخطاء نرجع نفس الصفحة مع الأخطاء
         if not lines_formset.is_valid():
             return self.render_to_response(self.get_context_data(form=form))
+
+        # updated_by
+        user = self.request.user
+        if user.is_authenticated and hasattr(form.instance, "updated_by"):
+            form.instance.updated_by = user
 
         # حفظ الهيدر
         self.object = form.save()
@@ -283,7 +342,6 @@ class SalesDocumentUpdateView(SalesBaseView, UpdateView):
         return reverse("sales:sales_detail", args=[self.object.pk])
 
 
-
 # ======================================================================
 # Convert Quotation → Order
 # ======================================================================
@@ -294,7 +352,7 @@ class ConvertQuotationToOrderView(SalesBaseView, View):
         document = get_object_or_404(SalesDocument.objects.quotations(), pk=pk)
 
         try:
-            services.confirm_quotation_to_order(document)
+            services.confirm_quotation_to_order(document, user=request.user)
         except Exception as e:
             messages.error(request, str(e))
             return redirect(document.get_absolute_url())
@@ -313,7 +371,7 @@ class MarkOrderInvoicedView(SalesBaseView, View):
         order = get_object_or_404(SalesDocument.objects.orders(), pk=pk)
 
         try:
-            services.mark_order_invoiced(order)
+            services.mark_order_invoiced(order, user=request.user)
         except Exception as e:
             messages.error(request, str(e))
             return redirect(order.get_absolute_url())
@@ -326,6 +384,10 @@ class MarkOrderInvoicedView(SalesBaseView, View):
 # Delivery Notes
 # ======================================================================
 class DeliveryNoteCreateView(SalesBaseView, CreateView):
+    """
+    إنشاء مذكرة تسليم:
+    - يضبط created_by / updated_by لو الموديل يرث UserStampedModel.
+    """
     model = DeliveryNote
     form_class = DeliveryNoteForm
     template_name = "sales/delivery/form.html"
@@ -341,6 +403,15 @@ class DeliveryNoteCreateView(SalesBaseView, CreateView):
     def form_valid(self, form):
         form.instance.order = self.order
         form.instance.status = DeliveryNote.Status.DRAFT
+
+        # تعبئة created_by / updated_by
+        user = self.request.user
+        if user.is_authenticated:
+            if hasattr(form.instance, "created_by") and not form.instance.pk:
+                form.instance.created_by = user
+            if hasattr(form.instance, "updated_by"):
+                form.instance.updated_by = user
+
         response = super().form_valid(form)
         messages.success(self.request, _("تم إنشاء مذكرة التسليم بنجاح."))
         return response
@@ -390,7 +461,7 @@ class CancelSalesDocumentView(SalesBaseView, View):
         document = get_object_or_404(SalesDocument, pk=pk)
 
         try:
-            services.cancel_sales_document(document)
+            services.cancel_sales_document(document, user=request.user)
         except Exception as e:
             messages.error(request, str(e))
             return redirect(document.get_absolute_url())
@@ -409,7 +480,7 @@ class ResetSalesDocumentToDraftView(SalesBaseView, View):
         document = get_object_or_404(SalesDocument, pk=pk)
 
         try:
-            services.reset_sales_document_to_draft(document)
+            services.reset_sales_document_to_draft(document, user=request.user)
         except Exception as e:
             messages.error(request, str(e))
             return redirect(document.get_absolute_url())
@@ -432,23 +503,20 @@ def sales_reopen_view(request, pk):
         return redirect("sales:sales_detail", pk=document.pk)
 
     try:
-        reopen_cancelled_sales_document(document)
+        reopen_cancelled_sales_document(document, user=request.user)
         messages.success(
             request,
             _("تمت إعادة فتح المستند وإرجاعه إلى حالة المسودة (عرض سعر)."),
         )
     except ValidationError as e:
-        # الأخطاء القادمة من السيرفس
         messages.error(request, " ".join(e.messages))
     except Exception:
-        # في حال أي خطأ غير متوقع
         messages.error(
             request,
             _("حدث خطأ غير متوقع أثناء إعادة فتح المستند."),
         )
 
     return redirect("sales:sales_detail", pk=document.pk)
-
 
 
 def product_uom_info(request, pk):
@@ -461,11 +529,10 @@ def product_uom_info(request, pk):
     """
     product = get_object_or_404(Product, pk=pk)
 
-    base_uom = product.base_uom          # حقل إجباري في الموديل
-    alt_uom = product.alt_uom           # قد يكون None
-    alt_factor = product.alt_factor     # قد يكون None
+    base_uom = product.base_uom
+    alt_uom = product.alt_uom
+    alt_factor = product.alt_factor
 
-    # أسعار البيع حسب الوحدة
     base_price = product.get_price_for_uom(
         uom=base_uom,
         kind="sale",
@@ -478,11 +545,9 @@ def product_uom_info(request, pk):
             kind="sale",
         )
 
-    # نفترض أن UnitOfMeasure فيه حقل name
     def uom_label(uom):
         if not uom:
             return ""
-        # لو عندك name_ar / name_en غيّرها هنا
         return getattr(uom, "name", str(uom))
 
     data = {
@@ -506,12 +571,6 @@ class SalesDocumentPrintView(SalesBaseView, DetailView):
     context_object_name = "document"
 
     def get_queryset(self):
-        """
-        Optimize queries for print:
-        - contact (customer)
-        - lines + related products
-        - delivery notes if needed
-        """
         return (
             SalesDocument.objects
             .select_related("contact")

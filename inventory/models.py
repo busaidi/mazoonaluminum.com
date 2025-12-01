@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from solo.models import SingletonModel
 
-from core.models import TimeStampedModel, NumberedModel
+from core.models import TimeStampedModel, BaseModel
 from inventory.managers import (
     ProductCategoryManager,
     ProductManager,
@@ -628,7 +628,7 @@ class StockLocation(TimeStampedModel):
 # ============================================================
 # حركات المخزون (الرأس)
 # ============================================================
-class StockMove(NumberedModel):
+class StockMove(BaseModel):
     """
     مستند حركة مخزون.
     يحتوي على معلومات عامة عن الحركة:

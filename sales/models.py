@@ -7,7 +7,8 @@ from django.utils.translation import gettext_lazy as _
 from contacts.models import Contact
 from inventory.models import Product
 
-from .managers import SalesDocumentQuerySet
+from core.models.base import BaseModel, TimeStampedModel, UserStampedModel
+from .managers import SalesDocumentManager, SalesLineManager, DeliveryNoteManager, DeliveryLineManager
 
 
 # ===================================================================
@@ -15,13 +16,19 @@ from .managers import SalesDocumentQuerySet
 # ===================================================================
 
 
-class SalesDocument(models.Model):
+class SalesDocument(BaseModel):
     """
     مستند مبيعات:
     - عرض سعر
     - أمر بيع
 
     نفس السجل يمكن أن يتحول من عرض إلى أمر بدون إنشاء وثيقة جديدة.
+
+    يرث من BaseModel:
+    - public_id (UUID)
+    - created_at / updated_at
+    - created_by / updated_by
+    - is_deleted / deleted_at / deleted_by
     """
 
     class Kind(models.TextChoices):
@@ -129,21 +136,9 @@ class SalesDocument(models.Model):
         verbose_name=_("ملاحظات للعميل"),
     )
 
-    # ========== تتبع الإنشاء والتحديث ==========
-
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name=_("تاريخ الإنشاء"),
-    )
-
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        verbose_name=_("آخر تحديث"),
-    )
-
     # ========== Manager ==========
 
-    objects = SalesDocumentQuerySet.as_manager()
+    objects = SalesDocumentManager()
 
     class Meta:
         ordering = ("-date", "-id")
@@ -211,8 +206,14 @@ class SalesDocument(models.Model):
 # ===================================================================
 
 
-class SalesLine(models.Model):
-    """بند مبيعات مرتبط بمستند واحد."""
+class SalesLine(TimeStampedModel, UserStampedModel):
+    """
+    بند مبيعات مرتبط بمستند واحد.
+
+    يرث:
+    - created_at / updated_at
+    - created_by / updated_by
+    """
 
     document = models.ForeignKey(
         SalesDocument,
@@ -264,6 +265,8 @@ class SalesLine(models.Model):
         default=Decimal("0.000"),
         verbose_name=_("إجمالي السطر"),
     )
+
+    objects = SalesLineManager()
 
     class Meta:
         ordering = ("id",)
@@ -320,10 +323,16 @@ class SalesLine(models.Model):
 # ===================================================================
 
 
-class DeliveryNote(models.Model):
+class DeliveryNote(BaseModel):
     """
     مذكرة تسليم مرتبطة بأمر بيع واحد.
     يمكن أن يكون لأمر البيع عدة مذكرات.
+
+    يرث من BaseModel:
+    - public_id
+    - created_at / updated_at
+    - created_by / updated_by
+    - soft delete
     """
 
     class Status(models.TextChoices):
@@ -356,15 +365,7 @@ class DeliveryNote(models.Model):
         verbose_name=_("ملاحظات"),
     )
 
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name=_("تاريخ الإنشاء"),
-    )
-
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        verbose_name=_("آخر تحديث"),
-    )
+    objects = DeliveryNoteManager()
 
     class Meta:
         ordering = ("-date", "-id")
@@ -394,10 +395,14 @@ class DeliveryNote(models.Model):
 # ===================================================================
 
 
-class DeliveryLine(models.Model):
+class DeliveryLine(TimeStampedModel, UserStampedModel):
     """
     بند تسليم بسيط ضمن مذكرة تسليم.
     (بدون ربط إلزامي بسطر أمر البيع حالياً)
+
+    يرث:
+    - created_at / updated_at
+    - created_by / updated_by
     """
 
     delivery = models.ForeignKey(
@@ -429,6 +434,8 @@ class DeliveryLine(models.Model):
         default=Decimal("1.000"),
         verbose_name=_("الكمية المسلّمة"),
     )
+
+    objects = DeliveryLineManager()
 
     class Meta:
         ordering = ("id",)

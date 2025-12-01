@@ -1,4 +1,4 @@
-from .base import BaseModel, TimeStampedModel, UserStampedModel, SoftDeleteModel, NumberedModel
+from .base import BaseModel, TimeStampedModel, UserStampedModel, SoftDeleteModel
 from .audit import AuditLog
 from .attachments import Attachment, attachment_upload_to
 from .domain import StatefulDomainModel, DomainEvent
@@ -16,7 +16,6 @@ __all__ = [
     # Auto Number
     "NumberSequence",
     "NumberingScheme",
-    "NumberedModel",
     # Attachments
     "Attachment",
     "attachment_upload_to",
