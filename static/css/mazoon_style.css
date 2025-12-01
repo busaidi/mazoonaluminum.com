@@ -1,74 +1,64 @@
-:root,
-[data-bs-theme="light"] {
+:root {
+  /* الروابط */
+  --bs-link-color: #111827;
+  --bs-link-color-rgb: 17, 24, 39;
+  --bs-link-hover-color: #020617;
+  --bs-link-hover-color-rgb: 2, 6, 23;
+
+  /* اللون الأساسي */
   --bs-primary: #111827;
   --bs-primary-rgb: 17, 24, 39;
-
-  /* الروابط العامة */
-  --bs-link-color: #1f1b1b;       /* نفس primary */
-  --bs-link-hover-color: #020617; /* داكن أكثر */
 }
 
+/* ============================
+   أزرار Primary
+   ============================ */
 
-
-/* زر primary أسود/داكن */
+/* زر Primary */
 .btn-primary {
-  --bs-btn-color: #ffffff;
-  --bs-btn-bg: #111827;              /* الخلفية الأساسية */
+  --bs-btn-bg: #111827;
   --bs-btn-border-color: #111827;
+  --bs-btn-color: #fff;
 
-  --bs-btn-hover-color: #ffffff;
-  --bs-btn-hover-bg: #020617;        /* عند المرور */
+  --bs-btn-hover-bg: #020617;
   --bs-btn-hover-border-color: #020617;
-
-  --bs-btn-focus-shadow-rgb: 17, 24, 39;
-
-  --bs-btn-active-color: #ffffff;
-  --bs-btn-active-bg: #020617;
-  --bs-btn-active-border-color: #020617;
-
-  --bs-btn-disabled-color: #ffffff;
-  --bs-btn-disabled-bg: #111827;
-  --bs-btn-disabled-border-color: #111827;
 }
 
-/* زر outline-primary بنفس اللون لكن شفاف */
+/* زر Outline Primary */
 .btn-outline-primary {
   --bs-btn-color: #111827;
   --bs-btn-border-color: #111827;
-  --bs-btn-hover-color: #ffffff;
+  --bs-btn-hover-color: #fff;
   --bs-btn-hover-bg: #111827;
   --bs-btn-hover-border-color: #111827;
-  --bs-btn-active-bg: #020617;
-  --bs-btn-active-border-color: #020617;
-  --bs-btn-disabled-color: #111827;
 }
 
-/* الروابط العادية داخل الناف */
-/*.nav-link {*/
-/*  color: var(--bs-primary);*/
-/*}*/
+/* ============================
+   nav-link (تبويب + ناف)
+   ============================ */
+.nav-link {
+  color: #111827 !important;
+}
 
-/*.nav-link:hover {*/
-/*}*/
+.nav-link:hover {
+  color: #020617 !important;
+}
 
-/*.nav-link:hover {*/
-/*    color: var(--bs-link-hover-color);*/
-/*}*/
-
-/* الروابط النشطة داخل nav-pills */
+/* active – نفس ستايل Mazoon */
+.nav-link.active,
+.nav-link.show,
 .nav-pills .nav-link.active {
-  --bs-nav-pills-link-active-bg: #111827;     /* الخلفية */
-  --bs-nav-pills-link-active-color: #ffffff;  /* لون النص */
+  color: #fff !important;
+  background-color: #111827 !important;
 }
 
-/* الاختيارية: حدود خفيفة للناف */
-.nav-pills {
-  --bs-nav-pills-border-color: transparent;
+/* لو nav-tabs */
+.nav-tabs .nav-link.active {
+  color: #111827 !important;
+  font-weight: 600;
+  border-color: #111827 #111827 transparent;
 }
 
-
-/*customize
- */
 .navbar-logo {
   height: 28px;  /* كان أكبر، صغّرناه */
   width: auto;

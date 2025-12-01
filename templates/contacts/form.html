@@ -10,20 +10,33 @@
 {% endblock %}
 
 {% block sales_content %}
+
 <div class="row">
   <div class="col-lg-9">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <div>
-        <h1 class="h4 fw-bold mb-1">
-          {% if object %}
-            {% trans "تعديل جهة اتصال" %}
-          {% else %}
-            {% trans "إضافة جهة اتصال جديدة" %}
-          {% endif %}
-        </h1>
-        <p class="text-muted small mb-0">
-          {% trans "تعبئة بيانات جهة الاتصال العامة والعناوين المرتبطة بها." %}
-        </p>
+
+    {# هيدر الصفحة #}
+    <div class="card border-0 shadow-sm mb-4 bg-body">
+      <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+          <h1 class="h4 fw-bold mb-1 text-body">
+            {% if object %}
+              {% trans "تعديل جهة اتصال" %}
+            {% else %}
+              {% trans "إضافة جهة اتصال جديدة" %}
+            {% endif %}
+          </h1>
+          <p class="text-secondary small mb-0">
+            {% trans "تعبئة بيانات جهة الاتصال العامة والعناوين المرتبطة بها." %}
+          </p>
+        </div>
+        {% if object %}
+          <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'contacts:contact_detail' object.pk %}" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-arrow-right-square ms-1"></i>
+              {% trans "عرض جهة الاتصال" %}
+            </a>
+          </div>
+        {% endif %}
       </div>
     </div>
 
@@ -39,9 +52,12 @@
       {# 1) البيانات الأساسية #}
       <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
-          <h2 class="h6 fw-semibold mb-3">{% trans "البيانات الأساسية" %}</h2>
+          <h2 class="h6 fw-semibold mb-3">
+            {% trans "البيانات الأساسية" %}
+          </h2>
 
           <div class="row g-3">
+
             <div class="col-md-3">
               <label class="form-label small mb-1" for="{{ form.kind.id_for_label }}">
                 {{ form.kind.label }}
@@ -76,7 +92,7 @@
               </label>
               {{ form.company }}
               {% if form.company.help_text %}
-                <div class="form-text small text-muted">
+                <div class="form-text small text-secondary">
                   {{ form.company.help_text }}
                 </div>
               {% endif %}
@@ -90,6 +106,7 @@
               {{ form.company_name_ar }}
               {{ form.company_name_ar.errors }}
             </div>
+
             <div class="col-md-6">
               <label class="form-label small mb-1" for="{{ form.company_name_en.id_for_label }}">
                 {{ form.company_name_en.label }}
@@ -105,6 +122,7 @@
               {{ form.phone }}
               {{ form.phone.errors }}
             </div>
+
             <div class="col-md-4">
               <label class="form-label small mb-1" for="{{ form.email.id_for_label }}">
                 {{ form.email.label }}
@@ -112,6 +130,7 @@
               {{ form.email }}
               {{ form.email.errors }}
             </div>
+
             <div class="col-md-4">
               <label class="form-label small mb-1" for="{{ form.tax_number.id_for_label }}">
                 {{ form.tax_number.label }}
@@ -119,6 +138,7 @@
               {{ form.tax_number }}
               {{ form.tax_number.errors }}
             </div>
+
           </div>
         </div>
       </div>
@@ -126,40 +146,50 @@
       {# 2) الأدوار والحالة #}
       <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
-          <h2 class="h6 fw-semibold mb-3">{% trans "الأدوار والحالة" %}</h2>
+          <h2 class="h6 fw-semibold mb-3">
+            {% trans "الأدوار والحالة" %}
+          </h2>
 
-          <div class="row g-3">
+          <div class="row g-3 align-items-center">
             <div class="col-md-8">
-              <div class="form-check form-check-inline">
-                {{ form.is_customer }}
-                <label class="form-check-label ms-1" for="{{ form.is_customer.id_for_label }}">
-                  {{ form.is_customer.label }}
-                </label>
-                {{ form.is_customer.errors }}
-              </div>
-              <div class="form-check form-check-inline">
-                {{ form.is_supplier }}
-                <label class="form-check-label ms-1" for="{{ form.is_supplier.id_for_label }}">
-                  {{ form.is_supplier.label }}
-                </label>
-                {{ form.is_supplier.errors }}
-              </div>
-              <div class="form-check form-check-inline">
-                {{ form.is_owner }}
-                <label class="form-check-label ms-1" for="{{ form.is_owner.id_for_label }}">
-                  {{ form.is_owner.label }}
-                </label>
-                {{ form.is_owner.errors }}
-              </div>
-              <div class="form-check form-check-inline">
-                {{ form.is_employee }}
-                <label class="form-check-label ms-1" for="{{ form.is_employee.id_for_label }}">
-                  {{ form.is_employee.label }}
-                </label>
-                {{ form.is_employee.errors }}
+              <div class="d-flex flex-wrap gap-3">
+
+                <div class="form-check form-check-inline">
+                  {{ form.is_customer }}
+                  <label class="form-check-label ms-1" for="{{ form.is_customer.id_for_label }}">
+                    {{ form.is_customer.label }}
+                  </label>
+                  {{ form.is_customer.errors }}
+                </div>
+
+                <div class="form-check form-check-inline">
+                  {{ form.is_supplier }}
+                  <label class="form-check-label ms-1" for="{{ form.is_supplier.id_for_label }}">
+                    {{ form.is_supplier.label }}
+                  </label>
+                  {{ form.is_supplier.errors }}
+                </div>
+
+                <div class="form-check form-check-inline">
+                  {{ form.is_owner }}
+                  <label class="form-check-label ms-1" for="{{ form.is_owner.id_for_label }}">
+                    {{ form.is_owner.label }}
+                  </label>
+                  {{ form.is_owner.errors }}
+                </div>
+
+                <div class="form-check form-check-inline">
+                  {{ form.is_employee }}
+                  <label class="form-check-label ms-1" for="{{ form.is_employee.id_for_label }}">
+                    {{ form.is_employee.label }}
+                  </label>
+                  {{ form.is_employee.errors }}
+                </div>
+
               </div>
             </div>
-            <div class="col-md-4 d-flex align-items-center justify-content-md-end">
+
+            <div class="col-md-4 d-flex justify-content-md-end">
               <div class="form-check">
                 {{ form.is_active }}
                 <label class="form-check-label ms-1" for="{{ form.is_active.id_for_label }}">
@@ -176,12 +206,15 @@
       {% if address_formset %}
         <div class="card border-0 shadow-sm mb-3">
           <div class="card-body">
-            <h2 class="h6 fw-semibold mb-3">{% trans "العناوين" %}</h2>
-            <p class="text-muted small mb-3">
+            <h2 class="h6 fw-semibold mb-2">
+              {% trans "العناوين" %}
+            </h2>
+            <p class="text-secondary small mb-3">
               {% trans "استخدم هذه العناوين للفوترة، الشحن، أو مواقع المشاريع والورش. يمكنك تمييز أحد العناوين كرئيسي." %}
             </p>
 
             {{ address_formset.management_form }}
+
             {% for addr_form in address_formset %}
               {% if addr_form.non_field_errors %}
                 <div class="alert alert-danger small">
@@ -189,13 +222,14 @@
                 </div>
               {% endif %}
 
-              <div class="card mb-3 border-0 shadow-sm">
+              <div class="card mb-3 border-0 shadow-sm bg-body-tertiary">
                 <div class="card-body">
                   {% for hidden in addr_form.hidden_fields %}
                     {{ hidden }}
                   {% endfor %}
 
                   <div class="row g-3 align-items-start">
+
                     <div class="col-md-4">
                       <label class="form-label small mb-1" for="{{ addr_form.address_type.id_for_label }}">
                         {{ addr_form.address_type.label }}
@@ -211,6 +245,7 @@
                       {{ addr_form.address_ar }}
                       {{ addr_form.address_ar.errors }}
                     </div>
+
                     <div class="col-md-4">
                       <label class="form-label small mb-1" for="{{ addr_form.address_en.id_for_label }}">
                         {{ addr_form.address_en.label }}
@@ -226,6 +261,7 @@
                       {{ addr_form.country }}
                       {{ addr_form.country.errors }}
                     </div>
+
                     <div class="col-md-3">
                       <label class="form-label small mb-1" for="{{ addr_form.governorate.id_for_label }}">
                         {{ addr_form.governorate.label }}
@@ -233,6 +269,7 @@
                       {{ addr_form.governorate }}
                       {{ addr_form.governorate.errors }}
                     </div>
+
                     <div class="col-md-3">
                       <label class="form-label small mb-1" for="{{ addr_form.wilaya.id_for_label }}">
                         {{ addr_form.wilaya.label }}
@@ -240,6 +277,7 @@
                       {{ addr_form.wilaya }}
                       {{ addr_form.wilaya.errors }}
                     </div>
+
                     <div class="col-md-3">
                       <label class="form-label small mb-1" for="{{ addr_form.village.id_for_label }}">
                         {{ addr_form.village.label }}
@@ -255,6 +293,7 @@
                       {{ addr_form.postal_code }}
                       {{ addr_form.postal_code.errors }}
                     </div>
+
                     <div class="col-md-4">
                       <label class="form-label small mb-1" for="{{ addr_form.po_box.id_for_label }}">
                         {{ addr_form.po_box.label }}
@@ -272,6 +311,7 @@
                           </label>
                           {{ addr_form.is_primary.errors }}
                         </div>
+
                         <div class="form-check">
                           {{ addr_form.is_active }}
                           <label class="form-check-label ms-1" for="{{ addr_form.is_active.id_for_label }}">
@@ -290,23 +330,25 @@
                         {% endif %}
                       </div>
                     </div>
+
                   </div>
                 </div>
               </div>
             {% endfor %}
 
-            <p class="text-muted small mb-0">
+            <p class="text-secondary small mb-0">
               {% trans "يمكنك إضافة المزيد من العناوين بحفظ البيانات ثم العودة للتعديل." %}
             </p>
           </div>
         </div>
       {% endif %}
 
+      {# أزرار الحفظ #}
       <div class="d-flex justify-content-between align-items-center mt-3">
         <a href="{% url 'contacts:contact_list' %}" class="btn btn-outline-secondary">
           {% trans "إلغاء" %}
         </a>
-        <button type="submit" class="btn btn-dark">
+        <button type="submit" class="btn btn-primary">
           {% if object %}
             {% trans "حفظ التعديلات" %}
           {% else %}
@@ -314,7 +356,9 @@
           {% endif %}
         </button>
       </div>
+
     </form>
   </div>
 </div>
+
 {% endblock %}

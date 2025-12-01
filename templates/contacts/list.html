@@ -5,26 +5,32 @@
 {% block title %}{% trans "جهات الاتصال" %} – Mazoon Aluminum{% endblock %}
 
 {% block sales_content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <div>
-    <h1 class="h4 fw-bold mb-1">
-      {% trans "جهات الاتصال" %}
-    </h1>
-    <p class="text-muted small mb-0">
-      {% trans "إدارة الزبائن، الموردين، الملاك والموظفين في سجل موحد." %}
-    </p>
-  </div>
-  <div class="d-flex gap-2">
-    <a href="{% url 'contacts:contact_create' %}" class="btn btn-primary btn-sm">
-      <i class="bi bi-plus-lg"></i>
-      {% trans "إضافة جهة اتصال" %}
-    </a>
+
+{# هيدر القسم #}
+<div class="card border-0 shadow-sm mb-4 bg-body">
+  <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <div>
+      <h1 class="h4 fw-bold mb-1 text-body">
+        {% trans "جهات الاتصال" %}
+      </h1>
+      <p class="text-secondary small mb-0">
+        {% trans "إدارة الزبائن، الموردين، الملاك والموظفين في سجل موحد." %}
+      </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'contacts:contact_create' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg ms-1"></i>
+        {% trans "إضافة جهة اتصال" %}
+      </a>
+    </div>
   </div>
 </div>
 
+{# كرت الفلترة والبحث #}
 <div class="card border-0 shadow-sm mb-3">
   <div class="card-body">
     <form method="get" class="row g-2 align-items-end">
+
       <div class="col-md-4">
         <label for="id_q" class="form-label small mb-1">
           {% trans "بحث" %}
@@ -90,24 +96,28 @@
         </select>
       </div>
 
-      <div class="col-md-2 d-flex gap-2">
-        <button type="submit" class="btn btn-outline-primary btn-sm w-100">
-          <i class="bi bi-search"></i>
-          {% trans "تصفية" %}
-        </button>
-        <a href="{% url 'contacts:contact_list' %}" class="btn btn-outline-secondary btn-sm">
-          <i class="bi bi-x-lg"></i>
-        </a>
+      <div class="col-md-2">
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-outline-primary btn-sm w-100">
+            <i class="bi bi-search ms-1"></i>
+            {% trans "تصفية" %}
+          </button>
+          <a href="{% url 'contacts:contact_list' %}" class="btn btn-outline-secondary btn-sm" title="{% trans 'إعادة التعيين' %}">
+            <i class="bi bi-x-lg"></i>
+          </a>
+        </div>
       </div>
+
     </form>
   </div>
 </div>
 
+{# كرت الجدول #}
 <div class="card border-0 shadow-sm">
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover mb-0 align-middle">
-        <thead>
+      <table class="table table-hover table-sm mb-0 align-middle">
+        <thead class="table-light">
           <tr>
             <th class="small text-muted">{% trans "الاسم" %}</th>
             <th class="small text-muted">{% trans "الشركة" %}</th>
@@ -122,24 +132,27 @@
         {% if contacts %}
           {% for contact in contacts %}
             <tr>
-              <td>
-                <a href="{% url 'contacts:contact_detail' contact.pk %}" class="fw-semibold text-mazoon">
+              <td class="small">
+                <a href="{% url 'contacts:contact_detail' contact.pk %}"
+                   class="link-body-emphasis text-decoration-none fw-semibold">
                   {{ contact.name }}
                 </a>
               </td>
+
               <td class="small">
                 {# أولوية للشركة المرتبطة (FK) ثم الاسم النصّي #}
                 {% if contact.company %}
                   <a href="{% url 'contacts:contact_detail' contact.company_id %}"
-                     class="text-decoration-none">
+                     class="link-secondary text-decoration-none">
                     {{ contact.company.name }}
                   </a>
                 {% elif contact.company_name %}
                   {{ contact.company_name }}
                 {% else %}
-                  <span class="text-muted">—</span>
+                  <span class="text-secondary">—</span>
                 {% endif %}
               </td>
+
               <td class="small">
                 <div class="d-flex flex-wrap gap-1">
                   {% if contact.is_customer %}
@@ -155,28 +168,31 @@
                     <span class="badge bg-success-subtle text-success-emphasis small">{% trans "موظف" %}</span>
                   {% endif %}
                   {% if not contact.is_customer and not contact.is_supplier and not contact.is_owner and not contact.is_employee %}
-                    <span class="text-muted small">—</span>
+                    <span class="text-secondary small">—</span>
                   {% endif %}
                 </div>
               </td>
+
               <td class="small">
                 {% if contact.kind %}
                   {{ contact.get_kind_display }}
                 {% else %}
-                  <span class="text-muted">—</span>
+                  <span class="text-secondary">—</span>
                 {% endif %}
               </td>
+
               <td class="small">
                 {% if contact.phone %}
                   <div>{{ contact.phone }}</div>
                 {% endif %}
                 {% if contact.email %}
-                  <div class="text-muted">{{ contact.email }}</div>
+                  <div class="text-secondary">{{ contact.email }}</div>
                 {% endif %}
                 {% if not contact.phone and not contact.email %}
-                  <span class="text-muted">—</span>
+                  <span class="text-secondary">—</span>
                 {% endif %}
               </td>
+
               <td class="small text-center">
                 {% if contact.is_active %}
                   <span class="badge bg-success-subtle text-success-emphasis small">
@@ -188,14 +204,17 @@
                   </span>
                 {% endif %}
               </td>
+
               <td class="small text-end">
                 <div class="btn-group btn-group-sm" role="group">
                   <a href="{% url 'contacts:contact_detail' contact.pk %}"
-                     class="btn btn-outline-secondary btn-sm">
+                     class="btn btn-outline-secondary btn-sm"
+                     title="{% trans 'عرض' %}">
                     <i class="bi bi-eye"></i>
                   </a>
                   <a href="{% url 'contacts:contact_edit' contact.pk %}"
-                     class="btn btn-outline-secondary btn-sm">
+                     class="btn btn-outline-secondary btn-sm"
+                     title="{% trans 'تعديل' %}">
                     <i class="bi bi-pencil"></i>
                   </a>
                 </div>
@@ -204,7 +223,7 @@
           {% endfor %}
         {% else %}
           <tr>
-            <td colspan="7" class="text-center text-muted small py-4">
+            <td colspan="7" class="text-center text-secondary small py-4">
               {% trans "لا توجد جهات اتصال مطابقة حالياً." %}
             </td>
           </tr>
@@ -215,7 +234,7 @@
   </div>
 
   {% if is_paginated %}
-    <div class="card-footer bg-white border-top-0">
+    <div class="card-footer bg-body border-0">
       <nav aria-label="{% trans 'ترقيم الصفحات' %}">
         <ul class="pagination pagination-sm mb-0 justify-content-center">
           {% if page_obj.has_previous %}
@@ -254,4 +273,5 @@
     </div>
   {% endif %}
 </div>
+
 {% endblock %}
