@@ -1,4 +1,9 @@
-:root {
+/* ============================
+   LIGHT THEME ONLY
+   ============================ */
+:root,
+[data-bs-theme="light"] {
+
   /* الروابط */
   --bs-link-color: #111827;
   --bs-link-color-rgb: 17, 24, 39;
@@ -8,6 +13,10 @@
   /* اللون الأساسي */
   --bs-primary: #111827;
   --bs-primary-rgb: 17, 24, 39;
+
+  /* اللون الثانوي (mazoon secondary) */
+  --bs-secondary: #6b7280;        /* رمادي ناعم */
+  --bs-secondary-rgb: 107, 114, 128;
 }
 
 /* ============================
@@ -15,7 +24,7 @@
    ============================ */
 
 /* زر Primary */
-.btn-primary {
+[data-bs-theme="light"] .btn-primary {
   --bs-btn-bg: #111827;
   --bs-btn-border-color: #111827;
   --bs-btn-color: #fff;
@@ -25,7 +34,7 @@
 }
 
 /* زر Outline Primary */
-.btn-outline-primary {
+[data-bs-theme="light"] .btn-outline-primary {
   --bs-btn-color: #111827;
   --bs-btn-border-color: #111827;
   --bs-btn-hover-color: #fff;
@@ -34,30 +43,55 @@
 }
 
 /* ============================
+   Secondary Buttons
+   ============================ */
+
+/* زر Secondary */
+[data-bs-theme="light"] .btn-secondary {
+  --bs-btn-bg: #6b7280;                 /* رمادي Mazoon */
+  --bs-btn-border-color: #6b7280;
+  --bs-btn-color: #fff;
+
+  --bs-btn-hover-bg: #4b5563;           /* أغمق عند المرور */
+  --bs-btn-hover-border-color: #4b5563;
+}
+
+/* زر Outline Secondary */
+[data-bs-theme="light"] .btn-outline-secondary {
+  --bs-btn-color: #6b7280;
+  --bs-btn-border-color: #6b7280;
+
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #6b7280;
+  --bs-btn-hover-border-color: #6b7280;
+}
+
+/* ============================
    nav-link (تبويب + ناف)
    ============================ */
-.nav-link {
+[data-bs-theme="light"] .nav-link {
   color: #111827 !important;
 }
 
-.nav-link:hover {
+[data-bs-theme="light"] .nav-link:hover {
   color: #020617 !important;
 }
 
 /* active – نفس ستايل Mazoon */
-.nav-link.active,
-.nav-link.show,
-.nav-pills .nav-link.active {
+[data-bs-theme="light"] .nav-link.active,
+[data-bs-theme="light"] .nav-link.show,
+[data-bs-theme="light"] .nav-pills .nav-link.active {
   color: #fff !important;
   background-color: #111827 !important;
 }
 
 /* لو nav-tabs */
-.nav-tabs .nav-link.active {
+[data-bs-theme="light"] .nav-tabs .nav-link.active {
   color: #111827 !important;
   font-weight: 600;
   border-color: #111827 #111827 transparent;
 }
+
 
 .navbar-logo {
   height: 28px;  /* كان أكبر، صغّرناه */
