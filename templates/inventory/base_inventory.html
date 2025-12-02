@@ -1,3 +1,4 @@
+{# templates/inventory/base_inventory.html #}
 {% extends "base.html" %}
 {% load i18n %}
 
@@ -6,13 +7,13 @@
 {% block content %}
 <div class="container-fluid py-3">
 
-  {# === ناف المخزون الموحد === #}
+  {# رأس قسم المخزون + التبويبات #}
   {% include "inventory/_nav.html" %}
 
-  {# === هنا يتم حقن محتوى كل صفحة فرعية === #}
-  <section class="mt-3">
+  {# محتوى الصفحات الفرعية #}
+  <main class="mt-3">
     {% block inventory_content %}{% endblock %}
-  </section>
+  </main>
 
 </div>
 {% endblock %}

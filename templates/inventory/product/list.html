@@ -7,10 +7,10 @@
 {% block inventory_content %}
 
 {# ====================== HEADER CARD ====================== #}
-<div class="card border-0 shadow-sm mb-3 bg-mazoon-card">
-  <div class="card-body d-flex justify-content-between align-items-center gap-3">
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body d-flex justify-content-between align-items-center gap-3 flex-wrap">
     <div>
-      <h1 class="h4 fw-bold mb-1 text-mazoon">
+      <h1 class="h4 fw-semibold mb-1">
         {% trans "المنتجات" %}
       </h1>
       <p class="text-muted small mb-0">
@@ -32,25 +32,25 @@
   <div class="card-body py-2">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
 
-      <div class="d-flex flex-wrap hero-kpis">
+      <div class="d-flex flex-wrap gap-2">
 
         {# إجمالي عدد المنتجات #}
-        <div class="hero-kpi-card">
-          <div class="hero-kpi-number">
+        <div class="border rounded-3 px-3 py-2">
+          <div class="fw-semibold">
             {{ page_obj.paginator.count }}
           </div>
-          <div class="hero-kpi-label">
+          <div class="text-muted small">
             {% trans "إجمالي المنتجات" %}
           </div>
         </div>
 
         {# فلتر النشر #}
         {% if only_published %}
-          <div class="hero-kpi-card">
-            <div class="hero-kpi-number">
+          <div class="border rounded-3 px-3 py-2 bg-light">
+            <div class="fw-semibold mb-1">
               <i class="bi bi-globe2"></i>
             </div>
-            <div class="hero-kpi-label">
+            <div class="text-muted small">
               {% trans "عرض المنشور فقط" %}
             </div>
           </div>
@@ -58,11 +58,11 @@
 
         {# فلتر الفئة #}
         {% if category_filter %}
-          <div class="hero-kpi-card">
-            <div class="hero-kpi-number">
+          <div class="border rounded-3 px-3 py-2 bg-light">
+            <div class="fw-semibold mb-1">
               <i class="bi bi-grid-3x3-gap"></i>
             </div>
-            <div class="hero-kpi-label">
+            <div class="text-muted small">
               {% trans "فلتر حسب الفئة" %}
             </div>
           </div>
@@ -70,11 +70,11 @@
 
         {# فلتر نوع المنتج #}
         {% if product_type_filter_label %}
-          <div class="hero-kpi-card">
-            <div class="hero-kpi-number">
+          <div class="border rounded-3 px-3 py-2 bg-light">
+            <div class="fw-semibold mb-1">
               <i class="bi bi-tags"></i>
             </div>
-            <div class="hero-kpi-label">
+            <div class="text-muted small">
               {{ product_type_filter_label }}
             </div>
           </div>
@@ -82,11 +82,11 @@
 
         {# نتيجة البحث #}
         {% if q %}
-          <div class="hero-kpi-card">
-            <div class="hero-kpi-number">
+          <div class="border rounded-3 px-3 py-2 bg-light">
+            <div class="fw-semibold mb-1">
               <i class="bi bi-search"></i>
             </div>
-            <div class="hero-kpi-label">
+            <div class="text-muted small">
               {% blocktrans with query=q %}
                 بحث عن “{{ query }}”
               {% endblocktrans %}
@@ -115,7 +115,7 @@
 
       <div class="col-md-4">
         <div class="input-group input-group-sm">
-          <span class="input-group-text bg-light border-mazoon-soft">
+          <span class="input-group-text bg-light">
             <i class="bi bi-search"></i>
           </span>
           <input type="text"
@@ -128,7 +128,7 @@
 
       <div class="col-md-3">
         <div class="input-group input-group-sm">
-          <span class="input-group-text bg-light border-mazoon-soft">
+          <span class="input-group-text bg-light">
             <i class="bi bi-grid-3x3-gap"></i>
           </span>
           <select name="category" class="form-select form-select-sm">
@@ -145,7 +145,7 @@
       {# فلتر نوع المنتج #}
       <div class="col-md-3">
         <div class="input-group input-group-sm">
-          <span class="input-group-text bg-light border-mazoon-soft">
+          <span class="input-group-text bg-light">
             <i class="bi bi-tags"></i>
           </span>
           <select name="product_type" class="form-select form-select-sm">
@@ -174,7 +174,7 @@
         </div>
       </div>
 
-      <div class="col-md-12 col-lg-0 col-xl-0 col-xxl-2 text-end">
+      <div class="col-md-12 col-lg-2 text-end">
         <button class="btn btn-outline-primary btn-sm w-100">
           <i class="bi bi-funnel me-1"></i>
           {% trans "تطبيق" %}
@@ -188,77 +188,57 @@
 <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
   {% for product in products %}
     <div class="col">
-      <div class="card product-card h-100">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body d-flex flex-column">
 
-        {# هيدر البطاقة: الاسم + الكود + شارات #}
-        <div class="card-header bg-white border-0 pb-1">
-          <div class="d-flex justify-content-between align-items-start gap-2">
+          {# عنوان بسيط: الاسم + الكود #}
+          <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
             <div class="flex-grow-1">
-              <h2 class="h6 fw-bold mb-1 text-truncate text-mazoon" title="{{ product.name }}">
+              <h2 class="h6 fw-semibold mb-1 text-truncate" title="{{ product.name }}">
                 {{ product.name }}
               </h2>
-              <div class="small text-muted">
-                {% trans "الكود" %}:
-                <span class="fw-semibold">{{ product.code }}</span>
-              </div>
-              <div class="small text-muted mt-1">
-                <span class="text-muted">{% trans "نوع" %}:</span>
-                <span class="fw-semibold">{{ product.get_product_type_display }}</span>
-              </div>
+              <span class="badge bg-light border small text-muted">
+                {% trans "الكود" %}: {{ product.code }}
+              </span>
             </div>
 
-            <div class="text-end small">
-              {# حالة النشر #}
+            <div class="text-end small text-muted">
+              {% if product.is_active %}
+                <span class="text-success d-block">
+                  {% trans "نشط" %}
+                </span>
+              {% else %}
+                <span class="text-danger d-block">
+                  {% trans "غير نشط" %}
+                </span>
+              {% endif %}
               {% if product.is_published %}
-                <span class="badge bg-success-subtle text-success border d-block mb-1">
-                  <i class="bi bi-globe2 me-1"></i>
+                <span class="d-block">
                   {% trans "منشور" %}
                 </span>
               {% else %}
-                <span class="badge bg-secondary-subtle text-muted border d-block mb-1">
-                  <i class="bi bi-globe2 me-1"></i>
+                <span class="d-block">
                   {% trans "غير منشور" %}
-                </span>
-              {% endif %}
-
-              {# حالة التتبع في المخزون #}
-              {% if product.is_stock_item %}
-                <span class="badge bg-primary-subtle text-primary border d-block">
-                  <i class="bi bi-box-seam me-1"></i>
-                  {% trans "يُتابَع" %}
-                </span>
-              {% else %}
-                <span class="badge bg-warning-subtle text-warning border d-block">
-                  <i class="bi bi-box-seam me-1"></i>
-                  {% trans "غير متابع" %}
                 </span>
               {% endif %}
             </div>
           </div>
-        </div>
 
-        <div class="card-body d-flex flex-column">
-
-          {# صف الفئة + وحدات القياس #}
-          <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 small">
-            <div class="text-truncate">
-              <span class="text-muted">{% trans "الفئة" %}:</span>
-              {% if product.category %}
-                <span class="fw-semibold">{{ product.category.name }}</span>
-              {% else %}
-                <span class="text-muted">{% trans "غير محدد" %}</span>
-              {% endif %}
-            </div>
-
-            <div class="text-end">
-              <span class="text-muted">{% trans "الوحدة الأساسية" %}:</span>
-              <span class="fw-semibold">{{ product.base_uom }}</span>
-              {% if product.alt_uom %}
-                <span class="text-muted mx-1">•</span>
-                <span class="text-muted">{% trans "بديلة" %}:</span>
-                <span class="fw-semibold">{{ product.alt_uom }}</span>
-              {% endif %}
-            </div>
+          {# سطر يلخص الفئة / النوع / الوحدة #}
+          <div class="small text-muted mb-2">
+            {% if product.category %}
+              <span class="me-2">
+                {{ product.category.name }}
+              </span>
+              <span class="text-muted mx-1">•</span>
+            {% endif %}
+            <span class="me-2">
+              {{ product.get_product_type_display }}
+            </span>
+            <span class="text-muted mx-1">•</span>
+            <span>
+              {{ product.base_uom }}
+            </span>
           </div>
 
           {# وصف مختصر #}
@@ -274,32 +254,28 @@
             {% endif %}
           </p>
 
-          {# ملخص المخزون – Mazoon KPI داخل البطاقة #}
-          <div class="kpi-card mb-3 small">
+          {# ملخص المخزون #}
+          <div class="border rounded-3 p-2 mb-3 small bg-light">
             <div class="d-flex justify-content-between align-items-center">
               <div>
                 <div class="text-muted mb-1">
                   {% trans "إجمالي المخزون المتوفر" %}
                 </div>
-                <div class="h6 mb-0">
-                  <span class="hero-kpi-number">
-                    {{ product.total_on_hand_agg|default:"0.000" }}
-                  </span>
-                  <span class="fs-6 text-muted">{{ product.base_uom }}</span>
+                <div class="fw-semibold mb-0">
+                  {{ product.total_on_hand_agg|default:"0.000" }}
+                  <span class="text-muted small">{{ product.base_uom }}</span>
                 </div>
               </div>
               <div class="text-end">
                 {% if product.has_low_stock_anywhere_agg %}
-                  <span class="badge bg-danger-subtle text-danger border d-block mb-1">
-                    <i class="bi bi-exclamation-triangle me-1"></i>
+                  <span class="badge bg-danger-subtle text-danger border small d-block mb-1">
                     {% trans "مخزون منخفض" %}
                   </span>
                   <span class="text-muted small d-block">
                     {% trans "أحد المواقع تحت الحد الأدنى." %}
                   </span>
                 {% else %}
-                  <span class="badge bg-success-subtle text-success border d-block mb-1">
-                    <i class="bi bi-check2-circle me-1"></i>
+                  <span class="badge bg-success-subtle text-success border small d-block mb-1">
                     {% trans "حالة مستقرة" %}
                   </span>
                   <span class="text-muted small d-block">
@@ -307,24 +283,6 @@
                   </span>
                 {% endif %}
               </div>
-            </div>
-          </div>
-
-          {# حالة التفعيل #}
-          <div class="d-flex justify-content-between align-items-center small mb-2">
-            <div>
-              <span class="text-muted">{% trans "حالة المنتج" %}:</span>
-              {% if product.is_active %}
-                <span class="text-success fw-semibold">
-                  <i class="bi bi-check-circle me-1"></i>
-                  {% trans "نشط" %}
-                </span>
-              {% else %}
-                <span class="text-danger fw-semibold">
-                  <i class="bi bi-x-circle me-1"></i>
-                  {% trans "غير نشط" %}
-                </span>
-              {% endif %}
             </div>
           </div>
 
@@ -348,7 +306,6 @@
               <button class="btn btn-light btn-sm border dropdown-toggle"
                       type="button"
                       data-bs-toggle="dropdown">
-                <i class="bi bi-columns me-1"></i>
                 {% trans "إجراءات" %}
               </button>
               <ul class="dropdown-menu dropdown-menu-end small">
