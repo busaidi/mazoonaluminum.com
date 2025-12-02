@@ -2,8 +2,8 @@ from django.contrib import messages
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
-from django.urls import reverse
 from django.utils.translation import gettext as _
+
 
 from django.views.generic import TemplateView, ListView, DetailView, View
 
@@ -257,17 +257,39 @@ class ContactView(View):
 # ============================================================
 # Robots.txt
 # ============================================================
+#فعل هذي والغي الي تحت عشان البحث- حاليا معطلة مؤقتا
+# def robots_txt(request):
+#     """
+#     Basic robots.txt for search engines.
+#     """
+#     lines = [
+#         "User-agent: *",
+#         "Disallow: /admin/",
+#         "",
+#         f"Sitemap: {request.build_absolute_uri(reverse('sitemap'))}",
+#         "",
+#     ]
+#     text = "\n".join(lines)
+#     return HttpResponse(text, content_type="text/plain")
 
 def robots_txt(request):
     """
-    Basic robots.txt for search engines.
+    Robots.txt to fully block indexing during development.
     """
     lines = [
         "User-agent: *",
-        "Disallow: /admin/",
+        "Disallow: /",     # ▶ يمنع كل الصفحات
         "",
-        f"Sitemap: {request.build_absolute_uri(reverse('sitemap'))}",
+        # لا نعرض السايت ماب مؤقتاً
+        # f"Sitemap: {request.build_absolute_uri(reverse('sitemap'))}",
         "",
     ]
+
     text = "\n".join(lines)
-    return HttpResponse(text, content_type="text/plain")
+
+    # نرجّع Response ونضيف هيدر يمنع الفهرسة جذرياً
+    response = HttpResponse(text, content_type="text/plain")
+    response["X-Robots-Tag"] = "noindex, nofollow, noarchive, nosnippet"
+
+    return response
+
