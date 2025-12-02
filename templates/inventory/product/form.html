@@ -303,19 +303,20 @@
             {% endfor %}
           </div>
 
-          <div class="form-check form-switch mb-0">
-            {{ form.is_published }}
-            <label for "{{ form.is_published.id_for_label }}"
-                   class="form-check-label small fw-semibold">
-              {{ form.is_published.label }}
-            </label>
-            {% if form.is_published.help_text %}
-              <div class="form-text small">{{ form.is_published.help_text }}</div>
-            {% endif %}
-            {% for error in form.is_published.errors %}
-              <div class="text-danger small">{{ error }}</div>
-            {% endfor %}
-          </div>
+            <div class="form-check form-switch mb-0">
+              {{ form.is_published }}
+              <label for="{{ form.is_published.id_for_label }}"
+                     class="form-check-label small fw-semibold">
+                {{ form.is_published.label }}
+              </label>
+              {% if form.is_published.help_text %}
+                <div class="form-text small">{{ form.is_published.help_text }}</div>
+              {% endif %}
+              {% for error in form.is_published.errors %}
+                <div class="text-danger small">{{ error }}</div>
+              {% endfor %}
+            </div>
+
         </section>
 
       </div>
