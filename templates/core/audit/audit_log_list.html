@@ -1,72 +1,353 @@
-{# templates/core/audit_log_list.html #}
+{# templates/core/audit/audit_log_list.html #}
 {% extends "base.html" %}
 {% load i18n %}
 
 {% block title %}
-  {{ page_title }}
+  {% trans "سجل التدقيق" %}
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
 
+  {# ========================= العنوان الرئيسي ========================= #}
   <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <div>
       <h1 class="h4 fw-bold mb-1">
-        {{ page_title }}
+        {% trans "سجل التدقيق" %}
       </h1>
       <p class="text-muted small mb-0">
-        {% if target_model and target_id %}
-          {% trans "السجلات المعروضة تخص مستندًا محددًا فقط." %}
-        {% else %}
-          {% trans "يتم عرض جميع سجلات التدقيق في النظام." %}
-        {% endif %}
+        {% trans "عرض جميع الأحداث الهامة في النظام مع إمكانية الفلترة حسب المستند والمستخدم والفترة الزمنية." %}
       </p>
     </div>
   </div>
 
-  {% if logs %}
-    <div class="card shadow-sm border-0">
-      <div class="card-body p-0">
+  {# ========================= Tabs: عام / مبيعات / حسابات ========================= #}
+  <ul class="nav nav-tabs mb-3">
+
+    <li class="nav-item">
+      <a class="nav-link {% if not current_section %}active{% endif %}"
+         href="?{% if tab_all_query %}{{ tab_all_query }}{% endif %}">
+        {% trans "عام" %}
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link {% if current_section == 'sales' %}active{% endif %}"
+         href="?{{ tab_sales_query }}">
+        {% trans "مبيعات" %}
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link {% if current_section == 'accounting' %}active{% endif %}"
+         href="?{{ tab_accounting_query }}">
+        {% trans "حسابات" %}
+      </a>
+    </li>
+
+  </ul>
+
+  {# ========================= فورم الفلترة ========================= #}
+  <form method="get" class="card card-body border-0 shadow-sm mb-3">
+
+    {# -------- Presets جاهزة (أعلى الفورم) -------- #}
+    <div class="d-flex flex-wrap gap-2 mb-3">
+
+      {# هذا المستند فقط #}
+      {% if preset_this_document_query %}
+        <a href="?{{ preset_this_document_query }}"
+           class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-target ms-1"></i>
+          {% trans "هذا المستند فقط" %}
+        </a>
+      {% else %}
+        <button type="button"
+                class="btn btn-outline-secondary btn-sm"
+                disabled>
+          <i class="bi bi-target ms-1"></i>
+          {% trans "هذا المستند فقط" %}
+        </button>
+      {% endif %}
+
+      {# كل مستندات المبيعات #}
+      <a href="?{{ preset_sales_documents_query }}"
+         class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-file-earmark-text ms-1"></i>
+        {% trans "كل مستندات المبيعات" %}
+      </a>
+
+      {# آخر ٧ أيام #}
+      <a href="?{{ preset_last7_query }}"
+         class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-calendar-week ms-1"></i>
+        {% trans "آخر ٧ أيام" %}
+      </a>
+
+      {# اليوم فقط #}
+      <a href="?{{ preset_today_query }}"
+         class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-calendar-day ms-1"></i>
+        {% trans "اليوم فقط" %}
+      </a>
+
+      {# آخر ٣٠ يوم #}
+      <a href="?{{ preset_last30_query }}"
+         class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-calendar-range ms-1"></i>
+        {% trans "آخر ٣٠ يوم" %}
+      </a>
+
+    </div>
+
+    {# -------- حقول الفلترة التفصيلية -------- #}
+    <div class="row g-2 align-items-end">
+
+      {# نص البحث في الرسالة #}
+      <div class="col-md-3">
+        <label class="form-label small mb-1" for="id_q">
+          {% trans "نص الرسالة" %}
+        </label>
+        <input type="text"
+               name="q"
+               id="id_q"
+               class="form-control form-control-sm"
+               value="{{ current_filters.q }}"
+               placeholder="{% trans 'ابحث في وصف الحدث...' %}">
+      </div>
+
+      {# نوع العملية #}
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="id_action">
+          {% trans "نوع العملية" %}
+        </label>
+        <select name="action" id="id_action" class="form-select form-select-sm">
+          <option value="">{% trans "الكل" %}</option>
+          {% for value, label in actions %}
+            <option value="{{ value }}" {% if current_filters.action == value %}selected{% endif %}>
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# المستخدم #}
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="id_actor">
+          {% trans "المستخدم" %}
+        </label>
+        <input type="text"
+               name="actor"
+               id="id_actor"
+               class="form-control form-control-sm"
+               value="{{ current_filters.actor }}"
+               placeholder="{% trans 'اسم المستخدم...' %}">
+      </div>
+
+      {# من تاريخ #}
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="id_date_from">
+          {% trans "من تاريخ" %}
+        </label>
+        <input type="date"
+               name="date_from"
+               id="id_date_from"
+               class="form-control form-control-sm"
+               value="{{ current_filters.date_from }}">
+      </div>
+
+      {# إلى تاريخ #}
+      <div class="col-md-2">
+        <label class="form-label small mb-1" for="id_date_to">
+          {% trans "إلى تاريخ" %}
+        </label>
+        <input type="date"
+               name="date_to"
+               id="id_date_to"
+               class="form-control form-control-sm"
+               value="{{ current_filters.date_to }}">
+      </div>
+
+      {# زر البحث #}
+      <div class="col-md-1 d-grid">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="bi bi-search"></i>
+          {% trans "بحث" %}
+        </button>
+      </div>
+    </div>
+
+    {# نحافظ على فلترة المستند (لو جاي من السيلز) #}
+    {% if current_filters.target_model %}
+      <input type="hidden" name="target_model" value="{{ current_filters.target_model }}">
+    {% endif %}
+    {% if current_filters.target_id %}
+      <input type="hidden" name="target_id" value="{{ current_filters.target_id }}">
+    {% endif %}
+
+    {# نحافظ على الـ section الحالي حتى مع إعادة البحث #}
+    {% if current_filters.section %}
+      <input type="hidden" name="section" value="{{ current_filters.section }}">
+    {% endif %}
+
+  </form>
+
+  {# ========================= جدول سجلات التدقيق ========================= #}
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      {% if logs %}
         <div class="table-responsive">
           <table class="table table-sm align-middle mb-0">
             <thead class="table-light">
               <tr>
-                <th class="text-nowrap">{% trans "التاريخ" %}</th>
-                <th class="text-nowrap">{% trans "العملية" %}</th>
-                <th class="text-nowrap">{% trans "المستخدم" %}</th>
-                <th class="text-nowrap">{% trans "الوصف" %}</th>
+                <th class="small text-muted text-nowrap">{% trans "التاريخ والوقت" %}</th>
+                <th class="small text-muted text-nowrap">{% trans "نوع العملية" %}</th>
+                <th class="small text-muted text-nowrap">{% trans "المستخدم" %}</th>
+                <th class="small text-muted text-nowrap">{% trans "الهدف" %}</th>
+                <th class="small text-muted">{% trans "الرسالة" %}</th>
+                <th class="small text-muted text-nowrap">{% trans "بيانات إضافية" %}</th>
               </tr>
             </thead>
             <tbody>
               {% for log in logs %}
                 <tr>
-                  <td class="text-nowrap">{{ log.created_at|date:"Y-m-d H:i" }}</td>
-                  <td class="text-nowrap">
-                    {{ log.get_action_display }}
+                  {# التاريخ والوقت #}
+                  <td class="small text-nowrap">
+                    {{ log.created_at|date:"Y-m-d H:i" }}
                   </td>
-                  <td class="text-nowrap">
-                    {{ log.actor|default:"—" }}
+
+                  {# نوع العملية كبادج ملوّن حسب الـ action #}
+                  <td class="small text-nowrap">
+                    {# جدول ألوان بسيط للأنواع الشائعة #}
+                    {% if log.action == "create" %}
+                      <span class="badge bg-success-subtle text-success-emphasis">
+                        {{ log.get_action_display }}
+                      </span>
+                    {% elif log.action == "update" %}
+                      <span class="badge bg-info-subtle text-info-emphasis">
+                        {{ log.get_action_display }}
+                      </span>
+                    {% elif log.action == "status_change" %}
+                      <span class="badge bg-warning-subtle text-warning-emphasis">
+                        {{ log.get_action_display }}
+                      </span>
+                    {% elif log.action == "delete" %}
+                      <span class="badge bg-danger-subtle text-danger-emphasis">
+                        {{ log.get_action_display }}
+                      </span>
+                    {% elif log.action == "notification" %}
+                      <span class="badge bg-primary-subtle text-primary-emphasis">
+                        {{ log.get_action_display }}
+                      </span>
+                    {% else %}
+                      <span class="badge bg-secondary-subtle text-secondary-emphasis">
+                        {{ log.get_action_display }}
+                      </span>
+                    {% endif %}
                   </td>
+
+                  {# المستخدم #}
+                  <td class="small text-nowrap">
+                    {% if log.actor %}
+                      {{ log.actor.get_username }}
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+
+                  {# الهدف #}
+                  <td class="small text-nowrap">
+                    {% if log.target %}
+                      {{ log.target }}
+                    {% elif log.target_content_type %}
+                      {{ log.target_content_type.app_label }}.{{ log.target_content_type.model }}#{{ log.target_object_id }}
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+
+                  {# الرسالة #}
                   <td class="small">
-                    {{ log.message|default:"" }}
+                    {{ log.message|default:"—" }}
+                  </td>
+
+                  {# بيانات إضافية (extra) مختصرة #}
+                  <td class="small text-muted">
+                    {% if log.extra %}
+                      <code class="small d-block text-truncate" style="max-width: 220px;">
+                        {{ log.extra }}
+                      </code>
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
                   </td>
                 </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-      </div>
 
-      {% if is_paginated %}
-        <div class="card-footer py-2">
-          {% include "includes/pagination.html" %}
+      {% else %}
+        <div class="p-3">
+          <p class="text-muted small mb-0">
+            {% trans "لا توجد سجلات تدقيق مطابقة لمعايير البحث الحالية." %}
+          </p>
         </div>
       {% endif %}
     </div>
-  {% else %}
-    <div class="alert alert-info small">
-      {% trans "لا توجد سجلات تدقيق مطابقة لخيارات الفلترة الحالية." %}
-    </div>
+  </div>
+
+  {# ========================= الترقيم (Pagination) ========================= #}
+  {% if is_paginated %}
+    <nav class="mt-3" aria-label="{% trans 'ترقيم سجلات التدقيق' %}">
+      <ul class="pagination pagination-sm justify-content-center mb-0">
+
+        {# Previous #}
+        {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link"
+               href="?{% if base_query %}{{ base_query }}&{% endif %}page={{ page_obj.previous_page_number }}">
+              &laquo;
+            </a>
+          </li>
+        {% else %}
+          <li class="page-item disabled">
+            <span class="page-link">&laquo;</span>
+          </li>
+        {% endif %}
+
+        {# أرقام الصفحات حول الصفحة الحالية فقط (من -2 إلى +2) #}
+        {% for num in paginator.page_range %}
+          {% if num == page_obj.number %}
+            <li class="page-item active">
+              <span class="page-link">{{ num }}</span>
+            </li>
+          {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+            <li class="page-item">
+              <a class="page-link"
+                 href="?{% if base_query %}{{ base_query }}&{% endif %}page={{ num }}">
+                {{ num }}
+              </a>
+            </li>
+          {% endif %}
+        {% endfor %}
+
+        {# Next #}
+        {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link"
+               href="?{% if base_query %}{{ base_query }}&{% endif %}page={{ page_obj.next_page_number }}">
+              &raquo;
+            </a>
+          </li>
+        {% else %}
+          <li class="page-item disabled">
+            <span class="page-link">&raquo;</span>
+          </li>
+        {% endif %}
+
+      </ul>
+    </nav>
   {% endif %}
+
 </div>
 {% endblock %}
