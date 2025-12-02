@@ -1,4 +1,3 @@
-# uom/management/commands/seed_uom.py
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -32,7 +31,7 @@ class Command(BaseCommand):
                 "code": "piece",
                 "name_ar": "العدد / القطعة",
                 "name_en": "Piece / Unit",
-                "description": "وحدات عددية مثل قطعة، مجموعة، كرتون.",
+                "description": "وحدات عددية مثل قطعة، مجموعة، لفة، حزمة، كرتون.",
             },
             {
                 "code": "area",
@@ -83,7 +82,7 @@ class Command(BaseCommand):
                 "name_ar": "متر",
                 "name_en": "Meter",
                 "symbol": "م",
-                "notes": "الوحدة الأساسية في الألمنيوم.",
+                "notes": "الوحدة الأساسية في الألمنيوم (طول).",
             },
             {
                 "category": "length",
@@ -135,7 +134,7 @@ class Command(BaseCommand):
                 "name_ar": "قطعة",
                 "name_en": "Piece",
                 "symbol": "pcs",
-                "notes": "قطعة واحدة.",
+                "notes": "قطعة واحدة (مقابض، مفصلات، ...).",
             },
             {
                 "category": "piece",
@@ -151,7 +150,7 @@ class Command(BaseCommand):
                 "name_ar": "لفة",
                 "name_en": "Roll",
                 "symbol": "roll",
-                "notes": "تُستخدم مثلاً لوحدات اللفة (جوانات، ربل...).",
+                "notes": "تُستخدم لوحدات اللفة (جوانات، ربل...). الطول الفعلي يحدد في المنتج (alt_factor).",
             },
             {
                 "category": "piece",
@@ -159,7 +158,15 @@ class Command(BaseCommand):
                 "name_ar": "حزمة",
                 "name_en": "Bundle",
                 "symbol": "bundle",
-                "notes": "مجموعة قطع مجمعة معًا.",
+                "notes": "مجموعة قطع أو بارات مجمعة معًا. الطول أو العدد يحدد في المنتج.",
+            },
+            {
+                "category": "piece",
+                "code": "BAR",
+                "name_ar": "بار",
+                "name_en": "Bar",
+                "symbol": "bar",
+                "notes": "قضيب/بار ألمنيوم (مثلاً 6.4 م). الطول الفعلي يحدد في المنتج (alt_factor).",
             },
             {
                 "category": "piece",
