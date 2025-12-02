@@ -11,6 +11,13 @@ from .base import TimeStampedModel, SoftDeleteModel
 class AuditLog(TimeStampedModel, SoftDeleteModel):
     """
     Simple audit log entry to record important business events.
+
+    Designed to be generic and lightweight:
+    - action: short code describing what happened
+    - actor: who did it (user)
+    - target: any model instance (via GenericForeignKey)
+    - message: human-readable description
+    - extra: JSON payload for structured data
     """
 
     class Action(models.TextChoices):
@@ -26,6 +33,7 @@ class AuditLog(TimeStampedModel, SoftDeleteModel):
         max_length=32,
         choices=Action.choices,
         verbose_name=_("العملية"),
+        db_index=True,
     )
 
     # Who did it (optional)
@@ -36,6 +44,7 @@ class AuditLog(TimeStampedModel, SoftDeleteModel):
         on_delete=models.SET_NULL,
         related_name="audit_logs",
         verbose_name=_("المستخدم"),
+        help_text=_("المستخدم الذي قام بهذه العملية إن وُجد."),
     )
 
     # Generic relation to any target object (order, invoice, payment, etc.)
@@ -45,11 +54,13 @@ class AuditLog(TimeStampedModel, SoftDeleteModel):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="audit_logs",
+        verbose_name=_("نوع الكائن"),
     )
     target_object_id = models.CharField(
         max_length=64,
         null=True,
         blank=True,
+        verbose_name=_("معرّف الكائن"),
     )
     target = GenericForeignKey("target_content_type", "target_object_id")
 
@@ -70,6 +81,19 @@ class AuditLog(TimeStampedModel, SoftDeleteModel):
         verbose_name = _("سجل تدقيق")
         verbose_name_plural = _("سجلات التدقيق")
         ordering = ("-created_at",)
+        indexes = [
+            # Fast filtering by actor (user audit history)
+            models.Index(fields=["actor", "created_at"]),
+            # Fast filtering by target (object audit history)
+            models.Index(fields=["target_content_type", "target_object_id", "created_at"]),
+            # Filter by action type
+            models.Index(fields=["action", "created_at"]),
+        ]
 
     def __str__(self) -> str:
-        return f"[{self.action}] {self.message or self.pk}"
+        base = f"[{self.action}]"
+        if self.message:
+            return f"{base} {self.message[:80]}"
+        if self.target:
+            return f"{base} {self.target!r}"
+        return f"{base} #{self.pk}"

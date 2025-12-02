@@ -1,3 +1,4 @@
+# core/models/base.py
 import uuid
 
 from django.conf import settings
@@ -56,9 +57,12 @@ class SoftDeleteModel(models.Model):
     Soft delete support:
     - is_deleted: mark record as deleted without actually removing it
     - deleted_at / deleted_by: track who deleted and when
+
+    Use soft_delete() instead of delete() in services.
     """
     is_deleted = models.BooleanField(
         default=False,
+        db_index=True,
         verbose_name=_("محذوف؟"),
     )
     deleted_at = models.DateTimeField(
@@ -78,19 +82,36 @@ class SoftDeleteModel(models.Model):
     class Meta:
         abstract = True
 
-    def soft_delete(self, user=None, save=True):
+    def soft_delete(self, user=None, save: bool = True) -> None:
         """
         Mark the object as deleted without actually removing it from DB.
         Call this from services instead of obj.delete().
         """
-        if not self.is_deleted:
-            self.is_deleted = True
-            self.deleted_at = timezone.now()
-            if user is not None:
-                self.deleted_by = user
+        if self.is_deleted:
+            return
 
-            if save:
-                self.save(update_fields=["is_deleted", "deleted_at", "deleted_by"])
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+
+        if user is not None and getattr(user, "is_authenticated", True):
+            self.deleted_by = user
+
+        if save:
+            self.save(update_fields=["is_deleted", "deleted_at", "deleted_by"])
+
+    def restore(self, save: bool = True) -> None:
+        """
+        Restore a soft-deleted object.
+        """
+        if not self.is_deleted:
+            return
+
+        self.is_deleted = False
+        self.deleted_at = None
+        self.deleted_by = None
+
+        if save:
+            self.save(update_fields=["is_deleted", "deleted_at", "deleted_by"])
 
 
 class BaseModel(TimeStampedModel, UserStampedModel, SoftDeleteModel):
