@@ -16,6 +16,8 @@ from django.views.generic import (
     UpdateView,
 )
 
+from core.models import AuditLog
+from core.services.audit import log_event
 from .forms import (
     StockMoveForm,
     ProductForm,
@@ -310,8 +312,39 @@ class ProductCreateView(InventoryStaffRequiredMixin, CreateView):
     success_url = reverse_lazy("inventory:product_list")
 
     def form_valid(self, form):
+        user = self.request.user
+
+        # تعبئة created_by / updated_by من المستخدم الحالي
+        if user.is_authenticated:
+            if hasattr(form.instance, "created_by") and not form.instance.pk:
+                form.instance.created_by = user
+            if hasattr(form.instance, "updated_by"):
+                form.instance.updated_by = user
+
+        response = super().form_valid(form)
+
         messages.success(self.request, _("تم إنشاء المنتج بنجاح."))
-        return super().form_valid(form)
+
+        # تسجيل في سجل التدقيق
+        log_event(
+            action=AuditLog.Action.CREATE,
+            message=_("تم إنشاء المنتج %(code)s") % {
+                "code": self.object.code
+            },
+            actor=user if user.is_authenticated else None,
+            target=self.object,
+            extra={
+                "category_id": self.object.category_id,
+                "product_type": self.object.product_type,
+                "is_stock_item": self.object.is_stock_item,
+                "is_active": self.object.is_active,
+                "is_published": self.object.is_published,
+                "default_sale_price": str(self.object.default_sale_price),
+                "default_cost_price": str(self.object.default_cost_price),
+            },
+        )
+
+        return response
 
     def get_initial(self):
         initial = super().get_initial()
@@ -327,6 +360,7 @@ class ProductCreateView(InventoryStaffRequiredMixin, CreateView):
         return ctx
 
 
+
 class ProductUpdateView(InventoryStaffRequiredMixin, UpdateView):
     model = Product
     form_class = ProductForm
@@ -334,14 +368,42 @@ class ProductUpdateView(InventoryStaffRequiredMixin, UpdateView):
     success_url = reverse_lazy("inventory:product_list")
 
     def form_valid(self, form):
+        user = self.request.user
+
+        # تعبئة updated_by فقط
+        if user.is_authenticated and hasattr(form.instance, "updated_by"):
+            form.instance.updated_by = user
+
+        response = super().form_valid(form)
+
         messages.success(self.request, _("تم تحديث بيانات المنتج بنجاح."))
-        return super().form_valid(form)
+
+        log_event(
+            action=AuditLog.Action.UPDATE,
+            message=_("تم تحديث بيانات المنتج %(code)s") % {
+                "code": self.object.code
+            },
+            actor=user if user.is_authenticated else None,
+            target=self.object,
+            extra={
+                "category_id": self.object.category_id,
+                "product_type": self.object.product_type,
+                "is_stock_item": self.object.is_stock_item,
+                "is_active": self.object.is_active,
+                "is_published": self.object.is_published,
+                "default_sale_price": str(self.object.default_sale_price),
+                "default_cost_price": str(self.object.default_cost_price),
+            },
+        )
+
+        return response
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["subsection"] = "products"
         ctx["mode"] = "update"
         return ctx
+
 
 
 # ============================================================
@@ -611,6 +673,15 @@ class StockMoveCreateView(InventoryStaffRequiredMixin, CreateView):
             # وجود أخطاء في البنود → نرجع نفس الصفحة مع الأخطاء
             return self.render_to_response(self.get_context_data(form=form))
 
+        user = self.request.user
+
+        # تعبئة created_by / updated_by
+        if user.is_authenticated:
+            if hasattr(form.instance, "created_by") and not form.instance.pk:
+                form.instance.created_by = user
+            if hasattr(form.instance, "updated_by"):
+                form.instance.updated_by = user
+
         # حفظ رأس الحركة
         self.object = form.save()
 
@@ -619,6 +690,26 @@ class StockMoveCreateView(InventoryStaffRequiredMixin, CreateView):
         line_formset.save()
 
         messages.success(self.request, _("تم إنشاء حركة المخزون بنجاح."))
+
+        # سجل التدقيق
+        log_event(
+            action=AuditLog.Action.CREATE,
+            message=_("تم إنشاء حركة مخزون رقم %(id)s") % {
+                "id": self.object.pk
+            },
+            actor=user if user.is_authenticated else None,
+            target=self.object,
+            extra={
+                "move_type": self.object.move_type,
+                "status": self.object.status,
+                "from_warehouse_id": self.object.from_warehouse_id,
+                "to_warehouse_id": self.object.to_warehouse_id,
+                "from_location_id": self.object.from_location_id,
+                "to_location_id": self.object.to_location_id,
+                "total_lines_quantity": str(self.object.total_lines_quantity),
+            },
+        )
+
         return HttpResponseRedirect(self.get_success_url())
 
 
@@ -648,11 +739,36 @@ class StockMoveUpdateView(InventoryStaffRequiredMixin, UpdateView):
         if not line_formset.is_valid():
             return self.render_to_response(self.get_context_data(form=form))
 
+        user = self.request.user
+
+        # تعبئة updated_by
+        if user.is_authenticated and hasattr(form.instance, "updated_by"):
+            form.instance.updated_by = user
+
         self.object = form.save()
         line_formset.instance = self.object
         line_formset.save()
 
         messages.success(self.request, _("تم تحديث حركة المخزون بنجاح."))
+
+        log_event(
+            action=AuditLog.Action.UPDATE,
+            message=_("تم تحديث حركة المخزون رقم %(id)s") % {
+                "id": self.object.pk
+            },
+            actor=user if user.is_authenticated else None,
+            target=self.object,
+            extra={
+                "move_type": self.object.move_type,
+                "status": self.object.status,
+                "from_warehouse_id": self.object.from_warehouse_id,
+                "to_warehouse_id": self.object.to_warehouse_id,
+                "from_location_id": self.object.from_location_id,
+                "to_location_id": self.object.to_location_id,
+                "total_lines_quantity": str(self.object.total_lines_quantity),
+            },
+        )
+
         return HttpResponseRedirect(self.get_success_url())
 
 

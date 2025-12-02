@@ -1,7 +1,7 @@
 # inventory/models.py
 
 from decimal import Decimal
-
+from pathlib import Path
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Sum, F, Q
@@ -27,7 +27,7 @@ DECIMAL_ZERO = Decimal("0.000")
 # ============================================================
 # تصنيفات المنتجات
 # ============================================================
-class ProductCategory(TimeStampedModel):
+class ProductCategory(BaseModel):
     """
     شجرة تصنيفات بسيطة للمنتجات.
     مثال: أنظمة ألمنيوم، إكسسوارات، زجاج، خدمات...
@@ -119,7 +119,20 @@ class ProductCategory(TimeStampedModel):
 # ============================================================
 # المنتجات
 # ============================================================
-class Product(TimeStampedModel):
+
+
+# دالة مسار حفظ الصورة
+def product_image_upload_to(instance, filename):
+    """
+    مسار حفظ صورة المنتج داخل MEDIA_ROOT.
+    مثال: products/MZN-46-FRAME/main.jpg
+    """
+    safe_code = (instance.code or "unknown").replace("/", "_")
+    ext = Path(filename).suffix
+    return f"products/{safe_code}/main{ext}"
+
+
+class Product(BaseModel):
     """
     المنتج الأساسي للمخزون.
     يُستخدم في المخزون / الأوامر / الفواتير.
@@ -251,6 +264,14 @@ class Product(TimeStampedModel):
     # ============================
     # أعلام الحالة والمخزون
     # ============================
+
+    image = models.ImageField(
+        upload_to=product_image_upload_to,
+        null=True,
+        blank=True,
+        verbose_name=_("الصورة الرئيسية"),
+        help_text=_("صورة المنتج التي ستظهر في القوائم والبوابة (اختياري)."),
+    )
 
     is_stock_item = models.BooleanField(
         default=True,
@@ -483,11 +504,22 @@ class Product(TimeStampedModel):
         """
         return not self.stock_moves.exists()
 
+    @property
+    def image_url(self):
+        """
+        يرجع رابط الصورة إذا كانت موجودة، وإلا يرجع None.
+        مفيد في القوالب: {{ product.image_url|default:'#' }}
+        """
+        if self.image and hasattr(self.image, "url"):
+            return self.image.url
+        return None
+
+
 
 # ============================================================
 # المستودعات
 # ============================================================
-class Warehouse(TimeStampedModel):
+class Warehouse(BaseModel):
     """
     مستودع فعلي أو منطقي.
     مثال: مستودع رئيسي، معرض، مخزن خارجي...
@@ -565,7 +597,7 @@ class Warehouse(TimeStampedModel):
 # ============================================================
 # مواقع المخزون داخل المستودعات
 # ============================================================
-class StockLocation(TimeStampedModel):
+class StockLocation(BaseModel):
     """
     موقع مخزون داخل / مرتبط بالمستودع.
     أمثلة:
@@ -886,7 +918,7 @@ class StockMove(BaseModel):
 # ============================================================
 # بنود حركات المخزون (التفاصيل)
 # ============================================================
-class StockMoveLine(TimeStampedModel):
+class StockMoveLine(BaseModel):
     """
     سطر واحد في حركة مخزون.
     يحتوي على:
@@ -979,7 +1011,7 @@ class StockMoveLine(TimeStampedModel):
 # ============================================================
 # أرصدة المخزون
 # ============================================================
-class StockLevel(TimeStampedModel):
+class StockLevel(BaseModel):
     """
     الرصيد الحالي لكل (منتج، مستودع، موقع).
 

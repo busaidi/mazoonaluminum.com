@@ -248,13 +248,16 @@ class ProductForm(forms.ModelForm):
         model = Product
         fields = [
             "category",
-            "product_type",  # 👈 جديد
+            "product_type",
             "code",
             "name",
             "short_description",
             # الأسعار
             "default_sale_price",
             "default_cost_price",
+            # الصورة
+            "image",
+            # الوصف
             "description",
             # UoM fields
             "base_uom",
@@ -262,8 +265,7 @@ class ProductForm(forms.ModelForm):
             "alt_factor",
             "weight_uom",
             "weight_per_base",
-            # نوع المنتج وأعلام الحالة
-            "product_type",
+            # أعلام الحالة
             "is_stock_item",
             "is_active",
             "is_published",
@@ -272,13 +274,14 @@ class ProductForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # عناوين عربية
+        # ========= العناوين =========
         self.fields["category"].label = _("التصنيف")
-        self.fields["product_type"].label = "نوع المنتج"
+        self.fields["product_type"].label = _("نوع المنتج")
         self.fields["code"].label = _("كود المنتج")
         self.fields["name"].label = _("اسم المنتج")
         self.fields["short_description"].label = _("وصف مختصر")
         self.fields["description"].label = _("وصف تفصيلي")
+        self.fields["image"].label = _("الصورة الرئيسية")
 
         self.fields["default_sale_price"].label = _("سعر البيع الافتراضي")
         self.fields["default_cost_price"].label = _("سعر التكلفة التقريبي")
@@ -289,23 +292,25 @@ class ProductForm(forms.ModelForm):
         self.fields["weight_uom"].label = _("وحدة الوزن")
         self.fields["weight_per_base"].label = _("الوزن لكل وحدة أساسية")
 
-        self.fields["product_type"].label = _("نوع المنتج")
         self.fields["is_stock_item"].label = _("يُتابَع في المخزون")
         self.fields["is_active"].label = _("نشط")
         self.fields["is_published"].label = _("منشور على الموقع/البوابة")
 
-        # Help texts
+        # ========= الملاحظات (help_text) =========
         self.fields["code"].help_text = _(
             "كود داخلي فريد، مثل: MZN-46-FRAME."
         )
-        self.fields["product_type"].help_text = (
-            "يحدد سلوك المنتج في المخزون والتقارير (مثل: صنف مخزني، خدمة، أصل ثابت...)."
+        self.fields["product_type"].help_text = _(
+            "يحدد إذا كان المنتج صنف مخزني، خدمة أو مستهلكات."
         )
         self.fields["short_description"].help_text = _(
             "سطر واحد يظهر في القوائم والجداول."
         )
         self.fields["description"].help_text = _(
             "وصف كامل للمنتج يمكن استخدامه في الموقع أو العروض."
+        )
+        self.fields["image"].help_text = _(
+            "صورة المنتج التي ستظهر في القوائم والبوابة (اختياري)."
         )
 
         self.fields["default_sale_price"].help_text = _(
@@ -333,9 +338,6 @@ class ProductForm(forms.ModelForm):
             "مثال: إذا الأساس متر ووحدة الوزن كجم، هذا الحقل هو كجم/م."
         )
 
-        self.fields["product_type"].help_text = _(
-            "يحدد إذا كان المنتج صنف مخزني، خدمة أو مستهلكات."
-        )
         self.fields["is_stock_item"].help_text = _(
             "إذا تم تعطيله، لن يتم تتبع هذا المنتج في حركات المخزون."
         )
@@ -346,7 +348,7 @@ class ProductForm(forms.ModelForm):
             "إذا تم تفعيله، يمكن عرضه في الموقع أو بوابة العملاء."
         )
 
-        # حصر وحدات القياس على الوحدات النشطة
+        # ========= حصر وحدات القياس على الوحدات النشطة =========
         active_uoms = UnitOfMeasure.objects.filter(is_active=True)
         if "base_uom" in self.fields:
             self.fields["base_uom"].queryset = active_uoms
@@ -355,20 +357,30 @@ class ProductForm(forms.ModelForm):
         if "weight_uom" in self.fields:
             self.fields["weight_uom"].queryset = active_uoms
 
-        # Bootstrap classes
+        # ========= Bootstrap classes =========
         for name, field in self.fields.items():
             widget = field.widget
             css = widget.attrs.get("class", "")
+
+            # Checkboxes
             if isinstance(widget, forms.CheckboxInput):
                 widget.attrs["class"] = (css + " form-check-input").strip()
+
+            # Selects
             elif isinstance(widget, (forms.Select, forms.SelectMultiple)):
                 widget.attrs["class"] = (
                     css.replace("form-control", "") + " form-select"
                 ).strip()
+
+            # File input (صورة المنتج)
+            elif isinstance(widget, forms.ClearableFileInput):
+                widget.attrs["class"] = (css + " form-control").strip()
+
+            # الباقي = حقول نص/أرقام
             else:
                 widget.attrs["class"] = (css + " form-control").strip()
 
-        # إعداد بعض الخصائص الرقمية
+        # ========= خصائص رقمية =========
         if "default_sale_price" in self.fields:
             self.fields["default_sale_price"].widget.attrs.setdefault("step", "0.001")
             self.fields["default_sale_price"].widget.attrs.setdefault("min", "0")
@@ -382,6 +394,8 @@ class ProductForm(forms.ModelForm):
         if "weight_per_base" in self.fields:
             self.fields["weight_per_base"].widget.attrs.setdefault("step", "0.000001")
             self.fields["weight_per_base"].widget.attrs.setdefault("min", "0")
+
+    # ========= تنظيف القيم =========
 
     def clean_code(self):
         """

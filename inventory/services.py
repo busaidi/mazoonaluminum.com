@@ -7,10 +7,48 @@ from django.db import transaction
 from django.db.models import F, Sum, Q
 from django.utils.translation import gettext_lazy as _
 
+from core.services.audit import log_event, AuditLog  # ✅ إضافة سجل التدقيق
+
 from .models import StockLevel, StockMove
 
 
 DECIMAL_ZERO = Decimal("0.000")
+
+
+# ============================================================
+# دوال مساعدة لسجل التدقيق لحركات المخزون
+# ============================================================
+
+def _build_move_audit_extra(move: StockMove, *, factor: Decimal | None = None) -> dict:
+    """
+    يبني دكشنري موحّد للمعلومات الإضافية لكل حدث متعلق بحركة مخزون.
+    مفيد لعرض تفاصيل الحركة لاحقاً في سجل التدقيق.
+    """
+    try:
+        lines_count = move.lines.count()
+    except Exception:
+        lines_count = 0
+
+    try:
+        total_lines_quantity = move.total_lines_quantity
+    except Exception:
+        total_lines_quantity = DECIMAL_ZERO
+
+    extra = {
+        "move_type": move.move_type,
+        "status": move.status,
+        "from_warehouse_id": move.from_warehouse_id,
+        "to_warehouse_id": move.to_warehouse_id,
+        "from_location_id": move.from_location_id,
+        "to_location_id": move.to_location_id,
+        "lines_count": lines_count,
+        "total_lines_quantity": str(total_lines_quantity),
+    }
+
+    if factor is not None:
+        extra["factor"] = str(factor)
+
+    return extra
 
 
 # ============================================================
@@ -167,13 +205,29 @@ def apply_stock_move_status_change(
         - DONE       → CANCELLED  => factor = -1   (إلغاء بعد التطبيق)
         - DONE       → DRAFT      => factor = -1   (رجوع لمسودة)
         - باقي الانتقالات لا تغيّر المخزون.
+
+    بالإضافة لذلك:
+      - نسجل جميع الانتقالات التي تؤثر على المخزون في AuditLog.Action.STATUS_CHANGE
+        مع معلومات إضافية عن الحركة.
     """
     new_status = move.status
 
     # إنشاء جديد
     if is_create:
         if new_status == StockMove.Status.DONE:
-            _apply_move_delta(move, factor=Decimal("1"))
+            factor = Decimal("1")
+            _apply_move_delta(move, factor=factor)
+
+            # سجل تدقيق: تطبيق حركة جديدة مباشرة كـ DONE
+            log_event(
+                action=AuditLog.Action.STATUS_CHANGE,
+                message=_("تم تطبيق حركة المخزون رقم %(id)s عند الإنشاء (إلى منفذة).") % {
+                    "id": move.pk,
+                },
+                actor=None,  # لا يوجد request هنا، نتركها بدون actor
+                target=move,
+                extra=_build_move_audit_extra(move, factor=factor),
+            )
         return
 
     # تحديث موجود مسبقاً
@@ -195,21 +249,55 @@ def apply_stock_move_status_change(
 
     _apply_move_delta(move, factor=factor)
 
+    # سجل التدقيق لهذا الانتقال
+    status_labels = dict(StockMove.Status.choices)
+    old_label = status_labels.get(old_status, old_status)
+    new_label = status_labels.get(new_status, new_status)
+
+    log_event(
+        action=AuditLog.Action.STATUS_CHANGE,
+        message=_(
+            "تغيير حالة حركة المخزون رقم %(id)s من %(old)s إلى %(new)s."
+        ) % {
+            "id": move.pk,
+            "old": old_label,
+            "new": new_label,
+        },
+        actor=None,
+        target=move,
+        extra=_build_move_audit_extra(move, factor=factor),
+    )
+
 
 def apply_stock_move_on_delete(move: StockMove) -> None:
     """
     تُستدعى عند حذف حركة مخزون لعكس الأثر *فقط إذا كانت الحركة في حالة DONE*.
+
+    - تعكس أثر الحركة على المخزون (factor = -1)
+    - تسجل حدثًا في سجل التدقيق (STATUS_CHANGE) بأن الحركة المحذوفة تم عكسها.
     """
     if move.status != StockMove.Status.DONE:
         return
 
-    _apply_move_delta(move, factor=Decimal("-1"))
+    factor = Decimal("-1")
+    _apply_move_delta(move, factor=factor)
+
+    log_event(
+        action=AuditLog.Action.STATUS_CHANGE,
+        message=_(
+            "تم حذف حركة المخزون رقم %(id)s وتم عكس أثرها على المخزون."
+        ) % {
+            "id": move.pk,
+        },
+        actor=None,
+        target=move,
+        extra=_build_move_audit_extra(move, factor=factor),
+    )
 
 
 # ============================================================
 # دوال حجز المخزون (للطلبيات)
 # ============================================================
-
 @transaction.atomic
 def reserve_stock_for_order(
     *,
@@ -262,7 +350,6 @@ def reserve_stock_for_order(
     level.save(update_fields=["quantity_reserved"])
     level.refresh_from_db(fields=["quantity_reserved"])
     return level
-
 
 @transaction.atomic
 def release_stock_reservation(

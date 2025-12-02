@@ -279,96 +279,136 @@
   </div>
 
   {# ========== العمود الأيمن: ملخص المخزون ========== #}
-  <div class="col-md-5">
+{# ========== العمود الأيمن: صورة المنتج + ملخص المخزون ========== #}
+<div class="col-md-5">
 
-    {# إجمالي المخزون #}
-    <div class="card border-0 shadow-sm mb-3">
-      <div class="card-body small">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <div>
-            <div class="text-muted mb-1">
-              {% trans "إجمالي المخزون المتوفر" %}
-            </div>
-            <div class="fw-semibold fs-4">
-              {{ total_on_hand|default:"0.000" }}
-              <span class="fs-6 text-muted">{{ object.base_uom }}</span>
-            </div>
-            <div class="text-muted">
-              {% trans "على مستوى جميع المستودعات والمواقع." %}
-            </div>
-          </div>
-          <div class="text-end">
-            {% if object.has_low_stock_anywhere %}
-              <span class="badge bg-danger-subtle text-danger border d-block mb-1">
-                {% trans "مخزون منخفض" %}
-              </span>
-              <span class="text-muted small d-block">
-                {% trans "يوجد مستوى واحد على الأقل تحت الحد الأدنى." %}
-              </span>
-            {% else %}
-              <span class="badge bg-success-subtle text-success border d-block mb-1">
-                {% trans "حالة مستقرة" %}
-              </span>
-              <span class="text-muted small d-block">
-                {% trans "لا توجد مستويات منخفضة حالياً." %}
-              </span>
-            {% endif %}
-          </div>
-        </div>
-      </div>
+  {# صورة المنتج #}
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+      <h2 class="h6 fw-semibold mb-0">
+        {% trans "صورة المنتج" %}
+      </h2>
+      {% if object.image %}
+        <span class="badge bg-light border text-muted small">
+          {% trans "صورة رئيسية" %}
+        </span>
+      {% else %}
+        <span class="badge bg-secondary-subtle text-secondary border small">
+          {% trans "لا توجد صورة" %}
+        </span>
+      {% endif %}
     </div>
+    <div class="card-body">
 
-    {# أهم المواقع (توب 3) #}
-    {% if stock_levels %}
-      <div class="card border-0 shadow-sm small">
-        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-          <span class="fw-semibold">
-            {% trans "أبرز المواقع" %}
-          </span>
-          <span class="badge bg-light border text-muted">
-            {% blocktrans with count=stock_levels|length %}
-              {{ count }} مستوى
-            {% endblocktrans %}
-          </span>
+      {% if object.image %}
+        <div class="ratio ratio-16x9 bg-light rounded-3">
+          <img src="{{ object.image.url }}"
+               alt="{{ object.name }}"
+               class="img-fluid rounded-3"
+               style="object-fit: contain;">
         </div>
-        <div class="card-body p-2">
-          <ul class="list-group list-group-flush">
-            {% for lvl in stock_levels|slice:":3" %}
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                <div>
-                  <div class="fw-semibold">
-                    {{ lvl.warehouse.code }} / {{ lvl.location.code }}
-                  </div>
-                  <div class="text-muted small">
-                    {{ lvl.warehouse.name }} – {{ lvl.location.name }}
-                  </div>
-                </div>
-                <div class="text-end">
-                  <div class="fw-semibold">
-                    {{ lvl.quantity_on_hand }} {{ object.base_uom }}
-                  </div>
-                  {% if lvl.is_below_min %}
-                    <span class="badge bg-warning-subtle text-warning border small">
-                      {% trans "تحت الحد الأدنى" %}
-                    </span>
-                  {% endif %}
-                </div>
-              </li>
-            {% endfor %}
-          </ul>
-          {% if stock_levels|length > 3 %}
-            <p class="text-muted small mt-2 mb-0">
-              {% blocktrans with extra=stock_levels|length|add:"-3" %}
-                و {{ extra }} موقع إضافي...
-              {% endblocktrans %}
-            </p>
+      {% else %}
+        <div class="ratio ratio-16x9 d-flex align-items-center justify-content-center bg-light rounded-3 text-muted small">
+          <div class="text-center px-3">
+            <i class="bi bi-image" style="font-size: 1.6rem;"></i>
+            <div class="mt-1">
+              {% trans "لم يتم رفع صورة لهذا المنتج بعد." %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  {# إجمالي المخزون #}
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body small">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+          <div class="text-muted mb-1">
+            {% trans "إجمالي المخزون المتوفر" %}
+          </div>
+          <div class="fw-semibold fs-4">
+            {{ total_on_hand|default:"0.000" }}
+            <span class="fs-6 text-muted">{{ object.base_uom }}</span>
+          </div>
+          <div class="text-muted">
+            {% trans "على مستوى جميع المستودعات والمواقع." %}
+          </div>
+        </div>
+        <div class="text-end">
+          {% if object.has_low_stock_anywhere %}
+            <span class="badge bg-danger-subtle text-danger border d-block mb-1">
+              {% trans "مخزون منخفض" %}
+            </span>
+            <span class="text-muted small d-block">
+              {% trans "يوجد مستوى واحد على الأقل تحت الحد الأدنى." %}
+            </span>
+          {% else %}
+            <span class="badge bg-success-subtle text-success border d-block mb-1">
+              {% trans "حالة مستقرة" %}
+            </span>
+            <span class="text-muted small d-block">
+              {% trans "لا توجد مستويات منخفضة حالياً." %}
+            </span>
           {% endif %}
         </div>
       </div>
-    {% endif %}
-
+    </div>
   </div>
+
+  {# أهم المواقع (توب 3) #}
+  {% if stock_levels %}
+    <div class="card border-0 shadow-sm small">
+      <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">
+          {% trans "أبرز المواقع" %}
+        </span>
+        <span class="badge bg-light border text-muted">
+          {% blocktrans with count=stock_levels|length %}
+            {{ count }} مستوى
+          {% endblocktrans %}
+        </span>
+      </div>
+      <div class="card-body p-2">
+        <ul class="list-group list-group-flush">
+          {% for lvl in stock_levels|slice:":3" %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-semibold">
+                  {{ lvl.warehouse.code }} / {{ lvl.location.code }}
+                </div>
+                <div class="text-muted small">
+                  {{ lvl.warehouse.name }} – {{ lvl.location.name }}
+                </div>
+              </div>
+              <div class="text-end">
+                <div class="fw-semibold">
+                  {{ lvl.quantity_on_hand }} {{ object.base_uom }}
+                </div>
+                {% if lvl.is_below_min %}
+                  <span class="badge bg-warning-subtle text-warning border small">
+                    {% trans "تحت الحد الأدنى" %}
+                  </span>
+                {% endif %}
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+        {% if stock_levels|length > 3 %}
+          <p class="text-muted small mt-2 mb-0">
+            {% blocktrans with extra=stock_levels|length|add:"-3" %}
+              و {{ extra }} موقع إضافي...
+            {% endblocktrans %}
+          </p>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+
 </div>
+
 
 {# =================== جدول مستويات المخزون =================== #}
 {% if stock_levels %}

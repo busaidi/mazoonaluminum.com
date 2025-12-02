@@ -189,6 +189,24 @@
   {% for product in products %}
     <div class="col">
       <div class="card h-100 border-0 shadow-sm">
+
+        {# ===== صورة المنتج (تظهر في الأعلى) ===== #}
+        {% if product.image %}
+          <div class="ratio ratio-16x9 bg-light">
+            <img src="{{ product.image.url }}"
+                 alt="{{ product.name }}"
+                 class="img-fluid rounded-top"
+                 style="object-fit: contain;">
+          </div>
+        {% else %}
+          <div class="ratio ratio-16x9 d-flex align-items-center justify-content-center bg-light text-muted small">
+            <div class="text-center px-3">
+              <i class="bi bi-image mb-1" style="font-size: 1.4rem;"></i>
+              <div>{% trans "لا توجد صورة للمنتج" %}</div>
+            </div>
+          </div>
+        {% endif %}
+
         <div class="card-body d-flex flex-column">
 
           {# عنوان بسيط: الاسم + الكود #}
@@ -262,12 +280,12 @@
                   {% trans "إجمالي المخزون المتوفر" %}
                 </div>
                 <div class="fw-semibold mb-0">
-                  {{ product.total_on_hand_agg|default:"0.000" }}
+                  {{ product.total_on_hand|default:"0.000" }}
                   <span class="text-muted small">{{ product.base_uom }}</span>
                 </div>
               </div>
               <div class="text-end">
-                {% if product.has_low_stock_anywhere_agg %}
+                {% if product.has_low_stock_anywhere %}
                   <span class="badge bg-danger-subtle text-danger border small d-block mb-1">
                     {% trans "مخزون منخفض" %}
                   </span>
