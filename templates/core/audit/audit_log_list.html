@@ -1,0 +1,72 @@
+{# templates/core/audit_log_list.html #}
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}
+  {{ page_title }}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h1 class="h4 fw-bold mb-1">
+        {{ page_title }}
+      </h1>
+      <p class="text-muted small mb-0">
+        {% if target_model and target_id %}
+          {% trans "السجلات المعروضة تخص مستندًا محددًا فقط." %}
+        {% else %}
+          {% trans "يتم عرض جميع سجلات التدقيق في النظام." %}
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  {% if logs %}
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="text-nowrap">{% trans "التاريخ" %}</th>
+                <th class="text-nowrap">{% trans "العملية" %}</th>
+                <th class="text-nowrap">{% trans "المستخدم" %}</th>
+                <th class="text-nowrap">{% trans "الوصف" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in logs %}
+                <tr>
+                  <td class="text-nowrap">{{ log.created_at|date:"Y-m-d H:i" }}</td>
+                  <td class="text-nowrap">
+                    {{ log.get_action_display }}
+                  </td>
+                  <td class="text-nowrap">
+                    {{ log.actor|default:"—" }}
+                  </td>
+                  <td class="small">
+                    {{ log.message|default:"" }}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {% if is_paginated %}
+        <div class="card-footer py-2">
+          {% include "includes/pagination.html" %}
+        </div>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="alert alert-info small">
+      {% trans "لا توجد سجلات تدقيق مطابقة لخيارات الفلترة الحالية." %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

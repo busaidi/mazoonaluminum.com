@@ -17,31 +17,43 @@ def log_event(
     extra: Optional[dict] = None,
 ) -> AuditLog:
     """
-    Create an audit log entry.
+    تسجيل حدث تدقيق (Audit Log).
 
-    - action: one of AuditLog.Action.* values or any string
-    - message: human-readable description (Arabic is fine)
-    - actor: a User instance or None
-    - target: any model instance (order, invoice, payment, ...)
-    - extra: optional dict with additional data (will be stored as JSON)
+    المعاملات:
+    - action: نوع العملية (مثل: CREATE / UPDATE / DELETE / STATUS_CHANGE ...)
+    - message: وصف نصي قابل للقراءة البشرية (يمكن أن يكون بالعربية)
+    - actor: المستخدم الذي قام بالعملية، أو None إذا لم يكن هناك مستخدم
+    - target: أي كائن (Model Instance) ليتم ربط هذا الحدث به
+    - extra: بيانات إضافية اختيارية يتم حفظها ضمن JSON
+
+    الوظائف:
+    - يحفظ اسم العملية والوصف.
+    - يسجل المستخدم (actor) إذا كان مسجلاً للدخول.
+    - يربط الحدث بكائن الهدف (target) باستخدام GenericForeignKey:
+        * target_content_type
+        * target_object_id
+    - يخزن البيانات الإضافية داخل extra كـ JSON.
     """
+
     data: dict[str, Any] = {
         "action": action,
         "message": message or "",
         "extra": extra or {},
     }
 
-    # Normalize actor
+    # --- تسجيل المستخدم (actor) ---
     if actor is not None and getattr(actor, "is_authenticated", False):
         data["actor"] = actor
 
-    # Attach generic target
+    # --- ربط الحدث بهدف معين (target model instance) ---
     if target is not None:
-        ct = ContentType.objects.get_for_model(target.__class__)
-        # try to use pk/id as string
+        # ContentType للكلاس الحقيقي للكائن (حتى مع الوراثة)
+        ct = ContentType.objects.get_for_model(target)
+
         obj_id = getattr(target, "pk", None) or getattr(target, "id", None)
         if obj_id is not None:
             data["target_content_type"] = ct
             data["target_object_id"] = str(obj_id)
 
+    # إنشاء سجل الأوديت فعليًا
     return AuditLog.objects.create(**data)

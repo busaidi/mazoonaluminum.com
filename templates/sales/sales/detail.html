@@ -1,3 +1,4 @@
+{# templates/sales/sales/detail.html #}
 {% extends "sales/base_sales.html" %}
 {% load i18n %}
 
@@ -7,11 +8,11 @@
 
 {% block sales_content %}
 
-{# ================== Header: عنوان + رقم المستند + البادجات + الأكشنز ================== #}
+{# ================== الهيدر: عنوان + رقم المستند + البادجات + الإجراءات ================== #}
 <div class="card shadow-sm border-0 mb-3">
   <div class="card-body pb-2">
 
-    {# الصف الأول: العنوان + رقم المستند #}
+    {# الصف الأول: عنوان عام + رقم المستند #}
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-2">
       <div>
         <div class="fs-6 text-muted mb-1">
@@ -28,13 +29,13 @@
       </div>
     </div>
 
-    {# الصف الثاني: البادجات + شريط الأزرار ================== #}
+    {# الصف الثاني: البادجات + أزرار الإجراءات #}
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-2 mb-1">
 
-      {# --- البادجات (نوع / حالة / فوترة) --- #}
+      {# --- البادجات (نوع المستند / الحالة / الفوترة) --- #}
       <div class="d-flex flex-wrap align-items-center gap-2">
 
-        {# نوع المستند: عرض / أمر #}
+        {# نوع المستند: عرض سعر / أمر بيع #}
         {% if document.is_quotation %}
           <span class="badge bg-info-subtle text-info-emphasis">
             <i class="bi bi-file-earmark-text ms-1"></i>
@@ -86,10 +87,10 @@
         {% endif %}
       </div>
 
-      {# --- شريط الأزرار (أكشنز) --- #}
+      {# --- شريط الأزرار (الإجراءات الرئيسية + الثانوية) --- #}
       <div class="d-flex flex-wrap align-items-center gap-2">
 
-        {# طباعة – متاحة دائمًا #}
+        {# زر الطباعة – متاح دائمًا #}
         <a href="{% url 'sales:sales_print' document.pk %}"
            target="_blank"
            class="btn btn-primary btn-sm"
@@ -99,10 +100,24 @@
           {% trans "طباعة" %}
         </a>
 
+        {# زر سجل التدقيق لهذا المستند (لو متوفر من الفيو) #}
+{% if audit_log_url %}
+  <a href="{{ audit_log_url }}"
+     class="btn btn-outline-dark btn-sm"
+     data-bs-toggle="tooltip"
+     data-bs-title="{% trans 'عرض سجل التدقيق لهذا المستند' %}">
+    <i class="bi bi-activity ms-1"></i>
+    {% trans "سجل التدقيق" %}
+  </a>
+{% endif %}
+
+
+        {# لو المستند ملغي: يظهر زر إعادة فتح فقط #}
         {% if document.is_cancelled %}
 
-          {# مستند ملغي: إعادة فتح فقط #}
-          <form method="post" action="{% url 'sales:sales_reopen' document.pk %}" class="d-inline">
+          <form method="post"
+                action="{% url 'sales:sales_reopen' document.pk %}"
+                class="d-inline">
             {% csrf_token %}
             <button type="submit"
                     class="btn btn-warning btn-sm"
@@ -114,9 +129,11 @@
 
         {% else %}
 
-          {# تأكيد (تحويل عرض → أمر بيع) #}
+          {# تأكيد عرض السعر وتحويله إلى أمر بيع (للمسودة فقط) #}
           {% if document.is_quotation and document.status == document.Status.DRAFT %}
-            <form method="post" action="{% url 'sales:quotation_convert' document.pk %}" class="d-inline">
+            <form method="post"
+                  action="{% url 'sales:quotation_convert' document.pk %}"
+                  class="d-inline">
               {% csrf_token %}
               <button type="submit"
                       class="btn btn-success btn-sm"
@@ -130,7 +147,9 @@
 
           {# تعليم أمر البيع كمفوتر #}
           {% if document.is_order and not document.is_invoiced %}
-            <form method="post" action="{% url 'sales:order_mark_invoiced' document.pk %}" class="d-inline">
+            <form method="post"
+                  action="{% url 'sales:order_mark_invoiced' document.pk %}"
+                  class="d-inline">
               {% csrf_token %}
               <button type="submit"
                       class="btn btn-outline-primary btn-sm"
@@ -142,7 +161,7 @@
             </form>
           {% endif %}
 
-          {# إنشاء مذكرة تسليم #}
+          {# إنشاء مذكرة تسليم جديدة (للأوامر فقط) #}
           {% if document.is_order %}
             <a href="{% url 'sales:delivery_note_create' order_pk=document.pk %}"
                class="btn btn-outline-primary btn-sm"
@@ -153,7 +172,7 @@
             </a>
           {% endif %}
 
-          {# Dropdown إجراءات ثانوية #}
+          {# قائمة منسدلة لإجراءات ثانوية (تعديل / إلغاء / إعادة لمسودة) #}
           <div class="dropdown">
             <button class="btn btn-outline-secondary btn-sm dropdown-toggle"
                     type="button"
@@ -173,7 +192,9 @@
               {% if not document.is_invoiced %}
                 <div class="dropdown-divider"></div>
 
-                <form method="post" action="{% url 'sales:sales_cancel' document.pk %}">
+                {# إلغاء المستند #}
+                <form method="post"
+                      action="{% url 'sales:sales_cancel' document.pk %}">
                   {% csrf_token %}
                   <button type="submit"
                           class="dropdown-item text-danger"
@@ -183,8 +204,10 @@
                   </button>
                 </form>
 
+                {# إعادة المستند إلى حالة المسودة (إن لم يكن أصلاً مسودة) #}
                 {% if document.status != document.Status.DRAFT %}
-                  <form method="post" action="{% url 'sales:sales_reset' document.pk %}">
+                  <form method="post"
+                        action="{% url 'sales:sales_reset' document.pk %}">
                     {% csrf_token %}
                     <button type="submit"
                             class="dropdown-item">
@@ -202,12 +225,12 @@
     </div>
 
     <p class="text-muted small mb-0">
-      {% trans "تفاصيل المستند، البنود، وملاحظات العميل." %}
+      {% trans "تفاصيل المستند، البنود، والملاحظات المرتبطة به." %}
     </p>
   </div>
 </div>
 
-{# ================== معلومات الرأس (Header Details) ================== #}
+{# ================== معلومات الرأس (العميل / التواريخ / العملة / الإجمالي) ================== #}
 <div class="card mb-3 shadow-sm border-0">
   <div class="card-body">
     <div class="row g-3">
@@ -260,7 +283,7 @@
   </div>
 </div>
 
-{# ================== جدول البنود ================== #}
+{# ================== جدول بنود المبيعات ================== #}
 <div class="card mb-3 shadow-sm border-0">
   <div class="card-header bg-transparent border-0 pb-0 d-flex justify-content-between align-items-center">
     <h2 class="h6 mb-0">
@@ -301,6 +324,7 @@
                     {{ line.quantity }}
                   </td>
                   <td class="small text-center">
+                    {# منطق اختيار وحدة القياس (أساسية / بديلة) #}
                     {% if line.uom %}
                       {{ line.uom }}
                     {% elif line.uom_type == "ALT" %}
@@ -341,7 +365,7 @@
   </div>
 </div>
 
-{# ================== الملاحظات ================== #}
+{# ================== الملاحظات (داخلية / للعميل) ================== #}
 <div class="row g-3">
 
   <div class="col-md-6">
@@ -450,6 +474,7 @@
 {% endblock %}
 
 {% block extra_body %}
+{# تفعيل الـ Tooltips في Bootstrap 5 #}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     var tooltipTriggerList = [].slice.call(

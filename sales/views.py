@@ -1,6 +1,7 @@
 # sales/views.py
 
 from decimal import Decimal
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -313,9 +314,10 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
 class SalesDocumentDetailView(SalesBaseView, DetailView):
     """
     عرض تفاصيل مستند المبيعات:
-    - معلومات الهيدر.
-    - بنود المبيعات.
-    - مذكرات التسليم المرتبطة.
+    - معلومات الهيدر (العميل، التواريخ، العملة، الإجمالي).
+    - بنود المبيعات المرتبطة بالمستند.
+    - مذكرات التسليم المرتبطة (إن وُجدت).
+    - رابط لسجل التدقيق (AuditLog) الخاص بهذا المستند فقط.
     """
     model = SalesDocument
     template_name = "sales/sales/detail.html"
@@ -325,14 +327,38 @@ class SalesDocumentDetailView(SalesBaseView, DetailView):
     def get_queryset(self):
         """
         تحسين الاستعلام باستخدام:
-        - select_related لجهة الاتصال.
-        - prefetch_related للبنود ومذكرات التسليم.
+        - select_related لجهة الاتصال (contact).
+        - prefetch_related للبنود (lines) ومذكرات التسليم (delivery_notes).
         """
         return (
             SalesDocument.objects
             .select_related("contact")
             .prefetch_related("lines", "delivery_notes")
         )
+
+    def get_context_data(self, **kwargs):
+        """
+        إضافة بيانات إضافية للتمبليت:
+
+        - audit_log_url:
+          رابط صفحة سجل التدقيق لهذا المستند فقط، مع فلترة:
+          target_model = "sales.SalesDocument"
+          target_id    = document.pk
+
+        يمكن استخدامه في القالب لعرض زر:
+        {{ audit_log_url }}
+        """
+        ctx = super().get_context_data(**kwargs)
+        document: SalesDocument = ctx["document"]
+
+        query = urlencode({
+            "target_model": "sales.SalesDocument",
+            "target_id": document.pk,
+        })
+
+        ctx["audit_log_url"] = reverse("core:audit_log_list") + f"?{query}"
+
+        return ctx
 
 
 class SalesDocumentUpdateView(SalesBaseView, UpdateView):
