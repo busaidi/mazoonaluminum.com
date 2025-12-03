@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import SalesDocumentPrintView
+from .views import SalesDocumentPrintView, product_api
 
 app_name = "sales"
 
@@ -8,9 +8,12 @@ urlpatterns = [
     # لوحة التحكم
     path("", views.SalesDashboardView.as_view(), name="dashboard"),
 
+
     # CRUD الموحد للمبيعات (عرض سعر + أمر بيع)
     path("sales/", views.SalesDocumentListView.as_view(), name="sales_list"),
     path("sales/new/", views.SalesDocumentCreateView.as_view(), name="sales_create"),
+    path("product/api/", product_api, name="product_api_search"),  # للبحث
+    path("product/api/<int:pk>/", product_api, name="product_api_uom"),  # للمعلومات
     path("sales/<int:pk>/", views.SalesDocumentDetailView.as_view(), name="sales_detail"),
     path("sales/<int:pk>/edit/", views.SalesDocumentUpdateView.as_view(), name="sales_edit"),
 
@@ -26,7 +29,6 @@ urlpatterns = [
 
     # تعليم أمر البيع كمفوتر
     path("sales/<int:pk>/mark-invoiced/", views.MarkOrderInvoicedView.as_view(), name="order_mark_invoiced"),
-    path("api/product-uom/<int:pk>/", views.product_uom_info, name="product_uom_info"),
     path("sales/<int:pk>/print/", SalesDocumentPrintView.as_view(), name="sales_print"),
 
     # مذكرات التسليم

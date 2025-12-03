@@ -4,6 +4,7 @@ from django import forms
 from django.forms.models import BaseInlineFormSet, inlineformset_factory
 from django.utils.translation import gettext_lazy as _
 
+from inventory.models import Product
 from .models import SalesDocument, DeliveryNote, SalesLine
 
 
@@ -88,6 +89,20 @@ class SalesLineForm(forms.ModelForm):
     line_total is computed on the model, so it is not exposed here.
     """
 
+    # 👈 حقل كود المنتج (فورم فقط، ليس من الموديل)
+    product_code = forms.CharField(
+        label=_("Product code"),
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control form-control-sm",
+                "placeholder": _("e.g. MZN-46-FRAME"),
+                "autocomplete": "off",
+            }
+        ),
+        help_text=_("Enter internal product code to search quickly."),
+    )
+
     class Meta:
         model = SalesLine
         fields = [
@@ -106,7 +121,8 @@ class SalesLineForm(forms.ModelForm):
             "description": forms.TextInput(
                 attrs={
                     "class": "form-control form-control-sm",
-                    "placeholder": _("Optional description..."),
+                    # 👈 نخليه واضح أنه وصف السطر (manual) مثل أودو
+                    "placeholder": _("Optional line description (shown on document)…"),
                 }
             ),
             "quantity": forms.NumberInput(
@@ -133,22 +149,48 @@ class SalesLineForm(forms.ModelForm):
             ),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # لو السطر مربوط بمنتج، عبّي product_code تلقائيًا من product.code
+        product = getattr(self.instance, "product", None)
+        if product and hasattr(product, "code") and not self.initial.get("product_code"):
+            self.initial["product_code"] = product.code
+
     def clean(self):
         """
         Basic per-line validation.
 
         - Skip completely untouched forms (handled by formset).
         - If quantity > 0, require either product or description.
+        - If product_code is filled and product is empty, try to resolve by code.
         """
         cleaned_data = super().clean()
+
         product = cleaned_data.get("product")
         description = cleaned_data.get("description")
         quantity = cleaned_data.get("quantity") or 0
+        code = cleaned_data.get("product_code")
 
         # Skip validation for completely empty forms (handled at formset level)
         if not self.has_changed():
             return cleaned_data
 
+        # 🧩 1) لو فيه كود وما حُدِّد منتج من السلكت → نحاول نجيبه من Product.code
+        if code and not product:
+            try:
+                product = Product.objects.get(code__iexact=code.strip())
+                cleaned_data["product"] = product
+                self.instance.product = product
+            except Product.DoesNotExist:
+                self.add_error(
+                    "product_code",
+                    _("No product found with this code."),
+                )
+                # نرجع مباشرة، عشان ما نكمل باقي الفالديشن على سطر فاسد
+                return cleaned_data
+
+        # 🧩 2) التحقق من أن السطر له معنى
         if quantity > 0 and not (product or description):
             raise forms.ValidationError(
                 _("You must select a product or enter a description for this line.")
@@ -199,13 +241,14 @@ class BaseSalesLineFormSet(BaseInlineFormSet):
             )
 
 
+
 SalesLineFormSet = inlineformset_factory(
     parent_model=SalesDocument,
     model=SalesLine,
-    form=SalesLineForm,
+    form=SalesLineForm,          # 👈 نفس الفورم
     formset=BaseSalesLineFormSet,
-    extra=5,          # one empty row by default
-    can_delete=True,  # allow deleting lines
-    min_num=0,        # we enforce "at least one" in clean()
+    extra=5,
+    can_delete=True,
+    min_num=0,
     validate_min=False,
 )

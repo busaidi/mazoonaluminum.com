@@ -3,6 +3,7 @@
 from decimal import Decimal
 from urllib.parse import urlencode
 
+from django.db import transaction
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -218,69 +219,41 @@ class SalesDocumentListView(SalesBaseView, ListView):
         return ctx
 
 
+
 class SalesDocumentCreateView(SalesBaseView, CreateView):
     """
-    إنشاء مستند مبيعات جديد (عرض سعر):
+    Create new SalesDocument (Quotation):
 
-    - يثبت النوع دائماً كعرض سعر (QUOTATION).
-    - يثبت الحالة كمسودة (DRAFT).
-    - يتعامل مع الهيدر + بنود المبيعات (SalesLineFormSet).
-    - يضبط created_by / updated_by من المستخدم الحالي.
-    - يعيد احتساب الإجماليات بعد حفظ البنود.
-    - يسجل عملية الأوديت لإنشاء المستند.
-    - ينشئ إشعار (Notification) للمستخدم الحالي.
+    - Force kind = QUOTATION, status = DRAFT.
+    - Handle header + lines (SalesLineFormSet).
+    - Set created_by / updated_by from current user.
+    - Recompute totals after saving lines.
+    - Log audit event.
+    - Create notification for current user.
     """
     model = SalesDocument
     form_class = SalesDocumentForm
     template_name = "sales/sales/form.html"
     sales_section = "sales_create"
 
-    def get_context_data(self, **kwargs):
-        """
-        تجهيز الـ formset الخاص ببنود المبيعات مع النموذج الرئيسي.
-        """
-        context = super().get_context_data(**kwargs)
-
+    # --------------------------------------------------
+    # Helpers
+    # --------------------------------------------------
+    def _get_lines_formset(self):
         if self.request.method == "POST":
-            context["lines_formset"] = SalesLineFormSet(self.request.POST)
-        else:
-            context["lines_formset"] = SalesLineFormSet()
+            return SalesLineFormSet(self.request.POST)
+        return SalesLineFormSet()
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.setdefault("lines_formset", self._get_lines_formset())
         return context
 
-    def form_valid(self, form):
-        """
-        منطق الحفظ عند إنشاء المستند:
-
-        - التحقق من صلاحية الـ formset (بنود المبيعات).
-        - ضبط kind/status الافتراضيين (عرض سعر / مسودة).
-        - ضبط created_by / updated_by من المستخدم الحالي.
-        - حفظ الهيدر أولاً (SalesDocument).
-        - (اختياري) ضبط الوحدة المختارة لكل بند إذا كان الموديل يدعم ذلك.
-        - حفظ البنود (جديدة + معدَّلة + حذف).
-        - إعادة احتساب الإجماليات.
-        - تسجيل الأوديت على الإنشاء.
-        - إنشاء إشعار للمستخدم الحالي برقم المستند.
-        """
-        context = self.get_context_data()
-        lines_formset = context["lines_formset"]
-
-        # =====================================================
-        # 1) التحقق من صلاحية الـ formset
-        # =====================================================
-        if not lines_formset.is_valid():
-            # لو البنود فيها أخطاء نرجّع نفس الصفحة مع عرض الأخطاء
-            return self.render_to_response(self.get_context_data(form=form))
-
-        # =====================================================
-        # 2) نوع المستند وحالته الافتراضية
-        # =====================================================
+    def _set_header_defaults(self, form):
+        """Force default kind/status and user fields on header."""
         form.instance.kind = SalesDocument.Kind.QUOTATION
         form.instance.status = SalesDocument.Status.DRAFT
 
-        # =====================================================
-        # 3) تعبئة created_by / updated_by من المستخدم الحالي
-        # =====================================================
         user = self.request.user
         if user.is_authenticated:
             if hasattr(form.instance, "created_by") and not form.instance.pk:
@@ -288,49 +261,34 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
             if hasattr(form.instance, "updated_by"):
                 form.instance.updated_by = user
 
-        # =====================================================
-        # 4) حفظ الهيدر أولاً (SalesDocument)
-        # =====================================================
-        self.object = form.save()
-
-        # نربط الـ formset بالهيدر الجديد
-        lines_formset.instance = self.object
-
-        # =====================================================
-        # 5) حفظ البنود يدويًا (مع دعم اختيار الوحدة لو توفر حقل uom)
-        # =====================================================
-
-        # السطور المحذوفة (لو inline formset)
-        deleted_objects = getattr(lines_formset, "deleted_objects", [])
-
-        # حذف السطور المحذوفة
-        for obj in deleted_objects:
+    def _save_lines(self, lines_formset):
+        """
+        Save lines (create/update/delete) and handle UoM selection.
+        Assumes self.object (header) is already saved.
+        """
+        # delete removed lines
+        for obj in getattr(lines_formset, "deleted_objects", []):
             obj.delete()
 
-        # السطور الجديدة / المعدّلة
         for line_form in lines_formset.forms:
-            # بعض الفورمات extra أو فاضية أو محذوفة
-            if not hasattr(line_form, "cleaned_data"):
+            # skip empty/extra/deleted forms
+            if not getattr(line_form, "cleaned_data", None):
                 continue
             if not line_form.cleaned_data:
                 continue
             if line_form.cleaned_data.get("DELETE"):
                 continue
 
-            # نجهز الـ instance بدون حفظ الآن
             line = line_form.save(commit=False)
 
             product = line_form.cleaned_data.get("product")
             if not product:
-                # سطر بدون منتج → نتجاهله
+                # no product → skip line
                 continue
 
-            # لو عندنا حقل uom في SalesLine, نضبطه بحسب اختيار المستخدم
+            # UoM handling (base / alt) if model has uom field
             if hasattr(line, "uom"):
-                # نقرأ اختيار المستخدم من الحقل المخفي:
-                # name="{{ line_form.prefix }}-uom_kind"
                 uom_kind = self.request.POST.get(f"{line_form.prefix}-uom_kind")  # "base" | "alt" | ""
-
                 selected_uom = None
 
                 if uom_kind == "base" and getattr(product, "base_uom", None):
@@ -338,28 +296,21 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
                 elif uom_kind == "alt" and getattr(product, "alt_uom", None):
                     selected_uom = product.alt_uom
                 elif getattr(product, "base_uom", None):
-                    # fallback: لو ما في اختيار أو alt غير متوفرة
+                    # fallback
                     selected_uom = product.base_uom
 
                 if selected_uom is not None:
                     line.uom = selected_uom
 
-            # نربط البند بالهيدر لو احتاج (عادة موجود مسبقاً من formset.instance)
+            # make sure line points to header
             if hasattr(line, "document") and line.document_id is None:
                 line.document = self.object
 
-            # حفظ السطر
             line.save()
 
-        # =====================================================
-        # 6) إعادة احتساب الإجمالي بعد حفظ البنود
-        # =====================================================
-        # (ممكن تُستدعى أيضاً من save() في SalesLine، لكن نخليها هنا صريحة)
-        self.object.recompute_totals(save=True)
-
-        # =====================================================
-        # 7) الأوديت: تسجيل عملية إنشاء المستند
-        # =====================================================
+    def _log_audit(self):
+        """Create audit log for document creation."""
+        user = self.request.user
         log_event(
             action=AuditLog.Action.CREATE,
             message=_("تم إنشاء مستند المبيعات %(number)s") % {
@@ -375,33 +326,54 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
             },
         )
 
-        # =====================================================
-        # 8) نتفيكشن: إشعار بإنشاء المستند
-        # =====================================================
-        if user.is_authenticated:
-            create_notification(
-                recipient=user,
-                verb=_("تم إنشاء مستند المبيعات %(number)s") % {
-                    "number": self.object.display_number
-                },
-                target=self.object,
-                level=Notification.Levels.SUCCESS,
-                url=reverse("sales:sales_detail", args=[self.object.pk]),
-            )
+    def _notify_user(self):
+        """Create notification for current user."""
+        user = self.request.user
+        if not user.is_authenticated:
+            return
 
-        # =====================================================
-        # 9) رسالة نجاح + redirect
-        # =====================================================
+        create_notification(
+            recipient=user,
+            verb=_("تم إنشاء مستند المبيعات %(number)s") % {
+                "number": self.object.display_number
+            },
+            target=self.object,
+            level=Notification.Levels.SUCCESS,
+            url=reverse("sales:sales_detail", args=[self.object.pk]),
+        )
+
+    # --------------------------------------------------
+    # Main save logic
+    # --------------------------------------------------
+    @transaction.atomic
+    def form_valid(self, form):
+        context = self.get_context_data(form=form)
+        lines_formset = context["lines_formset"]
+
+        if not lines_formset.is_valid():
+            # return page with both form + formset errors
+            return self.render_to_response(context)
+
+        # 1) header defaults + save header
+        self._set_header_defaults(form)
+        self.object = form.save()
+
+        # 2) bind formset to header and save lines
+        lines_formset.instance = self.object
+        self._save_lines(lines_formset)
+
+        # 3) recompute totals
+        self.object.recompute_totals(save=True)
+
+        # 4) audit + notification
+        self._log_audit()
+        self._notify_user()
+
+        # 5) success + redirect
         messages.success(self.request, _("تم إنشاء عرض السعر بنجاح."))
         return redirect(self.get_success_url())
 
-
-
-
     def get_success_url(self):
-        """
-        بعد الحفظ ننتقل إلى صفحة تفاصيل المستند.
-        """
         return reverse("sales:sales_detail", args=[self.object.pk])
 
 
@@ -905,52 +877,73 @@ def sales_reopen_view(request, pk):
 # ======================================================================
 # API بسيطة لمعلومات وحدات القياس للمنتج (للـ JS في الفورم)
 # ======================================================================
-def product_uom_info(request, pk):
+def product_api(request, pk=None):
     """
-    إرجاع معلومات وحدات القياس المرتبطة بالمنتج (كـ JSON):
+    Endpoint موحّد:
 
-    - الوحدة الأساسية.
-    - الوحدة البديلة (إن وجدت).
-    - عامل التحويل بينهما.
-    - سعر البيع لكل وحدة (أساسية وبديلة).
+    - ?q=ABC → بحث بالكود/الاسم (autocomplete)
+    - /product/api/<pk>/ → معلومات UoM + الأسعار
     """
-    product = get_object_or_404(Product, pk=pk)
 
-    base_uom = product.base_uom
-    alt_uom = product.alt_uom
-    alt_factor = product.alt_factor
+    # 1) حالة البحث (autocomplete)
+    q = request.GET.get("q")
+    if q is not None:
+        q = q.strip()
+        results = []
+        if q:
+            qs = Product.objects.filter(code__icontains=q)[:10]
+            for p in qs:
+                results.append({
+                    "id": p.id,
+                    "code": p.code,
+                    "name": p.name,
+                })
+        return JsonResponse({"results": results})
 
-    # سعر البيع بالوحدة الأساسية
-    base_price = product.get_price_for_uom(
-        uom=base_uom,
-        kind="sale",
-    )
+    # 2) حالة طلب معلومات منتج معيّن
+    if pk is not None:
+        product = get_object_or_404(Product, pk=pk)
 
-    # سعر البيع بالوحدة البديلة (إن وُجدت)
-    alt_price = None
-    if alt_uom and alt_factor:
-        alt_price = product.get_price_for_uom(
-            uom=alt_uom,
+        base_uom = product.base_uom
+        alt_uom = product.alt_uom
+        alt_factor = product.alt_factor
+
+        base_price = product.get_price_for_uom(
+            uom=base_uom,
             kind="sale",
         )
 
-    def uom_label(uom):
-        """
-        دالة مساعدة لعرض اسم الوحدة (أو نص فارغ إن لم تكن موجودة).
-        """
-        if not uom:
-            return ""
-        return getattr(uom, "name", str(uom))
+        alt_price = None
+        if alt_uom and alt_factor:
+            alt_price = product.get_price_for_uom(
+                uom=alt_uom,
+                kind="sale",
+            )
 
-    data = {
-        "base_uom": uom_label(base_uom),
-        "alt_uom": uom_label(alt_uom),
-        "has_alt": bool(alt_uom),
-        "alt_factor": str(alt_factor) if alt_uom and alt_factor else "",
-        "base_price": str(base_price) if base_price is not None else "",
-        "alt_price": str(alt_price) if alt_price is not None else "",
-    }
-    return JsonResponse(data)
+        def label(u):
+            if not u:
+                return ""
+            return getattr(u, "name", str(u))
+
+        data = {
+            "id": product.id,
+            "code": product.code,
+            "name": product.name,
+
+            # uom info
+            "base_uom": label(base_uom),
+            "alt_uom": label(alt_uom),
+            "alt_factor": str(alt_factor or ""),
+
+            # prices
+            "base_price": str(base_price or ""),
+            "alt_price": str(alt_price or ""),
+        }
+
+        return JsonResponse(data)
+
+    # 3) استخدام خاطئ → نرجّع خطأ
+    return JsonResponse({"error": "Invalid request"}, status=400)
 
 
 # ======================================================================

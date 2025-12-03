@@ -2,312 +2,674 @@
 {% load i18n %}
 
 {% block title %}
-  {% trans "مستند مبيعات" %}
+    {% trans "مستند مبيعات" %}
 {% endblock %}
 
 {% block sales_content %}
 
-{# ================== Header ================== #}
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-  <div>
-    <h1 class="h5 fw-bold mb-1 text-body">
-      {% if document %}
-        {% trans "تعديل مستند مبيعات" %}
-      {% else %}
-        {% trans "إنشاء مستند مبيعات" %}
-      {% endif %}
-    </h1>
-    <p class="text-muted small mb-0">
-      {% trans "إدارة عروض الأسعار وأوامر البيع." %}
-    </p>
-  </div>
-  <div>
-    <a href="{% url 'sales:sales_list' %}" class="btn btn-sm btn-outline-secondary">
-      <i class="bi bi-arrow-right ms-1"></i>
-      {% trans "رجوع لقائمة المستندات" %}
-    </a>
-  </div>
-</div>
-
-{# ================== Card: Form ================== #}
-<div class="card shadow-sm border-0">
-  <div class="card-body">
-
-    <form method="post" novalidate>
-      {% csrf_token %}
-
-      {% if form.non_field_errors %}
-        <div class="alert alert-danger small">
-          {{ form.non_field_errors }}
-        </div>
-      {% endif %}
-
-      {# ================== Header fields ================== #}
-      <div class="row g-3 mb-3">
-
-        {# العميل #}
-        <div class="col-md-8">
-          <label for="{{ form.contact.id_for_label }}" class="form-label small fw-semibold">
-            {{ form.contact.label|default:_("العميل") }}
-          </label>
-          {{ form.contact }}
-          {% if form.contact.help_text %}
-            <div class="form-text small text-muted">
-              {{ form.contact.help_text }}
-            </div>
-          {% endif %}
-          {% if form.contact.errors %}
-            <div class="text-danger small">
-              {{ form.contact.errors }}
-            </div>
-          {% endif %}
-        </div>
-
-        {# التاريخ #}
-        <div class="col-md-4">
-          <label for="{{ form.date.id_for_label }}" class="form-label small fw-semibold">
-            {{ form.date.label|default:_("التاريخ") }}
-          </label>
-          {{ form.date }}
-          {% if form.date.errors %}
-            <div class="text-danger small">
-              {{ form.date.errors }}
-            </div>
-          {% endif %}
-        </div>
-
-        {# تاريخ الانتهاء #}
-        <div class="col-md-4">
-          <label for="{{ form.due_date.id_for_label }}" class="form-label small fw-semibold">
-            {{ form.due_date.label|default:_("تاريخ الانتهاء") }}
-          </label>
-          {{ form.due_date }}
-          {% if form.due_date.errors %}
-            <div class="text-danger small">
-              {{ form.due_date.errors }}
-            </div>
-          {% endif %}
-        </div>
-
-        {# ملاحظات داخلية #}
-        <div class="col-12">
-          <label for="{{ form.notes.id_for_label }}" class="form-label small fw-semibold">
-            {{ form.notes.label|default:_("ملاحظات داخلية") }}
-          </label>
-          {{ form.notes }}
-          {% if form.notes.errors %}
-            <div class="text-danger small">
-              {{ form.notes.errors }}
-            </div>
-          {% endif %}
-        </div>
-
-        {# ملاحظات للعميل #}
-        <div class="col-12">
-          <label for="{{ form.customer_notes.id_for_label }}" class="form-label small fw-semibold">
-            {{ form.customer_notes.label|default:_("ملاحظات للعميل") }}
-          </label>
-          {{ form.customer_notes }}
-          {% if form.customer_notes.errors %}
-            <div class="text-danger small">
-              {{ form.customer_notes.errors }}
-            </div>
-          {% endif %}
-        </div>
-
-      </div>
-
-      {# ================== Lines formset ================== #}
-      <hr class="my-4">
-
-      <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-1">
+    {# ================== Header ================== #}
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>
-          <h2 class="h6 fw-bold mb-0">
-            {% trans "بنود المستند" %}
-          </h2>
-        </div>
-        <p class="text-muted small mb-0">
-          {% trans "أضف المنتجات والكميات والأسعار لهذا المستند." %}
-        </p>
-      </div>
-
-      {% if lines_formset %}
-        {{ lines_formset.management_form }}
-
-        {% if lines_formset.non_form_errors %}
-          <div class="alert alert-danger small">
-            {{ lines_formset.non_form_errors }}
-          </div>
-        {% endif %}
-
-        <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0">
-            <thead class="table-light">
-              <tr>
-                <th class="small text-muted">{% trans "المنتج" %}</th>
-                <th class="small text-muted">{% trans "الوصف" %}</th>
-                <th class="small text-muted">{% trans "الوحدة" %}</th>
-                <th class="small text-muted text-end">{% trans "الكمية" %}</th>
-                <th class="small text-muted text-end">{% trans "سعر الوحدة" %}</th>
-                <th class="small text-muted text-end">{% trans "الخصم %" %}</th>
-                <th class="small text-muted text-end">{% trans "إجمالي السطر" %}</th>
-                <th class="small text-muted text-center">{% trans "حذف" %}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for line_form in lines_formset %}
-                <tr>
-                  {# hidden fields (id, DELETE, إلخ) #}
-                  {% for hidden in line_form.hidden_fields %}
-                    {{ hidden }}
-                  {% endfor %}
-
-                  <td class="small">
-                    {{ line_form.product }}
-                    {% if line_form.product.errors %}
-                      <div class="text-danger small">
-                        {{ line_form.product.errors }}
-                      </div>
-                    {% endif %}
-                  </td>
-
-                  <td class="small">
-                    {{ line_form.description }}
-                    {% if line_form.description.errors %}
-                      <div class="text-danger small">
-                        {{ line_form.description.errors }}
-                      </div>
-                    {% endif %}
-                  </td>
-
-                  {# الوحدة الأساسية / البديلة #}
-                  <td class="small">
-                    <select class="form-select form-select-sm uom-select">
-                      <option value="">{% trans "—" %}</option>
-                    </select>
-
-                    {# هذا الحقل المخفي اللي ينزل في POST ويمثّل "base" أو "alt" #}
-                    <input type="hidden"
-                           name="{{ line_form.prefix }}-uom_kind"
-                           value=""
-                           class="uom-kind-input">
-                  </td>
-
-                  {# الكمية #}
-                  <td class="small text-end">
-                    {{ line_form.quantity }}
-                    {% if line_form.quantity.errors %}
-                      <div class="text-danger small">
-                        {{ line_form.quantity.errors }}
-                      </div>
-                    {% endif %}
-                  </td>
-
-                  {# سعر الوحدة #}
-                  <td class="small text-end">
-                    {{ line_form.unit_price }}
-                    {% if line_form.unit_price.errors %}
-                      <div class="text-danger small">
-                        {{ line_form.unit_price.errors }}
-                      </div>
-                    {% endif %}
-                  </td>
-
-                  {# نسبة الخصم #}
-                  <td class="small text-end">
-                    {{ line_form.discount_percent }}
-                    {% if line_form.discount_percent.errors %}
-                      <div class="text-danger small">
-                        {{ line_form.discount_percent.errors }}
-                      </div>
-                    {% endif %}
-                  </td>
-
-                  {# إجمالي السطر #}
-                  <td class="small text-end">
-                    {% if line_form.instance.pk %}
-                      {{ line_form.instance.line_total }}
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h1 class="h5 fw-bold mb-0 text-body">
+                    {% if document %}
+                        {% trans "تعديل مستند مبيعات" %}
                     {% else %}
-                      <span class="text-muted">—</span>
+                        {% trans "إنشاء مستند مبيعات" %}
                     {% endif %}
-                  </td>
-
-                  {# حذف السطر #}
-                  <td class="text-center">
-                    {% if line_form.can_delete %}
-                      <div class="form-check d-flex justify-content-center">
-                        {{ line_form.DELETE }}
-                      </div>
-                    {% endif %}
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+                </h1>
+                {% if document %}
+                    <span class="badge bg-secondary-subtle text-secondary-emphasis small">
+          {% trans "رقم المستند" %}: {{ document.display_number|default:"—" }}
+        </span>
+                {% endif %}
+            </div>
+            <p class="text-muted small mb-0">
+                {% trans "إدارة عروض الأسعار وأوامر البيع مع تفاصيل البنود والملاحظات." %}
+            </p>
         </div>
-      {% endif %}
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'sales:sales_list' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-right ms-1"></i>
+                {% trans "رجوع لقائمة المستندات" %}
+            </a>
+        </div>
+    </div>
 
-      {# ================== Actions ================== #}
-      <div class="d-flex justify-content-end gap-2 mt-4">
-        <a href="{% url 'sales:sales_list' %}" class="btn btn-light">
-          <i class="bi bi-arrow-right"></i>
-          {% trans "رجوع" %}
-        </a>
+    {# ================== Card: Form ================== #}
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
 
-        <button type="submit" class="btn btn-primary">
-          <i class="bi bi-check2-circle"></i>
-          {% trans "حفظ" %}
-        </button>
-      </div>
+            <form method="post" novalidate>
+                {% csrf_token %}
 
-    </form>
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger small mb-3">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
 
-  </div>
-</div>
+                {# ================== Section: Basic info ================== #}
+                <div class="border rounded-3 p-3 mb-3 bg-body-tertiary">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <div>
+                            <h2 class="h6 fw-bold mb-1 text-body">
+                                {% trans "بيانات المستند الأساسية" %}
+                            </h2>
+                            <p class="text-muted small mb-0">
+                                {% trans "اختر العميل وحدد تواريخ المستند قبل إضافة البنود." %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+
+                        {# العميل #}
+                        <div class="col-lg-6">
+                            <label for="{{ form.contact.id_for_label }}" class="form-label small fw-semibold mb-1">
+                                {{ form.contact.label|default:_("العميل") }}
+                            </label>
+                            {{ form.contact }}
+                            {% if form.contact.help_text %}
+                                <div class="form-text small text-muted mt-1">
+                                    {{ form.contact.help_text }}
+                                </div>
+                            {% endif %}
+                            {% if form.contact.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.contact.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {# التاريخ #}
+                        <div class="col-sm-6 col-lg-3">
+                            <label for="{{ form.date.id_for_label }}" class="form-label small fw-semibold mb-1">
+                                {{ form.date.label|default:_("التاريخ") }}
+                            </label>
+                            {{ form.date }}
+                            {% if form.date.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.date.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {# تاريخ الانتهاء #}
+                        <div class="col-sm-6 col-lg-3">
+                            <label for="{{ form.due_date.id_for_label }}" class="form-label small fw-semibold mb-1">
+                                {{ form.due_date.label|default:_("تاريخ الانتهاء") }}
+                            </label>
+                            {{ form.due_date }}
+                            {% if form.due_date.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.due_date.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                    </div>
+                </div>
+
+                {# ================== Section: Notes ================== #}
+                <div class="border rounded-3 p-3 mb-4 bg-body">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <div>
+                            <h2 class="h6 fw-bold mb-1 text-body">
+                                {% trans "الملاحظات" %}
+                            </h2>
+                            <p class="text-muted small mb-0">
+                                {% trans "يمكنك إضافة ملاحظات داخلية لا تظهر للعميل، وملاحظات تظهر في المستند المرسل للعميل." %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        {# ملاحظات داخلية #}
+                        <div class="col-md-6">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label small fw-semibold mb-1">
+                                {{ form.notes.label|default:_("ملاحظات داخلية") }}
+                            </label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.notes.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {# ملاحظات للعميل #}
+                        <div class="col-md-6">
+                            <label for="{{ form.customer_notes.id_for_label }}"
+                                   class="form-label small fw-semibold mb-1">
+                                {{ form.customer_notes.label|default:_("ملاحظات للعميل") }}
+                            </label>
+                            {{ form.customer_notes }}
+                            {% if form.customer_notes.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.customer_notes.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {# ================== Lines formset ================== #}
+                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-1">
+                    <div class="d-flex align-items-center gap-2">
+                        <h2 class="h6 fw-bold mb-0">
+                            {% trans "بنود المستند" %}
+                        </h2>
+                        {% if lines_formset %}
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis small">
+              {{ lines_formset.total_form_count }} {% trans "بند" %}
+            </span>
+                        {% endif %}
+                    </div>
+                    <p class="text-muted small mb-0">
+                        {% trans "أضف المنتجات والكميات والأسعار، وسيتم احتساب الإجمالي لكل سطر تلقائيًا." %}
+                    </p>
+                </div>
+
+                {% if lines_formset %}
+                    {{ lines_formset.management_form }}
+
+                    {% if lines_formset.non_form_errors %}
+                        <div class="alert alert-danger small mb-3">
+                            {{ lines_formset.non_form_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="table-responsive-md border rounded-3 overflow-hidden">
+                        <table class="table table-sm align-middle mb-0 table-hover">
+                            <thead class="table-light position-sticky top-0" style="z-index: 5;">
+                            <tr>
+                                <th class="small text-muted" style="min-width: 320px;">
+                                    {% trans "المنتج / الكود / الوصف" %}
+                                </th>
+                                <th class="small text-muted" style="width: 140px;">
+                                    {% trans "الوحدة" %}
+                                </th>
+                                <th class="small text-muted text-end" style="width: 110px;">
+                                    {% trans "الكمية" %}
+                                </th>
+                                <th class="small text-muted text-end" style="width: 130px;">
+                                    {% trans "سعر الوحدة" %}
+                                </th>
+                                <th class="small text-muted text-end" style="width: 110px;">
+                                    {% trans "الخصم %" %}
+                                </th>
+                                <th class="small text-muted text-end" style="width: 140px;">
+                                    {% trans "إجمالي السطر" %}
+                                </th>
+                                <th class="small text-muted text-center" style="width: 70px;">
+                                    {% trans "حذف" %}
+                                </th>
+                            </tr>
+                            </thead>
+
+                            <tbody>
+                            {% for line_form in lines_formset %}
+                                <tr>
+                                    {# hidden fields (id, إلخ) #}
+                                    {% for hidden in line_form.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+
+                                    {# ================== الكود + الاسم + الوصف في نفس العمود ================== #}
+                                    <td class="small" style="min-width: 320px;">
+
+                                        <div class="row g-1 mb-1">
+
+                                            {# -------- حقل الكود (سيرشابل بالكود) -------- #}
+                                            <div class="col-4 position-relative">
+                                                <div class="input-group input-group-sm">
+                          <span class="input-group-text">
+                            <i class="bi bi-upc"></i>
+                          </span>
+                                                    {{ line_form.product_code }}
+                                                </div>
+
+                                                {% if line_form.product_code.errors %}
+                                                    <div class="text-danger small mt-1">
+                                                        {{ line_form.product_code.errors }}
+                                                    </div>
+                                                {% endif %}
+
+                                                {# قائمة اقتراحات الكود #}
+                                                <div class="list-group position-absolute w-100 shadow-sm small d-none product-code-suggestions"
+                                                     style="z-index: 1050; max-height: 220px; overflow-y: auto;">
+                                                </div>
+                                            </div>
+
+                                            {# -------- حقل الاسم (input أوتو) + Ctrl+Click للوصف -------- #}
+                                            <div class="col-8">
+                                                <div class="input-group input-group-sm">
+                          <span class="input-group-text">
+                            <i class="bi bi-box-seam"></i>
+                          </span>
+                                                    <input type="text"
+                                                           class="form-control form-control-sm product-name-input"
+                                                           placeholder="{% trans 'اسم المنتج' %}"
+                                                           autocomplete="off"
+                                                           readonly>
+                                                </div>
+                                                <div class="form-text small text-muted">
+                                                    {% trans "Ctrl + نقرة على حقل اسم المنتج لإظهار/إخفاء حقل الوصف أسفله." %}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {# حقل المنتج الحقيقي (select) مخفي للباك إند #}
+                                        <div class="d-none">
+                                            {{ line_form.product }}
+                                        </div>
+
+                                        {# -------- حقل الوصف (يظهر/يختفي بـ Ctrl+Click) -------- #}
+                                        <div class="mt-1 line-description-container
+                                {% if not line_form.description.value and not line_form.description.errors %}d-none{% endif %}">
+                                            {{ line_form.description }}
+                                            {% if line_form.description.errors %}
+                                                <div class="text-danger small mt-1">
+                                                    {{ line_form.description.errors }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                    </td>
+
+                                    {# ================== الوحدة الأساسية / البديلة ================== #}
+                                    <td class="small">
+                                        <div class="form-floating form-floating-sm">
+                                            <select class="form-select form-select-sm uom-select"
+                                                    aria-label="{% trans 'الوحدة' %}">
+                                                <option value="">{% trans "—" %}</option>
+                                            </select>
+                                            <label class="small">{% trans "الوحدة" %}</label>
+                                        </div>
+
+                                        {# 🔹 المهم هنا: نخزن قيمة uom_kind الفعلية من الـ instance #}
+                                        <input type="hidden"
+                                               name="{{ line_form.prefix }}-uom_kind"
+                                               value="{{ line_form.instance.uom_kind|default_if_none:'' }}"
+                                               class="uom-kind-input">
+                                    </td>
+
+                                    {# ================== الكمية ================== #}
+                                    <td class="small text-end">
+                                        <div class="input-group input-group-sm">
+                                            {{ line_form.quantity }}
+                                        </div>
+                                        {% if line_form.quantity.errors %}
+                                            <div class="text-danger small mt-1 text-start">
+                                                {{ line_form.quantity.errors }}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+
+                                    {# ================== سعر الوحدة ================== #}
+                                    <td class="small text-end">
+                                        <div class="input-group input-group-sm">
+                                            {{ line_form.unit_price }}
+                                        </div>
+                                        {% if line_form.unit_price.errors %}
+                                            <div class="text-danger small mt-1 text-start">
+                                                {{ line_form.unit_price.errors }}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+
+                                    {# ================== نسبة الخصم ================== #}
+                                    <td class="small text-end">
+                                        <div class="input-group input-group-sm">
+                                            {{ line_form.discount_percent }}
+                                        </div>
+                                        {% if line_form.discount_percent.errors %}
+                                            <div class="text-danger small mt-1 text-start">
+                                                {{ line_form.discount_percent.errors }}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+
+                                    {# ================== إجمالي السطر ================== #}
+                                    <td class="small text-end">
+                                        {% if line_form.instance.pk %}
+                                            <span class="fw-semibold">{{ line_form.instance.line_total }}</span>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+
+                                    {# ================== حذف السطر ================== #}
+                                    <td class="text-center">
+                                        {% if line_form.can_delete %}
+                                            <div class="form-check d-flex justify-content-center">
+                                                {{ line_form.DELETE }}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+
+                        </table>
+                    </div>
+                {% endif %}
+
+                {# ================== Actions ================== #}
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{% url 'sales:sales_list' %}" class="btn btn-light">
+                        <i class="bi bi-arrow-right"></i>
+                        {% trans "رجوع" %}
+                    </a>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check2-circle"></i>
+                        {% trans "حفظ المستند" %}
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
 
 {% endblock %}
 
-{# ================== سكربت الوحدات – Vanilla JS ================== #}
+{# ================== سكربت الوحدات + بحث كود المنتج ================== #}
 {% block extra_body %}
 <script>
   (function () {
-    const productUomUrlTemplate = "{% url 'sales:product_uom_info' 0 %}";
-    const productUomBaseUrl = productUomUrlTemplate.replace(/0\/?$/, "");
+    // ======== روابط الـ API الموحد ========
+    const productApiSearchUrl = "{% url 'sales:product_api_search' %}";
+    const productApiUomTemplate = "{% url 'sales:product_api_uom' 0 %}";
+    const productApiUomBaseUrl = productApiUomTemplate.replace(/0\/?$/, "");
 
-    function resetUomSelect(uomSelect) {
-      if (!uomSelect) return;
-      const row = uomSelect.closest("tr");
-      const uomKindInput = row ? row.querySelector("input[name$='-uom_kind']") : null;
+    document.addEventListener("DOMContentLoaded", function () {
+      document
+        .querySelectorAll("table tbody tr")
+        .forEach(initRow);
+    });
 
-      uomSelect.innerHTML = "";
-      uomSelect.dataset.basePrice = "";
-      uomSelect.dataset.altPrice = "";
+    // ================== Helpers عامة ==================
+    function getEls(row) {
+      return {
+        row: row,
+        productSelect:     row.querySelector("select[name$='-product']"),
+        productCodeInput:  row.querySelector("input[name$='-product_code']"),
+        codeSuggestionsEl: row.querySelector(".product-code-suggestions"),
+        nameInput:         row.querySelector(".product-name-input"),
+        descField:         row.querySelector("textarea[name$='-description'], input[name$='-description']"),
+        descContainer:     row.querySelector(".line-description-container"),
+        uomSelect:         row.querySelector(".uom-select"),
+        uomKindInput:      row.querySelector("input[name$='-uom_kind']"),
+        unitPriceInput:    row.querySelector("input[name$='-unit_price']")
+      };
+    }
 
-      const opt = document.createElement("option");
-      opt.value = "";
-      opt.textContent = "—";
-      uomSelect.appendChild(opt);
+    function parseLabel(label) {
+      if (!label) return { code: "", name: "" };
 
-      if (uomKindInput) {
-        uomKindInput.value = "";
+      const dashIdx = label.indexOf("–"); // en dash
+      if (dashIdx !== -1) {
+        return {
+          code: label.slice(0, dashIdx).trim(),
+          name: label.slice(dashIdx + 1).trim()
+        };
+      }
+
+      const spaceIdx = label.indexOf(" ");
+      if (spaceIdx !== -1) {
+        return {
+          code: label.slice(0, spaceIdx).trim(),
+          name: label.slice(spaceIdx + 1).trim()
+        };
+      }
+
+      return { code: label.trim(), name: "" };
+    }
+
+    // ================== تهيئة صف واحد ==================
+    function initRow(row) {
+      const els = getEls(row);
+      if (!els.productSelect || !els.productCodeInput) return;
+
+      const initialProductId = els.productSelect.value || "";
+
+      // نوع الوحدة القديم:
+      const initialKindFromHidden = (els.uomKindInput && els.uomKindInput.value.trim()) || "";
+      const initialKindFromSelect = (els.uomSelect && els.uomSelect.value) || "";
+      const initialUomKind = initialKindFromHidden || initialKindFromSelect;
+
+      // تهيئة من بيانات موجودة (edit / بعد الفاليديشن)
+      if (initialProductId) {
+        fillFromSelectedOption(els);
+
+        if (els.descField && els.descField.value && els.descContainer) {
+          els.descContainer.classList.remove("d-none");
+        }
+
+        loadUom(initialProductId, els, {
+          uomKind: initialUomKind,
+          keepExisting: true
+        });
+      }
+
+      // --- بحث بالكود عن طريق الـ API ---
+      els.productCodeInput.addEventListener("input", function () {
+        handleCodeSearch(els);
+      });
+
+      // ESC / blur لإخفاء قائمة الاقتراحات
+      els.productCodeInput.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && els.codeSuggestionsEl) {
+          els.codeSuggestionsEl.classList.add("d-none");
+        }
+      });
+
+      els.productCodeInput.addEventListener("blur", function () {
+        if (!els.codeSuggestionsEl) return;
+        setTimeout(function () {
+          els.codeSuggestionsEl.classList.add("d-none");
+        }, 200);
+      });
+
+      // --- Ctrl + Click لفتح/إخفاء الوصف ---
+      if (els.nameInput) {
+        els.nameInput.addEventListener("click", function (e) {
+          if (e.ctrlKey) {
+            e.preventDefault();
+            toggleDescription(els);
+          }
+        });
+      }
+
+      // --- تغيير UoM ---
+      if (els.uomSelect) {
+        els.uomSelect.addEventListener("change", function () {
+          updateUnitPrice(els);
+        });
       }
     }
 
-    function fillUomSelect(uomSelect, data) {
-      if (!uomSelect) return;
+    // ================== تعبئة الكود/الاسم من الـ option ==================
+    function fillFromSelectedOption(els) {
+      const select = els.productSelect;
+      if (!select || !select.value) return;
 
-      uomSelect.innerHTML = "";
-      uomSelect.dataset.basePrice = data.base_price || "";
-      uomSelect.dataset.altPrice = data.alt_price || "";
+      const opt    = select.options[select.selectedIndex];
+      const parsed = parseLabel(opt ? opt.textContent : "");
+
+      if (parsed.code && !els.productCodeInput.value.trim()) {
+        els.productCodeInput.value = parsed.code;
+      }
+      if (els.nameInput && parsed.name && !els.nameInput.value.trim()) {
+        els.nameInput.value = parsed.name;
+      }
+    }
+
+    // ================== البحث بالكود + الاقتراحات (باستخدام الـ API) ==================
+    function handleCodeSearch(els) {
+      const listEl = els.codeSuggestionsEl;
+      if (!listEl) return;
+
+      const query = els.productCodeInput.value.trim();
+      listEl.innerHTML = "";
+
+      if (!query) {
+        listEl.classList.add("d-none");
+        return;
+      }
+
+      const url = productApiSearchUrl + "?q=" + encodeURIComponent(query);
+
+      fetch(url)
+        .then(res => {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.json();
+        })
+        .then(payload => {
+          const results = payload.results || [];
+          if (!results.length) {
+            listEl.classList.add("d-none");
+            return;
+          }
+
+          results.slice(0, 15).forEach(item => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "list-group-item list-group-item-action";
+
+            const label = item.name
+              ? (item.code + " – " + item.name)
+              : (item.code || "");
+
+            btn.textContent = label;
+
+            btn.addEventListener("click", function () {
+              applyProductSelection(els, item.id, {
+                code: item.code,
+                name: item.name || ""
+              });
+              listEl.classList.add("d-none");
+              listEl.innerHTML = "";
+            });
+
+            listEl.appendChild(btn);
+          });
+
+          listEl.classList.remove("d-none");
+        })
+        .catch(err => {
+          console.error("[Product search] error:", err);
+          listEl.classList.add("d-none");
+        });
+    }
+
+    function applyProductSelection(els, productId, parsed) {
+      if (els.productSelect) {
+        els.productSelect.value = String(productId);
+      }
+      if (els.productCodeInput && parsed.code) {
+        els.productCodeInput.value = parsed.code;
+      }
+      if (els.nameInput && parsed.name) {
+        els.nameInput.value = parsed.name;
+      }
+
+      // لا نلمس الوصف أبداً هنا
+
+      // reset uom kind + السعر
+      if (els.uomKindInput) els.uomKindInput.value = "";
+      if (els.unitPriceInput) els.unitPriceInput.value = "";
+
+      loadUom(productId, els, {
+        uomKind: "",
+        keepExisting: false
+      });
+    }
+
+    // ================== الوصف ==================
+    function toggleDescription(els) {
+      if (!els.descContainer) return;
+      els.descContainer.classList.toggle("d-none");
+      if (!els.descContainer.classList.contains("d-none") && els.descField) {
+        els.descField.focus();
+      }
+    }
+
+    // ================== UOM / الأسعار ==================
+    function loadUom(productId, els, opts) {
+      opts = opts || {};
+      if (!els.uomSelect) return;
+
+      if (!productId) {
+        resetUom(els);
+        return;
+      }
+
+      const url = productApiUomBaseUrl + productId + "/";
+
+      fetch(url)
+        .then(res => {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.json();
+        })
+        .then(data => {
+          fillUomFromData(els, data, opts);
+        })
+        .catch(err => {
+          console.error("[UoM] Error fetching UoM for product", productId, err);
+          resetUom(els);
+        });
+    }
+
+    function resetUom(els) {
+      const select = els.uomSelect;
+      if (!select) return;
+
+      select.innerHTML = "";
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "—";
+      select.appendChild(opt);
+
+      select.dataset.basePrice = "";
+      select.dataset.altPrice  = "";
+
+      if (els.uomKindInput)   els.uomKindInput.value   = "";
+      if (els.unitPriceInput) els.unitPriceInput.value = "";
+    }
+
+    // ======== UoM + السعر (مع دعم السعر اليدوي للسيرفس) ========
+    function fillUomFromData(els, data, opts) {
+      const select = els.uomSelect;
+      if (!select) return;
+
+      opts = opts || {};
+      const keepExisting = !!opts.keepExisting;
+
+      let existingKind = (opts.uomKind || "").trim(); // "base" | "alt" | ""
+
+      // نقرأ السعر الحالي من الفورم (قبل التعديل)
+      const currentPriceStr = (els.unitPriceInput && els.unitPriceInput.value.trim()) || "";
+
+      // تعبئة الـ <select> + تخزين الأسعار
+      select.innerHTML = "";
+      select.dataset.basePrice = data.base_price || "";
+      select.dataset.altPrice  = data.alt_price  || "";
 
       const hasBase = !!data.base_uom;
-      const hasAlt = !!data.alt_uom;
+      const hasAlt  = !!data.alt_uom;
 
       if (!hasBase && !hasAlt) {
         const opt = document.createElement("option");
         opt.value = "";
         opt.textContent = "—";
-        uomSelect.appendChild(opt);
+        select.appendChild(opt);
+
+        if (els.uomKindInput)   els.uomKindInput.value   = "";
+        if (els.unitPriceInput) els.unitPriceInput.value = "";
         return;
       }
 
@@ -315,42 +677,90 @@
         const baseOpt = document.createElement("option");
         baseOpt.value = "base";
         baseOpt.textContent = data.base_uom + " – {% trans 'أساسية' %}";
-        uomSelect.appendChild(baseOpt);
+        select.appendChild(baseOpt);
       }
 
       if (hasAlt) {
         const altOpt = document.createElement("option");
         altOpt.value = "alt";
         altOpt.textContent = data.alt_uom + " – {% trans 'بديلة' %}";
-        uomSelect.appendChild(altOpt);
+        select.appendChild(altOpt);
       }
 
-      if (hasBase) {
-        uomSelect.value = "base";
-      } else if (hasAlt) {
-        uomSelect.value = "alt";
+      // ===== اكتشاف السعر اليدوي / نوع الوحدة =====
+      let shouldUpdatePrice = true;  // هل نسمح بتعديل السعر؟
+      const baseStr = select.dataset.basePrice || "";
+      const altStr  = select.dataset.altPrice  || "";
+
+      const current = parseFloat(currentPriceStr);
+      const baseNum = parseFloat(baseStr);
+      const altNum  = parseFloat(altStr);
+
+      let matchesBase = false;
+      let matchesAlt  = false;
+
+      if (!isNaN(current)) {
+        const eps = 0.0005;
+        if (!isNaN(baseNum) && Math.abs(current - baseNum) < eps) {
+          matchesBase = true;
+        }
+        if (!isNaN(altNum) && Math.abs(current - altNum) < eps) {
+          matchesAlt = true;
+        }
       }
 
-      updateUnitPriceFromUom(uomSelect);
+      if (keepExisting && currentPriceStr) {
+        // لو السعر لا يطابق لا base ولا alt → سعر يدوي (مثال: سيرفس 2500 و base_price=0)
+        if (!matchesBase && !matchesAlt) {
+          shouldUpdatePrice = false;  // لا نغيّر السعر أبداً
+        }
+
+        // لو ما عندنا نوع سابق لكن السعر يطابق base أو alt → نستنتج النوع منه
+        if (!existingKind) {
+          if (matchesAlt) {
+            existingKind = "alt";
+          } else if (matchesBase) {
+            existingKind = "base";
+          }
+        }
+      }
+
+      // نوع الوحدة النهائي
+      let kindToSelect = existingKind;
+
+      // لو ما قدرنا نحدّد، نرجّع للأساسية ثم البديلة
+      if (!kindToSelect) {
+        if (hasBase)      kindToSelect = "base";
+        else if (hasAlt)  kindToSelect = "alt";
+      }
+
+      if (kindToSelect) {
+        select.value = kindToSelect;
+      }
+
+      // نحدّث الحقل المخفي ليطابق الاختيار
+      if (els.uomKindInput) {
+        els.uomKindInput.value = select.value || "";
+      }
+
+      // السعر:
+      // - لو سعر يدوي (لا يطابق base/alt) → لا نلمسه
+      // - غير ذلك → نحدّثه بحيث يطابق الوحدة
+      if (shouldUpdatePrice) {
+        updateUnitPrice(els);
+      }
     }
 
-    function updateUnitPriceFromUom(uomSelect) {
-      if (!uomSelect) return;
+    function updateUnitPrice(els) {
+      const select = els.uomSelect;
+      const priceInput = els.unitPriceInput;
+      if (!select || !priceInput) return;
 
-      const row = uomSelect.closest("tr");
-      if (!row) return;
-
-      const unitPriceInput = row.querySelector("input[name$='-unit_price']");
-      const uomKindInput = row.querySelector("input[name$='-uom_kind']");
-
-      if (!unitPriceInput) return;
-
-      const selected = uomSelect.value; // base | alt | ""
-      const basePrice = uomSelect.dataset.basePrice || "";
-      const altPrice = uomSelect.dataset.altPrice || "";
+      const selected  = select.value; // base | alt | ""
+      const basePrice = select.dataset.basePrice || "";
+      const altPrice  = select.dataset.altPrice  || "";
 
       let priceToUse = "";
-
       if (selected === "base") {
         priceToUse = basePrice;
       } else if (selected === "alt") {
@@ -360,66 +770,15 @@
       if (priceToUse !== "") {
         const num = parseFloat(priceToUse);
         if (!isNaN(num)) {
-          unitPriceInput.value = num.toFixed(3);
+          priceInput.value = num.toFixed(3);
         } else {
-          unitPriceInput.value = priceToUse;
+          priceInput.value = priceToUse;
         }
-      }
-
-      if (uomKindInput) {
-        uomKindInput.value = selected || "";
-      }
-    }
-
-    function setupRow(row) {
-      const productSelect = row.querySelector("select[name$='-product']");
-      const uomSelect = row.querySelector(".uom-select");
-
-      if (!productSelect || !uomSelect) return;
-
-      function fetchAndUpdateUom(productId) {
-        if (!productId) {
-          resetUomSelect(uomSelect);
-          return;
-        }
-
-        const url = productUomBaseUrl + productId + "/";
-
-        fetch(url)
-          .then((res) => {
-            if (!res.ok) {
-              throw new Error("HTTP " + res.status);
-            }
-            return res.json();
-          })
-          .then((data) => {
-            fillUomSelect(uomSelect, data);
-          })
-          .catch((err) => {
-            console.error("[UoM] Error fetching UoM for product", productId, err);
-            resetUomSelect(uomSelect);
-          });
-      }
-
-      if (productSelect.value) {
-        fetchAndUpdateUom(productSelect.value);
       } else {
-        resetUomSelect(uomSelect);
+        priceInput.value = "";
       }
-
-      productSelect.addEventListener("change", function (e) {
-        fetchAndUpdateUom(e.target.value);
-      });
-
-      uomSelect.addEventListener("change", function () {
-        updateUnitPriceFromUom(uomSelect);
-      });
     }
 
-    document.addEventListener("DOMContentLoaded", function () {
-      const rows = document.querySelectorAll("table tbody tr");
-      rows.forEach((row) => setupRow(row));
-    });
   })();
 </script>
 {% endblock %}

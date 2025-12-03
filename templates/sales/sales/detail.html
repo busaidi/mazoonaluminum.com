@@ -296,64 +296,87 @@
       {% if lines %}
         <div class="table-responsive">
           <table class="table table-sm align-middle mb-0">
-            <thead class="table-light">
-              <tr>
-                <th class="small text-muted">{% trans "المنتج" %}</th>
-                <th class="small text-muted">{% trans "الوصف" %}</th>
-                <th class="small text-muted text-end">{% trans "الكمية" %}</th>
-                <th class="small text-muted text-center">{% trans "الوحدة" %}</th>
-                <th class="small text-muted text-end">{% trans "سعر الوحدة" %}</th>
-                <th class="small text-muted text-end">{% trans "الخصم %" %}</th>
-                <th class="small text-muted text-end">{% trans "إجمالي السطر" %}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for line in lines %}
-                <tr>
-                  <td class="small">
-                    {% if line.product %}
-                      {{ line.product.name }}
-                    {% else %}
-                      <span class="text-muted">—</span>
-                    {% endif %}
-                  </td>
-                  <td class="small">
-                    {{ line.display_name }}
-                  </td>
-                  <td class="small text-end">
-                    {{ line.quantity }}
-                  </td>
-                  <td class="small text-center">
-                    {# منطق اختيار وحدة القياس (أساسية / بديلة) #}
-                    {% if line.uom %}
-                      {{ line.uom }}
-                    {% elif line.uom_type == "ALT" %}
-                      {% if line.product and line.product.alt_uom %}
-                        {{ line.product.alt_uom }}
-                      {% else %}
-                        <span class="text-muted">—</span>
-                      {% endif %}
-                    {% else %}
-                      {% if line.product and line.product.base_uom %}
-                        {{ line.product.base_uom }}
-                      {% else %}
-                        <span class="text-muted">—</span>
-                      {% endif %}
-                    {% endif %}
-                  </td>
-                  <td class="small text-end">
-                    {{ line.unit_price }}
-                  </td>
-                  <td class="small text-end">
-                    {{ line.discount_percent }}
-                  </td>
-                  <td class="small text-end">
-                    {{ line.line_total }}
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+  <thead class="table-light">
+    <tr>
+      <th class="small text-muted" style="width:120px;">{% trans "الكود" %}</th>
+      <th class="small text-muted">{% trans "الاسم + الوصف" %}</th>
+      <th class="small text-muted text-end">{% trans "الكمية" %}</th>
+      <th class="small text-muted text-center">{% trans "الوحدة" %}</th>
+      <th class="small text-muted text-end">{% trans "سعر الوحدة" %}</th>
+      <th class="small text-muted text-end">{% trans "إجمالي" %}</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {% for line in document.lines.all %}
+
+      {% comment %}
+      استخراج الكود الحقيقي:
+      1) الكود من الحقل line.product_code
+      2) وإذا كان فاضي نأخذ كود المنتج الأساسي line.product.code
+      {% endcomment %}
+      {% with code=line.product_code|default:line.product.code %}
+
+      <tr>
+
+        {# ====== عمود الكود (مستقل تمامًا) ====== #}
+        <td class="text-nowrap small fw-bold" dir="ltr">
+          {% if code %}
+            <span class="badge bg-dark text-white px-3 py-2"
+                  style="font-size: 0.75rem;">
+              {{ code }}
+            </span>
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+
+        {# ====== الاسم + الوصف تحت الاسم ====== #}
+        <td class="small">
+          {% if line.product %}
+            <div class="fw-semibold text-body">
+              {{ line.product.name }}
+            </div>
+          {% else %}
+            <div class="text-muted">—</div>
+          {% endif %}
+
+          {% if line.description %}
+            <div class="text-muted small mt-1">
+              {{ line.description }}
+            </div>
+          {% endif %}
+        </td>
+
+        {# ====== باقي الأعمدة ====== #}
+        <td class="small text-end">
+          {{ line.quantity }}
+        </td>
+
+        <td class="small text-center">
+          {% if line.uom %}
+            {{ line.uom }}
+          {% else %}
+            {{ line.product.base_uom|default:"—" }}
+          {% endif %}
+        </td>
+
+        <td class="small text-end">
+          {{ line.unit_price }}
+        </td>
+
+        <td class="small text-end fw-semibold">
+          {{ line.line_total }}
+        </td>
+
+      </tr>
+
+      {% endwith %}
+    {% endfor %}
+  </tbody>
+</table>
+
+
         </div>
       {% else %}
         <p class="text-muted small mb-0">

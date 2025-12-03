@@ -164,8 +164,8 @@
           <thead class="table-light">
             <tr>
               <th class="small text-muted">{% trans "م" %}</th>
-              <th class="small text-muted">{% trans "المنتج" %}</th>
-              <th class="small text-muted">{% trans "الوصف" %}</th>
+              <th class="small text-muted">{% trans "الكود" %}</th>
+              <th class="small text-muted">{% trans "المنتج / الوصف" %}</th>
               <th class="small text-muted text-end">{% trans "الكمية" %}</th>
               <th class="small text-muted text-center">{% trans "الوحدة" %}</th>
               <th class="small text-muted text-end">{% trans "سعر الوحدة" %}</th>
@@ -178,22 +178,47 @@
               {% if lines %}
                 {% for line in lines %}
                   <tr>
-                    <td class="small">
+                    {# رقم السطر #}
+                    <td class="small text-nowrap">
                       {{ forloop.counter }}
                     </td>
-                    <td class="small">
-                      {% if line.product %}
-                        {{ line.product.code }} – {{ line.product.name }}
+
+                    {# الكود فقط #}
+                    <td class="small text-nowrap">
+                      {% if line.product_code %}
+                        {{ line.product_code }}
+                      {% elif line.product %}
+                        {{ line.product.code }}
                       {% else %}
                         <span class="text-muted">—</span>
                       {% endif %}
                     </td>
+
+                    {# الاسم + الوصف في نفس الحقل #}
                     <td class="small">
-                      {{ line.display_name }}
+                      {% if line.product %}
+                        <div class="fw-semibold">
+                          {{ line.product.name }}
+                        </div>
+                      {% elif line.display_name %}
+                        <div class="fw-semibold">
+                          {{ line.display_name }}
+                        </div>
+                      {% else %}
+                        <span class="text-muted">—</span>
+                      {% endif %}
+
+                      {% if line.description %}
+                        <div class="small text-muted">
+                          {{ line.description|linebreaksbr }}
+                        </div>
+                      {% endif %}
                     </td>
+
                     <td class="small text-end">
                       {{ line.quantity }}
                     </td>
+
                     <td class="small text-center">
                       {% if line.uom %}
                         {{ line.uom }}
@@ -211,6 +236,7 @@
                         {% endif %}
                       {% endif %}
                     </td>
+
                     <td class="small text-end">
                       {{ line.unit_price }}
                     </td>
