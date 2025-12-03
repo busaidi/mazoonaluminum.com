@@ -96,7 +96,7 @@ class SalesLineForm(forms.ModelForm):
         widget=forms.TextInput(
             attrs={
                 "class": "form-control form-control-sm",
-                "placeholder": _("e.g. MZN-46-FRAME"),
+                # "placeholder": _("e.g. MZN-46-FRAME"),
                 "autocomplete": "off",
             }
         ),
@@ -122,7 +122,7 @@ class SalesLineForm(forms.ModelForm):
                 attrs={
                     "class": "form-control form-control-sm",
                     # 👈 نخليه واضح أنه وصف السطر (manual) مثل أودو
-                    "placeholder": _("Optional line description (shown on document)…"),
+                    # "placeholder": _("Optional line description (shown on document)…"),
                 }
             ),
             "quantity": forms.NumberInput(
