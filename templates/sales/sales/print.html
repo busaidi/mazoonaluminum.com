@@ -335,28 +335,54 @@
 
 {% block extra_body %}
 <style>
+  /* إعدادات الطباعة */
+  @page {
+    size: A4;
+    margin: 1.2cm;   /* هوامش جميلة للطباعة */
+  }
+
   @media print {
     body {
       background-color: #ffffff !important;
+      margin: 0 !important;
+      padding: 0 !important;
     }
+
+    /* إخفاء كل شيء غير مطلوب في الطباعة */
     .navbar,
     .mazoon-footer,
     .d-print-none {
       display: none !important;
     }
+
+    /* إزالة الهيدر والفوتر الافتراضيين للمتصفح */
+    @page {
+      margin: 0;
+    }
+    body {
+      margin: 1.2cm !important;
+    }
+
+    /* الصفحة الرئيسية للطباعة بدون ظل ولا حدود */
     .print-page {
       box-shadow: none !important;
       border: none !important;
+      width: 100% !important;
+      max-width: 100% !important;
     }
+
     .container {
       max-width: 100% !important;
-      margin: 0;
-      padding: 0;
+      margin: 0 !important;
+      padding: 0 !important;
     }
   }
 
+  /* في الشاشة العادية قبل الطباعة */
   .print-page {
     max-width: 900px;
+    margin: auto;
   }
 </style>
+
 {% endblock %}
