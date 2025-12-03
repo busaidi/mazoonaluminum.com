@@ -157,7 +157,7 @@
             <tbody>
               {% for line_form in lines_formset %}
                 <tr>
-                  {# hidden fields (id, DELETE, etc.) #}
+                  {# hidden fields (id, DELETE, إلخ) #}
                   {% for hidden in line_form.hidden_fields %}
                     {{ hidden }}
                   {% endfor %}
@@ -180,13 +180,20 @@
                     {% endif %}
                   </td>
 
-                  {# الوحدة الأساسية / البديلة (UI فقط حالياً) #}
+                  {# الوحدة الأساسية / البديلة #}
                   <td class="small">
                     <select class="form-select form-select-sm uom-select">
                       <option value="">{% trans "—" %}</option>
                     </select>
+
+                    {# هذا الحقل المخفي اللي ينزل في POST ويمثّل "base" أو "alt" #}
+                    <input type="hidden"
+                           name="{{ line_form.prefix }}-uom_kind"
+                           value=""
+                           class="uom-kind-input">
                   </td>
 
+                  {# الكمية #}
                   <td class="small text-end">
                     {{ line_form.quantity }}
                     {% if line_form.quantity.errors %}
@@ -196,6 +203,7 @@
                     {% endif %}
                   </td>
 
+                  {# سعر الوحدة #}
                   <td class="small text-end">
                     {{ line_form.unit_price }}
                     {% if line_form.unit_price.errors %}
@@ -205,6 +213,7 @@
                     {% endif %}
                   </td>
 
+                  {# نسبة الخصم #}
                   <td class="small text-end">
                     {{ line_form.discount_percent }}
                     {% if line_form.discount_percent.errors %}
@@ -214,6 +223,7 @@
                     {% endif %}
                   </td>
 
+                  {# إجمالي السطر #}
                   <td class="small text-end">
                     {% if line_form.instance.pk %}
                       {{ line_form.instance.line_total }}
@@ -222,6 +232,7 @@
                     {% endif %}
                   </td>
 
+                  {# حذف السطر #}
                   <td class="text-center">
                     {% if line_form.can_delete %}
                       <div class="form-check d-flex justify-content-center">
@@ -260,12 +271,14 @@
 {% block extra_body %}
 <script>
   (function () {
-    // Django سيرندر هذا لشيء مثل: "/ar/sales/api/product-uom/0/"
     const productUomUrlTemplate = "{% url 'sales:product_uom_info' 0 %}";
     const productUomBaseUrl = productUomUrlTemplate.replace(/0\/?$/, "");
 
     function resetUomSelect(uomSelect) {
       if (!uomSelect) return;
+      const row = uomSelect.closest("tr");
+      const uomKindInput = row ? row.querySelector("input[name$='-uom_kind']") : null;
+
       uomSelect.innerHTML = "";
       uomSelect.dataset.basePrice = "";
       uomSelect.dataset.altPrice = "";
@@ -274,6 +287,10 @@
       opt.value = "";
       opt.textContent = "—";
       uomSelect.appendChild(opt);
+
+      if (uomKindInput) {
+        uomKindInput.value = "";
+      }
     }
 
     function fillUomSelect(uomSelect, data) {
@@ -286,7 +303,6 @@
       const hasBase = !!data.base_uom;
       const hasAlt = !!data.alt_uom;
 
-      // لا توجد وحدات معرّفة
       if (!hasBase && !hasAlt) {
         const opt = document.createElement("option");
         opt.value = "";
@@ -295,7 +311,6 @@
         return;
       }
 
-      // الأساس
       if (hasBase) {
         const baseOpt = document.createElement("option");
         baseOpt.value = "base";
@@ -303,7 +318,6 @@
         uomSelect.appendChild(baseOpt);
       }
 
-      // البديلة
       if (hasAlt) {
         const altOpt = document.createElement("option");
         altOpt.value = "alt";
@@ -311,7 +325,6 @@
         uomSelect.appendChild(altOpt);
       }
 
-      // اختيار افتراضي
       if (hasBase) {
         uomSelect.value = "base";
       } else if (hasAlt) {
@@ -328,9 +341,11 @@
       if (!row) return;
 
       const unitPriceInput = row.querySelector("input[name$='-unit_price']");
+      const uomKindInput = row.querySelector("input[name$='-uom_kind']");
+
       if (!unitPriceInput) return;
 
-      const selected = uomSelect.value; // "base" | "alt" | ""
+      const selected = uomSelect.value; // base | alt | ""
       const basePrice = uomSelect.dataset.basePrice || "";
       const altPrice = uomSelect.dataset.altPrice || "";
 
@@ -343,7 +358,16 @@
       }
 
       if (priceToUse !== "") {
-        unitPriceInput.value = priceToUse;
+        const num = parseFloat(priceToUse);
+        if (!isNaN(num)) {
+          unitPriceInput.value = num.toFixed(3);
+        } else {
+          unitPriceInput.value = priceToUse;
+        }
+      }
+
+      if (uomKindInput) {
+        uomKindInput.value = selected || "";
       }
     }
 
@@ -377,19 +401,16 @@
           });
       }
 
-      // تحميل أولي
       if (productSelect.value) {
         fetchAndUpdateUom(productSelect.value);
       } else {
         resetUomSelect(uomSelect);
       }
 
-      // عند تغيير المنتج
       productSelect.addEventListener("change", function (e) {
         fetchAndUpdateUom(e.target.value);
       });
 
-      // عند تغيير الوحدة
       uomSelect.addEventListener("change", function () {
         updateUnitPriceFromUom(uomSelect);
       });

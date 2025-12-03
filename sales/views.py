@@ -251,10 +251,13 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
     def form_valid(self, form):
         """
         منطق الحفظ عند إنشاء المستند:
-        - التحقق من صلاحية الـ formset.
-        - ضبط kind/status.
-        - ضبط created_by / updated_by.
-        - حفظ الهيدر ثم البنود.
+
+        - التحقق من صلاحية الـ formset (بنود المبيعات).
+        - ضبط kind/status الافتراضيين (عرض سعر / مسودة).
+        - ضبط created_by / updated_by من المستخدم الحالي.
+        - حفظ الهيدر أولاً (SalesDocument).
+        - (اختياري) ضبط الوحدة المختارة لكل بند إذا كان الموديل يدعم ذلك.
+        - حفظ البنود (جديدة + معدَّلة + حذف).
         - إعادة احتساب الإجماليات.
         - تسجيل الأوديت على الإنشاء.
         - إنشاء إشعار للمستخدم الحالي برقم المستند.
@@ -262,15 +265,22 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
         context = self.get_context_data()
         lines_formset = context["lines_formset"]
 
-        # التحقق من الـ formset قبل الحفظ
+        # =====================================================
+        # 1) التحقق من صلاحية الـ formset
+        # =====================================================
         if not lines_formset.is_valid():
+            # لو البنود فيها أخطاء نرجّع نفس الصفحة مع عرض الأخطاء
             return self.render_to_response(self.get_context_data(form=form))
 
-        # نوع المستند وحالته الافتراضية
+        # =====================================================
+        # 2) نوع المستند وحالته الافتراضية
+        # =====================================================
         form.instance.kind = SalesDocument.Kind.QUOTATION
         form.instance.status = SalesDocument.Status.DRAFT
 
-        # تعبئة created_by / updated_by من المستخدم الحالي
+        # =====================================================
+        # 3) تعبئة created_by / updated_by من المستخدم الحالي
+        # =====================================================
         user = self.request.user
         if user.is_authenticated:
             if hasattr(form.instance, "created_by") and not form.instance.pk:
@@ -278,17 +288,78 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
             if hasattr(form.instance, "updated_by"):
                 form.instance.updated_by = user
 
-        # حفظ الهيدر أولاً
+        # =====================================================
+        # 4) حفظ الهيدر أولاً (SalesDocument)
+        # =====================================================
         self.object = form.save()
 
-        # ضبط المستند في الـ formset وحفظ البنود
+        # نربط الـ formset بالهيدر الجديد
         lines_formset.instance = self.object
-        lines_formset.save()
 
-        # إعادة احتساب الإجمالي بعد حفظ البنود
+        # =====================================================
+        # 5) حفظ البنود يدويًا (مع دعم اختيار الوحدة لو توفر حقل uom)
+        # =====================================================
+
+        # السطور المحذوفة (لو inline formset)
+        deleted_objects = getattr(lines_formset, "deleted_objects", [])
+
+        # حذف السطور المحذوفة
+        for obj in deleted_objects:
+            obj.delete()
+
+        # السطور الجديدة / المعدّلة
+        for line_form in lines_formset.forms:
+            # بعض الفورمات extra أو فاضية أو محذوفة
+            if not hasattr(line_form, "cleaned_data"):
+                continue
+            if not line_form.cleaned_data:
+                continue
+            if line_form.cleaned_data.get("DELETE"):
+                continue
+
+            # نجهز الـ instance بدون حفظ الآن
+            line = line_form.save(commit=False)
+
+            product = line_form.cleaned_data.get("product")
+            if not product:
+                # سطر بدون منتج → نتجاهله
+                continue
+
+            # لو عندنا حقل uom في SalesLine, نضبطه بحسب اختيار المستخدم
+            if hasattr(line, "uom"):
+                # نقرأ اختيار المستخدم من الحقل المخفي:
+                # name="{{ line_form.prefix }}-uom_kind"
+                uom_kind = self.request.POST.get(f"{line_form.prefix}-uom_kind")  # "base" | "alt" | ""
+
+                selected_uom = None
+
+                if uom_kind == "base" and getattr(product, "base_uom", None):
+                    selected_uom = product.base_uom
+                elif uom_kind == "alt" and getattr(product, "alt_uom", None):
+                    selected_uom = product.alt_uom
+                elif getattr(product, "base_uom", None):
+                    # fallback: لو ما في اختيار أو alt غير متوفرة
+                    selected_uom = product.base_uom
+
+                if selected_uom is not None:
+                    line.uom = selected_uom
+
+            # نربط البند بالهيدر لو احتاج (عادة موجود مسبقاً من formset.instance)
+            if hasattr(line, "document") and line.document_id is None:
+                line.document = self.object
+
+            # حفظ السطر
+            line.save()
+
+        # =====================================================
+        # 6) إعادة احتساب الإجمالي بعد حفظ البنود
+        # =====================================================
+        # (ممكن تُستدعى أيضاً من save() في SalesLine، لكن نخليها هنا صريحة)
         self.object.recompute_totals(save=True)
 
-        # --- الأوديت: إنشاء مستند مبيعات ---
+        # =====================================================
+        # 7) الأوديت: تسجيل عملية إنشاء المستند
+        # =====================================================
         log_event(
             action=AuditLog.Action.CREATE,
             message=_("تم إنشاء مستند المبيعات %(number)s") % {
@@ -304,7 +375,9 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
             },
         )
 
-        # --- نتفيكشن: إشعار بإنشاء المستند ---
+        # =====================================================
+        # 8) نتفيكشن: إشعار بإنشاء المستند
+        # =====================================================
         if user.is_authenticated:
             create_notification(
                 recipient=user,
@@ -316,8 +389,14 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
                 url=reverse("sales:sales_detail", args=[self.object.pk]),
             )
 
+        # =====================================================
+        # 9) رسالة نجاح + redirect
+        # =====================================================
         messages.success(self.request, _("تم إنشاء عرض السعر بنجاح."))
         return redirect(self.get_success_url())
+
+
+
 
     def get_success_url(self):
         """

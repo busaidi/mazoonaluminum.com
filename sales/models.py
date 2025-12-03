@@ -8,6 +8,7 @@ from contacts.models import Contact
 from inventory.models import Product
 
 from core.models.base import BaseModel, TimeStampedModel, UserStampedModel
+from uom.models import UnitOfMeasure
 from .managers import SalesDocumentManager, SalesLineManager, DeliveryNoteManager, DeliveryLineManager
 
 
@@ -243,6 +244,14 @@ class SalesLine(TimeStampedModel, UserStampedModel):
         decimal_places=3,
         default=Decimal("1.000"),
         verbose_name=_("الكمية"),
+    )
+    uom = models.ForeignKey(
+        UnitOfMeasure,
+        on_delete=models.PROTECT,
+        verbose_name=_("وحدة القياس"),
+        help_text=_("الوحدة المستخدمة في هذا السطر (أساسية أو بديلة)."),
+        null=True,
+        blank=True,
     )
 
     unit_price = models.DecimalField(
