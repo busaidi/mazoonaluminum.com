@@ -7,7 +7,8 @@ from django.db import transaction
 from django.db.models import F, Sum, Q
 from django.utils.translation import gettext_lazy as _
 
-from core.services.audit import log_event, AuditLog  # ✅ إضافة سجل التدقيق
+from core.models import AuditLog
+from core.services.audit import log_event
 
 from .models import StockLevel, StockMove
 
@@ -47,6 +48,36 @@ def _build_move_audit_extra(move: StockMove, *, factor: Decimal | None = None) -
 
     if factor is not None:
         extra["factor"] = str(factor)
+
+    return extra
+
+
+def _build_reservation_audit_extra(
+    *,
+    product,
+    warehouse,
+    location,
+    quantity: Decimal,
+    before_available: Decimal | None = None,
+    after_reserved: Decimal | None = None,
+) -> dict:
+    """
+    دكشنري موحّد لمعلومات حجز / فك حجز المخزون،
+    بحيث نظام النتفيكشن يقدر يستخدمه لو حاب.
+    """
+    extra = {
+        "product_id": getattr(product, "pk", None),
+        "product_code": getattr(product, "code", None),
+        "warehouse_id": getattr(warehouse, "pk", None),
+        "warehouse_code": getattr(warehouse, "code", None),
+        "location_id": getattr(location, "pk", None),
+        "quantity": str(quantity),
+    }
+
+    if before_available is not None:
+        extra["available_before"] = str(before_available)
+    if after_reserved is not None:
+        extra["reserved_after"] = str(after_reserved)
 
     return extra
 
@@ -349,7 +380,31 @@ def reserve_stock_for_order(
     level.quantity_reserved = F("quantity_reserved") + quantity
     level.save(update_fields=["quantity_reserved"])
     level.refresh_from_db(fields=["quantity_reserved"])
+
+    # 🔔 سجل تدقيق / نتفيكشن للحجز
+    log_event(
+        action=AuditLog.Action.UPDATE,
+        message=_(
+            "تم حجز كمية %(qty)s من المنتج %(product)s في المستودع %(wh)s."
+        ) % {
+            "qty": quantity,
+            "product": getattr(product, "code", str(product)),
+            "wh": getattr(warehouse, "code", str(warehouse)),
+        },
+        actor=None,
+        target=level,
+        extra=_build_reservation_audit_extra(
+            product=product,
+            warehouse=warehouse,
+            location=location,
+            quantity=quantity,
+            before_available=available,
+            after_reserved=level.quantity_reserved,
+        ),
+    )
+
     return level
+
 
 @transaction.atomic
 def release_stock_reservation(
@@ -393,9 +448,34 @@ def release_stock_reservation(
             params={"reserved": level.quantity_reserved, "requested": quantity},
         )
 
+    before_reserved = level.quantity_reserved or DECIMAL_ZERO
+
     level.quantity_reserved = F("quantity_reserved") - quantity
     level.save(update_fields=["quantity_reserved"])
     level.refresh_from_db(fields=["quantity_reserved"])
+
+    # 🔔 سجل تدقيق / نتفيكشن لفك الحجز
+    log_event(
+        action=AuditLog.Action.UPDATE,
+        message=_(
+            "تم فك حجز كمية %(qty)s من المنتج %(product)s في المستودع %(wh)s."
+        ) % {
+            "qty": quantity,
+            "product": getattr(product, "code", str(product)),
+            "wh": getattr(warehouse, "code", str(warehouse)),
+        },
+        actor=None,
+        target=level,
+        extra=_build_reservation_audit_extra(
+            product=product,
+            warehouse=warehouse,
+            location=location,
+            quantity=quantity,
+            before_available=None,  # هنا الأهم هو الحجز قبل/بعد
+            after_reserved=level.quantity_reserved,
+        ),
+    )
+
     return level
 
 

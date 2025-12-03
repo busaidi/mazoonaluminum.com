@@ -23,8 +23,9 @@ from django.views.generic import (
 
 from inventory.models import Product
 
-from core.models import AuditLog
+from core.models import AuditLog, Notification
 from core.services.audit import log_event
+from core.services.notifications import create_notification
 
 from .forms import SalesDocumentForm, DeliveryNoteForm, SalesLineFormSet
 from .models import SalesDocument, DeliveryNote
@@ -227,6 +228,7 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
     - يضبط created_by / updated_by من المستخدم الحالي.
     - يعيد احتساب الإجماليات بعد حفظ البنود.
     - يسجل عملية الأوديت لإنشاء المستند.
+    - ينشئ إشعار (Notification) للمستخدم الحالي.
     """
     model = SalesDocument
     form_class = SalesDocumentForm
@@ -255,6 +257,7 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
         - حفظ الهيدر ثم البنود.
         - إعادة احتساب الإجماليات.
         - تسجيل الأوديت على الإنشاء.
+        - إنشاء إشعار للمستخدم الحالي برقم المستند.
         """
         context = self.get_context_data()
         lines_formset = context["lines_formset"]
@@ -301,6 +304,18 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
             },
         )
 
+        # --- نتفيكشن: إشعار بإنشاء المستند ---
+        if user.is_authenticated:
+            create_notification(
+                recipient=user,
+                verb=_("تم إنشاء مستند المبيعات %(number)s") % {
+                    "number": self.object.display_number
+                },
+                target=self.object,
+                level=Notification.Levels.SUCCESS,
+                url=reverse("sales:sales_detail", args=[self.object.pk]),
+            )
+
         messages.success(self.request, _("تم إنشاء عرض السعر بنجاح."))
         return redirect(self.get_success_url())
 
@@ -344,9 +359,6 @@ class SalesDocumentDetailView(SalesBaseView, DetailView):
           رابط صفحة سجل التدقيق لهذا المستند فقط، مع فلترة:
           target_model = "sales.SalesDocument"
           target_id    = document.pk
-
-        يمكن استخدامه في القالب لعرض زر:
-        {{ audit_log_url }}
         """
         ctx = super().get_context_data(**kwargs)
         document: SalesDocument = ctx["document"]
@@ -369,6 +381,7 @@ class SalesDocumentUpdateView(SalesBaseView, UpdateView):
     - ضبط updated_by بالمستخدم الحالي.
     - إعادة احتساب الإجماليات بعد الحفظ.
     - تسجيل الأوديت على التعديل مع حفظ القيم القديمة والجديدة.
+    - إنشاء إشعار بتحديث المستند.
     """
     model = SalesDocument
     form_class = SalesDocumentForm
@@ -404,9 +417,10 @@ class SalesDocumentUpdateView(SalesBaseView, UpdateView):
         - حفظ قيم قديمة (kind/status/total_amount) للأوديت.
         - ضبط updated_by.
         - حفظ الهيدر.
-        - حفظ البنود.
+        - حفظ البنود المرتبطة.
         - إعادة احتساب الإجماليات.
         - تسجيل الأوديت كتعديل.
+        - إنشاء إشعار بتحديث المستند.
         """
         context = self.get_context_data()
         lines_formset = context["lines_formset"]
@@ -452,6 +466,18 @@ class SalesDocumentUpdateView(SalesBaseView, UpdateView):
             },
         )
 
+        # --- نتفيكشن: إشعار بتعديل المستند ---
+        if user.is_authenticated:
+            create_notification(
+                recipient=user,
+                verb=_("تم تحديث مستند المبيعات %(number)s") % {
+                    "number": self.object.display_number
+                },
+                target=self.object,
+                level=Notification.Levels.INFO,
+                url=reverse("sales:sales_detail", args=[self.object.pk]),
+            )
+
         messages.success(self.request, _("تم تحديث المستند بنجاح."))
         return redirect(self.get_success_url())
 
@@ -469,7 +495,12 @@ class ConvertQuotationToOrderView(SalesBaseView, View):
     """
     فيو بسيط ينفّذ عملية تحويل عرض السعر إلى أمر بيع
     عبر service: confirm_quotation_to_order
-    (والـ service بدوره يسجل الأوديت).
+    (والـ service بدوره يتكفّل بالمنطق والأوديت).
+
+    هنا نركّز فقط على:
+    - استدعاء الـ service.
+    - عرض الرسائل للمستخدم.
+    - إنشاء إشعار بنجاح التحويل.
     """
     sales_section = "sales_detail"
 
@@ -481,6 +512,18 @@ class ConvertQuotationToOrderView(SalesBaseView, View):
         except Exception as e:
             messages.error(request, str(e))
             return redirect(document.get_absolute_url())
+
+        # نتفيكشن بسيط للمستخدم الحالي
+        if request.user.is_authenticated:
+            create_notification(
+                recipient=request.user,
+                verb=_("تم تحويل عرض السعر %(number)s إلى أمر بيع") % {
+                    "number": document.display_number
+                },
+                target=document,
+                level=Notification.Levels.SUCCESS,
+                url=document.get_absolute_url(),
+            )
 
         messages.success(request, _("تم تحويل عرض السعر إلى أمر بيع بنجاح."))
         return redirect(document.get_absolute_url())
@@ -494,6 +537,8 @@ class MarkOrderInvoicedView(SalesBaseView, View):
     فيو مسؤول عن تعليم أمر البيع كمفوتر
     عبر service: mark_order_invoiced
     (والـ service يسجل الأوديت).
+
+    هنا نضيف إشعار بسيط للمستخدم عند النجاح.
     """
     sales_section = "sales_detail"
 
@@ -505,6 +550,17 @@ class MarkOrderInvoicedView(SalesBaseView, View):
         except Exception as e:
             messages.error(request, str(e))
             return redirect(order.get_absolute_url())
+
+        if request.user.is_authenticated:
+            create_notification(
+                recipient=request.user,
+                verb=_("تم تعليم أمر البيع %(number)s كمفوتر") % {
+                    "number": order.display_number
+                },
+                target=order,
+                level=Notification.Levels.INFO,
+                url=order.get_absolute_url(),
+            )
 
         messages.success(request, _("تم تعليم أمر البيع كمفوتر."))
         return redirect(order.get_absolute_url())
@@ -519,6 +575,7 @@ class DeliveryNoteCreateView(SalesBaseView, CreateView):
     - يتم جلب أمر البيع من الـ URL (order_pk).
     - يتم ضبط created_by / updated_by بالمستخدم الحالي.
     - يتم تسجيل الأوديت عند إنشاء المذكرة.
+    - يتم إنشاء إشعار للمستخدم الحالي.
     """
     model = DeliveryNote
     form_class = DeliveryNoteForm
@@ -542,6 +599,7 @@ class DeliveryNoteCreateView(SalesBaseView, CreateView):
         - تثبيت الحالة كمسودة.
         - ضبط created_by / updated_by.
         - تسجيل الأوديت بعد الحفظ.
+        - إنشاء إشعار للمستخدم.
         """
         form.instance.order = self.order
         form.instance.status = DeliveryNote.Status.DRAFT
@@ -573,6 +631,19 @@ class DeliveryNoteCreateView(SalesBaseView, CreateView):
                 "date": str(self.object.date),
             },
         )
+
+        # --- نتفيكشن: إشعار بإنشاء مذكرة التسليم ---
+        if user.is_authenticated:
+            create_notification(
+                recipient=user,
+                verb=_("تم إنشاء مذكرة التسليم %(dn)s لأمر البيع %(order)s") % {
+                    "dn": self.object.display_number,
+                    "order": self.order.display_number,
+                },
+                target=self.object,
+                level=Notification.Levels.SUCCESS,
+                url=reverse("sales:delivery_note_detail", args=[self.object.pk]),
+            )
 
         messages.success(self.request, _("تم إنشاء مذكرة التسليم بنجاح."))
         return response
@@ -642,6 +713,11 @@ class CancelSalesDocumentView(SalesBaseView, View):
     """
     إلغاء مستند مبيعات باستخدام service: cancel_sales_document
     (والـ service يسجل الأوديت).
+
+    هنا نقوم فقط:
+    - باستدعاء الـ service.
+    - عرض الرسائل.
+    - إنشاء إشعار بإلغاء المستند.
     """
     sales_section = "sales_detail"
 
@@ -654,6 +730,17 @@ class CancelSalesDocumentView(SalesBaseView, View):
             messages.error(request, str(e))
             return redirect(document.get_absolute_url())
 
+        if request.user.is_authenticated:
+            create_notification(
+                recipient=request.user,
+                verb=_("تم إلغاء مستند المبيعات %(number)s") % {
+                    "number": document.display_number
+                },
+                target=document,
+                level=Notification.Levels.WARNING,
+                url=document.get_absolute_url(),
+            )
+
         messages.success(request, _("تم إلغاء المستند بنجاح."))
         return redirect(document.get_absolute_url())
 
@@ -663,6 +750,8 @@ class ResetSalesDocumentToDraftView(SalesBaseView, View):
     إعادة مستند المبيعات إلى حالة المسودة
     باستخدام service: reset_sales_document_to_draft
     (والأوديت يتم من داخل الـ service).
+
+    هنا نضيف فقط إشعار عند النجاح.
     """
     sales_section = "sales_detail"
 
@@ -675,6 +764,17 @@ class ResetSalesDocumentToDraftView(SalesBaseView, View):
             messages.error(request, str(e))
             return redirect(document.get_absolute_url())
 
+        if request.user.is_authenticated:
+            create_notification(
+                recipient=request.user,
+                verb=_("تمت إعادة مستند المبيعات %(number)s إلى حالة المسودة") % {
+                    "number": document.display_number
+                },
+                target=document,
+                level=Notification.Levels.INFO,
+                url=document.get_absolute_url(),
+            )
+
         messages.success(request, _("تمت إعادة المستند إلى حالة المسودة بنجاح."))
         return redirect(document.get_absolute_url())
 
@@ -686,6 +786,8 @@ def sales_reopen_view(request, pk):
     إلى حالة المسودة كعرض سعر
     باستخدام service: reopen_cancelled_sales_document
     (والـ service يسجل الأوديت).
+
+    هنا نضيف إشعار بسيط لإعادة الفتح.
     """
     document = get_object_or_404(SalesDocument, pk=pk)
 
@@ -699,6 +801,17 @@ def sales_reopen_view(request, pk):
             request,
             _("تمت إعادة فتح المستند وإرجاعه إلى حالة المسودة (عرض سعر)."),
         )
+
+        create_notification(
+            recipient=request.user,
+            verb=_("تمت إعادة فتح مستند المبيعات %(number)s كعرض سعر") % {
+                "number": document.display_number
+            },
+            target=document,
+            level=Notification.Levels.SUCCESS,
+            url=document.get_absolute_url(),
+        )
+
     except ValidationError as e:
         messages.error(request, " ".join(e.messages))
     except Exception:

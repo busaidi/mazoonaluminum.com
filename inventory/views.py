@@ -1,8 +1,10 @@
 # inventory/views.py
 
 from decimal import Decimal
+from urllib.parse import urlencode
 
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Sum, Q, F, Case, When, IntegerField
 from django.http import HttpResponseRedirect
@@ -16,8 +18,9 @@ from django.views.generic import (
     UpdateView,
 )
 
-from core.models import AuditLog
+from core.models import AuditLog, Notification
 from core.services.audit import log_event
+from core.services.notifications import create_notification
 from .forms import (
     StockMoveForm,
     ProductForm,
@@ -44,6 +47,47 @@ from .services import (
     filter_products_queryset,
 )
 
+User = get_user_model()
+
+
+# ============================================================
+# هيلبر مشترك للنوتفيكيشن في قسم المخزون
+# ============================================================
+
+def _notify_inventory_staff(
+    *,
+    actor,
+    verb: str,
+    target,
+    level: str = Notification.Levels.INFO,
+    url: str | None = None,
+) -> None:
+    """
+    إرسال نوتفيكيشن لكل مستخدم ستاف في قسم النظام (ما عدا الفاعل نفسه):
+
+    - actor: المستخدم الذي قام بالعملية (قد يكون None).
+    - verb: النص الظاهر في النوتفيكيشن (قصير وواضح).
+    - target: الكائن المرتبط (Product, StockMove, InventorySettings, ...).
+    - level: مستوى النوتفيكيشن (info / success / warning / error).
+    - url: رابط داخلي (نمرّر نتيجة reverse مباشرة).
+    """
+    qs = User.objects.filter(is_active=True, is_staff=True)
+
+    # استثناء الفاعل من قائمة المستلمين (حتى لا يستلم تنبيه لنفسه)
+    if actor is not None and getattr(actor, "is_authenticated", False):
+        qs = qs.exclude(pk=actor.pk)
+
+    url = url or ""
+
+    for recipient in qs:
+        create_notification(
+            recipient=recipient,
+            verb=verb,
+            target=target,
+            level=level,
+            url=url,
+        )
+
 
 # ============================================================
 # مكسين الصلاحيات للمخزون
@@ -52,11 +96,14 @@ from .services import (
 class InventoryStaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     """
     مكسين يقيّد شاشات المخزون على المستخدمين الستاف فقط.
-    يمكن لاحقاً استبداله بمكسين مشترك من core.
+
+    - يتأكد أن المستخدم مسجّل دخول (LoginRequiredMixin).
+    - يتأكد أن المستخدم is_staff (UserPassesTestMixin).
+    - يضبط section = "inventory" لاستخدامه في الـ layout / الـ navbar.
     """
 
     raise_exception = True  # يرجّع 403 بدل دوّامة إعادة التوجيه
-    section = "inventory"   # لاستخدامه في الـ layout / الـ navbar
+    section = "inventory"
 
     def test_func(self):
         user = self.request.user
@@ -69,7 +116,13 @@ class InventoryStaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
 
 class InventoryDashboardView(InventoryStaffRequiredMixin, TemplateView):
     """
-    لوحة تحكم بسيطة فيها مؤشرات عامة للمخزون.
+    لوحة تحكم المخزون:
+
+    - إحصائيات عامة عن المنتجات والتصنيفات والمستودعات.
+    - عدد حركات المخزون (كلها والمنفّذة).
+    - آخر 10 حركات مخزون مع بنودها.
+    - ملخص رصيد المخزون لكل مستودع.
+    - قائمة بالمستويات تحت الحد الأدنى.
     """
     template_name = "inventory/dashboard.html"
 
@@ -130,6 +183,9 @@ class InventoryDashboardView(InventoryStaffRequiredMixin, TemplateView):
 # ============================================================
 
 class ProductCategoryListView(InventoryStaffRequiredMixin, ListView):
+    """
+    قائمة تصنيفات المنتجات مع دعم البحث النصي.
+    """
     model = ProductCategory
     template_name = "inventory/category/list.html"
     context_object_name = "categories"
@@ -154,6 +210,9 @@ class ProductCategoryListView(InventoryStaffRequiredMixin, ListView):
 
 
 class ProductCategoryCreateView(InventoryStaffRequiredMixin, CreateView):
+    """
+    إنشاء تصنيف جديد للمنتجات.
+    """
     model = ProductCategory
     form_class = ProductCategoryForm
     template_name = "inventory/category/form.html"
@@ -171,6 +230,9 @@ class ProductCategoryCreateView(InventoryStaffRequiredMixin, CreateView):
 
 
 class ProductCategoryUpdateView(InventoryStaffRequiredMixin, UpdateView):
+    """
+    تعديل تصنيف المنتجات.
+    """
     model = ProductCategory
     form_class = ProductCategoryForm
     template_name = "inventory/category/form.html"
@@ -192,6 +254,9 @@ class ProductCategoryUpdateView(InventoryStaffRequiredMixin, UpdateView):
 # ============================================================
 
 class ProductListView(InventoryStaffRequiredMixin, ListView):
+    """
+    قائمة المنتجات مع فلاتر وملخص بسيط للمخزون لكل منتج.
+    """
     model = Product
     template_name = "inventory/product/list.html"
     context_object_name = "products"
@@ -200,10 +265,11 @@ class ProductListView(InventoryStaffRequiredMixin, ListView):
     def get_queryset(self):
         """
         قائمة المنتجات مع:
-        - علاقات التصنيف لأجل الأداء (select_related)
-        - تلخيص رصيد المخزون لكل منتج في حقول:
-            total_on_hand_agg
-            has_low_stock_anywhere_agg
+
+        - select_related للتصنيف لأجل الأداء.
+        - annotate لاحتساب:
+            total_on_hand_agg: إجمالي الكمية على كل المواقع.
+            has_low_stock_anywhere_agg: عدد المواقع تحت الحد الأدنى.
         - فلاتر:
             q, category, product_type, only_published
         """
@@ -275,10 +341,13 @@ class ProductListView(InventoryStaffRequiredMixin, ListView):
         return ctx
 
 
-
-
-
 class ProductDetailView(InventoryStaffRequiredMixin, DetailView):
+    """
+    عرض تفاصيل المنتج:
+    - بيانات المنتج الأساسية.
+    - Snapshot لرصيد المخزون على مستوى المستودع/الموقع.
+    - رابط سريع لسجل التدقيق (AuditLog) لهذا المنتج فقط.
+    """
     model = Product
     template_name = "inventory/product/detail.html"
     context_object_name = "product"
@@ -299,13 +368,29 @@ class ProductDetailView(InventoryStaffRequiredMixin, DetailView):
             total=Sum("quantity_on_hand")
         )["total"] or Decimal("0")
 
+        # رابط سجل الأوديت لهذا المنتج
+        query = urlencode({
+            "target_model": "inventory.Product",
+            "target_id": product.pk,
+        })
+        audit_log_url = reverse("core:audit_log_list") + f"?{query}"
+
         ctx["stock_levels"] = stock_levels
         ctx["total_on_hand"] = total_on_hand
+        ctx["audit_log_url"] = audit_log_url
         ctx["subsection"] = "products"
         return ctx
 
 
 class ProductCreateView(InventoryStaffRequiredMixin, CreateView):
+    """
+    إنشاء منتج جديد:
+
+    - يضبط created_by / updated_by بالمستخدم الحالي (إن وُجد).
+    - يعرض رسالة نجاح.
+    - يسجّل حدث في سجل التدقيق (AuditLog).
+    - يرسل نوتفيكيشن لباقي مستخدمي الستاف في المخزون.
+    """
     model = Product
     form_class = ProductForm
     template_name = "inventory/product/form.html"
@@ -325,7 +410,7 @@ class ProductCreateView(InventoryStaffRequiredMixin, CreateView):
 
         messages.success(self.request, _("تم إنشاء المنتج بنجاح."))
 
-        # تسجيل في سجل التدقيق
+        # --- الأوديت: إنشاء منتج ---
         log_event(
             action=AuditLog.Action.CREATE,
             message=_("تم إنشاء المنتج %(code)s") % {
@@ -344,11 +429,23 @@ class ProductCreateView(InventoryStaffRequiredMixin, CreateView):
             },
         )
 
+        # --- النوتفيكيشن: إنشاء منتج جديد ---
+        product_url = reverse("inventory:product_detail", args=[self.object.pk])
+        _notify_inventory_staff(
+            actor=user,
+            verb=_("تم إنشاء المنتج %(code)s") % {"code": self.object.code},
+            target=self.object,
+            level=Notification.Levels.INFO,
+            url=product_url,
+        )
+
         return response
 
     def get_initial(self):
+        """
+        قيم افتراضية بسيطة للمنتج الجديد.
+        """
         initial = super().get_initial()
-        # قيم افتراضية بسيطة
         initial.setdefault("is_stock_item", True)
         initial.setdefault("is_active", True)
         return initial
@@ -360,8 +457,14 @@ class ProductCreateView(InventoryStaffRequiredMixin, CreateView):
         return ctx
 
 
-
 class ProductUpdateView(InventoryStaffRequiredMixin, UpdateView):
+    """
+    تعديل بيانات المنتج:
+
+    - يحدّث updated_by بالمستخدم الحالي.
+    - يسجّل حدث في سجل التدقيق (AuditLog).
+    - يرسل نوتفيكيشن لباقي مستخدمي الستاف.
+    """
     model = Product
     form_class = ProductForm
     template_name = "inventory/product/form.html"
@@ -378,6 +481,7 @@ class ProductUpdateView(InventoryStaffRequiredMixin, UpdateView):
 
         messages.success(self.request, _("تم تحديث بيانات المنتج بنجاح."))
 
+        # --- الأوديت: تحديث منتج ---
         log_event(
             action=AuditLog.Action.UPDATE,
             message=_("تم تحديث بيانات المنتج %(code)s") % {
@@ -396,6 +500,16 @@ class ProductUpdateView(InventoryStaffRequiredMixin, UpdateView):
             },
         )
 
+        # --- النوتفيكيشن: تحديث منتج ---
+        product_url = reverse("inventory:product_detail", args=[self.object.pk])
+        _notify_inventory_staff(
+            actor=user,
+            verb=_("تم تحديث بيانات المنتج %(code)s") % {"code": self.object.code},
+            target=self.object,
+            level=Notification.Levels.INFO,
+            url=product_url,
+        )
+
         return response
 
     def get_context_data(self, **kwargs):
@@ -405,12 +519,14 @@ class ProductUpdateView(InventoryStaffRequiredMixin, UpdateView):
         return ctx
 
 
-
 # ============================================================
 # المستودعات
 # ============================================================
 
 class WarehouseListView(InventoryStaffRequiredMixin, ListView):
+    """
+    قائمة المستودعات مع بحث نصي.
+    """
     model = Warehouse
     template_name = "inventory/warehouse/list.html"
     context_object_name = "warehouses"
@@ -435,6 +551,9 @@ class WarehouseListView(InventoryStaffRequiredMixin, ListView):
 
 
 class WarehouseCreateView(InventoryStaffRequiredMixin, CreateView):
+    """
+    إنشاء مستودع جديد.
+    """
     model = Warehouse
     fields = ["code", "name", "description", "is_active"]
     template_name = "inventory/warehouse/form.html"
@@ -452,6 +571,9 @@ class WarehouseCreateView(InventoryStaffRequiredMixin, CreateView):
 
 
 class WarehouseUpdateView(InventoryStaffRequiredMixin, UpdateView):
+    """
+    تعديل بيانات المستودع.
+    """
     model = Warehouse
     fields = ["code", "name", "description", "is_active"]
     template_name = "inventory/warehouse/form.html"
@@ -473,6 +595,9 @@ class WarehouseUpdateView(InventoryStaffRequiredMixin, UpdateView):
 # ============================================================
 
 class StockLocationListView(InventoryStaffRequiredMixin, ListView):
+    """
+    قائمة مواقع المخزون داخل المستودعات.
+    """
     model = StockLocation
     template_name = "inventory/location/list.html"
     context_object_name = "locations"
@@ -512,6 +637,9 @@ class StockLocationListView(InventoryStaffRequiredMixin, ListView):
 
 
 class StockLocationCreateView(InventoryStaffRequiredMixin, CreateView):
+    """
+    إنشاء موقع جديد داخل مستودع.
+    """
     model = StockLocation
     fields = ["warehouse", "code", "name", "type", "is_active"]
     template_name = "inventory/location/form.html"
@@ -529,6 +657,9 @@ class StockLocationCreateView(InventoryStaffRequiredMixin, CreateView):
 
 
 class StockLocationUpdateView(InventoryStaffRequiredMixin, UpdateView):
+    """
+    تعديل موقع المخزون.
+    """
     model = StockLocation
     fields = ["warehouse", "code", "name", "type", "is_active"]
     template_name = "inventory/location/form.html"
@@ -550,6 +681,9 @@ class StockLocationUpdateView(InventoryStaffRequiredMixin, UpdateView):
 # ============================================================
 
 class StockMoveListView(InventoryStaffRequiredMixin, ListView):
+    """
+    قائمة حركات المخزون مع فلاتر حسب النوع والحالة والبحث النصي.
+    """
     model = StockMove
     template_name = "inventory/stockmove/list.html"
     context_object_name = "moves"
@@ -597,6 +731,12 @@ class StockMoveListView(InventoryStaffRequiredMixin, ListView):
 
 
 class StockMoveDetailView(InventoryStaffRequiredMixin, DetailView):
+    """
+    عرض تفاصيل حركة المخزون:
+    - بيانات الحركة (من/إلى مستودع/موقع).
+    - بنود الحركة (المنتجات والكميات).
+    - رابط لسجل الأوديت لهذه الحركة فقط.
+    """
     model = StockMove
     template_name = "inventory/stockmove/detail.html"
     context_object_name = "stockmove"
@@ -604,12 +744,30 @@ class StockMoveDetailView(InventoryStaffRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         move = self.object
+
         ctx["lines"] = move.lines.select_related("product", "uom").all()
+
+        # رابط سجل الأوديت لهذه الحركة
+        query = urlencode({
+            "target_model": "inventory.StockMove",
+            "target_id": move.pk,
+        })
+        ctx["audit_log_url"] = reverse("core:audit_log_list") + f"?{query}"
+
         ctx["subsection"] = "moves"
         return ctx
 
 
 class StockMoveCreateView(InventoryStaffRequiredMixin, CreateView):
+    """
+    إنشاء حركة مخزون جديدة:
+
+    - تعبئة created_by / updated_by من المستخدم الحالي.
+    - إنشاء وحفظ البنود عبر formset.
+    - عرض رسالة نجاح للمستخدم.
+    - تسجيل حدث في سجل التدقيق (AuditLog).
+    - إرسال نوتفيكيشن لباقي مستخدمي الستاف.
+    """
     model = StockMove
     form_class = StockMoveForm
     template_name = "inventory/stockmove/form.html"
@@ -638,9 +796,13 @@ class StockMoveCreateView(InventoryStaffRequiredMixin, CreateView):
         return initial
 
     def get_context_data(self, **kwargs):
+        """
+        تجهيز الـ inline formset للبنود:
+        - في حالة POST نستخدم البيانات القادمة من الفورم.
+        - في حالة GET نهيئ initial (مثل تعبئة المنتج لو جاي من شاشة المنتج).
+        """
         ctx = super().get_context_data(**kwargs)
 
-        # inline formset للبنود
         if self.request.POST:
             line_formset = StockMoveLineFormSet(
                 self.request.POST,
@@ -666,6 +828,14 @@ class StockMoveCreateView(InventoryStaffRequiredMixin, CreateView):
         return ctx
 
     def form_valid(self, form):
+        """
+        منطق الحفظ عند إنشاء حركة المخزون:
+        - التحقق من صلاحية formset البنود.
+        - تعبئة created_by / updated_by.
+        - حفظ رأس الحركة ثم البنود.
+        - تسجيل الأوديت.
+        - إرسال نوتفيكيشن.
+        """
         context = self.get_context_data()
         line_formset = context["line_formset"]
 
@@ -691,7 +861,7 @@ class StockMoveCreateView(InventoryStaffRequiredMixin, CreateView):
 
         messages.success(self.request, _("تم إنشاء حركة المخزون بنجاح."))
 
-        # سجل التدقيق
+        # --- الأوديت: إنشاء حركة مخزون ---
         log_event(
             action=AuditLog.Action.CREATE,
             message=_("تم إنشاء حركة مخزون رقم %(id)s") % {
@@ -710,11 +880,29 @@ class StockMoveCreateView(InventoryStaffRequiredMixin, CreateView):
             },
         )
 
+        # --- النوتفيكيشن: حركة مخزون جديدة ---
+        move_url = reverse("inventory:move_detail", args=[self.object.pk])
+        _notify_inventory_staff(
+            actor=user,
+            verb=_("تم إنشاء حركة مخزون جديدة رقم %(id)s") % {"id": self.object.pk},
+            target=self.object,
+            level=Notification.Levels.INFO,
+            url=move_url,
+        )
+
         return HttpResponseRedirect(self.get_success_url())
 
 
-
 class StockMoveUpdateView(InventoryStaffRequiredMixin, UpdateView):
+    """
+    تعديل حركة المخزون:
+
+    - تعديل رأس الحركة (التواريخ، النوع، المستودعات..).
+    - تعديل البنود عبر formset.
+    - تحديث updated_by.
+    - تسجيل حدث في سجل الأوديت.
+    - إرسال نوتفيكيشن لباقي الستاف.
+    """
     model = StockMove
     form_class = StockMoveForm
     template_name = "inventory/stockmove/form.html"
@@ -733,6 +921,14 @@ class StockMoveUpdateView(InventoryStaffRequiredMixin, UpdateView):
         return ctx
 
     def form_valid(self, form):
+        """
+        منطق التحديث:
+        - التحقق من formset.
+        - تحديث updated_by.
+        - حفظ الرأس والبنود.
+        - تسجيل حدث الأوديت.
+        - إرسال نوتفيكيشن.
+        """
         context = self.get_context_data()
         line_formset = context["line_formset"]
 
@@ -751,6 +947,7 @@ class StockMoveUpdateView(InventoryStaffRequiredMixin, UpdateView):
 
         messages.success(self.request, _("تم تحديث حركة المخزون بنجاح."))
 
+        # --- الأوديت: تحديث حركة مخزون ---
         log_event(
             action=AuditLog.Action.UPDATE,
             message=_("تم تحديث حركة المخزون رقم %(id)s") % {
@@ -769,6 +966,16 @@ class StockMoveUpdateView(InventoryStaffRequiredMixin, UpdateView):
             },
         )
 
+        # --- النوتفيكيشن: تحديث حركة مخزون ---
+        move_url = reverse("inventory:move_detail", args=[self.object.pk])
+        _notify_inventory_staff(
+            actor=user,
+            verb=_("تم تحديث حركة المخزون رقم %(id)s") % {"id": self.object.pk},
+            target=self.object,
+            level=Notification.Levels.INFO,
+            url=move_url,
+        )
+
         return HttpResponseRedirect(self.get_success_url())
 
 
@@ -777,6 +984,10 @@ class StockMoveUpdateView(InventoryStaffRequiredMixin, UpdateView):
 # ============================================================
 
 class StockLevelListView(InventoryStaffRequiredMixin, ListView):
+    """
+    قائمة مستويات المخزون (Product + Warehouse + Location)
+    مع فلاتر بحث ومستودع وتحت الحد الأدنى.
+    """
     model = StockLevel
     template_name = "inventory/stocklevel/list.html"
     context_object_name = "stock_levels"
@@ -827,12 +1038,23 @@ class StockLevelListView(InventoryStaffRequiredMixin, ListView):
 
 
 class StockLevelDetailView(InventoryStaffRequiredMixin, DetailView):
+    """
+    عرض تفاصيل مستوى مخزون محدّد.
+    """
     model = StockLevel
     template_name = "inventory/stocklevel/detail.html"
     context_object_name = "object"
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["subsection"] = "stock_levels"
+        return ctx
+
 
 class StockLevelCreateView(InventoryStaffRequiredMixin, CreateView):
+    """
+    إنشاء مستوى مخزون جديد (Product + Warehouse + Location).
+    """
     model = StockLevel
     form_class = StockLevelForm
     template_name = "inventory/stocklevel/form.html"
@@ -864,8 +1086,17 @@ class StockLevelCreateView(InventoryStaffRequiredMixin, CreateView):
 
         return initial
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["subsection"] = "stock_levels"
+        ctx["mode"] = "create"
+        return ctx
+
 
 class StockLevelUpdateView(InventoryStaffRequiredMixin, UpdateView):
+    """
+    تعديل مستوى المخزون.
+    """
     model = StockLevel
     form_class = StockLevelForm
     template_name = "inventory/stocklevel/form.html"
@@ -877,26 +1108,48 @@ class StockLevelUpdateView(InventoryStaffRequiredMixin, UpdateView):
         messages.success(self.request, _("تم تحديث مستوى المخزون بنجاح."))
         return super().form_valid(form)
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["subsection"] = "stock_levels"
+        ctx["mode"] = "update"
+        return ctx
+
 
 # ============================================================
 # إعدادات المخزون
 # ============================================================
 
 class InventorySettingsView(InventoryStaffRequiredMixin, UpdateView):
+    """
+    شاشة إعدادات المخزون (نمط django-solo):
+
+    - نموذج واحد فقط من InventorySettings.
+    - مناسب لتعريف إعدادات عامة (مستودع افتراضي، سياسات، ...).
+    - عند تغيير الإعدادات يتم إشعار مستخدمي الستاف.
+    """
     model = InventorySettings
     form_class = InventorySettingsForm
     template_name = "inventory/settings/form.html"
     success_url = reverse_lazy("inventory:settings")
 
     def get_object(self, queryset=None):
-        # نمط django-solo
+        # نمط django-solo: يرجع سجل واحد فقط
         return InventorySettings.get_solo()
 
     def form_valid(self, form):
+        user = self.request.user
         messages.success(self.request, _("تم حفظ إعدادات المخزون بنجاح."))
-        return super().form_valid(form)
 
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx["subsection"] = "settings"
-        return ctx
+        response = super().form_valid(form)
+
+        # --- النوتفيكيشن: تحديث إعدادات المخزون ---
+        settings_url = reverse("inventory:settings")
+        _notify_inventory_staff(
+            actor=user,
+            verb=_("تم تحديث إعدادات المخزون."),
+            target=self.object,
+            level=Notification.Levels.INFO,
+            url=settings_url,
+        )
+
+        return response

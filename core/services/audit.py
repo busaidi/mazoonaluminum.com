@@ -1,7 +1,8 @@
 # core/services/audit.py
+
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Mapping, Optional
 
 from django.contrib.contenttypes.models import ContentType
 
@@ -10,50 +11,80 @@ from core.models import AuditLog
 
 def log_event(
     *,
-    action: str,
+    action: str | AuditLog.Action,
     message: str = "",
-    actor=None,
+    actor: Any = None,
     target: Optional[Any] = None,
-    extra: Optional[dict] = None,
+    extra: Optional[Mapping[str, Any]] = None,
 ) -> AuditLog:
     """
-    تسجيل حدث تدقيق (Audit Log).
+    Create a single audit log entry.
 
-    المعاملات:
-    - action: نوع العملية (مثل: CREATE / UPDATE / DELETE / STATUS_CHANGE ...)
-    - message: وصف نصي قابل للقراءة البشرية (يمكن أن يكون بالعربية)
-    - actor: المستخدم الذي قام بالعملية، أو None إذا لم يكن هناك مستخدم
-    - target: أي كائن (Model Instance) ليتم ربط هذا الحدث به
-    - extra: بيانات إضافية اختيارية يتم حفظها ضمن JSON
+    Parameters
+    ----------
+    action:
+        The action code to store. Prefer using AuditLog.Action.* enums, e.g.:
+        - AuditLog.Action.CREATE
+        - AuditLog.Action.UPDATE
+        - AuditLog.Action.DELETE
+        - AuditLog.Action.STATUS_CHANGE
+        - AuditLog.Action.NOTIFICATION
+        - AuditLog.Action.OTHER
 
-    الوظائف:
-    - يحفظ اسم العملية والوصف.
-    - يسجل المستخدم (actor) إذا كان مسجلاً للدخول.
-    - يربط الحدث بكائن الهدف (target) باستخدام GenericForeignKey:
-        * target_content_type
-        * target_object_id
-    - يخزن البيانات الإضافية داخل extra كـ JSON.
+    message:
+        Human-readable description of what happened (Arabic or English).
+
+    actor:
+        The user who performed the action, or None if not applicable.
+        Only stored if user.is_authenticated is True.
+
+    target:
+        Optional model instance that this event relates to
+        (SalesDocument, Invoice, Payment, etc.). It will be stored via
+        GenericForeignKey (target_content_type + target_object_id).
+
+    extra:
+        Optional mapping of additional structured data (will be stored as JSON).
+
+    Returns
+    -------
+    AuditLog
+        The created AuditLog instance.
     """
 
+    # -------- Normalize and validate action --------
+    if isinstance(action, AuditLog.Action):
+        action_value = action.value
+    else:
+        action_value = str(action)
+
+    valid_actions = {choice[0] for choice in AuditLog.Action.choices}
+    if action_value not in valid_actions:
+        raise ValueError(
+            f"Invalid audit action '{action_value}'. "
+            f"Allowed values: {sorted(valid_actions)}"
+        )
+
     data: dict[str, Any] = {
-        "action": action,
+        "action": action_value,
         "message": message or "",
-        "extra": extra or {},
+        # Copy extra to avoid mutating external dict
+        "extra": dict(extra) if extra is not None else {},
     }
 
-    # --- تسجيل المستخدم (actor) ---
+    # -------- Actor --------
     if actor is not None and getattr(actor, "is_authenticated", False):
         data["actor"] = actor
 
-    # --- ربط الحدث بهدف معين (target model instance) ---
+    # -------- Target object (via GenericForeignKey) --------
     if target is not None:
-        # ContentType للكلاس الحقيقي للكائن (حتى مع الوراثة)
-        ct = ContentType.objects.get_for_model(target)
+        # Use real model class (handles inheritance/proxy models correctly)
+        ct = ContentType.objects.get_for_model(target, for_concrete_model=True)
 
         obj_id = getattr(target, "pk", None) or getattr(target, "id", None)
         if obj_id is not None:
             data["target_content_type"] = ct
             data["target_object_id"] = str(obj_id)
 
-    # إنشاء سجل الأوديت فعليًا
+    # -------- Create the audit log entry --------
     return AuditLog.objects.create(**data)

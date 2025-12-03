@@ -1,5 +1,7 @@
 # sales/services.py
 
+from __future__ import annotations
+
 from django.utils import timezone
 from django.db import transaction
 from django.core.exceptions import ValidationError
@@ -20,11 +22,15 @@ def create_quotation(contact, date=None, user=None, **kwargs) -> SalesDocument:
     """
     إنشاء عرض سعر بسيط في حالة المسودة.
 
+    المسؤوليات:
     - يضبط kind = QUOTATION
     - يضبط status = DRAFT
-    - في حال تمرير user:
-        يتم ضبط created_by / updated_by = user
-    - يسجل عملية التدقيق (Audit) عند الإنشاء.
+    - يضبط created_by / updated_by (إن تم تمرير user)
+    - يسجل عملية التدقيق (Audit Log) عند الإنشاء
+
+    ملاحظة:
+    - الإشعارات (Notifications) تتم حالياً من الفيوهات وليس من هنا،
+      لأن المستفيد غالباً هو المستخدم الحالي (request.user).
     """
     if date is None:
         date = timezone.localdate()
@@ -68,14 +74,18 @@ def confirm_quotation_to_order(document: SalesDocument, user=None) -> SalesDocum
     تحويل عرض سعر قائم إلى أمر بيع دون إنشاء سجل جديد.
 
     القواعد:
-    - يجب أن يكون المستند من نوع عرض سعر.
-    - يجب ألا يكون المستند ملغياً.
-    - يجب ألا يكون المستند محذوفاً (soft delete).
-    - يجب ألا يكون المستند مفوترًا.
+    - يجب أن يكون المستند من نوع عرض سعر (quotation).
+    - يجب ألا يكون المستند ملغياً (cancelled).
+    - يجب ألا يكون المستند محذوفاً soft delete.
+    - يجب ألا يكون المستند مفوترًا (is_invoiced=False).
     - يتم تحويل النوع إلى ORDER.
     - يتم تحويل الحالة إلى CONFIRMED.
     - يتم تحديث updated_by إذا تم تمرير user.
     - يتم تسجيل عملية الأوديت لتغيير النوع والحالة.
+
+    ملاحظة:
+    - الفيو (ConvertQuotationToOrderView) يتكفّل بعرض الرسائل للمستخدم
+      وإطلاق الإشعار (Notification) عند النجاح.
     """
 
     # ممنوع التعامل مع مستند محذوف soft delete
@@ -140,10 +150,13 @@ def mark_order_invoiced(order: SalesDocument, user=None) -> SalesDocument:
 
     القواعد:
     - لا يمكن التعامل مع أمر محذوف soft delete.
-    - يجب أن يكون المستند أمر بيع (وليس عرض سعر).
+    - يجب أن يكون المستند أمر بيع (is_order=True).
     - لا يمكن فوتر أمر ملغي.
     - في حال كان مفوترًا مسبقاً يتم إرجاعه كما هو.
     - يتم تسجيل عملية الأوديت عند التعليم كمفوتر.
+
+    ملاحظة:
+    - الفيو (MarkOrderInvoicedView) يتكفّل بعرض الرسائل والإشعار.
     """
     if getattr(order, "is_deleted", False):
         raise ValidationError(_("لا يمكن فوتر أمر محذوف."))
@@ -205,6 +218,9 @@ def create_delivery_note_for_order(
     - لا يمكن الإنشاء لأمر ملغي.
     - يتم ضبط created_by / updated_by إذا تم تمرير user.
     - يتم تسجيل عملية الأوديت عند إنشاء مذكرة التسليم.
+
+    ملاحظة:
+    - الفيو (DeliveryNoteCreateView) يتكفّل بإطلاق الإشعارات وعرض الرسائل.
     """
     if getattr(order, "is_deleted", False):
         raise ValidationError(_("لا يمكن إنشاء مذكرة تسليم لأمر بيع محذوف."))
@@ -267,6 +283,10 @@ def add_delivery_line(
     - لا يمكن الإضافة على مذكرة ملغاة.
     - يتم ضبط created_by / updated_by إذا تم تمرير user.
     - يتم تسجيل عملية الأوديت عند إضافة البند.
+
+    ملاحظة:
+    - هذا السيرفس يمكن استخدامه من واجهات مختلفة (HTML / API)،
+      لذلك هو يهتم only بالمنطق والأوديت.
     """
     if getattr(delivery, "is_deleted", False):
         raise ValidationError(_("لا يمكن إضافة بنود لمذكرة تسليم محذوفة."))
@@ -321,6 +341,9 @@ def cancel_sales_document(document: SalesDocument, user=None) -> SalesDocument:
     - لا يمكن إلغاء مستند مفوتر.
     - لا يمكن إلغاء أمر بيع لديه مذكرات تسليم.
     - يتم تسجيل عملية الأوديت عند الإلغاء.
+
+    ملاحظة:
+    - الفيو (CancelSalesDocumentView) يعرض الرسائل والإشعارات.
     """
     if getattr(document, "is_deleted", False):
         raise ValidationError(_("لا يمكن إلغاء مستند محذوف."))
@@ -376,6 +399,9 @@ def reset_sales_document_to_draft(document: SalesDocument, user=None) -> SalesDo
     - لا يمكن إعادة مستند ملغي إلى مسودة (له دالة خاصة).
     - إذا كان أمر بيع بدون مذكرات تسليم → يرجع إلى عرض سعر + مسودة.
     - يتم تسجيل عملية الأوديت عند الإرجاع إلى المسودة.
+
+    ملاحظة:
+    - الفيو (ResetSalesDocumentToDraftView) يتعامل مع الرسائل والإشعارات.
     """
     if getattr(document, "is_deleted", False):
         raise ValidationError(_("لا يمكن إعادة مستند محذوف إلى حالة المسودة."))
@@ -438,6 +464,9 @@ def reopen_cancelled_sales_document(document: SalesDocument, user=None) -> Sales
     - لا يمكن إعادة فتح مستند مفوتر.
     - لا يمكن إعادة فتح مستند له مذكرات تسليم.
     - يتم تسجيل عملية الأوديت عند إعادة الفتح.
+
+    ملاحظة:
+    - الفيو (sales_reopen_view) يرسل إشعاراً للمستخدم عند النجاح.
     """
     if getattr(document, "is_deleted", False):
         raise ValidationError(_("لا يمكن إعادة فتح مستند محذوف."))
@@ -490,6 +519,12 @@ def reopen_cancelled_sales_document(document: SalesDocument, user=None) -> Sales
 def can_reopen_cancelled(document: SalesDocument) -> bool:
     """
     دالة مساعدة للـ UI: هل يمكن إعادة فتح هذا المستند الملغي؟
+
+    الشروط:
+    - أن يكون في حالة الإلغاء.
+    - غير مفوتر.
+    - غير محذوف soft delete.
+    - لا توجد عليه مذكرات تسليم.
     """
     return (
         document.is_cancelled
