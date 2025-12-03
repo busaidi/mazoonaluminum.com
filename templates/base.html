@@ -4,18 +4,15 @@
 <head>
   <meta charset="utf-8"/>
 
-  {# عنوان التبويب + SEO #}
   <title>
   {% block meta_title %}
     {% block title %}Mazoon Aluminum{% endblock %}
   {% endblock %}
   </title>
 
-  {# وصف الصفحة (SEO description) #}
   <meta name="description"
         content="{% block meta_description %}High-quality aluminum systems, profiles, and solutions by Mazoon Aluminum.{% endblock %}">
 
-  {# Canonical + hreflang مبسّطة #}
   {% with cur_path=request.path host=request.get_host scheme=request.scheme %}
     {% if cur_path|slice:":4" == "/en/" %}
       {% with path_no_lang=cur_path|slice:"4:" %}
@@ -45,7 +42,6 @@
     {% endif %}
   {% endwith %}
 
-  {# Open Graph / WhatsApp #}
   <meta property="og:title"
         content="{% block og_title %}{% block og_title_inner %}Mazoon Aluminum{% endblock %}{% endblock %}">
   <meta property="og:description"
@@ -55,9 +51,8 @@
   <meta property="og:url"
         content="{% block og_url %}{{ request.build_absolute_uri }}{% endblock %}">
   <meta property="og:image"
-        content="{% block og_image %}{% endblock %}">
+        content="{% block og_image %}{% static 'img/mazoon/og-home.webp' %}{% endblock %}">
 
-  {# Twitter #}
   <meta name="twitter:card"
         content="{% block twitter_card %}summary_large_image{% endblock %}">
   <meta name="twitter:title"
@@ -65,12 +60,10 @@
   <meta name="twitter:description"
         content="{% block twitter_description %}{% endblock %}">
   <meta name="twitter:image"
-        content="{% block twitter_image %}{% endblock %}">
+        content="{% block twitter_image %}{% static 'img/mazoon/og-home.webp' %}{% endblock %}">
 
-  {# باقي الراس: viewport + Bootstrap + CSS #}
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
-  {# Bootstrap 5.3.x - RTL للعربي، عادي للإنجليزي #}
   {% if LANGUAGE_CODE == "ar" %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.rtl.min.css"
           rel="stylesheet"
@@ -84,16 +77,49 @@
   <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
-  {# ملف CSS واحد لأي تعديلات بسيطة (مثلاً ألوان الأزرار) #}
   <link rel="stylesheet" href="{% static 'css/mazoon_style.css' %}"/>
 
   {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-body text-body d-flex flex-column min-vh-100">
+<body class="bg-body-tertiary text-body d-flex flex-column min-vh-100">
 
-<nav class="navbar navbar-expand-lg bg-body border-bottom shadow-sm">
-  <div class="container">
-    <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{% url 'home' %}">
+{# ======== الشريط العلوي الصغير (Top Bar) ========= #}
+{#<header class="bg-body-secondary border-bottom small">#}
+{#  <div class="container-lg d-flex justify-content-between align-items-center py-1 gap-2">#}
+{##}
+    {# معلومات التواصل الأساسية #}
+{#    <div class="d-flex flex-wrap align-items-center gap-3 text-muted">#}
+{#      <span class="d-flex align-items-center gap-1">#}
+{#        <i class="bi bi-telephone"></i>#}
+{#        <span>+968 9XX XXX XX</span>#}
+{#      </span>#}
+{#      <span class="d-flex align-items-center gap-1 d-none d-lg-inline-flex">#}
+{#        <i class="bi bi-envelope"></i>#}
+{#        <span>info@mazoonaluminum.com</span>#}
+{#      </span>#}
+{#    </div>#}
+{##}
+    {# CTA سريع لأصحاب الورش + واتساب #}
+{#    <div class="d-flex flex-wrap align-items-center gap-2">#}
+{#      <span class="text-muted d-none d-lg-inline">#}
+{#        {% trans "حلول خاصة للورش والمشاريع الكبيرة" %}#}
+{#      </span>#}
+{#      <a href="https://wa.me/9689XXXXXXX"#}
+{#         class="btn btn-sm btn-outline-success d-flex align-items-center gap-1">#}
+{#        <i class="bi bi-whatsapp"></i>#}
+{#        <span>{% trans "تواصل عبر واتساب" %}</span>#}
+{#      </a>#}
+{#      <a href="{% url 'contact' %}"#}
+{#         class="btn btn-sm btn-primary">#}
+{#        {% trans "استشارة سريعة" %}#}
+{#      </a>#}
+{#    </div>#}
+{##}
+{#  </div>#}
+{#</header>#}
+<nav class="navbar navbar-expand-lg bg-body border-bottom shadow-sm sticky-top">
+  <div class="container-lg">
+    <a class="navbar-brand fw-bold d-flex align-items-center gap-2 py-2" href="{% url 'home' %}">
       <img src="{% static 'img/logo_mazoon_black.png' %}"
            alt="Mazoon Aluminum logo"
            class="img-fluid"
@@ -139,10 +165,9 @@
         </li>
       </ul>
 
-      {# يمين/يسار: بوابة، تطبيقات، مستخدم، لغة، ثيم #}
-      <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center">
+      {# يمين/يسار النافبار #}
+      <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center gap-2">
 
-        {# بوابة الزبون #}
         {% if user.is_authenticated and user.customer_profile %}
           <li class="nav-item">
             <a class="nav-link {% if request.resolver_match.namespace == 'portal' %}active{% endif %}"
@@ -182,16 +207,13 @@
                 {% trans "سجل التدقيق" %}
               </a>
             </li>
-
           {% endif %}
         {% endif %}
 
-        {# Notifications dropdown #}
         {% include "core/notifications/_navbar_dropdown.html" %}
 
-        {# المستخدم / تسجيل الدخول #}
         {% if user.is_authenticated %}
-          <li class="nav-item dropdown ms-2">
+          <li class="nav-item dropdown">
             <a class="nav-link d-flex align-items-center gap-2"
                href="#"
                id="userMenuDropdown"
@@ -201,6 +223,9 @@
               <span class="rounded-circle d-inline-flex justify-content-center align-items-center bg-dark text-white"
                     style="width: 32px; height: 32px; font-size: 0.8rem;">
                 {{ user.username|first|upper }}
+              </span>
+              <span class="d-none d-xl-inline small text-muted">
+                {{ user.get_full_name|default:user.username }}
               </span>
             </a>
             <ul class="dropdown-menu dropdown-menu-end shadow-sm small" aria-labelledby="userMenuDropdown">
@@ -226,7 +251,7 @@
             </ul>
           </li>
         {% else %}
-          <li class="nav-item ms-2">
+          <li class="nav-item">
             <a class="btn btn-outline-primary btn-sm"
                href="{% url 'login' %}?next={{ request.path }}">
               {% trans "تسجيل الدخول" %}
@@ -234,8 +259,7 @@
           </li>
         {% endif %}
 
-        {# زر تبديل الثيم (لايت/دارك) #}
-        <li class="nav-item ms-2">
+        <li class="nav-item">
           <button class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
                   type="button"
                   id="themeToggleBtn"
@@ -245,9 +269,8 @@
           </button>
         </li>
 
-        {# Language switcher #}
-        <li class="nav-item ms-2">
-          <form action="{% url 'set_language' %}" method="post" class="d-flex">
+        <li class="nav-item">
+          <form action="{% url 'set_language' %}" method="post" class="d-flex align-items-center">
             {% csrf_token %}
             <input name="next" type="hidden" value="{{ request.get_full_path }}"/>
             <select name="language"
@@ -264,8 +287,8 @@
   </div>
 </nav>
 
-<main class="py-4 flex-grow-1">
-  <div class="container">
+<main class="py-4 py-md-5 flex-grow-1">
+  <div class="container-lg">
 
     {% if messages %}
       <div class="mb-3">
@@ -289,7 +312,7 @@
 </main>
 
 <footer class="border-top py-3 mt-auto bg-body-tertiary">
-  <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center text-muted small gap-2">
+  <div class="container-lg d-flex flex-column flex-md-row justify-content-between align-items-center text-muted small gap-2">
     <div>
       &copy; {% now "Y" %} Mazoon Aluminum – {% trans "جميع الحقوق محفوظة" %}
     </div>
@@ -304,7 +327,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
         crossorigin="anonymous"></script>
 
-{# سويتشر الثيم (يعتمد فقط على data-bs-theme وبوتستراب 5.3) #}
 <script>
   (function () {
     const THEME_KEY = "mazoonTheme";

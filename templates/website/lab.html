@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n static %}
 
 {# ================== SEO BLOCKS ================== #}
 
@@ -21,7 +21,7 @@
 
 {% block og_type %}website{% endblock %}
 {% block og_url %}{{ request.build_absolute_uri }}{% endblock %}
-{% block og_image %}{% endblock %}
+{% block og_image %}{% static 'img/mazoon/og-home.webp' %}{% endblock %}
 
 {% block twitter_card %}summary_large_image{% endblock %}
 
@@ -33,7 +33,7 @@
   {% trans "تعرف على مختبر مزون المنيوم للبحث والتطوير، واختبارات الأداء والاعتمادية لأنظمة النوافذ والأبواب." %}
 {% endblock %}
 
-{% block twitter_image %}{% endblock %}
+{% block twitter_image %}{% static 'img/mazoon/og-home.webp' %}{% endblock %}
 
 {% block title %}
   {% trans "المختبر" %}
@@ -41,132 +41,269 @@
 
 {# ================== PAGE CONTENT ================== #}
 {% block content %}
-<div class="py-4">
 
-  {# عنوان عام للصفحة خارج الكروت #}
-  <div class="mb-4">
-    <h1 class="h4 fw-bold text-mazoon mb-1">
-      {% trans "مختبر مزون المنيوم" %}
-    </h1>
-    <p class="text-muted small mb-0">
-      {% trans "منصة مزون لاختبار وتطوير أنظمة النوافذ والأبواب وفق معايير أداء واعتمادية عالية." %}
-    </p>
+{# ===== HERO / INTRO ===== #}
+<section class="mb-4 mb-md-5">
+  <div class="card border-0 shadow-sm bg-body">
+    <div class="card-body p-4 p-md-5">
+      <div class="row g-4 align-items-center">
+
+        <div class="col-lg-8">
+          <div class="d-inline-flex align-items-center gap-2 mb-3 px-3 py-1 rounded-pill bg-body-tertiary small">
+            <span class="d-inline-flex align-items-center justify-content-center rounded-pill bg-primary text-white px-2 py-1">
+              <i class="bi bi-flask-fill small me-1"></i>
+              <span>{% trans "مختبر مزون" %}</span>
+            </span>
+            <span class="text-muted">
+              {% trans "بحث وتطوير · نماذج أولية · اختبارات أداء" %}
+            </span>
+          </div>
+
+          <h1 class="h3 h2 mb-3 fw-bold text-body">
+            {% trans "مختبر مزون المنيوم للبحث والتطوير" %}
+          </h1>
+
+          <p class="small text-muted mb-3" style="line-height: 1.9;">
+            {% trans "من خلال مختبر مزون المنيوم نختبر أنظمة النوافذ والأبواب في ظروف مشابهة للواقع، مع التركيز على العزل الحراري والصوتي، أداء الهواء والماء والرياح، والمتانة على المدى الطويل." %}
+          </p>
+
+          <div class="row row-cols-1 row-cols-md-3 g-3 small">
+            <div class="col">
+              <div class="border rounded-3 p-3 h-100 bg-body-tertiary">
+                <div class="fw-semibold text-mazoon mb-1">
+                  {% trans "نماذج رقمية وواقعية" %}
+                </div>
+                <div class="text-muted">
+                  {% trans "من التصميم ثلاثي الأبعاد إلى النموذج الكامل في المختبر." %}
+                </div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="border rounded-3 p-3 h-100 bg-body-tertiary">
+                <div class="fw-semibold text-mazoon mb-1">
+                  {% trans "اختبارات موجهة" %}
+                </div>
+                <div class="text-muted">
+                  {% trans "تجارب مبنية على السيناريوهات الفعلية في المشاريع." %}
+                </div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="border rounded-3 p-3 h-100 bg-body-tertiary">
+                <div class="fw-semibold text-mazoon mb-1">
+                  {% trans "تقارير ونتائج" %}
+                </div>
+                <div class="text-muted">
+                  {% trans "ملخصات فنية تساعد في اتخاذ القرار في الموقع." %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# جانب توضيحي / Placeholder لصورة المختبر مستقبلاً #}
+        <div class="col-lg-4">
+          <div class="ratio ratio-4x3 rounded-4 border bg-body-tertiary d-flex align-items-center justify-content-center">
+            <div class="text-center px-3 small text-muted">
+              <i class="bi bi-building-gear fs-1 mb-2 d-block"></i>
+              <p class="mb-1">
+                {% trans "مساحة مخصصة لاحقًا لصور فعلية من مختبر مزون، مثل صور غرف الاختبار أو النماذج." %}
+              </p>
+              <p class="mb-0">
+                {% trans "يمكن استبدالها لاحقًا بصور حقيقية توضح خطوات الاختبار." %}
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="row g-4">
+
+  {# ================== العمود الأيسر ================== #}
+  <div class="col-lg-8">
+
+    {# وصف المختبر #}
+    <section class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h2 class="h5 fw-bold mb-3 text-body">
+          {% trans "عن مختبر مزون" %}
+        </h2>
+
+        <div class="small text-muted lh-lg">
+          <p>
+            {% trans "في مختبر مزون المنيوم نقوم باختبار أنظمة النوافذ والأبواب وفق معايير أداء دقيقة، تشمل العزل الحراري، العزل الصوتي، مقاومة الهواء والماء، والمتانة الإنشائية." %}
+          </p>
+          <p>
+            {% trans "نستخدم مزيجًا من النماذج الرقمية (Digital Prototyping) والنماذج الواقعية، مما يتيح تحسين التصاميم قبل اعتمادها في المشاريع الفعلية وتقليل الأخطاء في موقع العمل." %}
+          </p>
+          <p class="mb-0">
+            {% trans "يهدف المختبر إلى ضمان أن كل نظام يحمل اسم مزون يحقق مستوى ثابتًا من الجودة في مختلف الظروف التشغيلية، سواء في المشاريع السكنية أو التجارية أو الواجهات المتقدمة." %}
+          </p>
+        </div>
+      </div>
+    </section>
+
+    {# مسار الاختبار (خطوات وهمية لكن مفيدة UX) #}
+    <section class="card border-0 shadow-sm mb-3">
+      <div class="card-body small text-muted">
+        <h2 class="h6 fw-bold mb-3 text-body">
+          {% trans "كيف يمر النظام عبر المختبر؟" %}
+        </h2>
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="h-100 border rounded-3 p-3 bg-body-tertiary">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge rounded-pill bg-primary text-white">1</span>
+                <span class="fw-semibold">
+                  {% trans "مرحلة التصميم" %}
+                </span>
+              </div>
+              <p class="mb-0">
+                {% trans "نماذج رقمية، حسابات أحمال، واختيار الإكسسوارات المناسبة لكل نظام." %}
+              </p>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="h-100 border rounded-3 p-3 bg-body-tertiary">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge rounded-pill bg-primary text-white">2</span>
+                <span class="fw-semibold">
+                  {% trans "النموذج الواقعي" %}
+                </span>
+              </div>
+              <p class="mb-0">
+                {% trans "تصنيع نموذج كامل للنظام في المختبر، يشمل جميع تفاصيل التجميع والزجاج." %}
+              </p>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="h-100 border rounded-3 p-3 bg-body-tertiary">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge rounded-pill bg-primary text-white">3</span>
+                <span class="fw-semibold">
+                  {% trans "الاختبار والتوثيق" %}
+                </span>
+              </div>
+              <p class="mb-0">
+                {% trans "إجراء الاختبارات، تسجيل النتائج، وتحديث مواصفات النظام والمخططات الفنية." %}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# البحث والتطوير R&D #}
+    <section class="card border-0 shadow-sm mb-3">
+      <div class="card-body small text-muted">
+        <h2 class="h6 fw-bold mb-2 text-body">
+          {% trans "البحث والتطوير (R&D)" %}
+        </h2>
+        <p class="mb-1">
+          {% trans "يمثل المختبر نقطة الوصل بين فريق التصميم وفريق التنفيذ في الموقع، حيث يتم اختبار الأفكار الجديدة قبل تعميمها على الأنظمة المعتمدة." %}
+        </p>
+        <p class="mb-0">
+          {% trans "هذا يتيح لمزون تطوير حلول خاصة للمشاريع المميزة، مثل الواجهات الزجاجية الكبيرة، الأبواب المنزلقة ذات الأحمال العالية، وأنظمة العزل المتقدمة." %}
+        </p>
+      </div>
+    </section>
+
+    {# حالات استخدام وهمية للمختبر (تعطي إحساس عملي) #}
+    <section class="card border-0 shadow-sm">
+      <div class="card-body small text-muted">
+        <h2 class="h6 fw-bold mb-3 text-body">
+          {% trans "أمثلة على استخدام المختبر في المشاريع" %}
+        </h2>
+
+        <ul class="mb-0">
+          <li class="mb-2">
+            {% trans "تجربة نظام خاص لنوافذ كبيرة في فيلا سكنية مطلة على البحر، مع متطلبات عالية للعزل ضد الهواء والرطوبة." %}
+          </li>
+          <li class="mb-2">
+            {% trans "اختبار أداء أبواب مفصلية عالية الارتفاع في مشروع تجاري، لضمان استقرار الحركة على المدى الطويل." %}
+          </li>
+          <li class="mb-0">
+            {% trans "تعديل تفاصيل نظام عازل للحرارة بناءً على نتائج الاختبارات لتحسين قيمة U-Value وتقليل فقد الحرارة." %}
+          </li>
+        </ul>
+      </div>
+    </section>
+
   </div>
 
-  <div class="row g-4">
-    <div class="col-lg-8">
+  {# ================== العمود الأيمن ================== #}
+  <div class="col-lg-4">
 
-      {# الكرت الرئيسي (وصف المختبر) #}
-      <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body">
-          <h2 class="h6 fw-bold mb-3 text-mazoon">
-            {% trans "عن المختبر" %}
-          </h2>
-
-          <div class="small text-muted lh-lg">
-            <p>
-              {% trans "في مختبر مزون المنيوم نقوم باختبار أنظمة النوافذ والأبواب وفق معايير أداء دقيقة، تشمل العزل الحراري، العزل الصوتي، مقاومة الهواء والماء، والمتانة الإنشائية." %}
-            </p>
-            <p>
-              {% trans "نستخدم مزيجًا من النماذج الرقمية (Digital Prototyping) والنماذج الواقعية، مما يتيح تحسين التصاميم قبل اعتمادها في المشاريع الفعلية وتقليل الأخطاء في موقع العمل." %}
-            </p>
-            <p>
-              {% trans "يهدف المختبر إلى ضمان أن كل نظام يحمل اسم مزون يحقق مستوى ثابتًا من الجودة في مختلف الظروف التشغيلية، سواء في المشاريع السكنية أو التجارية أو الواجهات المتقدمة." %}
-            </p>
-          </div>
-
-          {# شريط صغير يلخّص مخرجات المختبر #}
-          <div class="row row-cols-1 row-cols-md-3 g-3 mt-3 small">
-            <div class="col">
-              <div class="bg-light border rounded-3 p-2 h-100">
-                <div class="fw-semibold text-mazoon mb-1">
-                  {% trans "تصاميم مُحسّنة" %}
-                </div>
-                <div class="text-muted">
-                  {% trans "معايرة مستمرة للأبعاد، الإكسسوارات، وأنظمة الإغلاق للحصول على أداء متوازن." %}
-                </div>
-              </div>
-            </div>
-            <div class="col">
-              <div class="bg-light border rounded-3 p-2 h-100">
-                <div class="fw-semibold text-mazoon mb-1">
-                  {% trans "تقارير أداء" %}
-                </div>
-                <div class="text-muted">
-                  {% trans "توثيق نتائج الاختبارات لدعم القرارات الفنية في المشاريع." %}
-                </div>
-              </div>
-            </div>
-            <div class="col">
-              <div class="bg-light border rounded-3 p-2 h-100">
-                <div class="fw-semibold text-mazoon mb-1">
-                  {% trans "نماذج تجريبية" %}
-                </div>
-                <div class="text-muted">
-                  {% trans "تصنيع نماذج كاملة للأنظمة قبل الانتقال إلى الإنتاج على نطاق واسع." %}
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
+    {# مجالات الاختبار #}
+    <section class="card border-0 shadow-sm mb-3">
+      <div class="card-body small text-muted">
+        <h2 class="h6 fw-bold mb-3 text-body">
+          {% trans "مجالات الاختبار في مختبر مزون" %}
+        </h2>
+        <ul class="mb-0">
+          <li class="mb-1">
+            {% trans "اختبارات أداء الهواء والماء والرياح." %}
+          </li>
+          <li class="mb-1">
+            {% trans "اختبارات العزل الحراري والصوتي." %}
+          </li>
+          <li class="mb-1">
+            {% trans "اختبارات جودة التشطيب والأكسسوارات وملاءمتها للاستخدام اليومي." %}
+          </li>
+          <li class="mb-1">
+            {% trans "تجربة حلول خاصة للمشاريع (Customized Systems) قبل التنفيذ." %}
+          </li>
+        </ul>
       </div>
+    </section>
 
-      {# كرت إضافي (tuning للـ R&D) لو حاب تضيفه لاحقاً #}
-      <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body small text-muted">
-          <h2 class="h6 fw-bold mb-2 text-mazoon">
-            {% trans "البحث والتطوير (R&D)" %}
-          </h2>
-          <p class="mb-1">
-            {% trans "يمثل المختبر نقطة الوصل بين فريق التصميم وفريق التنفيذ في الموقع، حيث يتم اختبار الأفكار الجديدة قبل تعميمها على الأنظمة المعتمدة." %}
-          </p>
-          <p class="mb-0">
-            {% trans "هذا يتيح لمزون تطوير حلول خاصة للمشاريع المميزة، مثل الواجهات الزجاجية الكبيرة، الأبواب المنزلقة ذات الأحمال العالية، وأنظمة العزل المتقدمة." %}
-          </p>
-        </div>
+    {# كرت هدف المختبر #}
+    <section class="card border-0 shadow-sm mb-3">
+      <div class="card-body small text-muted">
+        <h2 class="h6 fw-bold mb-2 text-body">
+          {% trans "هدف المختبر" %}
+        </h2>
+        <p class="mb-0">
+          {% trans "ضمان أن كل نظام نوافذ أو أبواب من مزون لا يعتمد فقط على الرسومات، بل تم اختباره فعليًا وتحسينه قبل أن يصل إلى مشروعك." %}
+        </p>
       </div>
+    </section>
 
-    </div>
-
-    <div class="col-lg-4">
-
-      {# مجالات الاختبار #}
-      <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body small text-muted">
-          <h2 class="h6 fw-bold mb-3 text-mazoon">
-            {% trans "مجالات الاختبار" %}
-          </h2>
-          <ul class="mb-0">
-            <li class="mb-1">
-              {% trans "اختبارات أداء الهواء والماء والرياح." %}
-            </li>
-            <li class="mb-1">
-              {% trans "اختبارات العزل الحراري والصوتي." %}
-            </li>
-            <li class="mb-1">
-              {% trans "اختبارات جودة التشطيب والأكسسوارات وملاءمتها للاستخدام اليومي." %}
-            </li>
-            <li class="mb-1">
-              {% trans "تجربة حلول خاصة للمشاريع (Customized Systems) قبل التنفيذ." %}
-            </li>
-          </ul>
-        </div>
+    {# بلوك “قريباً” + CTA خفيف #}
+    <section class="card border-0 shadow-sm mb-3">
+      <div class="card-body small text-muted">
+        <h2 class="h6 fw-bold mb-2 text-body">
+          {% trans "قريباً – زيارات وجلسات تقنية" %}
+        </h2>
+        <p class="mb-3">
+          {% trans "نعمل على إعداد برنامج زيارات ميدانية للمختبر لطلاب الهندسة، ومكاتب التصميم، وأصحاب الورش للتعرّف على آلية اختبار الأنظمة." %}
+        </p>
+        <a href="{% url 'contact' %}" class="btn btn-sm btn-outline-primary">
+          {% trans "تواصل معنا لحجز جلسة فنية" %}
+        </a>
       </div>
+    </section>
 
-      {# كرت جانبي خفيف لتوضيح الهدف #}
-      <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body small text-muted">
-          <h2 class="h6 fw-bold mb-2 text-mazoon">
-            {% trans "هدف المختبر" %}
-          </h2>
-          <p class="mb-0">
-            {% trans "ضمان أن كل نظام نوافذ أو أبواب من مزون لا يعتمد فقط على الرسومات، بل تم اختباره فعليًا وتحسينه قبل أن يصل إلى مشروعك." %}
-          </p>
-        </div>
+    {# مشغل العلامة #}
+    <section class="card border-0 shadow-sm">
+      <div class="card-body small text-muted">
+        <h2 class="h6 fw-bold mb-2 text-body">
+          {% trans "جزء من منظومة مزون" %}
+        </h2>
+        <p class="mb-0">
+          {% trans "مختبر مزون المنيوم هو جزء من منظومة التطوير الكاملة للعلامة، بدءًا من تصميم الأنظمة، مرورًا بالاختبار، ووصولاً إلى التوثيق الفني الذي يصل إلى الورش والمشاريع." %}
+        </p>
       </div>
+    </section>
 
-    </div>
   </div>
 </div>
+
 {% endblock %}

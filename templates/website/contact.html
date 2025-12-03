@@ -45,7 +45,7 @@
 
   {# ===== عنوان الصفحة (خارج أي كرت، بدون بوردر) ===== #}
   <div class="mb-4">
-    <h1 class="h4 fw-bold text-mazoon mb-1">
+    <h1 class="h4 fw-bold text-body mb-1">
       {% trans "اتصل بنا" %}
     </h1>
     <p class="text-muted small mb-0">
@@ -58,7 +58,7 @@
     <div class="col-lg-7">
       <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
-          <h2 class="h6 fw-bold mb-2 text-mazoon">
+          <h2 class="h6 fw-bold mb-2 text-body">
             {% trans "نموذج التواصل" %}
           </h2>
 
@@ -123,7 +123,7 @@
               <p class="small text-muted mb-0">
                 {% trans "لن نستخدم بياناتك لأغراض تسويقية غير مرغوبة." %}
               </p>
-              <button type="submit" class="btn btn-primary px-4">
+              <button type="submit" class="btn btn-primary btn-sm px-4">
                 {% trans "إرسال" %}
               </button>
             </div>
@@ -135,60 +135,138 @@
     {# ===== معلومات التواصل ===== #}
     <div class="col-lg-5">
       <aside class="card border-0 shadow-sm h-100">
-        <div class="card-body">
-          <h2 class="h6 fw-bold mb-3 text-mazoon">
+        <div class="card-body small text-muted">
+
+          <h2 class="h6 fw-bold mb-3 text-body">
             {% trans "معلومات التواصل" %}
           </h2>
 
-          <div class="mb-3 small">
+          {# المواقع #}
+          <div class="mb-3">
             <h3 class="h6 fw-semibold mb-2 text-muted">
               {% trans "مواقعنا" %}
             </h3>
-            <ul class="list-unstyled mb-0">
-              <li class="mb-1">
-                📍 {% trans "المكتب: أبراج المهلب، الأنصب، مسقط، سلطنة عمان" %}
-              </li>
-              <li class="mb-1">
-                📍 {% trans "معرض إبرا: إبرا، محافظة شمال الشرقية، سلطنة عمان" %}
-              </li>
-              <li class="mb-1">
-                📍 {% trans "التصنيع: المنطقة الصناعية، السويق، سلطنة عمان" %}
-              </li>
-            </ul>
+
+            <div class="vstack gap-2">
+              <div class="d-flex align-items-start gap-2">
+                <div class="rounded-circle bg-body-tertiary d-inline-flex align-items-center justify-content-center"
+                     style="width: 32px; height: 32px;">
+                  <i class="bi bi-geo-alt small"></i>
+                </div>
+                <div>
+                  <div class="fw-semibold text-body">
+                    {% trans "المكتب الرئيسي" %}
+                  </div>
+                  <div>
+                    {% trans "أبراج المهلب، الأنصب، مسقط، سلطنة عمان" %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex align-items-start gap-2">
+                <div class="rounded-circle bg-body-tertiary d-inline-flex align-items-center justify-content-center"
+                     style="width: 32px; height: 32px;">
+                  <i class="bi bi-geo-alt small"></i>
+                </div>
+                <div>
+                  <div class="fw-semibold text-body">
+                    {% trans "معرض إبرا" %}
+                  </div>
+                  <div>
+                    {% trans "إبرا، محافظة شمال الشرقية، سلطنة عمان" %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex align-items-start gap-2">
+                <div class="rounded-circle bg-body-tertiary d-inline-flex align-items-center justify-content-center"
+                     style="width: 32px; height: 32px;">
+                  <i class="bi bi-gear-wide-connected small"></i>
+                </div>
+                <div>
+                  <div class="fw-semibold text-body">
+                    {% trans "التصنيع" %}
+                  </div>
+                  <div>
+                    {% trans "المنطقة الصناعية، السويق، سلطنة عمان" %}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <hr class="my-3">
 
-          <div class="mb-3 small">
+          {# البريد الإلكتروني #}
+          <div class="mb-3">
             <h3 class="h6 fw-semibold mb-2 text-muted">
               {% trans "البريد الإلكتروني" %}
             </h3>
-            <p class="mb-0">
-              <a href="mailto:info@mazoonaluminum.com"
-                 class="text-decoration-none text-mazoon">
-                info@mazoonaluminum.com
-              </a>
-            </p>
+
+            <div class="d-flex align-items-center gap-2">
+              <div class="rounded-circle bg-body-tertiary d-inline-flex align-items-center justify-content-center"
+                   style="width: 32px; height: 32px;">
+                <i class="bi bi-envelope small"></i>
+              </div>
+              <div>
+                <a href="mailto:info@mazoonaluminum.com"
+                   class="text-decoration-none text-body">
+                  info@mazoonaluminum.com
+                </a>
+              </div>
+            </div>
           </div>
 
           <hr class="my-3">
 
-          <div class="mb-0 small">
+          {# أرقام الهواتف #}
+          <div class="mb-0">
             <h3 class="h6 fw-semibold mb-2 text-muted">
               {% trans "أرقام الهواتف" %}
             </h3>
-            <ul class="list-unstyled mb-0">
-              <li class="mb-1">
-                📞 {% trans "الإدارة: 91711170" %}
-              </li>
-              <li class="mb-1">
-                📞 {% trans "المبيعات: 95777605" %}
-              </li>
-              <li class="mb-1">
-                📞 {% trans "معرض إبرا: 96767064" %}
-              </li>
-            </ul>
+
+            <div class="vstack gap-2">
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle bg-body-tertiary d-inline-flex align-items-center justify-content-center"
+                     style="width: 32px; height: 32px;">
+                  <i class="bi bi-telephone small"></i>
+                </div>
+                <div>
+                  <div class="fw-semibold text-body">
+                    {% trans "الإدارة" %}
+                  </div>
+                  <div>91711170</div>
+                </div>
+              </div>
+
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle bg-body-tertiary d-inline-flex align-items-center justify-content-center"
+                     style="width: 32px; height: 32px;">
+                  <i class="bi bi-telephone-outbound small"></i>
+                </div>
+                <div>
+                  <div class="fw-semibold text-body">
+                    {% trans "المبيعات" %}
+                  </div>
+                  <div>95777605</div>
+                </div>
+              </div>
+
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle bg-body-tertiary d-inline-flex align-items-center justify-content-center"
+                     style="width: 32px; height: 32px;">
+                  <i class="bi bi-telephone-plus small"></i>
+                </div>
+                <div>
+                  <div class="fw-semibold text-body">
+                    {% trans "معرض إبرا" %}
+                  </div>
+                  <div>96767064</div>
+                </div>
+              </div>
+            </div>
           </div>
+
         </div>
       </aside>
     </div>

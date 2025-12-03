@@ -93,85 +93,157 @@
 
 {# ========= PAGE CONTENT ========= #}
 {% block content %}
+
+{# ===== HERO HEADER ===== #}
+<section class="mb-4">
+  <div class="card border-0 shadow-sm bg-body">
+    <div class="card-body p-3 p-md-4">
+      <div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-md-center">
+
+        <div>
+          <h1 class="h4 fw-bold mb-1 text-body">
+            {% if current_category %}
+              {{ current_category.name }}
+            {% elif current_tag %}
+              {% trans "الوسم" %}: {{ current_tag.name }}
+            {% else %}
+              {% trans "مدونة مزون ألمنيوم" %}
+            {% endif %}
+          </h1>
+
+          <p class="small text-muted mb-0">
+            {% if current_category %}
+              {% blocktrans with name=current_category.name %}
+                تدوينات مصنّفة تحت {{ name }} في مدونة مزون ألمنيوم.
+              {% endblocktrans %}
+            {% elif current_tag %}
+              {% blocktrans with name=current_tag.name %}
+                تدوينات مرتبطة بالوسم {{ name }} في مدونة مزون ألمنيوم.
+              {% endblocktrans %}
+            {% elif q %}
+              {% blocktrans with q=q %}
+                نتائج البحث عن "{{ q }}" في مدونة مزون ألمنيوم.
+              {% endblocktrans %}
+            {% else %}
+              {% trans "مقالات تقنية وأخبار وأنشطة حول أنظمة الألمنيوم، النوافذ والأبواب، والمشاريع." %}
+            {% endif %}
+          </p>
+        </div>
+
+        {# فورم البحث في الهيرو (نسخة أكبر قليلاً) #}
+        <div class="w-100 w-md-50">
+          <form method="get" class="d-flex gap-2">
+            <input type="text"
+                   name="q"
+                   class="form-control form-control-sm"
+                   value="{{ q }}"
+                   placeholder="{% trans 'ابحث في التدوينات...' %}">
+            <button class="btn btn-sm btn-primary" type="submit">
+              <i class="bi bi-search"></i>
+              <span class="d-none d-sm-inline ms-1">{% trans "بحث" %}</span>
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
 <div class="row g-4">
 
   {# ===== العمود الرئيسي (قائمة التدوينات) ===== #}
   <div class="col-lg-8">
-    <header class="mb-3">
-      <h1 class="h3 fw-bold mb-1 text-body">
-        {% if current_category %}
-          {{ current_category.name }}
-        {% elif current_tag %}
-          {% trans "الوسم" %}: {{ current_tag.name }}
-        {% else %}
-          {% trans "المدونة" %}
-        {% endif %}
-      </h1>
-
-      {% if q %}
-        <p class="small text-muted mb-0">
-          {% blocktrans with q=q %}
-            نتائج البحث عن "{{ q }}"
-          {% endblocktrans %}
-        </p>
-      {% endif %}
-    </header>
 
     {% if posts %}
       <div class="vstack gap-3">
+
         {% for post in posts %}
-          <article class="card border-0 shadow-sm">
-            <div class="card-body d-flex flex-column">
+          <article class="card border-0 shadow-sm overflow-hidden bg-white">
+            <div class="row g-0">
 
-              <h2 class="h5 mb-1">
-                <a href="{{ post.get_absolute_url }}" class="text-decoration-none text-body">
-                  {{ post.title }}
-                </a>
-              </h2>
+              {# صورة مصغّرة إن وجدت #}
+              {% if post.thumbnail %}
+                <div class="col-md-4">
+                  <div class="ratio ratio-4x3 h-100">
+                    <img
+                      src="{{ post.thumbnail.url }}"
+                      alt="{{ post.title }}"
+                      class="img-fluid object-fit-cover">
+                  </div>
+                </div>
+                <div class="col-md-8">
+              {% else %}
+                <div class="col-12">
+              {% endif %}
 
-              <div class="small text-muted mb-2 d-flex flex-wrap gap-2 align-items-center">
-                <span>📅 {{ post.published_at|date:"Y-m-d" }}</span>
+                <div class="card-body d-flex flex-column h-100">
 
-                {% with cats=post.categories.all %}
-                  {% if cats %}
-                    <span>•</span>
-                    <span>
-                      {% for c in cats %}
-                        <span class="badge bg-light text-muted border">
-                          {{ c.name }}
-                        </span>
-                      {% endfor %}
+                  <h2 class="h5 mb-1">
+                    <a href="{{ post.get_absolute_url }}"
+                       class="text-decoration-none link-body-emphasis">
+                      {{ post.title }}
+                    </a>
+                  </h2>
+
+                  <div class="small text-muted mb-2 d-flex flex-wrap gap-2 align-items-center">
+                    <span class="d-inline-flex align-items-center gap-1">
+                      <i class="bi bi-calendar-event"></i>
+                      <span>{{ post.published_at|date:"Y-m-d" }}</span>
                     </span>
-                  {% endif %}
-                {% endwith %}
-              </div>
 
-              <p class="small mb-2 text-muted" style="line-height: 1.8;">
-                {{ post.meta_description|default:post.body|truncatechars:220 }}
-              </p>
+                    {% with cats=post.categories.all %}
+                      {% if cats %}
+                        <span>•</span>
+                        <span class="d-flex flex-wrap gap-1">
+                          {% for c in cats %}
+                            <span class="badge bg-body-tertiary text-muted border">
+                              {{ c.name }}
+                            </span>
+                          {% endfor %}
+                        </span>
+                      {% endif %}
+                    {% endwith %}
+                  </div>
 
-              <a href="{{ post.get_absolute_url }}" class="btn btn-sm btn-outline-primary align-self-start">
-                {% trans "اقرأ المزيد" %}
-              </a>
-            </div>
+                  <p class="small mb-3 text-muted" style="line-height: 1.8;">
+                    {{ post.meta_description|default:post.body|truncatechars:220 }}
+                  </p>
+
+                  <div class="mt-auto d-flex justify-content-between align-items-center small">
+                    <a href="{{ post.get_absolute_url }}"
+                       class="btn btn-sm btn-outline-primary">
+                      {% trans "اقرأ المزيد" %}
+                    </a>
+                    {% if post.read_time %}
+                      <span class="text-muted">
+                        ⏱ {{ post.read_time }} {% trans "دقيقة قراءة تقريباً" %}
+                      </span>
+                    {% endif %}
+                  </div>
+
+                </div> {# /card-body #}
+              </div> {# /col-md-8 or /col-12 #}
+
+            </div> {# /row #}
           </article>
         {% endfor %}
       </div>
 
       {# الترقيم #}
       {% if page_obj.has_other_pages %}
-        <nav aria-label="Blog pagination" class="mt-3">
-          <ul class="pagination pagination-sm mb-0">
+        <nav aria-label="Blog pagination" class="mt-4">
+          <ul class="pagination pagination-sm justify-content-center mb-0">
 
             {% if page_obj.has_previous %}
               <li class="page-item">
                 <a class="page-link"
                    href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}">
-                  «
+                  ‹
                 </a>
               </li>
             {% else %}
-              <li class="page-item disabled"><span class="page-link">«</span></li>
+              <li class="page-item disabled"><span class="page-link">‹</span></li>
             {% endif %}
 
             {% for num in paginator.page_range %}
@@ -179,10 +251,12 @@
                 <li class="page-item active">
                   <span class="page-link">{{ num }}</span>
                 </li>
-              {% else %}
+              {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
                 <li class="page-item">
                   <a class="page-link"
-                     href="?page={{ num }}{% if q %}&q={{ q }}{% endif %}">{{ num }}</a>
+                     href="?page={{ num }}{% if q %}&q={{ q }}{% endif %}">
+                    {{ num }}
+                  </a>
                 </li>
               {% endif %}
             {% endfor %}
@@ -191,19 +265,27 @@
               <li class="page-item">
                 <a class="page-link"
                    href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}">
-                  »
+                  ›
                 </a>
               </li>
             {% else %}
-              <li class="page-item disabled"><span class="page-link">»</span></li>
+              <li class="page-item disabled"><span class="page-link">›</span></li>
             {% endif %}
           </ul>
         </nav>
       {% endif %}
     {% else %}
-      <p class="text-muted mb-0">
-        {% trans "لا توجد تدوينات متاحة حالياً." %}
-      </p>
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <p class="text-muted mb-0">
+            {% if q %}
+              {% trans "لا توجد نتائج مطابقة لبحثك حالياً." %}
+            {% else %}
+              {% trans "لا توجد تدوينات متاحة حالياً." %}
+            {% endif %}
+          </p>
+        </div>
+      </div>
     {% endif %}
   </div>
 
@@ -211,18 +293,20 @@
   <div class="col-lg-4">
     <aside class="position-sticky" style="top: 88px;">
 
-      {# البحث #}
+      {# البحث الجانبي (نسخة مختصرة) #}
       <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
-          <h2 class="h6 mb-2 fw-bold text-body">{% trans "بحث في المدونة" %}</h2>
+          <h2 class="h6 mb-2 fw-bold text-body">
+            {% trans "بحث في المدونة" %}
+          </h2>
           <form method="get" class="d-flex gap-2">
             <input type="text"
                    name="q"
                    class="form-control form-control-sm"
                    value="{{ q }}"
                    placeholder="{% trans 'كلمة البحث...' %}">
-            <button class="btn btn-sm btn-primary" type="submit">
-              {% trans "بحث" %}
+            <button class="btn btn-sm btn-outline-primary" type="submit">
+              <i class="bi bi-search"></i>
             </button>
           </form>
         </div>
@@ -232,16 +316,37 @@
       {% if categories %}
         <div class="card border-0 shadow-sm mb-3">
           <div class="card-body">
-            <h2 class="h6 mb-2 fw-bold text-body">{% trans "التصنيفات" %}</h2>
+            <h2 class="h6 mb-2 fw-bold text-body">
+              {% trans "التصنيفات" %}
+            </h2>
             <div class="vstack gap-1 small">
               <a href="{% url 'blog_list' %}"
-                 class="text-decoration-none {% if not current_category and not current_tag %}fw-bold text-body{% else %}text-muted{% endif %}">
-                {% trans "كل التدوينات" %}
+                 class="text-decoration-none d-flex justify-content-between {% if not current_category and not current_tag %}fw-bold text-body{% else %}text-muted{% endif %}">
+                <span>{% trans "كل التدوينات" %}</span>
               </a>
               {% for c in categories %}
                 <a href="{% url 'blog_category' category_slug=c.slug %}"
-                   class="text-decoration-none {% if current_category and current_category.slug == c.slug %}fw-bold text-body{% else %}text-muted{% endif %}">
-                  {{ c.name }}
+                   class="text-decoration-none d-flex justify-content-between {% if current_category and current_category.slug == c.slug %}fw-bold text-body{% else %}text-muted{% endif %}">
+                  <span>{{ c.name }}</span>
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+      {# وسوم شائعة (اختياري – يظهر فقط لو فيه popular_tags في الكونتكست) #}
+      {% if popular_tags %}
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-body small">
+            <h2 class="h6 mb-2 fw-bold text-body">
+              {% trans "الوسوم الشائعة" %}
+            </h2>
+            <div class="d-flex flex-wrap gap-1">
+              {% for tag in popular_tags %}
+                <a href="{% url 'blog_tag' tag_slug=tag.slug %}"
+                   class="badge text-bg-light text-decoration-none">
+                  #{{ tag.name }}
                 </a>
               {% endfor %}
             </div>
@@ -251,9 +356,12 @@
 
       <div class="card border-0 shadow-sm">
         <div class="card-body small text-muted">
-          <strong class="d-block mb-1 text-body">{% trans "ملاحظة" %}:</strong>
+          <strong class="d-block mb-1 text-body">{% trans "عن المدونة" %}</strong>
+          <p class="mb-1">
+            {% trans "مدونة مزون ألمنيوم مساحة لمشاركة الخبرة حول أنظمة الألمنيوم، النوافذ والأبواب، وتجارب المشاريع." %}
+          </p>
           <p class="mb-0">
-            {% trans "هذه صفحة قائمة التدوينات، ويمكن تطويرها لاحقاً لإضافة وسوم، مقالات مميزة، أو آخر الأخبار." %}
+            {% trans "يمكن تطوير هذه الصفحة لاحقاً لإضافة مقالات مميزة، آخر الأخبار، أو نشرات تقنية قابلة للتحميل." %}
           </p>
         </div>
       </div>
@@ -261,4 +369,5 @@
     </aside>
   </div>
 </div>
+
 {% endblock %}

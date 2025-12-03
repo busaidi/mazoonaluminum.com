@@ -1,10 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
-
-{# ============ STYLE / EXTRA HEAD (Bootstrap فقط) ============ #}
-{% block extra_head %}
-  {{ block.super }}
-{% endblock %}
+{% load i18n static %}
 
 {# ============ SEO ============ #}
 
@@ -30,7 +25,7 @@
 
 {% block og_type %}website{% endblock %}
 {% block og_url %}{{ request.build_absolute_uri }}{% endblock %}
-{% block og_image %}{% endblock %}
+{% block og_image %}{% static 'img/mazoon/og-home.webp' %}{% endblock %}
 
 {% block twitter_card %}summary_large_image{% endblock %}
 
@@ -44,7 +39,7 @@
   {% endblocktrans %}
 {% endblock %}
 
-{% block twitter_image %}{% endblock %}
+{% block twitter_image %}{% static 'img/mazoon/og-home.webp' %}{% endblock %}
 
 {% block title %}
   {% trans "من نحن" %}
@@ -53,16 +48,21 @@
 {# ============ CONTENT ============ #}
 {% block content %}
 
-{# ========== HERO CARD (Bootstrap فقط) ========== #}
-<div class="mb-4 mb-md-5">
+{# ========== HERO SECTION ========== #}
+<section class="mb-4 mb-md-5">
   <div class="card border-0 shadow-sm bg-primary text-light">
     <div class="card-body p-4 p-md-5">
       <div class="row g-4 align-items-center">
 
         <div class="col-lg-8">
-          <div class="d-inline-flex align-items-center gap-2 mb-3 px-3 py-1 rounded-pill border border-light border-opacity-50 small text-uppercase">
-            <span class="badge rounded-pill bg-warning text-dark"></span>
-            <span>{% trans "علامة عُمانية متخصصة في أنظمة الألمنيوم" %}</span>
+          <div class="d-inline-flex align-items-center gap-2 mb-3 px-3 py-1 rounded-pill border border-light border-opacity-50 small">
+            <span class="d-inline-flex align-items-center justify-content-center rounded-pill bg-warning text-dark px-2 py-1">
+              <i class="bi bi-flag-fill small me-1"></i>
+              <span>{% trans "علامة عُمانية" %}</span>
+            </span>
+            <span class="text-light-50">
+              {% trans "متخصصة في أنظمة الألمنيوم للنوافذ والأبواب" %}
+            </span>
           </div>
 
           <h1 class="h3 h2 mb-3 fw-bold">
@@ -133,14 +133,14 @@
       </div>
     </div>
   </div>
-</div>
+</section>
 
 <div class="row g-4">
 
   {# ========= العمود الأيسر (القصة + الرحلة) ========= #}
   <div class="col-lg-8">
 
-    <div class="card border-0 shadow-sm mb-3">
+    <section class="card border-0 shadow-sm mb-3">
       <div class="card-body">
         <h2 class="h5 fw-bold mb-3">
           {% trans "قصتنا ورؤيتنا" %}
@@ -163,57 +163,61 @@
           </p>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="card border-0 shadow-sm mb-3">
+    <section class="card border-0 shadow-sm mb-3">
       <div class="card-body">
         <h2 class="h5 fw-bold mb-3">
           {% trans "رحلة مزون المنيوم" %}
         </h2>
 
         <div class="small text-muted" style="line-height: 1.9;">
-          <div class="mb-3">
-            <div class="fw-semibold mb-1">
-              {% trans "2016 – مرحلة التأسيس والانطلاق" %}
-            </div>
-            <p class="mb-0">
-              {% blocktrans trimmed %}
-                انطلقت مزون المنيوم كمشروع عُماني يركز على تقديم حلول نوافذ وأبواب بمعايير جودة أعلى، مع فهم عميق لطبيعة المشاريع السكنية والتجارية في السوق المحلي.
-              {% endblocktrans %}
-            </p>
-          </div>
+          <div class="border-start border-3 border-body-tertiary ps-3">
 
-          <div class="mb-3">
-            <div class="fw-semibold mb-1">
-              {% trans "2021 – تطوير الأنظمة الخاصة" %}
+            <div class="mb-3">
+              <div class="fw-semibold mb-1">
+                {% trans "2016 – مرحلة التأسيس والانطلاق" %}
+              </div>
+              <p class="mb-0">
+                {% blocktrans trimmed %}
+                  انطلقت مزون المنيوم كمشروع عُماني يركز على تقديم حلول نوافذ وأبواب بمعايير جودة أعلى، مع فهم عميق لطبيعة المشاريع السكنية والتجارية في السوق المحلي.
+                {% endblocktrans %}
+              </p>
             </div>
-            <p class="mb-0">
-              {% blocktrans trimmed %}
-                مع تطور الخبرة، انتقلت الشركة إلى تصميم أنظمتها الخاصة للنوافذ والأبواب، بما في ذلك الأنظمة العازلة حرارياً، مع اعتماد معايير تصميم واختبارات أكثر صرامة.
-              {% endblocktrans %}
-            </p>
-          </div>
 
-          <div class="mb-0">
-            <div class="fw-semibold mb-1">
-              {% trans "2025 – بحث وتطوير مستمر" %}
+            <div class="mb-3">
+              <div class="fw-semibold mb-1">
+                {% trans "2021 – تطوير الأنظمة الخاصة" %}
+              </div>
+              <p class="mb-0">
+                {% blocktrans trimmed %}
+                  مع تطور الخبرة، انتقلت الشركة إلى تصميم أنظمتها الخاصة للنوافذ والأبواب، بما في ذلك الأنظمة العازلة حرارياً، مع اعتماد معايير تصميم واختبارات أكثر صرامة.
+                {% endblocktrans %}
+              </p>
             </div>
-            <p class="mb-0">
-              {% blocktrans trimmed %}
-                تستمر مزون المنيوم في تطوير نماذج جديدة للسحاب والمفصلي، وتوحيد الإكسسوارات، وبناء منصات اختبار متقدمة، إلى جانب توثيق تقني ثنائي اللغة لضمان ريادة مستدامة في الابتكار والجودة.
-              {% endblocktrans %}
-            </p>
+
+            <div class="mb-0">
+              <div class="fw-semibold mb-1">
+                {% trans "2025 – بحث وتطوير مستمر" %}
+              </div>
+              <p class="mb-0">
+                {% blocktrans trimmed %}
+                  تستمر مزون المنيوم في تطوير نماذج جديدة للسحاب والمفصلي، وتوحيد الإكسسوارات، وبناء منصات اختبار متقدمة، إلى جانب توثيق تقني ثنائي اللغة لضمان ريادة مستدامة في الابتكار والجودة.
+                {% endblocktrans %}
+              </p>
+            </div>
+
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
   </div>
 
   {# ========= العمود الأيمن (محاور التميز + الشركاء) ========= #}
   <div class="col-lg-4">
 
-    <div class="card border-0 shadow-sm mb-3">
+    <section class="card border-0 shadow-sm mb-3">
       <div class="card-body small text-muted">
         <h2 class="h6 fw-bold mb-3">
           {% trans "محاور التميز في مزون المنيوم" %}
@@ -222,7 +226,7 @@
         <ul class="list-unstyled mb-0">
 
           <li class="mb-3 d-flex">
-            <i class="bi bi-circle-fill me-2 mt-1 small"></i>
+            <i class="bi bi-check2-circle me-2 mt-1 small text-primary"></i>
             <div>
               <div class="fw-semibold mb-1">
                 {% trans "أنظمة مزون" %}
@@ -236,7 +240,7 @@
           </li>
 
           <li class="mb-3 d-flex">
-            <i class="bi bi-circle-fill me-2 mt-1 small"></i>
+            <i class="bi bi-check2-circle me-2 mt-1 small text-primary"></i>
             <div>
               <div class="fw-semibold mb-1">
                 {% trans "أداء مُعتمد" %}
@@ -250,7 +254,7 @@
           </li>
 
           <li class="mb-3 d-flex">
-            <i class="bi bi-circle-fill me-2 mt-1 small"></i>
+            <i class="bi bi-check2-circle me-2 mt-1 small text-primary"></i>
             <div>
               <div class="fw-semibold mb-1">
                 {% trans "البحث والتطوير والنماذج الأولية" %}
@@ -264,7 +268,7 @@
           </li>
 
           <li class="d-flex">
-            <i class="bi bi-circle-fill me-2 mt-1 small"></i>
+            <i class="bi bi-check2-circle me-2 mt-1 small text-primary"></i>
             <div>
               <div class="fw-semibold mb-1">
                 {% trans "المشاريع والشركاء" %}
@@ -279,9 +283,9 @@
 
         </ul>
       </div>
-    </div>
+    </section>
 
-    <div class="card border-0 shadow-sm mb-3">
+    <section class="card border-0 shadow-sm mb-3">
       <div class="card-body small text-muted">
         <h2 class="h6 fw-bold mb-3">
           {% trans "شركاؤنا المحليون الموثوقون" %}
@@ -344,9 +348,9 @@
           </li>
         </ul>
       </div>
-    </div>
+    </section>
 
-    <div class="card border-0 shadow-sm">
+    <section class="card border-0 shadow-sm">
       <div class="card-body small text-muted">
         <h2 class="h6 fw-bold mb-2">
           {% trans "مشغل بواسطة مؤسسة استثمار" %}
@@ -357,7 +361,7 @@
           {% endblocktrans %}
         </p>
       </div>
-    </div>
+    </section>
 
   </div>
 </div>

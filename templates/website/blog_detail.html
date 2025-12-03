@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n static %}
 
 {# ================== SEO BLOCKS ================== #}
 
@@ -21,7 +21,15 @@
 
 {% block og_type %}article{% endblock %}
 {% block og_url %}{{ request.build_absolute_uri }}{% endblock %}
-{% block og_image %}{% if og_image_url %}{{ og_image_url }}{% endif %}{% endblock %}
+{% block og_image %}
+  {% if og_image_url %}
+    {{ og_image_url }}
+  {% elif post.thumbnail %}
+    {{ post.thumbnail.url }}
+  {% else %}
+    {% static "img/mazoon/og-blog.webp" %}
+  {% endif %}
+{% endblock %}
 
 {% block twitter_card %}summary_large_image{% endblock %}
 {% block twitter_title %}
@@ -30,9 +38,17 @@
 {% block twitter_description %}
   {{ post.meta_description|default:post.body|striptags|truncatechars:180 }}
 {% endblock %}
-{% block twitter_image %}{% if og_image_url %}{{ og_image_url }}{% endif %}{% endblock %}
+{% block twitter_image %}
+  {% if og_image_url %}
+    {{ og_image_url }}
+  {% elif post.thumbnail %}
+    {{ post.thumbnail.url }}
+  {% else %}
+    {% static "img/mazoon/og-blog.webp" %}
+  {% endif %}
+{% endblock %}
 
-{# عنوان الصفحة الداخلي #}
+{# عنوان التبويب الداخلي #}
 {% block title %}
   {{ post.meta_title|default:post.title }}
 {% endblock %}
@@ -43,119 +59,170 @@
 
   {# ======== المقال ======== #}
   <div class="col-lg-8">
+
+    {# هيدر التدوينة (كرت خفيف) #}
+    <section class="mb-3">
+      <div class="card border-0 shadow-sm bg-body">
+        <div class="card-body p-3 p-md-4">
+
+          <header class="mb-2">
+            <h1 class="h3 fw-bold mb-2 text-body">
+              {{ post.title }}
+            </h1>
+          </header>
+
+          <div class="d-flex flex-wrap gap-3 align-items-center text-muted small">
+
+            <span class="d-inline-flex align-items-center gap-1">
+              <i class="bi bi-calendar-event"></i>
+              <span>{{ post.published_at|date:"Y-m-d H:i" }}</span>
+            </span>
+
+            {% if post.read_time %}
+              <span class="d-inline-flex align-items-center gap-1">
+                <i class="bi bi-stopwatch"></i>
+                <span>
+                  {{ post.read_time }} {% trans "دقيقة قراءة تقريباً" %}
+                </span>
+              </span>
+            {% endif %}
+
+            <span class="d-inline-flex align-items-center gap-1">
+              <i class="bi bi-chat-dots"></i>
+              <span>
+                {% blocktrans count count=comments|length %}
+                  تعليق واحد
+                {% plural %}
+                  {{ count }} تعليقات
+                {% endblocktrans %}
+              </span>
+            </span>
+
+          </div>
+
+          {# الوسوم #}
+          {% with tags=post.tags.all %}
+            {% if tags %}
+              <div class="mt-3 small">
+                <span class="text-muted me-1">{% trans "الوسوم" %}:</span>
+                {% for tag in tags %}
+                  <span class="badge bg-body-tertiary text-muted border">
+                    #{{ tag.name }}
+                  </span>
+                {% endfor %}
+              </div>
+            {% endif %}
+          {% endwith %}
+
+        </div>
+      </div>
+    </section>
+
+    {# محتوى التدوينة #}
     <article class="mb-4">
 
-      <header class="mb-3">
-        <h1 class="h3 fw-bold mb-2 text-body">
-          {{ post.title }}
-        </h1>
+      <div class="card border-0 shadow-sm overflow-hidden">
+        {# صورة في أعلى الكرت لو فيه thumbnail #}
+        {% if post.thumbnail %}
+          <div class="ratio ratio-16x9">
+            <img src="{{ post.thumbnail.url }}"
+                 alt="{{ post.title }}"
+                 class="img-fluid object-fit-cover">
+          </div>
+        {% endif %}
 
-        <div class="d-flex flex-wrap gap-2 align-items-center text-muted small">
-          <span>📅 {{ post.published_at|date:"Y-m-d H:i" }}</span>
-          <span>•</span>
-          <span>
+        <div class="card-body small" style="line-height: 1.9;">
+          {# لو المحتوى HTML استخدم |safe، لو نص عادي linebreaks تكفي #}
+          {{ post.body|linebreaks }}
+        </div>
+      </div>
+
+    </article>
+
+    {# ======== التعليقات ======== #}
+    <section class="mb-4" id="comments">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+
+          <h2 class="h5 fw-bold mb-3 text-body">
             {% blocktrans count count=comments|length %}
               تعليق واحد
             {% plural %}
               {{ count }} تعليقات
             {% endblocktrans %}
-          </span>
-        </div>
+          </h2>
 
-        {% with tags=post.tags.all %}
-          {% if tags %}
-            <div class="mt-2 small">
-              <span class="text-muted">{% trans "الوسوم" %}:</span>
-              {% for tag in tags %}
-                <span class="badge bg-light text-muted border ms-1">
-                  #{{ tag.name }}
-                </span>
+          {% if comments %}
+            <div class="list-group mb-3">
+              {% for c in comments %}
+                <div class="list-group-item border-0 border-bottom">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <strong class="small">{{ c.name }}</strong>
+                    <span class="small text-muted">
+                      {{ c.created_at|date:"Y-m-d H:i" }}
+                    </span>
+                  </div>
+                  <p class="mb-0 small text-body" style="white-space: pre-wrap;">
+                    {{ c.content }}
+                  </p>
+                </div>
               {% endfor %}
             </div>
+          {% else %}
+            <p class="text-muted small mb-0">
+              {% trans "لا توجد تعليقات بعد. كن أول من يعلق على هذه التدوينة." %}
+            </p>
           {% endif %}
-        {% endwith %}
-      </header>
 
-      <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body small" style="line-height: 1.9;">
-          {{ post.body|linebreaks }}
         </div>
       </div>
-    </article>
-
-    {# ======== التعليقات ======== #}
-    <section class="mb-4" id="comments">
-      <h2 class="h5 fw-bold mb-3">
-        {% blocktrans count count=comments|length %}
-          تعليق واحد
-        {% plural %}
-          {{ count }} تعليقات
-        {% endblocktrans %}
-      </h2>
-
-      {% if comments %}
-        <div class="list-group mb-3">
-          {% for c in comments %}
-            <div class="list-group-item">
-              <div class="d-flex justify-content-between align-items-center mb-1">
-                <strong>{{ c.name }}</strong>
-                <span class="small text-muted">
-                  {{ c.created_at|date:"Y-m-d H:i" }}
-                </span>
-              </div>
-              <p class="mb-1 small" style="white-space: pre-wrap;">
-                {{ c.content }}
-              </p>
-            </div>
-          {% endfor %}
-        </div>
-      {% else %}
-        <p class="text-muted small mb-3">
-          {% trans "لا توجد تعليقات بعد. كن أول من يعلق على هذه التدوينة." %}
-        </p>
-      {% endif %}
     </section>
 
     {# ======== نموذج إضافة تعليق ======== #}
     <section id="add-comment">
-      <h2 class="h5 fw-bold mb-3">{% trans "أضف تعليقاً" %}</h2>
-
       <div class="card border-0 shadow-sm">
         <div class="card-body">
+          <h2 class="h5 fw-bold mb-3 text-body">
+            {% trans "أضف تعليقاً" %}
+          </h2>
+
           <form method="post" class="row g-3">
             {% csrf_token %}
 
             <div class="col-md-6">
-              <label class="form-label small fw-semibold">
+              <label class="form-label small fw-semibold" for="id_comment_name">
                 {% trans "الاسم" %}
               </label>
               <input type="text"
+                     id="id_comment_name"
                      name="name"
                      class="form-control form-control-sm"
                      required>
             </div>
 
             <div class="col-md-6">
-              <label class="form-label small fw-semibold">
+              <label class="form-label small fw-semibold" for="id_comment_email">
                 {% trans "البريد الإلكتروني (اختياري)" %}
               </label>
               <input type="email"
+                     id="id_comment_email"
                      name="email"
                      class="form-control form-control-sm">
             </div>
 
             <div class="col-12">
-              <label class="form-label small fw-semibold">
+              <label class="form-label small fw-semibold" for="id_comment_content">
                 {% trans "التعليق" %}
               </label>
-              <textarea name="content"
+              <textarea id="id_comment_content"
+                        name="content"
                         rows="4"
                         class="form-control form-control-sm"
                         required></textarea>
             </div>
 
             <div class="col-12 d-flex justify-content-end">
-              <button type="submit" class="btn btn-primary">
+              <button type="submit" class="btn btn-primary btn-sm">
                 {% trans "إرسال التعليق" %}
               </button>
             </div>
@@ -163,26 +230,56 @@
         </div>
       </div>
     </section>
+
   </div>
 
   {# ======== الشريط الجانبي ======== #}
   <div class="col-lg-4">
-    <aside class="position-sticky" style="top: 80px;">
+    <aside class="position-sticky" style="top: 88px;">
 
       <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body">
-          <h2 class="h6 fw-bold mb-2 text-body">{% trans "عن هذه التدوينة" %}</h2>
-          <p class="small text-muted mb-0">
+        <div class="card-body small text-muted">
+          <h2 class="h6 fw-bold mb-2 text-body">
+            {% trans "عن هذه التدوينة" %}
+          </h2>
+          <p class="mb-1">
+            {{ post.meta_description|default:post.body|striptags|truncatechars:160 }}
+          </p>
+          <p class="mb-0">
             {% trans "يمكنك استخدام هذه المنطقة لإضافة وصف مختصر، ملاحظات تقنية، أو روابط لتدوينات مرتبطة." %}
           </p>
         </div>
       </div>
 
+      {# تدوينات أخرى (اختياري: recent_posts في الـ context) #}
+      {% if recent_posts %}
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-body small">
+            <h2 class="h6 fw-bold mb-2 text-body">
+              {% trans "تدوينات أخرى" %}
+            </h2>
+            <div class="vstack gap-2">
+              {% for p in recent_posts %}
+                <a href="{{ p.get_absolute_url }}"
+                   class="text-decoration-none d-block">
+                  <div class="fw-semibold small text-body">
+                    {{ p.title|truncatechars:60 }}
+                  </div>
+                  <div class="text-muted x-small">
+                    {{ p.published_at|date:"Y-m-d" }}
+                  </div>
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
       <div class="card border-0 shadow-sm">
         <div class="card-body small text-muted">
           <strong class="d-block mb-1 text-body">{% trans "ملاحظة" %}:</strong>
           <p class="mb-0">
-            {% trans "نموذج التعليقات هنا بسيط، ويمكن لاحقاً ربطه بنظام إشعارات أو موافقة يدوية من لوحة التحكم." %}
+            {% trans "نموذج التعليقات هنا بسيط، ويمكن لاحقاً ربطه بنظام إشعارات، مراجعة التعليقات يدوياً، أو تقييد التعليقات للمستخدمين المسجلين فقط." %}
           </p>
         </div>
       </div>
