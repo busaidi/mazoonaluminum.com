@@ -191,6 +191,7 @@
             <tr>
               <th class="small text-muted text-nowrap">{% trans "كود" %}</th>
               <th class="small text-muted">{% trans "المنتج / الوصف" %}</th>
+                <th class="small text-muted text-center text-nowrap">{% trans "الوحدة" %}</th>
               <th class="small text-muted text-end text-nowrap">{% trans "الكمية" %}</th>
             </tr>
           </thead>
@@ -214,16 +215,20 @@
                   <div class="text-muted">—</div>
                 {% endif %}
 
-                {% if line.display_name %}
-                  <div class="text-muted small mt-1">
-                    {{ line.display_name }}
-                  </div>
-                {% elif line.description %}
-                  <div class="text-muted small mt-1">
-                    {{ line.description }}
-                  </div>
-                {% endif %}
+{% if line.description %}
+  <div class="text-muted small mt-1">
+    {{ line.description }}
+  </div>
+{% endif %}
+
               </td>
+<td class="small text-center text-nowrap">
+  {% if line.uom %}
+    {{ line.uom.code|default:line.uom.name }}
+  {% else %}
+    <span class="text-muted">—</span>
+  {% endif %}
+</td>
 
               <td class="small text-end text-nowrap">
                 {{ line.quantity }}

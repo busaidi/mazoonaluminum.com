@@ -12,17 +12,17 @@ from .models import SalesDocument, DeliveryNote, SalesLine, DeliveryLine
 # SalesDocumentForm
 # ===================================================================
 
-
 class SalesDocumentForm(forms.ModelForm):
     """
-    فورم مستند المبيعات:
+    فورم مستند المبيعات (الهيدر):
+
     - لا نعرض حقل kind للمستخدم.
-    - نثبّت النوع = QUOTATION عند الإنشاء.
+    - عند إنشاء مستند جديد نثبّت النوع = QUOTATION.
     """
 
     class Meta:
         model = SalesDocument
-        # لاحظ: حذفنا kind من الحقول
+        # ملاحظة: kind غير موجود هنا عمداً
         fields = ["contact", "date", "due_date", "notes", "customer_notes"]
         widgets = {
             "contact": forms.Select(attrs={"class": "form-select"}),
@@ -37,16 +37,18 @@ class SalesDocumentForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """
+        عند إنشاء فورم جديد:
+        - لو instance جديد → نثبت kind=QUOTATION قبل الفالديشن.
+        """
         super().__init__(*args, **kwargs)
 
-        # لو مستند جديد → ثبّت النوع كعرض سعر قبل الفالديشن
         if not self.instance.pk:
             self.instance.kind = SalesDocument.Kind.QUOTATION
 
-
     def clean(self):
         """
-        التحقق من أن تاريخ الانتهاء لا يسبق تاريخ المستند.
+        التحقق من أن تاريخ الاستحقاق لا يسبق تاريخ المستند.
         """
         cleaned_data = super().clean()
         date = cleaned_data.get("date")
@@ -62,26 +64,13 @@ class SalesDocumentForm(forms.ModelForm):
 # DeliveryNoteForm
 # ===================================================================
 
-from django import forms
-from django.forms.models import BaseInlineFormSet, inlineformset_factory
-from django.utils.translation import gettext_lazy as _
-
-from inventory.models import Product
-from .models import SalesDocument, DeliveryNote, SalesLine, DeliveryLine
-
-
-# ===================================================================
-# DeliveryNoteForm
-# ===================================================================
-
 class DeliveryNoteForm(forms.ModelForm):
     """
-    فورم مذكرة التسليم.
+    فورم مذكرة التسليم (الهيدر):
 
-    ملاحظات:
-    - الحقل contact مطلوب في المذكرات المستقلة.
-    - في المذكرات المرتبطة بأمر بيع، سنملأ contact من order في الفيو
-      و/أو نجعله للعرض فقط في القالب.
+    - في المذكرات المستقلة: المستخدم يختار contact يدوياً.
+    - في المذكرات المرتبطة بأمر بيع: الفيو يملأ contact من order.contact
+      ويمكن للقالب أن يعرضه فقط بدون تعديل.
     """
 
     class Meta:
@@ -100,10 +89,10 @@ class DeliveryNoteForm(forms.ModelForm):
 
 class DeliveryLineForm(forms.ModelForm):
     """
-    فورم بند تسليم واحد ضمن مذكرة التسليم.
+    فورم سطر تسليم واحد ضمن مذكرة التسليم:
 
-    - product_code حقل مساعد للبحث بالكود.
-    - product (FK) مخفي في الواجهة، ويُعبّأ تلقائياً بعد إيجاد المنتج.
+    - product_code حقل مساعد للبحث بالكود (يُستخدم مع JS + API).
+    - product (FK) لا يظهر للمستخدم، ويُعبّأ تلقائياً بعد اختيار المنتج.
     """
 
     product_code = forms.CharField(
@@ -115,6 +104,7 @@ class DeliveryLineForm(forms.ModelForm):
                 "autocomplete": "off",
             }
         ),
+        # ممكن نضيف help_text لاحقاً لو حبيت
         # help_text=_("Enter internal product code to search quickly."),
     )
 
@@ -127,7 +117,12 @@ class DeliveryLineForm(forms.ModelForm):
             "uom",
         ]
         widgets = {
-            "product": forms.HiddenInput(),
+            # نخلي المنتج مخفي؛ الاختيار يتم عن طريق product_code + JS
+            "product": forms.Select(
+                attrs={
+                    "class": "form-select form-select-sm",
+                }
+            ),
             "description": forms.TextInput(
                 attrs={
                     "class": "form-control form-control-sm",
@@ -140,7 +135,7 @@ class DeliveryLineForm(forms.ModelForm):
                     "min": "0",
                 }
             ),
-            "uom": forms.Select(          # 👈 هذا الجديد
+            "uom": forms.Select(
                 attrs={
                     "class": "form-select form-select-sm",
                 }
@@ -148,14 +143,24 @@ class DeliveryLineForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """
+        عند تحميل السطر:
+        - لو السطر مرتبط بمنتج → نعبّي product_code تلقائياً من product.code.
+        """
         super().__init__(*args, **kwargs)
 
         product = getattr(self.instance, "product", None)
-        # لو السطر له منتج محفوظ مسبقاً → عبّي الكود تلقائياً
         if product and hasattr(product, "code") and not self.initial.get("product_code"):
             self.initial["product_code"] = product.code
 
     def clean(self):
+        """
+        منطق الفالديشن لسطر التسليم:
+
+        - لو الفورم لم يتغيّر نهائياً → نرجع البيانات كما هي (الفورمست يتكفّل).
+        - لو فيه product_code بدون product → نحاول نبحث عن المنتج بالكود.
+        - لو الكمية > 0 ولا يوجد منتج ولا وصف → نرمي خطأ.
+        """
         cleaned_data = super().clean()
 
         product = cleaned_data.get("product")
@@ -163,18 +168,18 @@ class DeliveryLineForm(forms.ModelForm):
         quantity = cleaned_data.get("quantity") or 0
         code = cleaned_data.get("product_code")
 
-        # سطر لم يتغيّر نهائياً → الفورمست سيتعامل معه
+        # لو الفورم ما تغيّر (no changes) نخليه يمر، والفورمست هو اللي يقرر
         if not self.has_changed():
             return cleaned_data
 
-        # 1) لو فيه كود وما حُدد منتج → نبحث بالكود
+        # 1) لو فيه كود وما حُدِّد منتج → نبحث بالكود
         if code and not product:
             try:
                 product = Product.objects.get(code__iexact=code.strip())
                 cleaned_data["product"] = product
                 self.instance.product = product
 
-                # اختياري: لو الوصف فاضي عبّيه باسم المنتج
+                # لو الوصف فاضي نعبيه باسم المنتج (اختياري ومفيد في الطباعة)
                 if not description:
                     cleaned_data["description"] = product.name
                     self.instance.description = product.name
@@ -186,7 +191,7 @@ class DeliveryLineForm(forms.ModelForm):
                 )
                 return cleaned_data
 
-        # 2) لابد أن يكون للسطر معنى
+        # 2) التحقق من أن السطر له معنى
         if quantity > 0 and not (product or description):
             raise forms.ValidationError(
                 _("You must select a product or enter a description for this line.")
@@ -197,8 +202,10 @@ class DeliveryLineForm(forms.ModelForm):
 
 class BaseDeliveryLineFormSet(BaseInlineFormSet):
     """
-    Inline formset لبنود التسليم.
-    نتأكد أن على الأقل يوجد سطر واحد له معنى.
+    Inline formset لبنود التسليم:
+
+    - نتأكد أن على الأقل يوجد سطر واحد له معنى (منتج / وصف / كمية).
+    - يمكن توسيع الفالديشن لاحقاً (مثل التحقق من عدم تجاوز كميات الأمر).
     """
 
     def clean(self):
@@ -223,6 +230,7 @@ class BaseDeliveryLineFormSet(BaseInlineFormSet):
             if product or description or quantity:
                 has_valid_line = True
 
+        # لو فيه فورمات لكن كلها فاضية / محذوفة → نرمي خطأ عام
         if self.total_form_count() > 0 and not has_valid_line:
             raise forms.ValidationError(
                 _("You must add at least one delivery line.")
@@ -240,25 +248,26 @@ DeliveryLineFormSet = inlineformset_factory(
     validate_min=False,
 )
 
+
 # ===================================================================
 # SalesLineForm + Inline Formset
 # ===================================================================
 
-
 class SalesLineForm(forms.ModelForm):
     """
-    Single sales line form used in the inline formset.
-    line_total is computed on the model, so it is not exposed here.
+    فورم سطر مبيعات واحد ضمن مستند المبيعات:
+
+    - product_code حقل يساعد في البحث بالكود الداخلي.
+    - product (FK) لا يظهر للمستخدم، ويُعبّأ تلقائياً بعد اختيار الكود.
+    - line_total يُحسب في الموديل، لذلك لا يظهر في الفورم.
     """
 
-    # 👈 حقل كود المنتج (فورم فقط، ليس من الموديل)
     product_code = forms.CharField(
         label=_("Product code"),
         required=False,
         widget=forms.TextInput(
             attrs={
                 "class": "form-control form-control-sm",
-                # "placeholder": _("e.g. MZN-46-FRAME"),
                 "autocomplete": "off",
             }
         ),
@@ -275,6 +284,7 @@ class SalesLineForm(forms.ModelForm):
             "discount_percent",
         ]
         widgets = {
+            # ❗ نخلي المنتج مخفي، والاختيار يتم عبر product_code + JS + API
             "product": forms.Select(
                 attrs={
                     "class": "form-select form-select-sm",
@@ -283,8 +293,6 @@ class SalesLineForm(forms.ModelForm):
             "description": forms.TextInput(
                 attrs={
                     "class": "form-control form-control-sm",
-                    # 👈 نخليه واضح أنه وصف السطر (manual) مثل أودو
-                    # "placeholder": _("Optional line description (shown on document)…"),
                 }
             ),
             "quantity": forms.NumberInput(
@@ -312,20 +320,23 @@ class SalesLineForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """
+        عند تحميل السطر:
+        - لو السطر مرتبط بمنتج → نعبّي product_code من product.code.
+        """
         super().__init__(*args, **kwargs)
 
-        # لو السطر مربوط بمنتج، عبّي product_code تلقائيًا من product.code
         product = getattr(self.instance, "product", None)
         if product and hasattr(product, "code") and not self.initial.get("product_code"):
             self.initial["product_code"] = product.code
 
     def clean(self):
         """
-        Basic per-line validation.
+        منطق الفالديشن لسطر المبيعات:
 
-        - Skip completely untouched forms (handled by formset).
-        - If quantity > 0, require either product or description.
-        - If product_code is filled and product is empty, try to resolve by code.
+        - تجاهل الفورمات التي لم تتغير نهائياً (handled by formset).
+        - لو فيه product_code بدون product → نحاول نبحث بالكود.
+        - لو الكمية > 0 ولا يوجد منتج ولا وصف → نرمي خطأ.
         """
         cleaned_data = super().clean()
 
@@ -334,11 +345,11 @@ class SalesLineForm(forms.ModelForm):
         quantity = cleaned_data.get("quantity") or 0
         code = cleaned_data.get("product_code")
 
-        # Skip validation for completely empty forms (handled at formset level)
+        # لو الفورم ما تغيّر، نخليه يمر والفورمست يتصرف
         if not self.has_changed():
             return cleaned_data
 
-        # 🧩 1) لو فيه كود وما حُدِّد منتج من السلكت → نحاول نجيبه من Product.code
+        # 1) محاولة ربط المنتج عن طريق الكود لو المنتج غير محدد
         if code and not product:
             try:
                 product = Product.objects.get(code__iexact=code.strip())
@@ -349,10 +360,10 @@ class SalesLineForm(forms.ModelForm):
                     "product_code",
                     _("No product found with this code."),
                 )
-                # نرجع مباشرة، عشان ما نكمل باقي الفالديشن على سطر فاسد
+                # نرجع مباشرة بدون المواصلة في باقي الفالديشن
                 return cleaned_data
 
-        # 🧩 2) التحقق من أن السطر له معنى
+        # 2) التحقق من أن السطر له معنى
         if quantity > 0 and not (product or description):
             raise forms.ValidationError(
                 _("You must select a product or enter a description for this line.")
@@ -363,10 +374,11 @@ class SalesLineForm(forms.ModelForm):
 
 class BaseSalesLineFormSet(BaseInlineFormSet):
     """
-    Inline formset for sales lines.
+    Inline formset لبنود المبيعات:
 
-    - Ensures at least one non-deleted, non-empty line.
-    - You can extend this later for cross-line validations.
+    - نتأكد من وجود سطر واحد على الأقل له قيمة حقيقية
+      (منتج / وصف / كمية / سعر).
+    - يمكن لاحقاً إضافة فالديشنات مشتركة بين السطور (مثل خصم ما يتعدى نسبة معينة...).
     """
 
     def clean(self):
@@ -375,15 +387,15 @@ class BaseSalesLineFormSet(BaseInlineFormSet):
         has_valid_line = False
 
         for form in self.forms:
-            # Some forms may not have cleaned_data (e.g., invalid forms)
+            # بعض الفورمات قد لا تحتوي cleaned_data (أخطاء سابقة)
             if not hasattr(form, "cleaned_data"):
                 continue
 
-            # Skip forms marked for deletion
+            # نتجاهل السطور المحددة للحذف
             if form.cleaned_data.get("DELETE", False):
                 continue
 
-            # Skip forms that did not change at all
+            # نتجاهل السطور التي لم تتغير نهائياً
             if not form.has_changed():
                 continue
 
@@ -392,22 +404,20 @@ class BaseSalesLineFormSet(BaseInlineFormSet):
             quantity = form.cleaned_data.get("quantity") or 0
             unit_price = form.cleaned_data.get("unit_price") or 0
 
-            # Consider this a meaningful line if it has some content
+            # نعتبر السطر "له معنى" لو فيه أي قيمة من هذه
             if product or description or quantity or unit_price:
                 has_valid_line = True
 
-        # If we require at least one line, enforce it here
         if self.total_form_count() > 0 and not has_valid_line:
             raise forms.ValidationError(
                 _("You must add at least one sales line.")
             )
 
 
-
 SalesLineFormSet = inlineformset_factory(
     parent_model=SalesDocument,
     model=SalesLine,
-    form=SalesLineForm,          # 👈 نفس الفورم
+    form=SalesLineForm,
     formset=BaseSalesLineFormSet,
     extra=5,
     can_delete=True,
