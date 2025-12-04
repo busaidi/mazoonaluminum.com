@@ -39,8 +39,9 @@ from .services import reopen_cancelled_sales_document
 
 
 # ======================================================================
-# Base View لقسم المبيعات
+# فيو أساسي لقسم المبيعات
 # ======================================================================
+
 
 class SalesBaseView(LoginRequiredMixin):
     """
@@ -48,6 +49,7 @@ class SalesBaseView(LoginRequiredMixin):
     - يضمن أن المستخدم مسجّل دخول (LoginRequiredMixin).
     - يضيف المتغير sales_section في الـ context لاستخدامه في الـ navbar.
     """
+
     sales_section = None
 
     def get_context_data(self, **kwargs):
@@ -60,6 +62,7 @@ class SalesBaseView(LoginRequiredMixin):
 # لوحة تحكم المبيعات (Dashboard)
 # ======================================================================
 
+
 class SalesDashboardView(SalesBaseView, TemplateView):
     """
     لوحة تحكم قسم المبيعات:
@@ -69,6 +72,7 @@ class SalesDashboardView(SalesBaseView, TemplateView):
     - تعرض إحصائيات workflow (مسودة / مؤكد / مفوتر / مسلَّم).
     - تعرض آخر المستندات وأعلى العملاء من حيث إجمالي الأوامر.
     """
+
     template_name = "sales/dashboard.html"
     sales_section = "dashboard"
 
@@ -154,10 +158,13 @@ class SalesDashboardView(SalesBaseView, TemplateView):
 
         ctx["top_customers"] = top_customers
 
+        return ctx
+
 
 # ======================================================================
 # قائمة / إنشاء / تفاصيل / تعديل مستندات المبيعات
 # ======================================================================
+
 
 class SalesDocumentListView(SalesBaseView, ListView):
     """
@@ -167,6 +174,7 @@ class SalesDocumentListView(SalesBaseView, ListView):
     - حسب الفوترة: مفوتر / غير مفوتر (للأوامر فقط).
     - حسب اسم جهة الاتصال (بحث نصي بسيط).
     """
+
     model = SalesDocument
     template_name = "sales/sales/list.html"
     context_object_name = "documents"
@@ -237,13 +245,14 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
     - إعادة احتساب الإجماليات بعد حفظ البنود.
     - تسجيل الأوديت وإنشاء نتفيكشن للمستخدم.
     """
+
     model = SalesDocument
     form_class = SalesDocumentForm
     template_name = "sales/sales/form.html"
     sales_section = "sales_create"
 
     # --------------------------------------------------
-    # دوال مساعدة داخلية (لا تُستخدم خارج الفيو)
+    # دوال مساعدة داخلية
     # --------------------------------------------------
 
     def _get_lines_formset(self):
@@ -324,7 +333,7 @@ class SalesDocumentCreateView(SalesBaseView, CreateView):
                 elif uom_kind == "alt" and getattr(product, "alt_uom", None):
                     selected_uom = product.alt_uom
                 elif getattr(product, "base_uom", None):
-                    # fallback افتراضي → الوحدة الأساسية
+                    # افتراضيًا نختار الوحدة الأساسية
                     selected_uom = product.base_uom
 
                 if selected_uom is not None:
@@ -436,6 +445,7 @@ class SalesDocumentDetailView(SalesBaseView, DetailView):
     - مذكرات التسليم المرتبطة (إن وُجدت).
     - رابط لسجل التدقيق (AuditLog) الخاص بهذا المستند.
     """
+
     model = SalesDocument
     template_name = "sales/sales/detail.html"
     context_object_name = "document"
@@ -484,6 +494,7 @@ class SalesDocumentUpdateView(SalesBaseView, UpdateView):
     - تسجيل الأوديت مع حفظ القيم القديمة والجديدة.
     - إنشاء إشعار بتحديث المستند.
     """
+
     model = SalesDocument
     form_class = SalesDocumentForm
     template_name = "sales/sales/form.html"
@@ -511,6 +522,7 @@ class SalesDocumentUpdateView(SalesBaseView, UpdateView):
 
         return context
 
+    @transaction.atomic
     def form_valid(self, form):
         """
         تسلسل منطق التحديث:
@@ -595,14 +607,16 @@ class SalesDocumentUpdateView(SalesBaseView, UpdateView):
 # تحويل عرض سعر → أمر بيع
 # ======================================================================
 
+
 class ConvertQuotationToOrderView(SalesBaseView, View):
     """
-    فيو بسيط لتحويل عرض السعر إلى أمر بيع
+    فيو لتحويل عرض السعر إلى أمر بيع
     عبر السيرفس: confirm_quotation_to_order
 
     - السيرفس يتكفّل بالمنطق الداخلي والأوديت.
     - الفيو مسؤول عن الرسائل والنتفيكشن فقط.
     """
+
     sales_section = "sales_detail"
 
     def post(self, request, pk):
@@ -634,6 +648,7 @@ class ConvertQuotationToOrderView(SalesBaseView, View):
 # تعليم أمر البيع كمفوتر
 # ======================================================================
 
+
 class MarkOrderInvoicedView(SalesBaseView, View):
     """
     فيو مسؤول عن تعليم أمر البيع كمفوتر
@@ -642,6 +657,7 @@ class MarkOrderInvoicedView(SalesBaseView, View):
     - السيرفس يسجل الأوديت.
     - الفيو يضيف إشعار ورسالة للمستخدم.
     """
+
     sales_section = "sales_detail"
 
     def post(self, request, pk):
@@ -672,37 +688,81 @@ class MarkOrderInvoicedView(SalesBaseView, View):
 # مذكرات التسليم (إنشاء / عرض / قائمة)
 # ======================================================================
 
+
 class DeliveryNoteCreateView(SalesBaseView, CreateView):
     """
     إنشاء مذكرة تسليم جديدة مرتبطة بأمر بيع:
 
     - يتم جلب أمر البيع من الـ URL (order_pk).
-    - يتم ضبط contact من order.contact.
-    - يتم ضبط الحالة كمسودة (DRAFT).
     - يتم ضبط created_by / updated_by بالمستخدم الحالي.
-    - يتم حفظ البنود عبر DeliveryLineFormSet + services.add_delivery_line.
-    - يتم تسجيل الأوديت وإنشاء نتفيكشن.
+    - يتم تسجيل الأوديت عند إنشاء المذكرة.
+    - يتم إنشاء إشعار للمستخدم.
+    - يتم حفظ بنود التسليم (DeliveryLine) عبر inline formset.
     """
+
     model = DeliveryNote
     form_class = DeliveryNoteForm
     template_name = "sales/delivery/form.html"
     sales_section = "deliveries"
 
-    # --------------------------------------------------
-    # دوال مساعدة
-    # --------------------------------------------------
+    # ---------------- دوال مساعدة ----------------
 
     def _get_lines_formset(self):
         """
-        تجهيز formset بنود التسليم.
+        تجهيز الـ formset لبنود التسليم:
+
+        - في حالة POST: نرجع الفورمست من الـ POST كما هو.
+        - في حالة GET (أول مرة يفتح الصفحة من أمر بيع):
+          نقوم بتحميل بنود أمر البيع (SalesLine) ونحوّلها لـ initial
+          حتى تظهر في مذكرة التسليم جاهزة مع:
+          - المنتج
+          - الوصف
+          - الكمية
+          - وحدة القياس
         """
         if self.request.method == "POST":
             return DeliveryLineFormSet(self.request.POST)
-        return DeliveryLineFormSet()
+
+        # حالة GET: نحاول نسحب بنود أمر البيع
+        order_lines = (
+            self.order.lines
+            .select_related("product", "uom")
+            .order_by("id")
+        )
+
+        initial = []
+        for line in order_lines:
+            # لو السطر فاضي جدًا نتجاهله احتياطًا
+            if not (line.product or line.description or line.quantity):
+                continue
+
+            product = line.product
+            description = line.description or (product.name if product else "")
+            quantity = line.quantity
+            uom = getattr(line, "uom", None)
+
+            initial.append(
+                {
+                    # الحقول المربوطة بالموديل DeliveryLine
+                    "product": product,
+                    "description": description,
+                    "quantity": quantity,
+                    "uom": uom,
+                    # حقل الفورم فقط (product_code) عشان يظهر الكود في الواجهة
+                    "product_code": getattr(product, "code", "") if product else "",
+                }
+            )
+
+        # لو ما فيه بنود للأوردر → نخليها فاضية
+        if not initial:
+            return DeliveryLineFormSet()
+
+        return DeliveryLineFormSet(initial=initial)
 
     def dispatch(self, request, *args, **kwargs):
         """
-        جلب أمر البيع المستهدف قبل تنفيذ باقي المنطق.
+        جلب أمر البيع المستهدف من قاعدة البيانات قبل تنفيذ باقي المنطق.
+        (مهم لأن _get_lines_formset يعتمد على self.order)
         """
         self.order = get_object_or_404(
             SalesDocument.objects.orders(),
@@ -712,24 +772,25 @@ class DeliveryNoteCreateView(SalesBaseView, CreateView):
 
     def get_context_data(self, **kwargs):
         """
-        تمرير أمر البيع + formset للبنود للقالب.
+        تمرير أمر البيع + الفورمست للبنود للقالب.
         """
         ctx = super().get_context_data(**kwargs)
         ctx["order"] = self.order
         ctx.setdefault("lines_formset", self._get_lines_formset())
         return ctx
 
+    @transaction.atomic
     def form_valid(self, form):
         """
         منطق الحفظ عند إنشاء مذكرة التسليم:
-
-        1) التحقق من صلاحية formset البنود.
-        2) ربط المذكرة بأمر البيع + العميل.
-        3) ضبط الحالة والـ created_by / updated_by.
-        4) حفظ المذكرة.
-        5) حفظ البنود عبر services.add_delivery_line.
-        6) تسجيل الأوديت.
-        7) إنشاء نتفيكشن.
+        - ربطها بأمر البيع.
+        - تثبيت الحالة كمسودة.
+        - ضبط contact من order.contact.
+        - ضبط created_by / updated_by.
+        - حفظ المذكرة.
+        - حفظ بنود التسليم عبر DeliveryLineFormSet (باستخدام service add_delivery_line).
+        - تسجيل الأوديت بعد الحفظ.
+        - إنشاء إشعار للمستخدم.
         """
         context = self.get_context_data(form=form)
         lines_formset = context["lines_formset"]
@@ -737,12 +798,10 @@ class DeliveryNoteCreateView(SalesBaseView, CreateView):
         if not lines_formset.is_valid():
             return self.render_to_response(context)
 
-        # 2) ربط المذكرة بأمر البيع + العميل
         form.instance.order = self.order
         form.instance.contact = self.order.contact
         form.instance.status = DeliveryNote.Status.DRAFT
 
-        # تعبئة created_by / updated_by
         user = self.request.user
         if user.is_authenticated:
             if hasattr(form.instance, "created_by") and not form.instance.pk:
@@ -750,16 +809,12 @@ class DeliveryNoteCreateView(SalesBaseView, CreateView):
             if hasattr(form.instance, "updated_by"):
                 form.instance.updated_by = user
 
-        # 4) حفظ المذكرة أولاً
         response = super().form_valid(form)
 
-        # 5) حفظ بنود التسليم باستخدام السيرفس (علشان الأوديت)
         for line_form in lines_formset.forms:
             if not getattr(line_form, "cleaned_data", None):
                 continue
             if line_form.cleaned_data.get("DELETE"):
-                continue
-            if not line_form.has_changed():
                 continue
 
             product = line_form.cleaned_data.get("product")
@@ -767,7 +822,6 @@ class DeliveryNoteCreateView(SalesBaseView, CreateView):
             quantity = line_form.cleaned_data.get("quantity") or 0
             uom = line_form.cleaned_data.get("uom")
 
-            # تجاهل السطور الفارغة تماماً
             if not product and not description and not quantity:
                 continue
 
@@ -780,7 +834,6 @@ class DeliveryNoteCreateView(SalesBaseView, CreateView):
                 user=user if user.is_authenticated else None,
             )
 
-        # 6) --- الأوديت: إنشاء مذكرة تسليم ---
         log_event(
             action=AuditLog.Action.CREATE,
             message=_("تم إنشاء مذكرة التسليم %(dn)s لأمر البيع %(order)s") % {
@@ -797,7 +850,6 @@ class DeliveryNoteCreateView(SalesBaseView, CreateView):
             },
         )
 
-        # 7) --- نتفيكشن: إشعار بإنشاء مذكرة التسليم ---
         if user.is_authenticated:
             create_notification(
                 recipient=user,
@@ -828,6 +880,7 @@ class StandaloneDeliveryNoteCreateView(SalesBaseView, CreateView):
     - يمكنه إضافة بنود التسليم (DeliveryLine).
     - لا يوجد ربط بأمر بيع.
     """
+
     model = DeliveryNote
     form_class = DeliveryNoteForm
     template_name = "sales/delivery/form.html"
@@ -844,26 +897,18 @@ class StandaloneDeliveryNoteCreateView(SalesBaseView, CreateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx.setdefault("lines_formset", self._get_lines_formset())
-        # علشان نفس القالب يشتغل لأمر بيع / مستقل
+        # حتى يعمل نفس القالب لأمر بيع / مستقل
         ctx["order"] = None
         return ctx
 
+    @transaction.atomic
     def form_valid(self, form):
-        """
-        منطق الحفظ لمذكرة تسليم مستقلة (بدون أمر):
-
-        - ضبط order = None.
-        - حفظ المذكرة كمسودة.
-        - حفظ البنود عبر services.add_delivery_line.
-        - تسجيل الأوديت والنتفيكشن.
-        """
         context = self.get_context_data(form=form)
         lines_formset = context["lines_formset"]
 
         if not lines_formset.is_valid():
             return self.render_to_response(context)
 
-        # مذكره مستقلة → لا يوجد order
         form.instance.order = None
         form.instance.status = DeliveryNote.Status.DRAFT
 
@@ -874,16 +919,12 @@ class StandaloneDeliveryNoteCreateView(SalesBaseView, CreateView):
             if hasattr(form.instance, "updated_by"):
                 form.instance.updated_by = user
 
-        # حفظ المذكرة
         response = super().form_valid(form)
 
-        # حفظ بنود التسليم
         for line_form in lines_formset.forms:
             if not getattr(line_form, "cleaned_data", None):
                 continue
             if line_form.cleaned_data.get("DELETE"):
-                continue
-            if not line_form.has_changed():
                 continue
 
             product = line_form.cleaned_data.get("product")
@@ -891,7 +932,6 @@ class StandaloneDeliveryNoteCreateView(SalesBaseView, CreateView):
             quantity = line_form.cleaned_data.get("quantity") or 0
             uom = line_form.cleaned_data.get("uom")
 
-            # تجاهل السطور الفارغة تماماً
             if not product and not description and not quantity:
                 continue
 
@@ -904,7 +944,6 @@ class StandaloneDeliveryNoteCreateView(SalesBaseView, CreateView):
                 user=user if user.is_authenticated else None,
             )
 
-        # --- الأوديت: إنشاء مذكرة تسليم مستقلة ---
         log_event(
             action=AuditLog.Action.CREATE,
             message=_("تم إنشاء مذكرة تسليم مستقلة %(dn)s") % {
@@ -920,7 +959,6 @@ class StandaloneDeliveryNoteCreateView(SalesBaseView, CreateView):
             },
         )
 
-        # --- نتفيكشن: إشعار بإنشاء مذكرة مستقلة ---
         if user.is_authenticated:
             create_notification(
                 recipient=user,
@@ -950,6 +988,7 @@ class DeliveryNoteDetailView(SalesBaseView, DetailView):
     - أمر البيع المرتبط (إن وجد).
     - بنود التسليم.
     """
+
     model = DeliveryNote
     template_name = "sales/delivery/detail.html"
     context_object_name = "delivery"
@@ -973,6 +1012,7 @@ class DeliveryNoteListView(SalesBaseView, ListView):
     """
     قائمة مذكرات التسليم مع دعم الفلترة والترقيم.
     """
+
     model = DeliveryNote
     template_name = "sales/delivery/list.html"
     context_object_name = "deliveries"
@@ -1027,6 +1067,7 @@ class DeliveryNoteListView(SalesBaseView, ListView):
 # إلغاء / إعادة لمسودة / إعادة فتح مستند مبيعات
 # ======================================================================
 
+
 class CancelSalesDocumentView(SalesBaseView, View):
     """
     إلغاء مستند مبيعات باستخدام السيرفس: cancel_sales_document
@@ -1034,6 +1075,7 @@ class CancelSalesDocumentView(SalesBaseView, View):
     - السيرفس يتكفّل بالمنطق الداخلي والأوديت.
     - هنا فقط نعرض الرسائل ونرسل نتفيكشن عند النجاح.
     """
+
     sales_section = "sales_detail"
 
     def post(self, request, pk):
@@ -1068,6 +1110,7 @@ class ResetSalesDocumentToDraftView(SalesBaseView, View):
     - السيرفس يتكفّل بالأوديت.
     - هنا نرسل إشعار ورسالة نجاح فقط.
     """
+
     sales_section = "sales_detail"
 
     def post(self, request, pk):
@@ -1090,7 +1133,10 @@ class ResetSalesDocumentToDraftView(SalesBaseView, View):
                 url=document.get_absolute_url(),
             )
 
-        messages.success(self.request, _("تمت إعادة المستند إلى حالة المسودة بنجاح."))
+        messages.success(
+            self.request,
+            _("تمت إعادة المستند إلى حالة المسودة بنجاح."),
+        )
         return redirect(document.get_absolute_url())
 
 
@@ -1144,12 +1190,13 @@ def sales_reopen_view(request, pk):
 # API بسيطة لمعلومات المنتجات ووحدات القياس (للـ JS في الفورم)
 # ======================================================================
 
+
 def product_api(request, pk=None):
     """
-    Endpoint موحّد لاستخدامه من الجافاسكربت في الفورم:
+    Endpoint بسيط لاستخدامه من الجافاسكربت في فورم المبيعات / التسليم:
 
     الحالة 1: ?q=ABC
-        - بحث بالكود (code) مع إرجاع top 10 نتائج للأوتوكومبليت.
+        - بحث بالكود (code) مع إرجاع أول 10 نتائج للأوتوكومبليت.
 
     الحالة 2: /product/api/<pk>/
         - جلب تفاصيل المنتج:
@@ -1225,14 +1272,15 @@ def product_api(request, pk=None):
         return JsonResponse(data)
 
     # --------------------------------------------------
-    # 3) في حال لم يتم تمرير q ولا pk → طلب غير صحيح
+    # 3) في حال لم يتم تمرير q ولا pk → طلب غير صالح
     # --------------------------------------------------
-    return JsonResponse({"error": "Invalid request"}, status=400)
+    return JsonResponse({"error": str(_("طلب غير صالح."))}, status=400)
 
 
 # ======================================================================
 # عرض نسخة قابلة للطباعة من مستند المبيعات
 # ======================================================================
+
 
 class SalesDocumentPrintView(SalesBaseView, DetailView):
     """
@@ -1241,6 +1289,7 @@ class SalesDocumentPrintView(SalesBaseView, DetailView):
     - يستخدم قالب مهيّأ للطباعة.
     - لا يحتوي على أزرار أو عناصر تفاعلية غير ضرورية.
     """
+
     model = SalesDocument
     template_name = "sales/sales/print.html"
     context_object_name = "document"

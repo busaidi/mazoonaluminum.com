@@ -14,8 +14,9 @@ from .models import SalesDocument, SalesLine, DeliveryNote, DeliveryLine
 
 
 # ======================================================
-# عروض الأسعار وأوامر البيع
+# خدمات مستندات المبيعات (عروض الأسعار وأوامر البيع)
 # ======================================================
+
 
 @transaction.atomic
 def create_quotation(contact, date=None, user=None, **kwargs) -> SalesDocument:
@@ -23,24 +24,24 @@ def create_quotation(contact, date=None, user=None, **kwargs) -> SalesDocument:
     إنشاء عرض سعر بسيط في حالة المسودة.
 
     المسؤوليات:
-    - يضبط kind = QUOTATION
-    - يضبط status = DRAFT
-    - يضبط created_by / updated_by (إن تم تمرير user)
-    - يسجل عملية التدقيق (Audit Log) عند الإنشاء
+    - ضبط kind = QUOTATION.
+    - ضبط status = DRAFT.
+    - ضبط created_by / updated_by (إن تم تمرير user).
+    - تسجيل عملية التدقيق (Audit Log) عند الإنشاء.
 
     ملاحظة:
     - الإشعارات (Notifications) تتم حالياً من الفيوهات وليس من هنا،
       لأن المستفيد غالباً هو المستخدم الحالي (request.user).
     """
     if date is None:
-        # تعليق: نستخدم التاريخ المحلي للسيرفر (مع احترام إعدادات التايم زون في Django)
+        # نستخدم التاريخ المحلي للسيرفر (مع احترام إعدادات التايمزون في Django)
         date = timezone.localdate()
 
-    # تعليق: نسمح بتمرير حقول إضافية مثل الملاحظات أو أرقام مرجعية عبر **kwargs
+    # نسمح بتمرير حقول إضافية مثل الملاحظات أو أرقام مرجعية عبر **kwargs
     extra_fields = kwargs.copy()
 
     if user is not None:
-        # تعليق: في حال وجود user نضبط created_by / updated_by مرة واحدة هنا
+        # في حال وجود user نضبط created_by / updated_by مرة واحدة هنا
         extra_fields.setdefault("created_by", user)
         extra_fields.setdefault("updated_by", user)
 
@@ -77,8 +78,8 @@ def confirm_quotation_to_order(document: SalesDocument, user=None) -> SalesDocum
 
     القواعد:
     - يجب أن يكون المستند من نوع عرض سعر (quotation).
-    - يجب ألا يكون المستند ملغياً (cancelled).
-    - يجب ألا يكون المستند محذوفاً soft delete.
+    - يجب ألا يكون المستند ملغياً.
+    - يجب ألا يكون المستند محذوفاً (soft delete).
     - يجب ألا يكون المستند مفوترًا (is_invoiced=False).
     - يتم تحويل النوع إلى ORDER.
     - يتم تحويل الحالة إلى CONFIRMED.
@@ -87,10 +88,10 @@ def confirm_quotation_to_order(document: SalesDocument, user=None) -> SalesDocum
 
     ملاحظة:
     - الفيو (ConvertQuotationToOrderView) يتكفّل بعرض الرسائل للمستخدم
-      وإطلاق الإشعار (Notification) عند النجاح.
+      وإطلاق الإشعار عند النجاح.
     """
 
-    # تعليق: أول شيء نمنع التعامل مع سجلات محذوفة (soft delete)
+    # منع التعامل مع سجلات محذوفة (soft delete)
     if getattr(document, "is_deleted", False):
         raise ValidationError(_("لا يمكن تحويل مستند محذوف."))
 
@@ -109,7 +110,7 @@ def confirm_quotation_to_order(document: SalesDocument, user=None) -> SalesDocum
     old_kind = document.kind
     old_status = document.status
 
-    # تعليق: تحويل النوع والحالة لأمر بيع مؤكد
+    # تحويل النوع والحالة لأمر بيع مؤكد
     document.kind = SalesDocument.Kind.ORDER
     document.status = SalesDocument.Status.CONFIRMED
 
@@ -120,7 +121,7 @@ def confirm_quotation_to_order(document: SalesDocument, user=None) -> SalesDocum
 
     document.save(update_fields=update_fields)
 
-    # تعليق: إعادة احتساب الإجماليات لو الدالة موجودة في الموديل
+    # إعادة احتساب الإجماليات لو الدالة موجودة في الموديل
     if hasattr(document, "recompute_totals"):
         document.recompute_totals(save=True)
 
@@ -158,7 +159,7 @@ def mark_order_invoiced(order: SalesDocument, user=None) -> SalesDocument:
     - يتم تسجيل عملية الأوديت عند التعليم كمفوتر.
 
     ملاحظة:
-    - الفيو (MarkOrderInvoicedView) يتكفّل بعرض الرسائل والإشعار.
+    - الفيو (MarkOrderInvoicedView) يتكفّل بعرض الرسائل والإشعارات.
     """
     if getattr(order, "is_deleted", False):
         raise ValidationError(_("لا يمكن فوتر أمر محذوف."))
@@ -170,7 +171,7 @@ def mark_order_invoiced(order: SalesDocument, user=None) -> SalesDocument:
         raise ValidationError(_("لا يمكن فوتر أمر بيع ملغي."))
 
     if order.is_invoiced:
-        # تعليق: لو مفوتر مسبقاً نرجعه كما هو بدون أي تغيير
+        # لو مفوتر مسبقاً نرجعه كما هو بدون أي تغيير
         return order
 
     order.is_invoiced = True
@@ -201,8 +202,9 @@ def mark_order_invoiced(order: SalesDocument, user=None) -> SalesDocument:
 
 
 # ======================================================
-# مذكرات التسليم
+# خدمات مذكرات التسليم
 # ======================================================
+
 
 @transaction.atomic
 def create_delivery_note_for_order(
@@ -241,6 +243,7 @@ def create_delivery_note_for_order(
         "date": date,
         "status": DeliveryNote.Status.DRAFT,
         "notes": notes,
+        # نترك contact فارغاً هنا، والموديل/الفيو يتولى effective_contact
     }
 
     if user is not None:
@@ -298,16 +301,16 @@ def add_delivery_line(
     if delivery.status == DeliveryNote.Status.CANCELLED:
         raise ValidationError(_("لا يمكن إضافة بنود لمذكرة تسليم ملغاة."))
 
-    # تعليق: نضمن أن الكمية ليست None (الفورم يتكفّل بصحتها عادة)
+    # نضمن أن الكمية ليست None (الفورم يتكفّل بالتحقق عادة)
     quantity = quantity or 0
 
     extra_fields = {
         "delivery": delivery,
         "product": product,
         "quantity": quantity,
-        # تعليق: لو ما في وصف نستخدم اسم المنتج كخيار افتراضي
+        # لو ما في وصف نستخدم اسم المنتج كخيار افتراضي
         "description": description or (product.name if product else ""),
-        "uom": uom,  # 👈 دعم تخزين وحدة القياس
+        "uom": uom,  # دعم تخزين وحدة القياس
     }
 
     # تعبئة created_by / updated_by عند الحاجة
@@ -340,8 +343,10 @@ def add_delivery_line(
 
 
 # ======================================================
-# حالات المستند (إلغاء / إعادة لمسودة / إعادة فتح الملغى)
+# تغييرات حالات مستند المبيعات
+# (إلغاء / إعادة لمسودة / إعادة فتح الملغى)
 # ======================================================
+
 
 @transaction.atomic
 def cancel_sales_document(document: SalesDocument, user=None) -> SalesDocument:
@@ -430,7 +435,7 @@ def reset_sales_document_to_draft(document: SalesDocument, user=None) -> SalesDo
     old_kind = document.kind
     old_status = document.status
 
-    # تعليق: لو المستند أمر بيع بدون مذكرات تسليم نرجعه لعرض سعر
+    # لو المستند أمر بيع بدون مذكرات تسليم نرجعه لعرض سعر
     if document.is_order:
         document.kind = SalesDocument.Kind.QUOTATION
 
@@ -540,7 +545,7 @@ def can_reopen_cancelled(document: SalesDocument) -> bool:
     - لا توجد عليه مذكرات تسليم.
     """
 
-    # تعليق: نفصل الشروط خطوة خطوة عشان تكون واضحة في الديبَغ
+    # نفصل الشروط خطوة خطوة عشان تكون واضحة في الديبَغ
     if getattr(document, "is_deleted", False):
         return False
 

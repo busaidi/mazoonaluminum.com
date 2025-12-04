@@ -253,7 +253,7 @@
                     {{ hidden }}
                   {% endfor %}
 
-                  {# ================== كود المنتج (بدون أيقونة) ================== #}
+                  {# ================== كود المنتج ================== #}
                   <td class="small align-top">
                     <div class="position-relative">
                       {{ line_form.product_code }}
@@ -271,7 +271,7 @@
                     </div>
                   </td>
 
-                  {# ================== اسم المنتج + زر فتح الوصف ================== #}
+                  {# ================== اسم المنتج + الوصف ================== #}
                   <td class="small align-top" style="min-width: 260px;">
                     <div class="d-flex align-items-center gap-1 mb-1">
                       <button type="button"
@@ -279,11 +279,8 @@
                               title="{% trans 'إظهار/إخفاء الوصف' %}">
                         <i class="bi bi-card-text"></i>
                       </button>
-                      <input type="text"
-                             class="form-control form-control-sm product-name-input"
-                             placeholder="{% trans 'اسم المنتج' %}"
-                             autocomplete="off"
-                             readonly>
+                      {# حقل اسم المنتج من الفورم (product_name) #}
+                      {{ line_form.product_name }}
                     </div>
 
                     <div class="line-description-container
@@ -296,9 +293,14 @@
                       {% endif %}
                     </div>
 
-                    {# حقل المنتج الحقيقي (select) مخفي للباك إند #}
+                    {# حقل المنتج الحقيقي (input مخفي) للباك إند #}
                     <div class="d-none">
                       {{ line_form.product }}
+                      {% if line_form.product.errors %}
+                        <div class="text-danger small mt-1">
+                          {{ line_form.product.errors }}
+                        </div>
+                      {% endif %}
                     </div>
                   </td>
 
@@ -309,10 +311,14 @@
                       <option value="">{% trans "—" %}</option>
                     </select>
 
-                    <input type="hidden"
-                           name="{{ line_form.prefix }}-uom_kind"
-                           value="{{ line_form.instance.uom_kind|default_if_none:'' }}"
-                           class="uom-kind-input">
+                    {# حقل نوع الوحدة من الفورم (uom_kind) #}
+                    {{ line_form.uom_kind }}
+
+                    {% if line_form.uom.errors %}
+                      <div class="text-danger small mt-1">
+                        {{ line_form.uom.errors }}
+                      </div>
+                    {% endif %}
                   </td>
 
                   {# ================== الكمية ================== #}
@@ -401,7 +407,7 @@
 {% endblock %}
 
 
-{# ================== سكربت الوحدات + بحث كود المنتج (كما هو) ================== #}
+{# ================== سكربت الوحدات + بحث كود المنتج ================== #}
 {% block extra_body %}
 <script>
   (function () {
@@ -410,20 +416,23 @@
     const productApiUomTemplate = "{% url 'sales:product_api_uom' 0 %}";
     const productApiUomBaseUrl  = productApiUomTemplate.replace(/0\/?$/, "");
 
-    document.addEventListener("DOMContentLoaded", function () {
+    // نهيئ الصفوف مباشرة (السكربت في آخر الـ body)
+    initAllRows();
+
+    function initAllRows() {
       document
         .querySelectorAll("table tbody tr")
         .forEach(initRow);
-    });
+    }
 
     // ================== Helpers عامة ==================
     function getEls(row) {
       return {
         row:              row,
-        productSelect:     row.querySelector("select[name$='-product']"),
+        productField:      row.querySelector("input[name$='-product']"),
         productCodeInput:  row.querySelector("input[name$='-product_code']"),
         codeSuggestionsEl: row.querySelector(".product-code-suggestions"),
-        nameInput:         row.querySelector(".product-name-input"),
+        nameInput:         row.querySelector("input[name$='-product_name']"),
         descField:         row.querySelector("textarea[name$='-description'], input[name$='-description']"),
         descContainer:     row.querySelector(".line-description-container"),
         descToggleBtn:     row.querySelector(".description-toggle-btn"),
@@ -433,44 +442,20 @@
       };
     }
 
-    function parseLabel(label) {
-      if (!label) return { code: "", name: "" };
-
-      const dashIdx = label.indexOf("–"); // en dash
-      if (dashIdx !== -1) {
-        return {
-          code: label.slice(0, dashIdx).trim(),
-          name: label.slice(dashIdx + 1).trim()
-        };
-      }
-
-      const spaceIdx = label.indexOf(" ");
-      if (spaceIdx !== -1) {
-        return {
-          code: label.slice(0, spaceIdx).trim(),
-          name: label.slice(spaceIdx + 1).trim()
-        };
-      }
-
-      return { code: label.trim(), name: "" };
-    }
-
     // ================== تهيئة صف واحد ==================
     function initRow(row) {
       const els = getEls(row);
-      if (!els.productSelect || !els.productCodeInput) return;
+      if (!els.productField || !els.productCodeInput) return;
 
-      const initialProductId = els.productSelect.value || "";
+      const initialProductId = els.productField.value || "";
 
       // نوع الوحدة القديم:
       const initialKindFromHidden = (els.uomKindInput && els.uomKindInput.value.trim()) || "";
       const initialKindFromSelect = (els.uomSelect && els.uomSelect.value) || "";
       const initialUomKind        = initialKindFromHidden || initialKindFromSelect;
 
-      // تهيئة من بيانات موجودة (edit / بعد الفاليديشن)
+      // تهيئة من بيانات موجودة (edit / بعد الفالديشن)
       if (initialProductId) {
-        fillFromSelectedOption(els);
-
         if (els.descField && els.descField.value && els.descContainer) {
           els.descContainer.classList.remove("d-none");
         }
@@ -493,7 +478,7 @@
         }
       });
 
-      // blur لإخفاء القائمة بعد قليل (حتى نسمح بالضغط على زر الاقتراح)
+      // blur لإخفاء القائمة بعد قليل (حتى نسمح بالضغط على الاقتراح)
       els.productCodeInput.addEventListener("blur", function () {
         if (!els.codeSuggestionsEl) return;
         setTimeout(function () {
@@ -509,36 +494,19 @@
         });
       }
 
-      // لو فيه وصف محفوظ مسبقاً نعتبره ظاهر ونلوّن الزر
+      // لو فيه وصف محفوظ مسبقاً نعتبره ظاهر
       if (els.descField && els.descField.value && els.descContainer) {
         els.descContainer.classList.remove("d-none");
-        if (els.descToggleBtn) {
-          els.descToggleBtn.classList.remove("btn-outline-secondary");
-          els.descToggleBtn.classList.add("btn-secondary");
-        }
       }
 
       // --- تغيير UoM ---
       if (els.uomSelect) {
         els.uomSelect.addEventListener("change", function () {
+          if (els.uomKindInput) {
+            els.uomKindInput.value = this.value || "";
+          }
           updateUnitPrice(els);
         });
-      }
-    }
-
-    // ================== تعبئة الكود/الاسم من الـ option ==================
-    function fillFromSelectedOption(els) {
-      const select = els.productSelect;
-      if (!select || !select.value) return;
-
-      const opt    = select.options[select.selectedIndex];
-      const parsed = parseLabel(opt ? opt.textContent : "");
-
-      if (parsed.code && !els.productCodeInput.value.trim()) {
-        els.productCodeInput.value = parsed.code;
-      }
-      if (els.nameInput && parsed.name && !els.nameInput.value.trim()) {
-        els.nameInput.value = parsed.name;
       }
     }
 
@@ -563,7 +531,11 @@
           return res.json();
         })
         .then(payload => {
-          const results = payload.results || [];
+          // يدعم الحالتين: List مباشرة أو {"results": [...]}
+          const results = Array.isArray(payload)
+            ? payload
+            : (payload.results || []);
+
           if (!results.length) {
             listEl.classList.add("d-none");
             return;
@@ -601,8 +573,8 @@
     }
 
     function applyProductSelection(els, productId, parsed) {
-      if (els.productSelect) {
-        els.productSelect.value = String(productId);
+      if (els.productField) {
+        els.productField.value = String(productId);
       }
       if (els.productCodeInput && parsed.code) {
         els.productCodeInput.value = parsed.code;
@@ -614,7 +586,7 @@
       // لا نلمس الوصف أبداً هنا
 
       // reset uom kind + السعر
-      if (els.uomKindInput)  els.uomKindInput.value  = "";
+      if (els.uomKindInput)   els.uomKindInput.value   = "";
       if (els.unitPriceInput) els.unitPriceInput.value = "";
 
       loadUom(productId, els, {
@@ -629,18 +601,6 @@
 
       const willShow = els.descContainer.classList.contains("d-none");
       els.descContainer.classList.toggle("d-none");
-
-      if (els.descToggleBtn) {
-        if (willShow) {
-          // الوصف صار ظاهر
-          els.descToggleBtn.classList.remove("btn-outline-secondary");
-          els.descToggleBtn.classList.add("btn-secondary");
-        } else {
-          // الوصف مخفي
-          els.descToggleBtn.classList.remove("btn-secondary");
-          els.descToggleBtn.classList.add("btn-outline-secondary");
-        }
-      }
 
       if (willShow && els.descField) {
         els.descField.focus();
@@ -759,7 +719,7 @@
       }
 
       if (keepExisting && currentPriceStr) {
-        // لو السعر لا يطابق لا base ولا alt → سعر يدوي (مثال: سيرفس 2500 و base_price=0)
+        // لو السعر لا يطابق لا base ولا alt → سعر يدوي
         if (!matchesBase && !matchesAlt) {
           shouldUpdatePrice = false;  // لا نغيّر السعر أبداً
         }
@@ -793,8 +753,6 @@
       }
 
       // السعر:
-      // - لو سعر يدوي (لا يطابق base/alt) → لا نلمسه
-      // - غير ذلك → نحدّثه بحيث يطابق الوحدة
       if (shouldUpdatePrice) {
         updateUnitPrice(els);
       }
@@ -831,4 +789,3 @@
   })();
 </script>
 {% endblock %}
-

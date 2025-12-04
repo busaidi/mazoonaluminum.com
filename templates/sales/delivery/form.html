@@ -155,7 +155,7 @@
           <tbody>
             {% for line_form in lines_formset.forms %}
               <tr class="align-top">
-                {# hidden fields (id, product, uom, ...) #}
+                {# hidden fields (id, إلخ) #}
                 {% for hidden in line_form.hidden_fields %}
                   {{ hidden }}
                 {% endfor %}
@@ -204,6 +204,11 @@
                         {{ line_form.description.errors|join:", " }}
                       </div>
                     {% endif %}
+                  </div>
+
+                  {# 👇 حقل المنتج الحقيقي (FK) – لازم يكون موجود عشان يحفظ #}
+                  <div class="d-none">
+                    {{ line_form.product }}
                   </div>
 
                   {% if line_form.product.errors %}
@@ -323,7 +328,7 @@
           }
         });
 
-        // زر الوصف
+        // زر الوصف: نلوّن الزر لو فيه وصف سابق
         const container = row.querySelector(".line-description-container");
         const btn = row.querySelector(".description-toggle-btn");
         const field = container ? container.querySelector("textarea, input") : null;
@@ -570,7 +575,7 @@
 
       const kind = els.uomSelect.value; // base | alt | ""
       const baseLabel = els.uomSelect.dataset.baseUomLabel || "";
-      const altLabel  = els.uomSelect.dataset.altUomLabel || "";
+      const altLabel  = els.uomSelect.dataset.altUomLabel  || "";
 
       let targetLabel = "";
       if (kind === "base") {
