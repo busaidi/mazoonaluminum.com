@@ -6,77 +6,277 @@
 
 {% block sales_content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
-    <h1 class="h5 fw-bold mb-1">
+    <h1 class="h5 fw-bold mb-1 text-body">
       {% trans "مذكرات التسليم" %}
     </h1>
     <p class="text-muted small mb-0">
-      {% trans "عرض ومتابعة مذكرات التسليم المرتبطة بأوامر البيع." %}
+      {% trans "عرض ومتابعة مذكرات التسليم المرتبطة بأوامر البيع أو المستقلة." %}
     </p>
+  </div>
+
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{% url 'sales:delivery_note_create_standalone' %}"
+       class="btn btn-sm btn-primary">
+      <i class="bi bi-plus-lg ms-1"></i>
+      {% trans "إنشاء مذكرة تسليم مستقلة" %}
+    </a>
   </div>
 </div>
 
 <div class="card shadow-sm border-0">
   <div class="card-body">
+
+    <div class="mb-3">
+      <form method="get" class="row g-2 align-items-center">
+
+        <div class="col-md-2 col-sm-4">
+          <label class="form-label small mb-1">
+            {% trans "الحالة" %}
+          </label>
+          <select name="status"
+                  class="form-select form-select-sm"
+                  onchange="this.form.submit()">
+            <option value="">{% trans "كل الحالات" %}</option>
+            <option value="draft" {% if current_status == "draft" %}selected{% endif %}>
+              {% trans "مسودة" %}
+            </option>
+            <option value="confirmed" {% if current_status == "confirmed" %}selected{% endif %}>
+              {% trans "مؤكدة" %}
+            </option>
+            <option value="cancelled" {% if current_status == "cancelled" %}selected{% endif %}>
+              {% trans "ملغاة" %}
+            </option>
+          </select>
+        </div>
+
+        <div class="col-md-6 col-sm-8">
+          <label class="form-label small mb-1" for="id_q">
+            {% trans "بحث" %}
+          </label>
+          <input type="text"
+                 id="id_q"
+                 name="q"
+                 value="{{ current_q }}"
+                 class="form-control form-control-sm"
+                 placeholder="{% trans 'بحث بالعميل أو رقم المذكرة أو رقم أمر البيع...' %}">
+        </div>
+
+        <div class="col-md-4 col-sm-4 d-flex align-items-end gap-2">
+          <button type="submit" class="btn btn-sm btn-outline-primary flex-grow-1">
+            <i class="bi bi-search ms-1"></i>
+            {% trans "تصفية" %}
+          </button>
+          <a href="{% url 'sales:delivery_note_list' %}"
+             class="btn btn-sm btn-outline-secondary"
+             title="{% trans 'مسح الفلاتر' %}">
+            <i class="bi bi-x-lg"></i>
+          </a>
+        </div>
+
+      </form>
+    </div>
+
     {% if deliveries %}
       <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
+        <table class="table table-sm table-hover align-middle mb-0">
           <thead class="table-light">
             <tr>
-              <th class="small text-muted">{% trans "الرقم" %}</th>
-              <th class="small text-muted">{% trans "تاريخ التسليم" %}</th>
-              <th class="small text-muted">{% trans "أمر البيع" %}</th>
-              <th class="small text-muted">{% trans "العميل" %}</th>
-              <th class="small text-muted">{% trans "الحالة" %}</th>
+              <th class="small text-muted text-nowrap">
+                {% trans "رقم المذكرة" %}
+              </th>
+              <th class="small text-muted text-nowrap">
+                {% trans "تاريخ التسليم" %}
+              </th>
+              <th class="small text-muted text-nowrap">
+                {% trans "أمر البيع" %}
+              </th>
+              <th class="small text-muted">
+                {% trans "العميل" %}
+              </th>
+              <th class="small text-muted text-nowrap">
+                {% trans "النوع" %}
+              </th>
+              <th class="small text-muted text-nowrap">
+                {% trans "الحالة" %}
+              </th>
+              <th class="small text-muted text-nowrap text-center">
+                {% trans "إجراءات" %}
+              </th>
             </tr>
           </thead>
+
           <tbody>
-            {% for d in deliveries %}
-              <tr>
-                <td class="small text-nowrap">
-                  {# اسم الـ URL الصحيح في urls.py: delivery_note_detail #}
-                  <a href="{% url 'sales:delivery_note_detail' d.pk %}"
-                     class="text-mazoon text-decoration-none"
+          {% for d in deliveries %}
+            <tr>
+
+              <td class="small text-nowrap">
+                <a href="{% url 'sales:delivery_note_detail' d.pk %}"
+                   class="text-body text-decoration-none fw-semibold"
+                   dir="ltr">
+                  {{ d.display_number }}
+                </a>
+              </td>
+
+              <td class="small text-nowrap">
+                {{ d.date|date:"Y-m-d" }}
+              </td>
+
+              <td class="small text-nowrap">
+                {% if d.order %}
+                  <a href="{% url 'sales:sales_detail' d.order.pk %}"
+                     class="text-decoration-none"
                      dir="ltr">
-                    {{ d.display_number }}
+                    {{ d.order.display_number }}
                   </a>
-                </td>
-                <td class="small text-nowrap">
-                  {{ d.date|date:"Y-m-d" }}
-                </td>
-                <td class="small text-nowrap">
+                {% else %}
+                  <span class="badge bg-light text-muted">
+                    {% trans "مستقلة" %}
+                  </span>
+                {% endif %}
+              </td>
+
+              <td class="small">
+                {% if d.contact %}
+                  {{ d.contact.name }}
+                {% elif d.order and d.order.contact %}
+                  {{ d.order.contact.name }}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+
+              <td class="small text-nowrap">
+                {% if d.order %}
+                  <span class="badge bg-info-subtle text-info-emphasis">
+                    <i class="bi bi-truck ms-1"></i>
+                    {% trans "مرتبطة بأمر" %}
+                  </span>
+                {% else %}
+                  <span class="badge bg-secondary-subtle text-secondary-emphasis">
+                    <i class="bi bi-file-earmark ms-1"></i>
+                    {% trans "مستقلة" %}
+                  </span>
+                {% endif %}
+              </td>
+
+              <td class="small text-nowrap">
+                {% if d.status == d.Status.DRAFT %}
+                  <span class="badge bg-secondary-subtle text-secondary-emphasis">
+                    {{ d.get_status_display }}
+                  </span>
+                {% elif d.status == d.Status.CONFIRMED %}
+                  <span class="badge bg-success-subtle text-success-emphasis">
+                    {{ d.get_status_display }}
+                  </span>
+                {% elif d.status == d.Status.CANCELLED %}
+                  <span class="badge bg-danger-subtle text-danger-emphasis">
+                    {{ d.get_status_display }}
+                  </span>
+                {% else %}
+                  <span class="badge bg-light text-muted">
+                    {{ d.get_status_display }}
+                  </span>
+                {% endif %}
+              </td>
+
+              <td class="small text-center text-nowrap">
+                <div class="d-inline-flex align-items-center gap-1">
+
+                  <a href="{% url 'sales:delivery_note_detail' d.pk %}"
+                     class="btn btn-sm btn-outline-secondary"
+                     data-bs-toggle="tooltip"
+                     data-bs-title="{% trans 'عرض تفاصيل المذكرة' %}">
+                    <i class="bi bi-eye"></i>
+                  </a>
+
                   {% if d.order %}
-                    {# ما عندك order_detail، التفاصيل الموحدة هي sales_detail #}
                     <a href="{% url 'sales:sales_detail' d.order.pk %}"
-                       class="text-decoration-none">
-                      {{ d.order.display_number }}
+                       class="btn btn-sm btn-outline-primary"
+                       data-bs-toggle="tooltip"
+                       data-bs-title="{% trans 'عرض أمر البيع المرتبط' %}">
+                      <i class="bi bi-receipt"></i>
                     </a>
-                  {% else %}
-                    <span class="text-muted">—</span>
                   {% endif %}
-                </td>
-                <td class="small">
-                  {% if d.order and d.order.contact %}
-                    {{ d.order.contact.name }}
-                  {% else %}
-                    <span class="text-muted">—</span>
-                  {% endif %}
-                </td>
-                <td class="small">
-                  {{ d.get_status_display }}
-                </td>
-              </tr>
-            {% endfor %}
+
+                </div>
+              </td>
+
+            </tr>
+          {% endfor %}
           </tbody>
         </table>
       </div>
+
+      {% if is_paginated %}
+        <nav class="mt-3">
+          <ul class="pagination pagination-sm justify-content-center mb-0">
+
+            {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link"
+                   href="?page={{ page_obj.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}">
+                  &laquo;
+                </a>
+              </li>
+            {% endif %}
+
+            {% for num in paginator.page_range %}
+              {% if num == page_obj.number %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}</span>
+                </li>
+              {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                <li class="page-item">
+                  <a class="page-link"
+                     href="?page={{ num }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}">
+                    {{ num }}
+                  </a>
+                </li>
+              {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link"
+                   href="?page={{ page_obj.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}">
+                  &raquo;
+                </a>
+              </li>
+            {% endif %}
+
+          </ul>
+        </nav>
+      {% endif %}
+
     {% else %}
-      <p class="text-muted small mb-0">
-        {% trans "لا توجد مذكرات تسليم حتى الآن." %}
-      </p>
+      <div class="text-center py-4">
+        <p class="text-muted small mb-1">
+          {% trans "لا توجد مذكرات تسليم حتى الآن." %}
+        </p>
+        <a href="{% url 'sales:delivery_note_create_standalone' %}"
+           class="btn btn-sm btn-primary">
+          <i class="bi bi-plus-lg ms-1"></i>
+          {% trans "إنشاء أول مذكرة تسليم" %}
+        </a>
+      </div>
     {% endif %}
+
   </div>
 </div>
 
+{% endblock %}
+
+{% block extra_body %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  var tooltipTriggerList = [].slice.call(
+    document.querySelectorAll('[data-bs-toggle="tooltip"]')
+  );
+  tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+});
+</script>
 {% endblock %}

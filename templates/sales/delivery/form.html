@@ -2,56 +2,261 @@
 {% load i18n %}
 
 {% block title %}
-  {% trans "مذكرة تسليم جديدة" %}
+  {% if delivery %}
+    {% trans "تعديل مذكرة تسليم" %}
+  {% else %}
+    {% trans "مذكرة تسليم جديدة" %}
+  {% endif %}
 {% endblock %}
 
 {% block sales_content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+{# ========== Header ========== #}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
     <h1 class="h5 fw-bold mb-1">
-      {% trans "مذكرة تسليم جديدة" %}
+      {% if delivery %}
+        {% trans "تعديل مذكرة تسليم" %}
+      {% else %}
+        {% if order %}
+          {% trans "مذكرة تسليم لأمر بيع" %}
+        {% else %}
+          {% trans "مذكرة تسليم جديدة" %}
+        {% endif %}
+      {% endif %}
     </h1>
-    <p class="text-muted small mb-0">
-      {% trans "ربط التسليم بأمر بيع محدد." %}
-    </p>
-    <p class="text-muted small mb-0">
-      {% trans "أمر البيع:" %} {{ order.display_number }} – {{ order.contact.name }}
-    </p>
+
+    {% if order %}
+      <p class="text-muted small mb-0">
+        {% trans "ربط التسليم بأمر بيع محدد." %}
+      </p>
+      <p class="text-muted small mb-0">
+        {% trans "أمر البيع:" %} {{ order.display_number }} – {{ order.contact.name }}
+      </p>
+    {% else %}
+      <p class="text-muted small mb-0">
+        {% trans "إنشاء مذكرة تسليم مستقلة مع تحديد العميل وبنود التسليم." %}
+      </p>
+    {% endif %}
   </div>
 
-  {# اسم URL الصحيح: delivery_note_list #}
-  <a href="{% url 'sales:delivery_note_list' %}" class="btn btn-sm btn-outline-secondary">
-    <i class="bi bi-list-ul ms-1"></i>
-    {% trans "مذكرات التسليم" %}
-  </a>
+  <div class="d-flex flex-wrap gap-2">
+    {% if order %}
+      <a href="{% url 'sales:sales_detail' order.pk %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-right-circle ms-1"></i>
+        {% trans "العودة لأمر البيع" %}
+      </a>
+    {% endif %}
+    <a href="{% url 'sales:delivery_note_list' %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-list-ul ms-1"></i>
+      {% trans "مذكرات التسليم" %}
+    </a>
+  </div>
 </div>
 
-<div class="card border-0 shadow-sm">
+{# ========== Card ========== #}
+<div class="card border-0 shadow-sm mb-3">
   <div class="card-body">
+
     <form method="post" novalidate>
       {% csrf_token %}
-      {{ form.non_field_errors }}
 
-      <div class="row g-3">
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger small mb-3">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
 
+      {% if lines_formset.non_form_errors %}
+        <div class="alert alert-danger small mb-3">
+          {% for err in lines_formset.non_form_errors %}
+            <div>{{ err }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {# ========== Header fields ========== #}
+      <div class="row g-3 mb-3">
         <div class="col-md-4">
+          <label class="form-label small">
+            {% trans "العميل / جهة الاتصال" %}
+          </label>
+
+          {% if order %}
+            {{ form.contact.as_hidden }}
+            <div class="form-control form-control-sm bg-body-secondary">
+              {{ order.contact.name }}
+            </div>
+          {% else %}
+            {{ form.contact }}
+            {% if form.contact.errors %}
+              <div class="text-danger small mt-1">
+                {{ form.contact.errors|join:", " }}
+              </div>
+            {% endif %}
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
           <label class="form-label small" for="{{ form.date.id_for_label }}">
             {{ form.date.label }}
           </label>
           {{ form.date }}
-          {{ form.date.errors }}
+          {% if form.date.errors %}
+            <div class="text-danger small mt-1">
+              {{ form.date.errors|join:", " }}
+            </div>
+          {% endif %}
         </div>
 
-        <div class="col-md-8">
+        <div class="col-md-5">
           <label class="form-label small" for="{{ form.notes.id_for_label }}">
             {{ form.notes.label }}
           </label>
           {{ form.notes }}
-          {{ form.notes.errors }}
+          {% if form.notes.errors %}
+            <div class="text-danger small mt-1">
+              {{ form.notes.errors|join:", " }}
+            </div>
+          {% endif %}
         </div>
-
       </div>
+
+      <hr class="my-3" />
+
+      {# ========== Lines header ========== #}
+      <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+        <div>
+          <h2 class="h6 fw-semibold mb-1">
+            {% trans "بنود التسليم" %}
+          </h2>
+          <p class="text-muted small mb-0">
+            {% trans "أدخل كود المنتج، وسيتم جلب اسم المنتج والوحدات المرتبطة به تلقائيًا، ويمكنك تعديل الوصف والكمية." %}
+          </p>
+        </div>
+      </div>
+
+      {{ lines_formset.management_form }}
+
+      {# ========== Lines table ========== #}
+      <div class="table-responsive mb-3">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr class="text-nowrap">
+              <th style="width: 18%;">{% trans "كود المنتج" %}</th>
+              <th style="width: 38%;">{% trans "المنتج / الوصف" %}</th>
+              <th style="width: 14%;" class="text-center">{% trans "الوحدة" %}</th>
+              <th style="width: 14%;" class="text-end">{% trans "الكمية" %}</th>
+              {% if lines_formset.can_delete %}
+                <th style="width: 6%;" class="text-center">{% trans "حذف" %}</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for line_form in lines_formset.forms %}
+              <tr class="align-top">
+                {# hidden fields (id, product, uom, ...) #}
+                {% for hidden in line_form.hidden_fields %}
+                  {{ hidden }}
+                {% endfor %}
+
+                {# === كود المنتج === #}
+                <td class="small">
+                  <div class="position-relative">
+                    {{ line_form.product_code }}
+                    {% if line_form.product_code.help_text %}
+                      <div class="form-text small">
+                        {{ line_form.product_code.help_text }}
+                      </div>
+                    {% endif %}
+                    {% if line_form.product_code.errors %}
+                      <div class="text-danger small mt-1">
+                        {{ line_form.product_code.errors|join:", " }}
+                      </div>
+                    {% endif %}
+
+                    <div class="list-group position-absolute w-100 shadow-sm small d-none product-code-suggestions"
+                         style="z-index: 1050; max-height: 220px; overflow-y: auto;"></div>
+                  </div>
+                </td>
+
+                {# === الاسم + الوصف (زر ميوت، وصف تحت الاسم) === #}
+                <td class="small" style="min-width: 260px;">
+                  <div class="d-flex align-items-center gap-1 mb-1">
+                    <button type="button"
+                            class="btn btn-link btn-sm text-muted description-toggle-btn p-0"
+                            title="{% trans 'إظهار/إخفاء الوصف' %}"
+                            onclick="toggleDeliveryDescription(this); return false;">
+                      <i class="bi bi-card-text"></i>
+                    </button>
+                    <input type="text"
+                           class="form-control form-control-sm product-name-input"
+                           data-role="product-name"
+                           value=""
+                           placeholder="{% trans 'سيظهر اسم المنتج هنا بعد اختيار الكود' %}"
+                           readonly>
+                  </div>
+
+                  <div class="line-description-container{% if not line_form.description.value and not line_form.description.errors %} d-none{% endif %}">
+                    {{ line_form.description }}
+                    {% if line_form.description.errors %}
+                      <div class="text-danger small mt-1">
+                        {{ line_form.description.errors|join:", " }}
+                      </div>
+                    {% endif %}
+                  </div>
+
+                  {% if line_form.product.errors %}
+                    <div class="text-danger small mt-1">
+                      {{ line_form.product.errors|join:", " }}
+                    </div>
+                  {% endif %}
+                </td>
+
+                {# === الوحدة: سلكت ظاهر (base/alt) + سلكت حقيقي مخفي === #}
+                <td class="small text-center align-top">
+                  <select class="form-select form-select-sm uom-select"
+                          aria-label="{% trans 'الوحدة' %}">
+                    <option value="">{% trans "—" %}</option>
+                  </select>
+
+                  <div class="d-none">
+                    {{ line_form.uom }}
+                  </div>
+
+                  {% if line_form.uom.errors %}
+                    <div class="text-danger small mt-1">
+                      {{ line_form.uom.errors|join:", " }}
+                    </div>
+                  {% endif %}
+                </td>
+
+                {# === الكمية === #}
+                <td class="text-end small align-top">
+                  {{ line_form.quantity }}
+                  {% if line_form.quantity.errors %}
+                    <div class="text-danger small mt-1 text-start">
+                      {{ line_form.quantity.errors|join:", " }}
+                    </div>
+                  {% endif %}
+                </td>
+
+                {% if lines_formset.can_delete %}
+                  <td class="text-center small align-top">
+                    <div class="form-check d-flex justify-content-center">
+                      {{ line_form.DELETE }}
+                    </div>
+                  </td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <p class="text-muted small mb-3">
+        {% trans "يمكنك ترك السطور الفارغة كما هي، أو استخدام مربع الحذف لإزالتها." %}
+      </p>
 
       <hr class="my-3" />
 
@@ -61,12 +266,367 @@
         </a>
         <button type="submit" class="btn btn-sm btn-primary">
           <i class="bi bi-check2 ms-1"></i>
-          {% trans "حفظ مذكرة التسليم" %}
+          {% if delivery %}
+            {% trans "حفظ التعديلات" %}
+          {% else %}
+            {% trans "حفظ مذكرة التسليم" %}
+          {% endif %}
         </button>
       </div>
 
     </form>
   </div>
 </div>
+
+{% block extra_body %}
+<script>
+  (function () {
+    const productApiSearchUrl   = "{% url 'sales:product_api_search' %}";
+    const productApiUomTemplate = "{% url 'sales:product_api_uom' 0 %}";
+    const productApiUomBaseUrl  = productApiUomTemplate.replace(/0\/?$/, "");
+
+    document.addEventListener("DOMContentLoaded", function () {
+      const rows = document.querySelectorAll("table tbody tr");
+
+      rows.forEach(function (row) {
+        const els = getRowElements(row);
+        if (!els.codeInput) return;
+
+        // لو فيه كود جاهز (من الأوردر مثلاً) → حاول تحلّه وتجيب المنتج + UoM
+        if ((els.codeInput.value || "").trim() !== "") {
+          resolveExactCode(els);
+        } else if (els.productField && els.productField.value) {
+          // fallback: لو المنتج متعبّي والـ code فاضي
+          loadUom(els.productField.value, els, { keepExisting: true });
+        }
+
+        // أوتوكومبليت الكود
+        els.codeInput.addEventListener("input", function () {
+          handleSuggestions(els);
+        });
+
+        els.codeInput.addEventListener("blur", function () {
+          setTimeout(function () {
+            if (els.suggestions) {
+              els.suggestions.classList.add("d-none");
+            }
+          }, 200);
+        });
+
+        els.codeInput.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            resolveExactCode(els);
+          }
+          if (e.key === "Escape" && els.suggestions) {
+            els.suggestions.classList.add("d-none");
+          }
+        });
+
+        // زر الوصف
+        const container = row.querySelector(".line-description-container");
+        const btn = row.querySelector(".description-toggle-btn");
+        const field = container ? container.querySelector("textarea, input") : null;
+
+        if (btn && container && field) {
+          if ((field.value || "").trim() !== "") {
+            container.classList.remove("d-none");
+            btn.classList.remove("text-muted");
+            btn.classList.add("text-body");
+          }
+        }
+
+        // تغيير الوحدة الظاهرة → حدّث السلكت الحقيقي
+        if (els.uomSelect) {
+          els.uomSelect.addEventListener("change", function () {
+            updateRealUomFromKind(els);
+          });
+        }
+      });
+    });
+
+    function getRowElements(row) {
+      return {
+        row:             row,
+        codeInput:       row.querySelector('input[name$="-product_code"]'),
+        nameInput:       row.querySelector(".product-name-input"),
+        productField:    row.querySelector('[name$="-product"]'),
+        suggestions:     row.querySelector(".product-code-suggestions"),
+        uomSelect:       row.querySelector(".uom-select"),
+        realUomSelect:   row.querySelector('select[name$="-uom"]'),
+      };
+    }
+
+    function setProductForRow(els, productObj) {
+      if (!els.productField || !els.nameInput || !els.codeInput) return;
+
+      if (productObj) {
+        els.productField.value = productObj.id;
+        if (productObj.code) {
+          els.codeInput.value = productObj.code;
+        }
+        els.nameInput.value = productObj.name
+          ? (productObj.name + " (" + productObj.code + ")")
+          : (productObj.code || "");
+        els.codeInput.classList.remove("is-invalid");
+      } else {
+        els.productField.value = "";
+        els.nameInput.value = "";
+        if ((els.codeInput.value || "").trim() !== "") {
+          els.codeInput.classList.add("is-invalid");
+        } else {
+          els.codeInput.classList.remove("is-invalid");
+        }
+      }
+    }
+
+    function applySelection(els, productObj) {
+      if (!els) return;
+      setProductForRow(els, productObj);
+
+      if (productObj && productObj.id) {
+        loadUom(productObj.id, els, { keepExisting: false });
+      } else {
+        resetUom(els);
+      }
+
+      if (els.suggestions) {
+        els.suggestions.classList.add("d-none");
+        els.suggestions.innerHTML = "";
+      }
+    }
+
+    function resolveExactCode(els) {
+      const code = (els.codeInput.value || "").trim();
+      if (!code) {
+        setProductForRow(els, null);
+        resetUom(els);
+        return;
+      }
+
+      fetch(productApiSearchUrl + "?q=" + encodeURIComponent(code))
+        .then((r) => r.json())
+        .then((data) => {
+          const results = data.results || [];
+          if (!results.length) {
+            setProductForRow(els, null);
+            resetUom(els);
+            return;
+          }
+          const lower = code.toLowerCase();
+          const exact = results.find((p) => (p.code || "").toLowerCase() === lower);
+          applySelection(els, exact || results[0]);
+        })
+        .catch(() => {
+          setProductForRow(els, null);
+          resetUom(els);
+        });
+    }
+
+    function handleSuggestions(els) {
+      if (!els.suggestions) return;
+
+      const query = (els.codeInput.value || "").trim();
+      els.suggestions.innerHTML = "";
+
+      if (!query) {
+        els.suggestions.classList.add("d-none");
+        return;
+      }
+
+      fetch(productApiSearchUrl + "?q=" + encodeURIComponent(query))
+        .then((r) => r.json())
+        .then((data) => {
+          const results = data.results || [];
+          if (!results.length) {
+            els.suggestions.classList.add("d-none");
+            return;
+          }
+
+          results.slice(0, 15).forEach((item) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "list-group-item list-group-item-action";
+            btn.textContent = item.name
+              ? (item.code + " – " + item.name)
+              : (item.code || "");
+
+            btn.addEventListener("click", function () {
+              applySelection(els, item);
+            });
+
+            els.suggestions.appendChild(btn);
+          });
+
+          els.suggestions.classList.remove("d-none");
+        })
+        .catch(() => {
+          els.suggestions.classList.add("d-none");
+        });
+    }
+
+    // ========== UoM logic (base / alt فقط) ==========
+    function resetUom(els) {
+      if (!els.uomSelect) return;
+
+      els.uomSelect.innerHTML = "";
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "—";
+      els.uomSelect.appendChild(opt);
+      els.uomSelect.dataset.baseUomLabel = "";
+      els.uomSelect.dataset.altUomLabel = "";
+
+      if (els.realUomSelect) {
+        els.realUomSelect.value = "";
+      }
+    }
+
+    function loadUom(productId, els, opts) {
+      opts = opts || {};
+      if (!els.uomSelect || !productId) {
+        resetUom(els);
+        return;
+      }
+
+      const url = productApiUomBaseUrl + productId + "/";
+
+      fetch(url)
+        .then((res) => {
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          return res.json();
+        })
+        .then((data) => {
+          fillUomFromData(els, data, opts);
+        })
+        .catch(() => {
+          resetUom(els);
+        });
+    }
+
+    function fillUomFromData(els, data, opts) {
+      opts = opts || {};
+      const select = els.uomSelect;
+      if (!select) return;
+
+      const baseLabel = data.base_uom || "";
+      const altLabel  = data.alt_uom || "";
+
+      select.innerHTML = "";
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "—";
+      select.appendChild(placeholder);
+
+      select.dataset.baseUomLabel = baseLabel;
+      select.dataset.altUomLabel  = altLabel;
+
+      let hasBase = !!baseLabel;
+      let hasAlt  = !!altLabel;
+
+      if (hasBase) {
+        const optBase = document.createElement("option");
+        optBase.value = "base";
+        optBase.textContent = baseLabel + " – {% trans 'أساسية' %}";
+        select.appendChild(optBase);
+      }
+
+      if (hasAlt) {
+        const optAlt = document.createElement("option");
+        optAlt.value = "alt";
+        optAlt.textContent = altLabel + " – {% trans 'بديلة' %}";
+        select.appendChild(optAlt);
+      }
+
+      let kindToSelect = "";
+
+      // لو فيه قيمة قديمة في الـ select الحقيقي حاول تربطها
+      if (els.realUomSelect && els.realUomSelect.value) {
+        const realOpt = els.realUomSelect.options[els.realUomSelect.selectedIndex];
+        const txt = realOpt ? realOpt.textContent.trim() : "";
+        if (baseLabel && txt && (txt === baseLabel || txt.indexOf(baseLabel) !== -1)) {
+          kindToSelect = "base";
+        } else if (altLabel && txt && (txt === altLabel || txt.indexOf(altLabel) !== -1)) {
+          kindToSelect = "alt";
+        }
+      }
+
+      if (!kindToSelect) {
+        if (hasBase) kindToSelect = "base";
+        else if (hasAlt) kindToSelect = "alt";
+      }
+
+      if (kindToSelect) {
+        select.value = kindToSelect;
+      } else {
+        select.value = "";
+      }
+
+      updateRealUomFromKind(els);
+    }
+
+    function updateRealUomFromKind(els) {
+      if (!els.uomSelect || !els.realUomSelect) return;
+
+      const kind = els.uomSelect.value; // base | alt | ""
+      const baseLabel = els.uomSelect.dataset.baseUomLabel || "";
+      const altLabel  = els.uomSelect.dataset.altUomLabel || "";
+
+      let targetLabel = "";
+      if (kind === "base") {
+        targetLabel = baseLabel;
+      } else if (kind === "alt") {
+        targetLabel = altLabel;
+      } else {
+        els.realUomSelect.value = "";
+        return;
+      }
+
+      if (!targetLabel) {
+        els.realUomSelect.value = "";
+        return;
+      }
+
+      const opts = els.realUomSelect.options;
+      let found = false;
+      for (let i = 0; i < opts.length; i++) {
+        const txt = opts[i].textContent.trim();
+        if (txt === targetLabel || txt.indexOf(targetLabel) !== -1) {
+          els.realUomSelect.value = opts[i].value;
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        els.realUomSelect.value = "";
+      }
+    }
+
+    // ========== وصف السطر ==========
+    window.toggleDeliveryDescription = function (btn) {
+      const row = btn.closest("tr");
+      if (!row) return;
+
+      const container = row.querySelector(".line-description-container");
+      if (!container) return;
+
+      const field = container.querySelector("textarea, input");
+      const willShow = container.classList.contains("d-none");
+
+      container.classList.toggle("d-none");
+
+      if (willShow) {
+        btn.classList.remove("text-muted");
+        btn.classList.add("text-body");
+        if (field) field.focus();
+      } else {
+        btn.classList.remove("text-body");
+        btn.classList.add("text-muted");
+      }
+    };
+  })();
+</script>
+{% endblock %}
 
 {% endblock %}

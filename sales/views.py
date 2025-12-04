@@ -28,7 +28,7 @@ from core.models import AuditLog, Notification
 from core.services.audit import log_event
 from core.services.notifications import create_notification
 
-from .forms import SalesDocumentForm, DeliveryNoteForm, SalesLineFormSet
+from .forms import SalesDocumentForm, DeliveryNoteForm, SalesLineFormSet, DeliveryLineFormSet
 from .models import SalesDocument, DeliveryNote
 from . import services
 from .services import reopen_cancelled_sales_document
@@ -626,12 +626,20 @@ class DeliveryNoteCreateView(SalesBaseView, CreateView):
     - يتم جلب أمر البيع من الـ URL (order_pk).
     - يتم ضبط created_by / updated_by بالمستخدم الحالي.
     - يتم تسجيل الأوديت عند إنشاء المذكرة.
-    - يتم إنشاء إشعار للمستخدم الحالي.
+    - يتم إنشاء إشعار للمستخدم.
+    - يتم حفظ بنود التسليم (DeliveryLine) عبر inline formset.
     """
     model = DeliveryNote
     form_class = DeliveryNoteForm
     template_name = "sales/delivery/form.html"
     sales_section = "deliveries"
+
+    # ---------------- Helpers ----------------
+
+    def _get_lines_formset(self):
+        if self.request.method == "POST":
+            return DeliveryLineFormSet(self.request.POST)
+        return DeliveryLineFormSet()
 
     def dispatch(self, request, *args, **kwargs):
         """
@@ -643,16 +651,36 @@ class DeliveryNoteCreateView(SalesBaseView, CreateView):
         )
         return super().dispatch(request, *args, **kwargs)
 
+    def get_context_data(self, **kwargs):
+        """
+        تمرير أمر البيع + الفورمست للبنود للقالب.
+        """
+        ctx = super().get_context_data(**kwargs)
+        ctx["order"] = self.order
+        ctx.setdefault("lines_formset", self._get_lines_formset())
+        return ctx
+
     def form_valid(self, form):
         """
         منطق الحفظ عند إنشاء مذكرة التسليم:
         - ربطها بأمر البيع.
         - تثبيت الحالة كمسودة.
+        - ضبط contact من order.contact.
         - ضبط created_by / updated_by.
+        - حفظ المذكرة.
+        - حفظ بنود التسليم عبر DeliveryLineFormSet (باستخدام service add_delivery_line).
         - تسجيل الأوديت بعد الحفظ.
         - إنشاء إشعار للمستخدم.
         """
+        context = self.get_context_data(form=form)
+        lines_formset = context["lines_formset"]
+
+        if not lines_formset.is_valid():
+            return self.render_to_response(context)
+
+        # ربط المذكرة بأمر البيع + العميل
         form.instance.order = self.order
+        form.instance.contact = self.order.contact
         form.instance.status = DeliveryNote.Status.DRAFT
 
         # تعبئة created_by / updated_by
@@ -663,8 +691,33 @@ class DeliveryNoteCreateView(SalesBaseView, CreateView):
             if hasattr(form.instance, "updated_by"):
                 form.instance.updated_by = user
 
-        # حفظ المذكرة
+        # حفظ المذكرة أولاً
         response = super().form_valid(form)
+
+        # حفظ بنود التسليم باستخدام السيرفس (علشان الأوديت)
+        for line_form in lines_formset.forms:
+            if not getattr(line_form, "cleaned_data", None):
+                continue
+            if line_form.cleaned_data.get("DELETE"):
+                continue
+            if not line_form.has_changed():
+                continue
+
+            product = line_form.cleaned_data.get("product")
+            description = line_form.cleaned_data.get("description") or ""
+            quantity = line_form.cleaned_data.get("quantity") or 0
+
+            # تجاهل السطور الفارغة تماماً
+            if not product and not description and not quantity:
+                continue
+
+            services.add_delivery_line(
+                delivery=self.object,
+                product=product,
+                quantity=quantity,
+                description=description,
+                user=user if user.is_authenticated else None,
+            )
 
         # --- الأوديت: إنشاء مذكرة تسليم ---
         log_event(
@@ -705,13 +758,108 @@ class DeliveryNoteCreateView(SalesBaseView, CreateView):
         """
         return reverse("sales:delivery_note_detail", args=[self.object.pk])
 
+class StandaloneDeliveryNoteCreateView(SalesBaseView, CreateView):
+    """
+    إنشاء مذكرة تسليم مستقلة (بدون أمر بيع):
+
+    - يختار المستخدم العميل (contact) مباشرة.
+    - يمكنه إضافة بنود التسليم (DeliveryLine).
+    """
+    model = DeliveryNote
+    form_class = DeliveryNoteForm
+    template_name = "sales/delivery/form.html"
+    sales_section = "deliveries"
+
+    def _get_lines_formset(self):
+        if self.request.method == "POST":
+            return DeliveryLineFormSet(self.request.POST)
+        return DeliveryLineFormSet()
+
     def get_context_data(self, **kwargs):
-        """
-        تمرير أمر البيع للقالب لعرض معلوماته في الصفحة.
-        """
         ctx = super().get_context_data(**kwargs)
-        ctx["order"] = self.order
+        ctx.setdefault("lines_formset", self._get_lines_formset())
+        ctx["order"] = None  # علشان نفس القالب يتعامل معها
         return ctx
+
+    def form_valid(self, form):
+        context = self.get_context_data(form=form)
+        lines_formset = context["lines_formset"]
+
+        if not lines_formset.is_valid():
+            return self.render_to_response(context)
+
+        # مذكره مستقلة → لا يوجد order
+        form.instance.order = None
+        form.instance.status = DeliveryNote.Status.DRAFT
+
+        user = self.request.user
+        if user.is_authenticated:
+            if hasattr(form.instance, "created_by") and not form.instance.pk:
+                form.instance.created_by = user
+            if hasattr(form.instance, "updated_by"):
+                form.instance.updated_by = user
+
+        # حفظ المذكرة
+        response = super().form_valid(form)
+
+        # حفظ بنود التسليم
+        for line_form in lines_formset.forms:
+            if not getattr(line_form, "cleaned_data", None):
+                continue
+            if line_form.cleaned_data.get("DELETE"):
+                continue
+            if not line_form.has_changed():
+                continue
+
+            product = line_form.cleaned_data.get("product")
+            description = line_form.cleaned_data.get("description") or ""
+            quantity = line_form.cleaned_data.get("quantity") or 0
+
+            if not product and not description and not quantity:
+                continue
+
+            services.add_delivery_line(
+                delivery=self.object,
+                product=product,
+                quantity=quantity,
+                description=description,
+                user=user if user.is_authenticated else None,
+            )
+
+        # --- الأوديت: إنشاء مذكرة تسليم مستقلة ---
+        log_event(
+            action=AuditLog.Action.CREATE,
+            message=_("تم إنشاء مذكرة تسليم مستقلة %(dn)s") % {
+                "dn": self.object.display_number,
+            },
+            actor=user if user.is_authenticated else None,
+            target=self.object,
+            extra={
+                "order_id": None,
+                "contact_id": self.object.contact_id,
+                "status": self.object.status,
+                "date": str(self.object.date),
+            },
+        )
+
+        if user.is_authenticated:
+            create_notification(
+                recipient=user,
+                verb=_("تم إنشاء مذكرة تسليم مستقلة %(dn)s") % {
+                    "dn": self.object.display_number
+                },
+                target=self.object,
+                level=Notification.Levels.SUCCESS,
+                url=reverse("sales:delivery_note_detail", args=[self.object.pk]),
+            )
+
+        messages.success(self.request, _("تم إنشاء مذكرة التسليم بنجاح."))
+        return response
+
+    def get_success_url(self):
+        return reverse("sales:delivery_note_detail", args=[self.object.pk])
+
+
 
 
 class DeliveryNoteDetailView(SalesBaseView, DetailView):

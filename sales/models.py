@@ -334,8 +334,10 @@ class SalesLine(TimeStampedModel, UserStampedModel):
 
 class DeliveryNote(BaseModel):
     """
-    مذكرة تسليم مرتبطة بأمر بيع واحد.
-    يمكن أن يكون لأمر البيع عدة مذكرات.
+    مذكرة تسليم:
+    - يمكن أن ترتبط بأمر بيع (order) أو تكون مستقلة.
+    - في حالة الربط بأمر بيع، يتم استخدام contact الخاص بالأمر.
+    - في حالة المستقلة، يتم تحديد contact مباشرة في المذكرة.
 
     يرث من BaseModel:
     - public_id
@@ -349,12 +351,22 @@ class DeliveryNote(BaseModel):
         CONFIRMED = "confirmed", _("مؤكد")
         CANCELLED = "cancelled", _("ملغي")
 
+    contact = models.ForeignKey(
+        Contact,
+        on_delete=models.PROTECT,
+        related_name="delivery_notes",
+        verbose_name=_("العميل / جهة الاتصال"),
+    )
+
     order = models.ForeignKey(
         SalesDocument,
         on_delete=models.PROTECT,
         related_name="delivery_notes",
         limit_choices_to={"kind": SalesDocument.Kind.ORDER},
         verbose_name=_("أمر البيع"),
+        null=True,
+        blank=True,
+        help_text=_("اختياري: ربط مذكرة التسليم بأمر بيع معيّن."),
     )
 
     date = models.DateField(
@@ -382,7 +394,7 @@ class DeliveryNote(BaseModel):
         verbose_name_plural = _("مذكرات التسليم")
 
     def __str__(self):
-        return f"{self.display_number} – {self.order.display_number}"
+        return f"{self.display_number} – {self.contact_name}"
 
     @property
     def display_number(self) -> str:
@@ -397,6 +409,26 @@ class DeliveryNote(BaseModel):
     @property
     def is_confirmed(self) -> bool:
         return self.status == self.Status.CONFIRMED
+
+    @property
+    def effective_contact(self):
+        """
+        في القوالب أستخدم:
+        delivery.effective_contact
+
+        - إن وُجد contact على المذكرة → نرجعه.
+        - وإلا نحاول نرجع order.contact إن وُجد.
+        """
+        if self.contact:
+            return self.contact
+        if self.order and getattr(self.order, "contact", None):
+            return self.order.contact
+        return None
+
+    @property
+    def contact_name(self):
+        c = self.effective_contact
+        return getattr(c, "name", "—")
 
 
 # ===================================================================
@@ -435,6 +467,14 @@ class DeliveryLine(TimeStampedModel, UserStampedModel):
         blank=True,
         verbose_name=_("الوصف"),
         help_text=_("يُستخدم اسم المنتج إذا تُرك فارغًا."),
+    )
+    uom = models.ForeignKey(
+        UnitOfMeasure,
+        on_delete=models.PROTECT,
+        verbose_name=_("وحدة القياس"),
+        help_text=_("الوحدة المستخدمة في هذا السطر (أساسية أو بديلة)."),
+        null=True,
+        blank=True,
     )
 
     quantity = models.DecimalField(

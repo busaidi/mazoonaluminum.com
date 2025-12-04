@@ -5,7 +5,7 @@ from django.forms.models import BaseInlineFormSet, inlineformset_factory
 from django.utils.translation import gettext_lazy as _
 
 from inventory.models import Product
-from .models import SalesDocument, DeliveryNote, SalesLine
+from .models import SalesDocument, DeliveryNote, SalesLine, DeliveryLine
 
 
 # ===================================================================
@@ -62,21 +62,183 @@ class SalesDocumentForm(forms.ModelForm):
 # DeliveryNoteForm
 # ===================================================================
 
+from django import forms
+from django.forms.models import BaseInlineFormSet, inlineformset_factory
+from django.utils.translation import gettext_lazy as _
+
+from inventory.models import Product
+from .models import SalesDocument, DeliveryNote, SalesLine, DeliveryLine
+
+
+# ===================================================================
+# DeliveryNoteForm
+# ===================================================================
 
 class DeliveryNoteForm(forms.ModelForm):
     """
     فورم مذكرة التسليم.
-    (order يُحدد من الـ URL وليس من الفورم)
+
+    ملاحظات:
+    - الحقل contact مطلوب في المذكرات المستقلة.
+    - في المذكرات المرتبطة بأمر بيع، سنملأ contact من order في الفيو
+      و/أو نجعله للعرض فقط في القالب.
     """
 
     class Meta:
         model = DeliveryNote
-        fields = ["date", "notes"]
+        fields = ["contact", "date", "notes"]
         widgets = {
+            "contact": forms.Select(attrs={"class": "form-select"}),
             "date": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
             "notes": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
         }
 
+
+# ===================================================================
+# DeliveryLineForm + Inline Formset
+# ===================================================================
+
+class DeliveryLineForm(forms.ModelForm):
+    """
+    فورم بند تسليم واحد ضمن مذكرة التسليم.
+
+    - product_code حقل مساعد للبحث بالكود.
+    - product (FK) مخفي في الواجهة، ويُعبّأ تلقائياً بعد إيجاد المنتج.
+    """
+
+    product_code = forms.CharField(
+        label=_("Product code"),
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control form-control-sm",
+                "autocomplete": "off",
+            }
+        ),
+        # help_text=_("Enter internal product code to search quickly."),
+    )
+
+    class Meta:
+        model = DeliveryLine
+        fields = [
+            "product",
+            "description",
+            "quantity",
+            "uom",
+        ]
+        widgets = {
+            "product": forms.HiddenInput(),
+            "description": forms.TextInput(
+                attrs={
+                    "class": "form-control form-control-sm",
+                }
+            ),
+            "quantity": forms.NumberInput(
+                attrs={
+                    "class": "form-control form-control-sm text-end",
+                    "step": "0.001",
+                    "min": "0",
+                }
+            ),
+            "uom": forms.Select(          # 👈 هذا الجديد
+                attrs={
+                    "class": "form-select form-select-sm",
+                }
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        product = getattr(self.instance, "product", None)
+        # لو السطر له منتج محفوظ مسبقاً → عبّي الكود تلقائياً
+        if product and hasattr(product, "code") and not self.initial.get("product_code"):
+            self.initial["product_code"] = product.code
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        product = cleaned_data.get("product")
+        description = cleaned_data.get("description")
+        quantity = cleaned_data.get("quantity") or 0
+        code = cleaned_data.get("product_code")
+
+        # سطر لم يتغيّر نهائياً → الفورمست سيتعامل معه
+        if not self.has_changed():
+            return cleaned_data
+
+        # 1) لو فيه كود وما حُدد منتج → نبحث بالكود
+        if code and not product:
+            try:
+                product = Product.objects.get(code__iexact=code.strip())
+                cleaned_data["product"] = product
+                self.instance.product = product
+
+                # اختياري: لو الوصف فاضي عبّيه باسم المنتج
+                if not description:
+                    cleaned_data["description"] = product.name
+                    self.instance.description = product.name
+
+            except Product.DoesNotExist:
+                self.add_error(
+                    "product_code",
+                    _("No product found with this code."),
+                )
+                return cleaned_data
+
+        # 2) لابد أن يكون للسطر معنى
+        if quantity > 0 and not (product or description):
+            raise forms.ValidationError(
+                _("You must select a product or enter a description for this line.")
+            )
+
+        return cleaned_data
+
+
+class BaseDeliveryLineFormSet(BaseInlineFormSet):
+    """
+    Inline formset لبنود التسليم.
+    نتأكد أن على الأقل يوجد سطر واحد له معنى.
+    """
+
+    def clean(self):
+        super().clean()
+
+        has_valid_line = False
+
+        for form in self.forms:
+            if not hasattr(form, "cleaned_data"):
+                continue
+
+            if form.cleaned_data.get("DELETE", False):
+                continue
+
+            if not form.has_changed():
+                continue
+
+            product = form.cleaned_data.get("product")
+            description = form.cleaned_data.get("description")
+            quantity = form.cleaned_data.get("quantity") or 0
+
+            if product or description or quantity:
+                has_valid_line = True
+
+        if self.total_form_count() > 0 and not has_valid_line:
+            raise forms.ValidationError(
+                _("You must add at least one delivery line.")
+            )
+
+
+DeliveryLineFormSet = inlineformset_factory(
+    parent_model=DeliveryNote,
+    model=DeliveryLine,
+    form=DeliveryLineForm,
+    formset=BaseDeliveryLineFormSet,
+    extra=5,
+    can_delete=True,
+    min_num=0,
+    validate_min=False,
+)
 
 # ===================================================================
 # SalesLineForm + Inline Formset

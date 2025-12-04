@@ -32,7 +32,9 @@ urlpatterns = [
     path("sales/<int:pk>/print/", SalesDocumentPrintView.as_view(), name="sales_print"),
 
     # مذكرات التسليم
-    path("sales/<int:order_pk>/delivery/new/", views.DeliveryNoteCreateView.as_view(), name="delivery_note_create"),
+    path("sales/<int:order_pk>/delivery/new/", views.DeliveryNoteCreateView.as_view(), name="delivery_note_create",),
+    path("deliveries/new/", views.StandaloneDeliveryNoteCreateView.as_view(), name="delivery_note_create_standalone",),
     path("deliveries/", views.DeliveryNoteListView.as_view(), name="delivery_note_list"),
     path("deliveries/<int:pk>/", views.DeliveryNoteDetailView.as_view(), name="delivery_note_detail"),
+
 ]

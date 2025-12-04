@@ -1,4 +1,3 @@
-{# templates/sales/delivery/detail.html #}
 {% extends "sales/base_sales.html" %}
 {% load i18n %}
 
@@ -8,47 +7,59 @@
 
 {% block sales_content %}
 
-{# ======= العنوان + الأكشنز ======= #}
-<div class="d-flex justify-content-between align-items-center mb-3">
+{# ===== Header ===== #}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+
   <div>
-    <h1 class="h5 fw-bold mb-1">
+    <h1 class="h5 fw-bold mb-1 text-body">
       {% trans "مذكرة تسليم" %} <span dir="ltr">{{ delivery.display_number }}</span>
     </h1>
-    <p class="text-muted small mb-0">
-      {% if delivery.order %}
+
+    {% if delivery.order %}
+      <p class="text-muted small mb-0">
         {% trans "مرتبطة بأمر البيع" %}:
-        {# تفاصيل أمر البيع → sales_detail #}
         <a href="{% url 'sales:sales_detail' delivery.order.pk %}"
-           class="text-decoration-none" dir="ltr">
+           class="text-decoration-none"
+           dir="ltr">
           {{ delivery.order.display_number }}
         </a>
         {% if delivery.order.contact %}
           – {{ delivery.order.contact.name }}
         {% endif %}
-      {% else %}
-        {% trans "لا يوجد أمر بيع مرتبط." %}
-      {% endif %}
-    </p>
+      </p>
+    {% else %}
+      <p class="text-muted small mb-0">
+        {% trans "مذكرة تسليم مستقلة بدون أمر بيع مرتبط." %}
+      </p>
+    {% endif %}
   </div>
 
-  <div class="d-flex flex-wrap gap-2 align-items-center">
+  <div class="d-flex flex-wrap align-items-center gap-2">
 
-    {# حالة مذكرة التسليم #}
-    {% if delivery.status == delivery.Status.DRAFT %}
-      <span class="badge bg-secondary px-3 py-2">
-        {{ delivery.get_status_display }}
-      </span>
-    {% elif delivery.status == delivery.Status.CONFIRMED %}
-      <span class="badge bg-success px-3 py-2">
-        {{ delivery.get_status_display }}
-      </span>
-    {% elif delivery.status == delivery.Status.CANCELLED %}
-      <span class="badge bg-danger px-3 py-2">
-        {{ delivery.get_status_display }}
-      </span>
-    {% endif %}
+    {# حالة المذكرة #}
+    <div>
+      {% if delivery.status == delivery.Status.DRAFT %}
+        <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill px-3 py-2 small">
+          <i class="bi bi-pencil-square ms-1"></i>
+          {{ delivery.get_status_display }}
+        </span>
+      {% elif delivery.status == delivery.Status.CONFIRMED %}
+        <span class="badge bg-success-subtle text-success-emphasis rounded-pill px-3 py-2 small">
+          <i class="bi bi-check-circle ms-1"></i>
+          {{ delivery.get_status_display }}
+        </span>
+      {% elif delivery.status == delivery.Status.CANCELLED %}
+        <span class="badge bg-danger-subtle text-danger-emphasis rounded-pill px-3 py-2 small">
+          <i class="bi bi-x-circle ms-1"></i>
+          {{ delivery.get_status_display }}
+        </span>
+      {% else %}
+        <span class="badge bg-light text-muted rounded-pill px-3 py-2 small">
+          {{ delivery.get_status_display }}
+        </span>
+      {% endif %}
+    </div>
 
-    {# قائمة مذكرات التسليم #}
     <a href="{% url 'sales:delivery_note_list' %}"
        class="btn btn-sm btn-outline-secondary">
       <i class="bi bi-list-ul ms-1"></i>
@@ -56,55 +67,65 @@
     </a>
 
     {% if delivery.order %}
-      {# الرجوع لأمر البيع → sales_detail #}
       <a href="{% url 'sales:sales_detail' delivery.order.pk %}"
          class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-right-short"></i>
+        <i class="bi bi-receipt ms-1"></i>
         {% trans "أمر البيع" %}
       </a>
     {% endif %}
-
   </div>
 </div>
 
-{# ======= معلومات الرأس ======= #}
+{# ===== Card: معلومات المذكرة ===== #}
 <div class="card border-0 shadow-sm mb-3">
   <div class="card-body small">
-
     <div class="row g-3">
-      <div class="col-md-4">
-        <div class="text-muted mb-1">{% trans "رقم مذكرة التسليم" %}</div>
-        <div dir="ltr" class="fw-bold">
+
+      <div class="col-md-3 col-sm-6">
+        <div class="text-muted mb-1">{% trans "رقم المذكرة" %}</div>
+        <div class="fw-semibold" dir="ltr">
           {{ delivery.display_number }}
         </div>
       </div>
 
-      <div class="col-md-4">
+      <div class="col-md-3 col-sm-6">
         <div class="text-muted mb-1">{% trans "تاريخ التسليم" %}</div>
         <div>
           {{ delivery.date|date:"Y-m-d" }}
         </div>
       </div>
 
-      <div class="col-md-4">
+      <div class="col-md-3 col-sm-6">
         <div class="text-muted mb-1">{% trans "تاريخ الإنشاء" %}</div>
         <div>
           {{ delivery.created_at|date:"Y-m-d H:i" }}
         </div>
       </div>
 
+      <div class="col-md-3 col-sm-6">
+        <div class="text-muted mb-1">{% trans "آخر تعديل" %}</div>
+        <div>
+          {% if delivery.updated_at %}
+            {{ delivery.updated_at|date:"Y-m-d H:i" }}
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </div>
+      </div>
+
       {% if delivery.order %}
-        <div class="col-md-6">
+        <div class="col-md-4 col-sm-6">
           <div class="text-muted mb-1">{% trans "أمر البيع" %}</div>
           <div>
             <a href="{% url 'sales:sales_detail' delivery.order.pk %}"
-               class="text-decoration-none" dir="ltr">
+               class="text-decoration-none"
+               dir="ltr">
               {{ delivery.order.display_number }}
             </a>
           </div>
         </div>
 
-        <div class="col-md-6">
+        <div class="col-md-4 col-sm-6">
           <div class="text-muted mb-1">{% trans "العميل" %}</div>
           <div>
             {% if delivery.order.contact %}
@@ -117,64 +138,98 @@
             {% endif %}
           </div>
         </div>
+      {% else %}
+        <div class="col-md-4 col-sm-6">
+          <div class="text-muted mb-1">{% trans "العميل" %}</div>
+          <div>
+            {% if delivery.contact %}
+              {{ delivery.contact.name }}
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </div>
+        </div>
       {% endif %}
-    </div>
 
+    </div>
   </div>
 </div>
 
-{# ======= بنود التسليم ======= #}
+{# ===== Card: بنود التسليم ===== #}
 <div class="card border-0 shadow-sm mb-3">
-  <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+  <div class="card-header bg-body border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+
     <div class="d-flex align-items-center gap-2">
-      <span class="feature-icon">
+      <div class="rounded-circle d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary-emphasis"
+           style="width: 2.1rem; height: 2.1rem;">
         <i class="bi bi-box-arrow-down"></i>
-      </span>
+      </div>
       <div>
-        <h2 class="h6 fw-bold mb-0">
+        <h2 class="h6 fw-bold mb-0 text-body">
           {% trans "بنود مذكرة التسليم" %}
         </h2>
         <p class="text-muted small mb-0">
-          {% trans "المنتجات / العناصر التي تم تسليمها ضمن هذه المذكرة." %}
+          {% trans "تفاصيل المنتجات المسلّمة ضمن هذه المذكرة." %}
         </p>
       </div>
     </div>
+
+    <span class="badge bg-light text-muted small">
+      {% blocktrans count cnt=delivery.lines.count %}
+        بند واحد
+      {% plural %}
+        {{ cnt }} بنود
+      {% endblocktrans %}
+    </span>
   </div>
 
   <div class="card-body small">
-
     {% if delivery.lines.all %}
       <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
           <thead class="table-light">
             <tr>
-              <th class="small text-muted">{% trans "م" %}</th>
-              <th class="small text-muted">{% trans "الوصف" %}</th>
-              <th class="small text-muted">{% trans "المنتج" %}</th>
-              <th class="small text-muted text-end">{% trans "الكمية المسلّمة" %}</th>
+              <th class="small text-muted text-nowrap">{% trans "كود" %}</th>
+              <th class="small text-muted">{% trans "المنتج / الوصف" %}</th>
+              <th class="small text-muted text-end text-nowrap">{% trans "الكمية" %}</th>
             </tr>
           </thead>
           <tbody>
-            {% for line in delivery.lines.all %}
-              <tr>
-                <td class="small text-nowrap">
-                  {{ forloop.counter }}
-                </td>
-                <td class="small">
-                  {{ line.display_name }}
-                </td>
-                <td class="small">
-                  {% if line.product %}
+          {% for line in delivery.lines.all %}
+            <tr>
+              <td class="small text-nowrap">
+                {% if line.product and line.product.code %}
+                  <span class="fw-semibold">{{ line.product.code }}</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+
+              <td class="small">
+                {% if line.product %}
+                  <div class="fw-semibold">
                     {{ line.product.name }}
-                  {% else %}
-                    <span class="text-muted">—</span>
-                  {% endif %}
-                </td>
-                <td class="small text-end text-nowrap">
-                  {{ line.quantity }}
-                </td>
-              </tr>
-            {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="text-muted">—</div>
+                {% endif %}
+
+                {% if line.display_name %}
+                  <div class="text-muted small mt-1">
+                    {{ line.display_name }}
+                  </div>
+                {% elif line.description %}
+                  <div class="text-muted small mt-1">
+                    {{ line.description }}
+                  </div>
+                {% endif %}
+              </td>
+
+              <td class="small text-end text-nowrap">
+                {{ line.quantity }}
+              </td>
+            </tr>
+          {% endfor %}
           </tbody>
         </table>
       </div>
@@ -183,14 +238,13 @@
         {% trans "لا توجد بنود تسليم مسجلة في هذه المذكرة." %}
       </p>
     {% endif %}
-
   </div>
 </div>
 
-{# ======= الملاحظات ======= #}
+{# ===== Card: الملاحظات ===== #}
 <div class="card border-0 shadow-sm mb-3">
-  <div class="card-header bg-white border-0">
-    <h2 class="h6 fw-bold mb-0">
+  <div class="card-header bg-body border-0">
+    <h2 class="h6 fw-bold mb-0 text-body">
       {% trans "ملاحظات" %}
     </h2>
   </div>
