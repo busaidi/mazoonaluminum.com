@@ -1,0 +1,40 @@
+{% load i18n %}
+
+<form method="get" class="card mb-4 shadow-sm border-0">
+    <div class="card-body p-2">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0">
+                        <i class="bi bi-search text-muted"></i>
+                    </span>
+                    <input type="text"
+                           name="q"
+                           class="form-control border-start-0 ps-0"
+                           placeholder="{% trans 'بحث برقم المستند، اسم العميل، أو المرجع...' %}"
+                           value="{{ current_q }}">
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <select name="status" class="form-select" onchange="this.form.submit()">
+                    <option value="">{% trans "كل الحالات" %}</option>
+                    {% for key, label in status_choices %}
+                        <option value="{{ key }}" {% if current_status == key %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">{% trans "بحث" %}</button>
+                {% if current_q or current_status %}
+                    <a href="{{ request.path }}" class="btn btn-outline-secondary" title="{% trans 'إلغاء الفلاتر' %}">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</form>

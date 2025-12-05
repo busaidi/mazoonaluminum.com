@@ -1,0 +1,71 @@
+{% extends "sales/base_sales.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "مذكرات التسليم" %}{% endblock %}
+
+{% block sales_content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 text-gray-800">{% trans "مذكرات التسليم" %}</h1>
+        <a href="{% url 'sales:delivery_create' %}" class="btn btn-primary">
+            <i class="bi bi-truck"></i> {% trans "تسليم جديد" %}
+        </a>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{% trans "رقم المذكرة" %}</th>
+                            <th>{% trans "العميل" %}</th>
+                            <th>{% trans "مرتبط بأمر" %}</th>
+                            <th>{% trans "التاريخ" %}</th>
+                            <th>{% trans "الحالة" %}</th>
+                            <th>{% trans "الإجراءات" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dn in deliveries %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'sales:delivery_detail' dn.pk %}" class="fw-bold text-decoration-none">
+                                    {{ dn.display_number }}
+                                </a>
+                            </td>
+                            <td>{{ dn.contact_name }}</td>
+                            <td>
+                                {% if dn.order %}
+                                    <a href="{% url 'sales:document_detail' dn.order.pk %}">{{ dn.order.display_number }}</a>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ dn.date }}</td>
+                            <td>
+                                <span class="badge {% if dn.status == 'draft' %}bg-secondary{% elif dn.status == 'confirmed' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ dn.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'sales:delivery_detail' dn.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                {% trans "لا توجد مذكرات تسليم." %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            </div>
+    </div>
+</div>
+{% endblock %}

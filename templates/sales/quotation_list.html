@@ -1,0 +1,78 @@
+{% extends "sales/base_sales.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "عروض الأسعار" %}{% endblock %}
+
+{% block sales_content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 text-gray-800">{% trans "عروض الأسعار" %}</h1>
+        <a href="{% url 'sales:quotation_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> {% trans "عرض سعر جديد" %}
+        </a>
+    </div>
+{% include "sales/partials/search_bar.html" %}
+    <div class="card shadow">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{% trans "رقم العرض" %}</th>
+                            <th>{% trans "العميل" %}</th>
+                            <th>{% trans "التاريخ" %}</th>
+                            <th>{% trans "الإجمالي" %}</th>
+                            <th>{% trans "الحالة" %}</th>
+                            <th>{% trans "الإجراءات" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for doc in documents %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'sales:document_detail' doc.pk %}" class="fw-bold text-decoration-none">
+                                    {{ doc.display_number }}
+                                </a>
+                            </td>
+                            <td>{{ doc.contact.name }}</td>
+                            <td>{{ doc.date }}</td>
+                            <td>{{ doc.total_amount }} {{ doc.currency }}</td>
+                            <td>
+                                <span class="badge {% if doc.status == 'draft' %}bg-secondary{% elif doc.status == 'confirmed' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ doc.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'sales:document_detail' doc.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                {% trans "لا توجد عروض أسعار حتى الآن." %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if is_paginated %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">{% trans "السابق" %}</a></li>
+                    {% endif %}
+                    <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+                    {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">{% trans "التالي" %}</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,15 +1,18 @@
 # sales/models.py
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+# تأكد من أن التطبيقات التالية موجودة لديك
 from contacts.models import Contact
 from inventory.models import Product
+from uom.models import UnitOfMeasure
 
 from core.models.base import BaseModel, TimeStampedModel, UserStampedModel
-from uom.models import UnitOfMeasure
+
+# سنفترض أن ملف المدراء managers.py موجود في نفس المجلد
 from .managers import (
     SalesDocumentManager,
     SalesLineManager,
@@ -17,31 +20,23 @@ from .managers import (
     DeliveryLineManager,
 )
 
-# ثوابت للأرقام العشرية لتفادي تكرار القيم النصية
+# ثوابت للأرقام العشرية لتفادي تكرار القيم النصية وحسابات دقيقة
 DECIMAL_ZERO = Decimal("0.000")
 DECIMAL_ONE = Decimal("1.000")
 DECIMAL_HUNDRED = Decimal("100.00")
 
 
 # ===================================================================
-# نموذج مستند المبيعات
+# نموذج مستند المبيعات (Quotation / Sales Order)
 # ===================================================================
-
 
 class SalesDocument(BaseModel):
     """
-    مستند مبيعات واحد يمكن أن يكون:
+    مستند مبيعات موحد يمكن أن يكون:
     - عرض سعر (QUOTATION)
     - أمر بيع (ORDER)
 
-    نفس السجل يمكن أن يتحول من عرض سعر إلى أمر بيع
-    بدون إنشاء مستند جديد.
-
-    يرث من BaseModel:
-    - public_id
-    - created_at / updated_at
-    - created_by / updated_by
-    - is_deleted / deleted_at / deleted_by
+    نفس السجل يمكن أن يتحول من عرض سعر إلى أمر بيع بتغيير الـ kind.
     """
 
     class Kind(models.TextChoices):
@@ -71,6 +66,7 @@ class SalesDocument(BaseModel):
         db_index=True,
     )
 
+    # هذا الحقل مفيد لربط المستندات ببعضها (مثلاً نسخة من عرض سعر سابق)
     source_document = models.ForeignKey(
         "self",
         on_delete=models.SET_NULL,
@@ -78,7 +74,6 @@ class SalesDocument(BaseModel):
         blank=True,
         related_name="child_documents",
         verbose_name=_("المستند الأصلي"),
-        help_text=_("يُستخدم لاحقًا للربط مع مستندات أخرى مثل التسليم أو النسخ."),
     )
 
     contact = models.ForeignKey(
@@ -86,6 +81,14 @@ class SalesDocument(BaseModel):
         on_delete=models.PROTECT,
         related_name="sales_documents",
         verbose_name=_("العميل / جهة الاتصال"),
+    )
+
+    # مرجع العميل (رقم أمر الشراء PO الخاص بالعميل) - مهم جداً للشركات
+    client_reference = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_("مرجع العميل / رقم طلب الشراء"),
+        help_text=_("رقم الإشارة الخاص بالعميل (PO Ref)."),
     )
 
     date = models.DateField(
@@ -97,10 +100,10 @@ class SalesDocument(BaseModel):
     due_date = models.DateField(
         null=True,
         blank=True,
-        verbose_name=_("تاريخ الانتهاء"),
+        verbose_name=_("تاريخ الانتهاء / الصلاحية"),
     )
 
-    # ========== المبالغ ==========
+    # ========== المبالغ المالية ==========
 
     total_before_tax = models.DecimalField(
         max_digits=14,
@@ -129,12 +132,11 @@ class SalesDocument(BaseModel):
         verbose_name=_("العملة"),
     )
 
-    # ========== فوترة أمر البيع ==========
+    # ========== حالة الفوترة والتسليم ==========
 
     is_invoiced = models.BooleanField(
         default=False,
-        verbose_name=_("مفوتر"),
-        help_text=_("يشير إلى أن أمر البيع تم فوترته بالكامل."),
+        verbose_name=_("مفوتر بالكامل"),
     )
 
     # ========== ملاحظات ==========
@@ -142,14 +144,16 @@ class SalesDocument(BaseModel):
     notes = models.TextField(
         blank=True,
         verbose_name=_("ملاحظات داخلية"),
+        help_text=_("ملاحظات لا تظهر للعميل.")
     )
 
     customer_notes = models.TextField(
         blank=True,
         verbose_name=_("ملاحظات للعميل"),
+        help_text=_("تظهر في الطباعة للعميل (مثل شروط الدفع).")
     )
 
-    # ========== Manager ==========
+    # ========== Managers ==========
 
     objects = SalesDocumentManager()
 
@@ -158,7 +162,7 @@ class SalesDocument(BaseModel):
         verbose_name = _("مستند مبيعات")
         verbose_name_plural = _("مستندات المبيعات")
 
-    # ========== تمثيل وخصائص مساعدة للـ UI ==========
+    # ========== خصائص العرض والمنطق ==========
 
     def __str__(self) -> str:
         contact_name = getattr(self.contact, "name", "—")
@@ -166,11 +170,11 @@ class SalesDocument(BaseModel):
 
     @property
     def display_number(self) -> str:
-        """
-        رقم موحّد لجميع مستندات المبيعات.
-        مثال: SO-0009
-        """
-        prefix = "SO"  # رقم موحّد لكل مستندات المبيعات
+        """رقم العرض للمستخدم"""
+        prefix = "SO"
+        if self.is_quotation:
+            prefix = "QN"  # Quotation Number
+
         if self.pk:
             return f"{prefix}-{self.pk:04d}"
         return f"{prefix}-DRAFT"
@@ -187,20 +191,19 @@ class SalesDocument(BaseModel):
     def is_cancelled(self) -> bool:
         return self.status == self.Status.CANCELLED
 
-    # ========== منطق احتساب الإجماليات ==========
+    # ========== العمليات الحسابية ==========
 
     def recompute_totals(self, save: bool = True) -> None:
         """
-        إعادة احتساب إجماليات المستند بناءً على بنوده.
-        - يتم جمع line_total من جميع البنود.
-        - حالياً الضريبة = 0 (سيتم دعم الضريبة لاحقاً).
+        إعادة احتساب إجماليات المستند بناءً على البنود.
         """
         agg = self.lines.aggregate(s=models.Sum("line_total"))
         total = agg.get("s") or DECIMAL_ZERO
 
         self.total_before_tax = total
+        # هنا يمكن إضافة منطق الضرائب لاحقاً
         self.total_tax = DECIMAL_ZERO
-        self.total_amount = total
+        self.total_amount = total + self.total_tax
 
         if save:
             self.save(
@@ -211,38 +214,26 @@ class SalesDocument(BaseModel):
                 ]
             )
 
-    # ========== صلاحيات التحويل ==========
+    # ========== التحقق من الصلاحيات ==========
     def can_be_converted_to_order(self) -> bool:
-        """
-        يمكن التحويل إلى أمر بيع إذا كان المستند عرض سعر وغير ملغي.
-        """
         return self.is_quotation and not self.is_cancelled
 
     def can_be_converted_to_invoice(self) -> bool:
-        """
-        يمكن التحويل إلى فاتورة إذا كان المستند أمر بيع، وغير ملغي،
-        ولم يتم فوترته مسبقاً.
-        """
         return self.is_order and not self.is_cancelled and not self.is_invoiced
 
     def get_absolute_url(self):
         from django.urls import reverse
-
-        return reverse("sales:sales_detail", kwargs={"pk": self.pk})
+        # تأكد من أن الـ URL name صحيح في ملف urls.py
+        return reverse("sales:document_detail", kwargs={"pk": self.pk})
 
 
 # ===================================================================
-# نموذج بند المبيعات
+# نموذج بند المبيعات (Sales Line)
 # ===================================================================
-
 
 class SalesLine(TimeStampedModel, UserStampedModel):
     """
-    بند مبيعات مرتبط بمستند مبيعات واحد.
-
-    يرث من:
-    - TimeStampedModel  → created_at / updated_at
-    - UserStampedModel  → created_by / updated_by
+    بند (سطر) داخل مستند المبيعات.
     """
 
     document = models.ForeignKey(
@@ -265,7 +256,7 @@ class SalesLine(TimeStampedModel, UserStampedModel):
         max_length=255,
         blank=True,
         verbose_name=_("الوصف"),
-        help_text=_("يُستخدم اسم المنتج تلقائيًا إذا تُرك هذا الحقل فارغًا."),
+        help_text=_("يُستخدم اسم المنتج تلقائيًا إذا تُرِك فارغًا."),
     )
 
     quantity = models.DecimalField(
@@ -279,7 +270,6 @@ class SalesLine(TimeStampedModel, UserStampedModel):
         UnitOfMeasure,
         on_delete=models.PROTECT,
         verbose_name=_("وحدة القياس"),
-        help_text=_("الوحدة المستخدمة في هذا السطر (أساسية أو بديلة)."),
         null=True,
         blank=True,
     )
@@ -295,7 +285,7 @@ class SalesLine(TimeStampedModel, UserStampedModel):
         max_digits=5,
         decimal_places=2,
         default=Decimal("0.00"),
-        verbose_name=_("نسبة الخصم"),
+        verbose_name=_("نسبة الخصم %"),
     )
 
     line_total = models.DecimalField(
@@ -303,6 +293,7 @@ class SalesLine(TimeStampedModel, UserStampedModel):
         decimal_places=3,
         default=DECIMAL_ZERO,
         verbose_name=_("إجمالي السطر"),
+        help_text=_("الكمية × السعر - الخصم"),
     )
 
     objects = SalesLineManager()
@@ -317,90 +308,66 @@ class SalesLine(TimeStampedModel, UserStampedModel):
 
     @property
     def display_name(self) -> str:
-        """
-        اسم البند كما يظهر في القوائم:
-        - الوصف إن وجد
-        - وإلا اسم المنتج
-        - وإلا نص افتراضي "سطر #"
-        """
         if self.description:
             return self.description
         if self.product:
             return self.product.name
-        if self.pk:
-            return f"سطر #{self.pk}"
-        return "سطر جديد"
+        return f"Line #{self.pk}"
 
     def compute_line_total(self) -> Decimal:
         """
-        يحسب إجمالي السطر مع تطبيق نسبة الخصم (إن وُجدت).
-        لا يغيّر السطر نفسه، فقط يرجع القيمة.
+        حساب القيمة الإجمالية للسطر
         """
-        qty = self.quantity or DECIMAL_ZERO
-        price = self.unit_price or DECIMAL_ZERO
+
+        def to_decimal(value, default="0"):
+            if value in (None, ""):
+                return Decimal(default)
+            try:
+                return Decimal(str(value))
+            except (InvalidOperation, TypeError, ValueError):
+                return Decimal(default)
+
+        qty = to_decimal(self.quantity, "0")
+        price = to_decimal(self.unit_price, "0")
+        discount = to_decimal(self.discount_percent, "0")
+
         base = qty * price
 
-        if self.discount_percent:
-            discount_factor = Decimal("1.00") - (self.discount_percent / DECIMAL_HUNDRED)
-            total = base * discount_factor
-        else:
-            total = base
+        if discount > 0:
+            # معادلة الخصم: السعر الأصلي * (100 - نسبة الخصم) / 100
+            base = base * (Decimal("100") - discount) / Decimal("100")
 
-        # حماية من الإدخال الخاطئ (مثلاً خصم > 100%)
-        if total < DECIMAL_ZERO:
-            total = DECIMAL_ZERO
-
-        # إرجاع القيمة بثلاث خانات عشرية
-        return total.quantize(Decimal("0.001"))
+        return base.quantize(Decimal("0.000"))
 
     def save(self, *args, **kwargs) -> None:
-        """
-        قبل الحفظ:
-        - نحتسب إجمالي السطر line_total.
-
-        بعد الحفظ:
-        - نعيد احتساب إجماليات المستند المرتبط.
-        """
         self.line_total = self.compute_line_total()
         super().save(*args, **kwargs)
-
+        # تحديث إجمالي المستند الأب
         if self.document_id:
             self.document.recompute_totals(save=True)
 
 
 # ===================================================================
-# نموذج مذكرة التسليم
+# نموذج مذكرة التسليم (Delivery Note)
 # ===================================================================
-
 
 class DeliveryNote(BaseModel):
     """
-    مذكرة تسليم:
-
-    - يمكن أن ترتبط بأمر بيع (order) أو تكون مستقلة.
-    - في حالة الربط بأمر بيع يمكن الاعتماد على العميل من أمر البيع.
-    - في حالة المستقلة يتم تحديد العميل مباشرة في المذكرة.
-
-    يرث من BaseModel:
-    - public_id
-    - created_at / updated_at
-    - created_by / updated_by
-    - is_deleted / deleted_at / deleted_by
+    مذكرة تسليم بضاعة للعميل.
     """
 
     class Status(models.TextChoices):
         DRAFT = "draft", _("مسودة")
-        CONFIRMED = "confirmed", _("مؤكد")
+        CONFIRMED = "confirmed", _("مؤكد / تم التسليم")
         CANCELLED = "cancelled", _("ملغي")
 
     contact = models.ForeignKey(
         Contact,
         on_delete=models.PROTECT,
         related_name="delivery_notes",
-        verbose_name=_("العميل / جهة الاتصال"),
+        verbose_name=_("العميل"),
         null=True,
         blank=True,
-        help_text=_("يمكن تركه فارغًا إذا كانت المذكرة مربوطة بأمر بيع وسيتم استخدام عميل أمر البيع."),
     )
 
     order = models.ForeignKey(
@@ -408,10 +375,9 @@ class DeliveryNote(BaseModel):
         on_delete=models.PROTECT,
         related_name="delivery_notes",
         limit_choices_to={"kind": SalesDocument.Kind.ORDER},
-        verbose_name=_("أمر البيع"),
+        verbose_name=_("أمر البيع المرتبط"),
         null=True,
         blank=True,
-        help_text=_("اختياري: ربط مذكرة التسليم بأمر بيع معيّن."),
     )
 
     date = models.DateField(
@@ -443,10 +409,6 @@ class DeliveryNote(BaseModel):
 
     @property
     def display_number(self) -> str:
-        """
-        رقم مبسّط لمذكرة التسليم:
-        مثال: DN-0003
-        """
         if self.pk:
             return f"DN-{self.pk:04d}"
         return "DN-DRAFT"
@@ -457,12 +419,7 @@ class DeliveryNote(BaseModel):
 
     @property
     def effective_contact(self):
-        """
-        المرجع القياسي للعميل في القوالب:
-        - إن وُجد contact على المذكرة → يُستخدم.
-        - وإلا إن وُجد order.contact → يُستخدم.
-        - وإلا يرجع None.
-        """
+        """إرجاع العميل سواء تم تحديده هنا أو في أمر البيع المرتبط"""
         if self.contact:
             return self.contact
         if self.order and getattr(self.order, "contact", None):
@@ -476,20 +433,12 @@ class DeliveryNote(BaseModel):
 
 
 # ===================================================================
-# نموذج بند التسليم
+# نموذج بند التسليم (Delivery Line)
 # ===================================================================
-
 
 class DeliveryLine(TimeStampedModel, UserStampedModel):
     """
-    بند تسليم بسيط ضمن مذكرة تسليم.
-
-    حالياً:
-    - لا يوجد ربط إلزامي بسطر أمر البيع (يمكن إضافته لاحقاً عند الحاجة).
-
-    يرث من:
-    - TimeStampedModel  → created_at / updated_at
-    - UserStampedModel  → created_by / updated_by
+    سطر داخل مذكرة التسليم.
     """
 
     delivery = models.ForeignKey(
@@ -497,6 +446,17 @@ class DeliveryLine(TimeStampedModel, UserStampedModel):
         on_delete=models.CASCADE,
         related_name="lines",
         verbose_name=_("مذكرة التسليم"),
+    )
+
+    # تحسين: ربط سطر التسليم بسطر أمر البيع لمعرفة ما تم تسليمه بالضبط
+    sales_line = models.ForeignKey(
+        SalesLine,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="delivery_lines",
+        verbose_name=_("بند أمر البيع"),
+        help_text=_("السطر المرتبط في أمر البيع (لحساب الكميات المتبقية)."),
     )
 
     product = models.ForeignKey(
@@ -512,14 +472,12 @@ class DeliveryLine(TimeStampedModel, UserStampedModel):
         max_length=255,
         blank=True,
         verbose_name=_("الوصف"),
-        help_text=_("يُستخدم اسم المنتج إذا تُرك فارغًا."),
     )
 
     uom = models.ForeignKey(
         UnitOfMeasure,
         on_delete=models.PROTECT,
         verbose_name=_("وحدة القياس"),
-        help_text=_("الوحدة المستخدمة في هذا السطر (أساسية أو بديلة)."),
         null=True,
         blank=True,
     )
@@ -543,16 +501,21 @@ class DeliveryLine(TimeStampedModel, UserStampedModel):
 
     @property
     def display_name(self) -> str:
-        """
-        اسم البند كما يظهر في القوائم:
-        - الوصف إن وجد
-        - وإلا اسم المنتج
-        - وإلا نص افتراضي "سطر #"
-        """
         if self.description:
             return self.description
         if self.product:
             return self.product.name
-        if self.pk:
-            return f"سطر #{self.pk}"
-        return "سطر جديد"
+        return f"Line #{self.pk}"
+
+    def save(self, *args, **kwargs):
+        # منطق اختياري: إذا تم تحديد سطر مبيعات ولم يتم تحديد المنتج، ننسخه من سطر المبيعات
+        if self.sales_line and not self.product:
+            self.product = self.sales_line.product
+
+        # إذا لم يتم تحديد وحدة القياس، ننسخها من المنتج أو سطر المبيعات
+        if not self.uom:
+            if self.sales_line and self.sales_line.uom:
+                self.uom = self.sales_line.uom
+            # هنا يمكنك إضافة شرط لجلب وحدة القياس الافتراضية للمنتج إذا وجدت
+
+        super().save(*args, **kwargs)
