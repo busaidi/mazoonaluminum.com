@@ -4,96 +4,193 @@
 {% block title %}{% trans "مذكرات التسليم" %}{% endblock %}
 
 {% block sales_content %}
+
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h5 class="m-0 font-weight-bold text-primary">
-            <i class="bi bi-truck me-1"></i> {% trans "سجل تسليم المواد" %}
-        </h5>
-
-        <div>
-            <a href="{% url 'sales:delivery_create_direct' %}" class="btn btn-outline-primary btn-sm shadow-sm me-2">
-                <i class="bi bi-lightning-charge"></i> {% trans "تسليم مباشر" %}
-            </a>
-
-            <a href="{% url 'sales:document_list' %}?status=confirmed" class="btn btn-primary btn-sm shadow-sm">
-                <i class="bi bi-file-earmark-check"></i> {% trans "من أمر بيع" %}
-            </a>
-        </div>
+  {# ================== HEADER ================== #}
+  <div class="card-header bg-body py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="h5 fw-bold mb-1 text-body">
+        <i class="bi bi-truck me-1"></i>
+        {% trans "سجل تسليم المواد" %}
+      </h1>
+      <p class="small text-muted mb-0">
+        {% trans "عرض جميع مذكرات التسليم، سواء المرتبطة بأوامر البيع أو التسليم المباشر." %}
+      </p>
     </div>
 
-    <div class="card-body">
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'sales:delivery_create_direct' %}"
+         class="btn btn-outline-primary btn-sm shadow-sm">
+        <i class="bi bi-lightning-charge me-1"></i>
+        {% trans "تسليم مباشر" %}
+      </a>
 
-        {% if deliveries %}
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>{% trans "رقم المذكرة" %}</th>
-                        <th>{% trans "التاريخ" %}</th>
-                        <th>{% trans "العميل" %}</th>
-                        <th>{% trans "مرجع الأمر" %}</th>
-                        <th>{% trans "الحالة" %}</th>
-                        <th class="text-center">{% trans "إجراءات" %}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for dn in deliveries %}
-                    <tr>
-                        <td class="fw-bold font-monospace">
-                            <a href="{% url 'sales:delivery_detail' dn.pk %}" class="text-decoration-none">
-                                {{ dn.display_number }}
-                            </a>
-                        </td>
-                        <td>{{ dn.date|date:"Y-m-d" }}</td>
-                        <td>{{ dn.contact.name }}</td>
-                        <td>
-                            {% if dn.order %}
-                                <a href="{% url 'sales:document_detail' dn.order.pk %}" class="text-muted text-decoration-none small">
-                                    <i class="bi bi-link-45deg"></i> {{ dn.order.display_number }}
-                                </a>
-                            {% else %}
-                                <span class="badge bg-light text-dark border">{% trans "مباشر" %}</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if dn.status == 'draft' %}
-                                <span class="badge bg-secondary">{% trans "مسودة" %}</span>
-                            {% elif dn.status == 'confirmed' %}
-                                <span class="badge bg-success">{% trans "تم التسليم" %}</span>
-                            {% elif dn.status == 'cancelled' %}
-                                <span class="badge bg-danger">{% trans "ملغي" %}</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-center">
-                            <a href="{% url 'sales:delivery_detail' dn.pk %}" class="btn btn-sm btn-outline-secondary" title="{% trans 'عرض التفاصيل' %}">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-            <div class="text-center py-5 text-muted">
-                <i class="bi bi-box-seam fs-1 d-block mb-3"></i>
-                <p>{% trans "لا توجد مذكرات تسليم حتى الآن." %}</p>
-            </div>
-        {% endif %}
-
-        {% if is_paginated %}
-        <nav class="mt-4">
-            <ul class="pagination justify-content-center">
-                {% if page_obj.has_previous %}
-                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">{% trans "السابق" %}</a></li>
-                {% endif %}
-                <li class="page-item disabled"><span class="page-link">{{ page_obj.number }}</span></li>
-                {% if page_obj.has_next %}
-                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">{% trans "التالي" %}</a></li>
-                {% endif %}
-            </ul>
-        </nav>
-        {% endif %}
+      <a href="{% url 'sales:document_list' %}?status=confirmed"
+         class="btn btn-primary btn-sm shadow-sm">
+        <i class="bi bi-file-earmark-check me-1"></i>
+        {% trans "إنشاء من أمر بيع" %}
+      </a>
     </div>
+  </div>
+
+  {# ================== BODY ================== #}
+  <div class="card-body">
+
+    {% if deliveries %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light small text-muted">
+            <tr>
+              <th style="width: 15%;">{% trans "رقم المذكرة" %}</th>
+              <th style="width: 12%;">{% trans "التاريخ" %}</th>
+              <th style="width: 25%;">{% trans "العميل" %}</th>
+              <th style="width: 20%;">{% trans "مرجع الأمر" %}</th>
+              <th style="width: 12%;">{% trans "الحالة" %}</th>
+              <th style="width: 10%;" class="text-center">
+                {% trans "إجراءات" %}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for dn in deliveries %}
+              <tr>
+                <td class="fw-semibold font-monospace">
+                  <a href="{% url 'sales:delivery_detail' dn.pk %}"
+                     class="text-decoration-none text-body">
+                    {{ dn.display_number }}
+                  </a>
+                </td>
+
+                <td class="small text-muted">
+                  <i class="bi bi-calendar3 me-1"></i>
+                  {{ dn.date|date:"Y-m-d" }}
+                </td>
+
+                <td>
+                  <div class="fw-semibold text-body">
+                    {{ dn.contact.name|default:"-" }}
+                  </div>
+                </td>
+
+                <td>
+                  {% if dn.order %}
+                    <a href="{% url 'sales:document_detail' dn.order.pk %}"
+                       class="text-decoration-none small">
+                      <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle">
+                        <i class="bi bi-link-45deg me-1"></i>
+                        {{ dn.order.display_number }}
+                      </span>
+                    </a>
+                  {% else %}
+                    <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle small">
+                      <i class="bi bi-bolt me-1"></i>
+                      {% trans "تسليم مباشر" %}
+                    </span>
+                  {% endif %}
+                </td>
+
+                <td>
+                  {% if dn.status == 'draft' %}
+                    <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle">
+                      {% trans "مسودة" %}
+                    </span>
+                  {% elif dn.status == 'confirmed' %}
+                    <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">
+                      <i class="bi bi-check-circle-fill me-1"></i>
+                      {% trans "تم التسليم" %}
+                    </span>
+                  {% elif dn.status == 'cancelled' %}
+                    <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle">
+                      {% trans "ملغي" %}
+                    </span>
+                  {% else %}
+                    <span class="badge bg-light text-muted">
+                      {{ dn.get_status_display }}
+                    </span>
+                  {% endif %}
+                </td>
+
+                <td class="text-center">
+                  <a href="{% url 'sales:delivery_detail' dn.pk %}"
+                     class="btn btn-sm btn-outline-secondary"
+                     title="{% trans 'عرض التفاصيل' %}">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="text-center py-5 text-muted">
+        <div class="mb-3">
+          <i class="bi bi-box-seam fs-1 d-block mb-2"></i>
+        </div>
+        <h6 class="fw-bold mb-1">
+          {% trans "لا توجد مذكرات تسليم حتى الآن." %}
+        </h6>
+        <p class="small mb-3">
+          {% trans "يمكنك البدء بإنشاء تسليم مباشر أو إنشاء أمر بيع ثم توليد مذكرة تسليم منه." %}
+        </p>
+        <div class="d-flex justify-content-center gap-2">
+          <a href="{% url 'sales:delivery_create_direct' %}"
+             class="btn btn-sm btn-primary">
+            <i class="bi bi-lightning-charge me-1"></i>
+            {% trans "تسليم مباشر جديد" %}
+          </a>
+          <a href="{% url 'sales:document_list' %}?status=confirmed"
+             class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-file-earmark-check me-1"></i>
+            {% trans "عرض أوامر البيع المؤكدة" %}
+          </a>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if is_paginated %}
+      <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+          {# السابق #}
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                {% trans "السابق" %}
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                {% trans "السابق" %}
+              </span>
+            </li>
+          {% endif %}
+
+          <li class="page-item active">
+            <span class="page-link">
+              {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+            </span>
+          </li>
+
+          {# التالي #}
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                {% trans "التالي" %}
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">
+                {% trans "التالي" %}
+              </span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    {% endif %}
+
+  </div>
 </div>
+
 {% endblock %}

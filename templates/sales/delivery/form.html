@@ -4,131 +4,283 @@
 {% block title %}{% trans "تسليم مباشر" %}{% endblock %}
 
 {% block sales_content %}
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">
-            <i class="bi bi-truck-flatbed"></i> {% trans "إنشاء تسليم مباشر (بدون أمر)" %}
-        </h6>
+
+<div class="card shadow-sm border-0">
+  {# ================== HEADER ================== #}
+  <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="h5 fw-bold mb-1 text-body">
+        <i class="bi bi-truck-flatbed me-2 text-primary"></i>
+        {% trans "إنشاء تسليم مباشر (بدون أمر بيع)" %}
+      </h1>
+      <p class="text-muted small mb-0">
+        {% trans "استخدم هذا النموذج لتسليم مواد مباشرة من المخزون لعميل بدون ربط بأمر بيع." %}
+      </p>
     </div>
-    <div class="card-body">
-        <form method="post">
-            {% csrf_token %}
-
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <label>{% trans "العميل" %}</label>
-                    {{ form.contact }}
-                </div>
-                <div class="col-md-3">
-                    <label>{% trans "التاريخ" %}</label>
-                    {{ form.date }}
-                </div>
-                <div class="col-md-12 mt-2">
-                    <label>{% trans "ملاحظات" %}</label>
-                    {{ form.notes }}
-                </div>
-            </div>
-
-            <hr>
-            <h5>{% trans "المواد المسلمة" %}</h5>
-            {{ lines.management_form }}
-            {{ lines.non_form_errors }}
-
-            <div class="table-responsive">
-                <table class="table table-bordered" id="lines-table">
-                    <thead class="table-light">
-                        <tr>
-                            <th width="30%">{% trans "المنتج" %}</th>
-                            <th width="25%">{% trans "الوصف" %}</th>
-                            <th width="15%">{% trans "الكمية" %}</th>
-                            <th width="15%">{% trans "الوحدة" %}</th>
-                            <th width="5%">❌</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for line_form in lines %}
-                            <tr class="line-form-row">
-                                {% for hidden in line_form.hidden_fields %}{{ hidden }}{% endfor %}
-                                <td>{{ line_form.product }}</td>
-                                <td>{{ line_form.description }}</td>
-                                <td>{{ line_form.quantity }}</td>
-                                <td>{{ line_form.uom }}</td>
-                                <td class="text-center">
-                                    {% if lines.can_delete %}{{ line_form.DELETE }}{% endif %}
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <button type="button" class="btn btn-sm btn-success mb-4" id="add-line-btn">
-                <i class="bi bi-plus-lg"></i> {% trans "إضافة سطر" %}
-            </button>
-
-            <div class="text-center">
-                <button type="submit" class="btn btn-primary px-5">{% trans "حفظ التسليم" %}</button>
-                <a href="{% url 'sales:delivery_list' %}" class="btn btn-secondary">{% trans "إلغاء" %}</a>
-            </div>
-        </form>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'sales:delivery_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-right-short"></i> {% trans "رجوع لسجل التسليم" %}
+      </a>
     </div>
+  </div>
+
+  {# ================== BODY ================== #}
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {# ----------- رأس التسليم ----------- #}
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold small">
+            {% trans "العميل" %}
+          </label>
+          {{ form.contact }}
+          {% if form.contact.errors %}
+            <div class="text-danger small mt-1">
+              {{ form.contact.errors }}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label fw-semibold small">
+            {% trans "تاريخ التسليم" %}
+          </label>
+          {{ form.date }}
+          {% if form.date.errors %}
+            <div class="text-danger small mt-1">
+              {{ form.date.errors }}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="col-12">
+          <label class="form-label fw-semibold small">
+            {% trans "ملاحظات" %}
+          </label>
+          {{ form.notes }}
+          {% if form.notes.errors %}
+            <div class="text-danger small mt-1">
+              {{ form.notes.errors }}
+            </div>
+          {% endif %}
+          <div class="form-text small text-muted">
+            {% trans "مثال: رقم المركبة، اسم المستلم، أو أي تفاصيل إضافية تفيد في التتبع." %}
+          </div>
+        </div>
+      </div>
+
+      <hr class="my-4">
+
+      {# ----------- بنود المواد المسلّمة ----------- #}
+      <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+        <div>
+          <h5 class="h6 mb-1 text-body fw-bold">
+            {% trans "المواد المسلّمة" %}
+          </h5>
+          <p class="text-muted small mb-0">
+            {% trans "أضف المنتجات والكميات التي تم تسليمها من المخزون." %}
+          </p>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="add-line-btn">
+          <i class="bi bi-plus-lg"></i> {% trans "إضافة سطر" %}
+        </button>
+      </div>
+
+      {{ lines.management_form }}
+      {{ lines.non_form_errors }}
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-3" id="lines-table">
+          <thead class="table-light">
+            <tr class="small text-muted">
+              <th width="30%">{% trans "المنتج" %}</th>
+              <th width="30%">{% trans "الوصف (اختياري)" %}</th>
+              <th width="15%" class="text-center">{% trans "الكمية" %}</th>
+              <th width="15%" class="text-center">{% trans "الوحدة" %}</th>
+              <th width="10%" class="text-center">❌</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for line_form in lines %}
+              <tr class="line-form-row">
+                {# hidden fields (id, delivery, إلخ) #}
+                {% for hidden in line_form.hidden_fields %}
+                  {{ hidden }}
+                {% endfor %}
+
+                <td>
+                  {{ line_form.product }}
+                  {% if line_form.product.errors %}
+                    <div class="text-danger small mt-1">
+                      {{ line_form.product.errors }}
+                    </div>
+                  {% endif %}
+                </td>
+
+                <td>
+                  {{ line_form.description }}
+                  {% if line_form.description.errors %}
+                    <div class="text-danger small mt-1">
+                      {{ line_form.description.errors }}
+                    </div>
+                  {% endif %}
+                </td>
+
+                <td>
+                  {{ line_form.quantity }}
+                  {% if line_form.quantity.errors %}
+                    <div class="text-danger small mt-1">
+                      {{ line_form.quantity.errors }}
+                    </div>
+                  {% endif %}
+                </td>
+
+                <td>
+                  {{ line_form.uom }}
+                  {% if line_form.uom.errors %}
+                    <div class="text-danger small mt-1">
+                      {{ line_form.uom.errors }}
+                    </div>
+                  {% endif %}
+                </td>
+
+                <td class="text-center align-middle">
+                  {% if lines.can_delete %}
+                    {{ line_form.DELETE }}
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {# ----------- أزرار الحفظ ----------- #}
+      <div class="d-flex justify-content-center gap-2 mt-4">
+        <button type="submit" class="btn btn-primary px-5">
+          <i class="bi bi-save"></i> {% trans "حفظ التسليم" %}
+        </button>
+        <a href="{% url 'sales:delivery_list' %}" class="btn btn-outline-secondary px-4">
+          {% trans "إلغاء" %}
+        </a>
+      </div>
+    </form>
+  </div>
 </div>
 
-<table style="display:none;">
-    <tr id="empty-form-row" class="line-form-row">
-        <td>{{ lines.empty_form.product }}</td>
-        <td>{{ lines.empty_form.description }}</td>
-        <td>{{ lines.empty_form.quantity }}</td>
-        <td>{{ lines.empty_form.uom }}</td>
-        <td class="text-center">
-            <button type="button" class="btn btn-outline-danger btn-sm remove-row-btn">x</button>
-        </td>
-    </tr>
+{# ========== قالب السطر الفارغ (للإضافة الديناميكية) ========== #}
+<table class="d-none">
+  <tr id="empty-form-row" class="line-form-row">
+    <td>{{ lines.empty_form.product }}</td>
+    <td>{{ lines.empty_form.description }}</td>
+    <td>{{ lines.empty_form.quantity }}</td>
+    <td>{{ lines.empty_form.uom }}</td>
+    <td class="text-center align-middle">
+      <button type="button" class="btn btn-outline-danger btn-sm remove-row-btn">
+        <i class="bi bi-x-lg"></i>
+      </button>
+      {% if lines.can_delete %}
+        {{ lines.empty_form.DELETE }}
+      {% endif %}
+    </td>
+  </tr>
 </table>
+
 {% endblock %}
 
 {% block extra_body %}
 {{ products_dict|json_script:"products-data" }}
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const productsData = JSON.parse(document.getElementById('products-data').textContent);
-    const tableBody = document.querySelector('#lines-table tbody');
-    const totalFormsInput = document.getElementById('id_lines-TOTAL_FORMS');
-    const emptyRowTemplate = document.getElementById('empty-form-row');
+document.addEventListener("DOMContentLoaded", function () {
+  const productsDataElement = document.getElementById("products-data");
+  if (!productsDataElement) {
+    return;
+  }
 
-    function handleProductChange(row) {
-        const productSelect = row.querySelector('.product-select');
-        const uomSelect = row.querySelector('.uom-select');
-        const productId = productSelect.value;
+  const productsData = JSON.parse(productsDataElement.textContent || "{}");
+  const tableBody = document.querySelector("#lines-table tbody");
 
-        if (productId && productsData[productId]) {
-            const data = productsData[productId];
-            uomSelect.innerHTML = '';
-            if (data.base_uom_id) uomSelect.add(new Option(data.base_uom_name, data.base_uom_id));
-            if (data.alt_uom_id) uomSelect.add(new Option(data.alt_uom_name, data.alt_uom_id));
-        }
+  // أهم تعديل: التقاط TOTAL_FORMS بشكل عام، وليس id_lines-TOTAL_FORMS
+  const totalFormsInput = document.querySelector('[name$="-TOTAL_FORMS"]');
+  const emptyRowTemplate = document.getElementById("empty-form-row");
+  const addLineBtn = document.getElementById("add-line-btn");
+
+  if (!tableBody || !totalFormsInput || !emptyRowTemplate || !addLineBtn) {
+    return;
+  }
+
+  // تحديث وحدات القياس حسب المنتج
+  function handleProductChange(row) {
+    const productSelect = row.querySelector(".product-select");
+    const uomSelect = row.querySelector(".uom-select");
+    if (!productSelect || !uomSelect) return;
+
+    const productId = productSelect.value;
+
+    if (productId && productsData[productId]) {
+      const data = productsData[productId];
+
+      // تفريغ الخيارات
+      uomSelect.innerHTML = "";
+
+      // الوحدة الأساسية
+      if (data.base_uom_id) {
+        const optBase = new Option(data.base_uom_name, data.base_uom_id);
+        uomSelect.add(optBase);
+      }
+
+      // الوحدة البديلة (إن وجدت)
+      if (data.alt_uom_id) {
+        const optAlt = new Option(data.alt_uom_name, data.alt_uom_id);
+        uomSelect.add(optAlt);
+      }
+    }
+  }
+
+  // عند تغيير المنتج في أي صف
+  tableBody.addEventListener("change", function (e) {
+    if (e.target.classList.contains("product-select")) {
+      const row = e.target.closest("tr");
+      if (row) {
+        handleProductChange(row);
+      }
+    }
+  });
+
+  // زر إضافة سطر جديد
+  addLineBtn.addEventListener("click", function () {
+    const formIdx = totalFormsInput.value;
+    const newRow = emptyRowTemplate.cloneNode(true);
+
+    newRow.removeAttribute("id");
+    newRow.style.display = "table-row";
+
+    // استبدال __prefix__ في أسماء الحقول
+    newRow.innerHTML = newRow.innerHTML.replace(/__prefix__/g, formIdx);
+
+    // تفعيل زر الحذف في السطر الجديد (يحذف السطر من الـ DOM فقط)
+    const removeBtn = newRow.querySelector(".remove-row-btn");
+    if (removeBtn) {
+      removeBtn.addEventListener("click", function () {
+        newRow.remove();
+      });
     }
 
-    tableBody.addEventListener('change', function(e) {
-        if (e.target.classList.contains('product-select')) {
-            handleProductChange(e.target.closest('tr'));
-        }
-    });
+    tableBody.appendChild(newRow);
+    totalFormsInput.value = parseInt(formIdx, 10) + 1;
+  });
 
-    document.getElementById('add-line-btn').addEventListener('click', function() {
-        const formIdx = totalFormsInput.value;
-        const newRow = emptyRowTemplate.cloneNode(true);
-        newRow.removeAttribute('id');
-        newRow.style.display = 'table-row';
-        newRow.innerHTML = newRow.innerHTML.replace(/__prefix__/g, formIdx);
-
-        newRow.querySelector('.remove-row-btn').addEventListener('click', function() {
-            newRow.remove();
-        });
-
-        tableBody.appendChild(newRow);
-        totalFormsInput.value = parseInt(formIdx) + 1;
-    });
+  // يمكن لاحقاً لو حبيت: نمرّ على الصفوف الموجودة ونضبط الـ UOM بناءً على المنتج المختار
+  // const existingRows = tableBody.querySelectorAll(".line-form-row");
+  // existingRows.forEach(row => {
+  //   const productSelect = row.querySelector(".product-select");
+  //   if (productSelect && productSelect.value) {
+  //     handleProductChange(row);
+  //   }
+  // });
 });
 </script>
 {% endblock %}

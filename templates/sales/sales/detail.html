@@ -2,183 +2,344 @@
 {% load i18n humanize %}
 
 {% block sales_content %}
-<div class="row">
-    <div class="col-lg-3 order-lg-2 mb-4">
 
-        <div class="card shadow-sm mb-3">
-            <div class="card-body">
-                <h6 class="text-muted text-uppercase small">{% trans "حالة المستند" %}</h6>
-                <div class="mb-3">
-                    {% if document.status == 'draft' %}
-                        <span class="badge bg-secondary w-100 py-2 fs-6">{% trans "مسودة" %}</span>
-                    {% elif document.status == 'sent' %}
-                        <span class="badge bg-info w-100 py-2 fs-6">{% trans "مرسل للعميل" %}</span>
-                    {% elif document.status == 'confirmed' %}
-                        <span class="badge bg-success w-100 py-2 fs-6">{% trans "مؤكد (أمر بيع)" %}</span>
-                    {% elif document.status == 'cancelled' %}
-                        <span class="badge bg-danger w-100 py-2 fs-6">{% trans "ملغي" %}</span>
-                    {% endif %}
+{# ================== HEADER CARD ================== #}
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-header bg-body py-3">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
 
-                    {% if document.is_order %}
-                        <div class="mt-2 text-center">
-                            <small class="text-muted">{% trans "حالة التسليم:" %}</small>
-                            {% if document.delivery_status == 'pending' %}
-                                <span class="badge bg-warning text-dark">{% trans "قيد الانتظار" %}</span>
-                            {% elif document.delivery_status == 'partial' %}
-                                <span class="badge bg-info text-dark">{% trans "تسليم جزئي" %}</span>
-                            {% elif document.delivery_status == 'delivered' %}
-                                <span class="badge bg-success">{% trans "تم التسليم" %}</span>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-                </div>
+      {# اليسار: رقم المستند + الحالة + معلومات سريعة #}
+      <div class="flex-grow-1">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+          <h1 class="h5 fw-bold mb-0 font-monospace text-body">
+            {{ document.display_number }}
+          </h1>
 
-                <hr>
+          {# حالة المستند #}
+          {% if document.status == 'draft' %}
+            <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle">
+              {% trans "مسودة" %}
+            </span>
+          {% elif document.status == 'sent' %}
+            <span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle">
+              {% trans "مرسل للعميل" %}
+            </span>
+          {% elif document.status == 'confirmed' %}
+            <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">
+              {% trans "مؤكد (أمر بيع)" %}
+            </span>
+          {% elif document.status == 'cancelled' %}
+            <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle">
+              {% trans "ملغي" %}
+            </span>
+          {% else %}
+            <span class="badge bg-light text-muted">
+              {{ document.get_status_display }}
+            </span>
+          {% endif %}
 
-                <div class="d-grid gap-2">
-
-                    {% if document.status == 'draft' or document.status == 'sent' %}
-                        <a href="{% url 'sales:document_edit' document.pk %}" class="btn btn-outline-primary">
-                            <i class="bi bi-pencil"></i> {% trans "تعديل البيانات" %}
-                        </a>
-                    {% endif %}
-
-                    {% if document.is_quotation %}
-                        <a href="{% url 'sales:document_confirm' document.pk %}" class="btn btn-success mt-2"
-                           onclick="return confirm('{% trans "هل أنت متأكد؟ سيتم اعتماد هذا العرض كأمر بيع نهائي." %}')">
-                            <i class="bi bi-check-circle-fill"></i> {% trans "تأكيد كأمر بيع" %}
-                        </a>
-                    {% endif %}
-
-                    {% if document.is_order and document.delivery_status != 'delivered' %}
-                        <a href="{% url 'sales:document_create_delivery' document.pk %}" class="btn btn-info text-white">
-                            <i class="bi bi-truck"></i> {% trans "تسليم مواد" %}
-                        </a>
-                    {% endif %}
-
-                    {% if document.status != 'cancelled' %}
-                        <a href="{% url 'sales:document_cancel' document.pk %}" class="btn btn-outline-danger mt-3"
-                           onclick="return confirm('{% trans "هل أنت متأكد من إلغاء هذا المستند؟" %}')">
-                            <i class="bi bi-x-circle"></i> {% trans "إلغاء المستند" %}
-                        </a>
-                    {% endif %}
-
-                    {% if document.status == 'cancelled' %}
-                        <a href="{% url 'sales:document_restore' document.pk %}" class="btn btn-warning text-dark mt-3"
-                           onclick="return confirm('{% trans "هل تريد استعادة هذا المستند إلى مسودة؟" %}')">
-                            <i class="bi bi-arrow-counterclockwise"></i> {% trans "استعادة المستند" %}
-                        </a>
-                    {% endif %}
-                </div>
-            </div>
+          {# حالة التسليم (للأوامر فقط) #}
+          {% if document.is_order %}
+            {% if document.delivery_status == 'pending' %}
+              <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle">
+                <i class="bi bi-hourglass-split me-1"></i>
+                {% trans "قيد الانتظار" %}
+              </span>
+            {% elif document.delivery_status == 'partial' %}
+              <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle">
+                <i class="bi bi-pie-chart-fill me-1"></i>
+                {% trans "تسليم جزئي" %}
+              </span>
+            {% elif document.delivery_status == 'delivered' %}
+              <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">
+                <i class="bi bi-check-all me-1"></i>
+                {% trans "تم التسليم" %}
+              </span>
+            {% endif %}
+          {% endif %}
         </div>
 
-        <div class="card shadow-sm">
-            <div class="card-header bg-light">
-                <i class="bi bi-person"></i> {% trans "بيانات العميل" %}
-            </div>
-            <div class="card-body">
-                <h6 class="fw-bold">{{ document.contact.name }}</h6>
-                <p class="mb-1 text-muted small"><i class="bi bi-telephone"></i> {{ document.contact.phone|default:"-" }}</p>
-                <p class="mb-0 text-muted small"><i class="bi bi-envelope"></i> {{ document.contact.email|default:"-" }}</p>
-            </div>
+        <div class="small text-muted d-flex flex-wrap align-items-center gap-2">
+          <span>
+            <i class="bi bi-person me-1"></i>
+            {{ document.contact.name }}
+          </span>
+          <span class="text-muted">•</span>
+          <span>
+            <i class="bi bi-calendar3 me-1"></i>
+            {{ document.date|date:"Y-m-d" }}
+          </span>
+          {% if document.due_date %}
+            <span class="text-muted">•</span>
+            <span>
+              <i class="bi bi-clock me-1"></i>
+              {% trans "صالح حتى" %} {{ document.due_date|date:"Y-m-d" }}
+            </span>
+          {% endif %}
+          {% if document.client_reference %}
+            <span class="text-muted">•</span>
+            <span>
+              <i class="bi bi-hash me-1"></i>
+              {% trans "مرجع العميل" %}: {{ document.client_reference }}
+            </span>
+          {% endif %}
         </div>
+      </div>
+
+      {# اليمين: أزرار الأكشن #}
+      <div class="d-flex flex-wrap gap-2 justify-content-end">
+
+        <button class="btn btn-light btn-sm"
+                type="button"
+                onclick="window.print()">
+          <i class="bi bi-printer me-1"></i>
+          {% trans "طباعة" %}
+        </button>
+
+        {% if document.status == 'draft' or document.status == 'sent' %}
+          <a href="{% url 'sales:document_edit' document.pk %}"
+             class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-pencil me-1"></i>
+            {% trans "تعديل" %}
+          </a>
+        {% endif %}
+
+        {% if document.is_quotation %}
+          <a href="{% url 'sales:document_confirm' document.pk %}"
+             class="btn btn-success btn-sm"
+             onclick="return confirm('{% trans "هل أنت متأكد؟ سيتم اعتماد هذا العرض كأمر بيع نهائي." %}')">
+            <i class="bi bi-check-circle-fill me-1"></i>
+            {% trans "تأكيد كأمر بيع" %}
+          </a>
+        {% endif %}
+
+        {% if document.is_order and document.delivery_status != 'delivered' %}
+          <a href="{% url 'sales:document_create_delivery' document.pk %}"
+             class="btn btn-info btn-sm text-white">
+            <i class="bi bi-truck me-1"></i>
+            {% trans "تسليم مواد" %}
+          </a>
+        {% endif %}
+
+        {% if document.status != 'cancelled' %}
+          <a href="{% url 'sales:document_cancel' document.pk %}"
+             class="btn btn-outline-danger btn-sm"
+             onclick="return confirm('{% trans "هل أنت متأكد من إلغاء هذا المستند؟" %}')">
+            <i class="bi bi-x-circle me-1"></i>
+            {% trans "إلغاء" %}
+          </a>
+        {% endif %}
+
+        {% if document.status == 'cancelled' %}
+          <a href="{% url 'sales:document_restore' document.pk %}"
+             class="btn btn-warning btn-sm text-dark"
+             onclick="return confirm('{% trans "هل تريد استعادة هذا المستند إلى مسودة؟" %}')">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>
+            {% trans "استعادة" %}
+          </a>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+  {# ================== BODY: معلومات العميل + العناوين ================== #}
+  <div class="card-body">
+
+    <div class="row g-3 mb-3">
+
+      {# بيانات العميل #}
+      <div class="col-md-6">
+        <div class="border rounded-3 p-3 h-100 bg-body-secondary">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <div class="rounded-circle d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary"
+                 style="width: 32px; height: 32px;">
+              <i class="bi bi-person"></i>
+            </div>
+            <div>
+              <div class="small text-muted text-uppercase">
+                {% trans "العميل" %}
+              </div>
+              <div class="fw-semibold text-body">
+                {{ document.contact.name }}
+              </div>
+            </div>
+          </div>
+
+          <div class="small text-muted">
+            <div class="mb-1">
+              <i class="bi bi-telephone me-1"></i>
+              {{ document.contact.phone|default:"-" }}
+            </div>
+            <div>
+              <i class="bi bi-envelope me-1"></i>
+              {{ document.contact.email|default:"-" }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# العناوين #}
+      <div class="col-md-6">
+        <div class="row g-2 small">
+          {% if document.billing_address %}
+            <div class="col-12">
+              <div class="border rounded-3 p-2 bg-body-secondary h-100">
+                <div class="fw-semibold mb-1">
+                  <i class="bi bi-receipt me-1"></i>
+                  {% trans "عنوان الفوترة" %}
+                </div>
+                <div class="text-muted">
+                  {{ document.billing_address|linebreaksbr }}
+                </div>
+              </div>
+            </div>
+          {% endif %}
+
+          {% if document.shipping_address %}
+            <div class="col-12">
+              <div class="border rounded-3 p-2 bg-body-secondary h-100">
+                <div class="fw-semibold mb-1">
+                  <i class="bi bi-box-arrow-up-right me-1"></i>
+                  {% trans "عنوان الشحن" %}
+                </div>
+                <div class="text-muted">
+                  {{ document.shipping_address|linebreaksbr }}
+                </div>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
     </div>
 
-    <div class="col-lg-9 order-lg-1">
-        <div class="card shadow-sm">
-            <div class="card-header bg-white py-3">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4 class="mb-0 fw-bold font-monospace">{{ document.display_number }}</h4>
-                        <span class="text-muted small">
-                            {{ document.date }}
-                        </span>
-                    </div>
-                    <div class="text-end">
-                        <button class="btn btn-light btn-sm" onclick="window.print()">
-                            <i class="bi bi-printer"></i> {% trans "طباعة" %}
-                        </button>
-                    </div>
+    {# ================== LINES TABLE ================== #}
+    <div class="table-responsive mb-0">
+      <table class="table table-striped align-middle mb-0">
+        <thead class="table-light small text-muted">
+          <tr>
+            <th class="text-center" style="width: 3rem;">#</th>
+            <th>{% trans "المنتج / الوصف" %}</th>
+            <th class="text-center" style="width: 8rem;">{% trans "الكمية" %}</th>
+            <th class="text-center" style="width: 8rem;">{% trans "الوحدة" %}</th>
+            <th class="text-end" style="width: 9rem;">{% trans "سعر الوحدة" %}</th>
+            <th class="text-end" style="width: 7rem;">{% trans "خصم" %}</th>
+            <th class="text-end" style="width: 10rem;">{% trans "الإجمالي" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for line in document.lines.all %}
+            <tr>
+              <td class="text-center small text-muted">
+                {{ forloop.counter }}
+              </td>
+              <td>
+                <div class="fw-semibold text-body">
+                  {{ line.product.name|default:line.description }}
                 </div>
-            </div>
-
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-striped mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>#</th>
-                                <th>{% trans "المنتج / الوصف" %}</th>
-                                <th class="text-center">{% trans "الكمية" %}</th>
-                                <th class="text-center">{% trans "الوحدة" %}</th>
-                                <th class="text-end">{% trans "سعر الوحدة" %}</th>
-                                <th class="text-end">{% trans "خصم" %}</th>
-                                <th class="text-end">{% trans "الإجمالي" %}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for line in document.lines.all %}
-                            <tr>
-                                <td>{{ forloop.counter }}</td>
-                                <td>
-                                    <span class="fw-bold">{{ line.product.name|default:line.description }}</span>
-                                    {% if line.description and line.product %}
-                                        <br><small class="text-muted">{{ line.description }}</small>
-                                    {% endif %}
-                                </td>
-                                <td class="text-center">{{ line.quantity|floatformat:3 }}</td>
-                                <td class="text-center">{{ line.uom.name }}</td>
-                                <td class="text-end">{{ line.unit_price|floatformat:3 }}</td>
-                                <td class="text-end text-danger">
-                                    {% if line.discount_percent > 0 %}
-                                        {{ line.discount_percent|floatformat:1 }}%
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
-                                <td class="text-end fw-bold">{{ line.line_total|floatformat:3 }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                        <tfoot class="table-light">
-                            <tr>
-                                <td colspan="6" class="text-end fw-bold">{% trans "الإجمالي قبل الضريبة" %}</td>
-                                <td class="text-end fw-bold">{{ document.total_before_tax|floatformat:3 }}</td>
-                            </tr>
-                            <tr class="bg-primary text-white">
-                                <td colspan="6" class="text-end fw-bold">{% trans "الإجمالي النهائي" %}</td>
-                                <td class="text-end fw-bold h5 mb-0">{{ document.total_amount|floatformat:3 }} {{ document.currency }}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-
-                {% if document.notes or document.customer_notes %}
-                <div class="p-4 bg-light border-top mt-0">
-                    <div class="row">
-                        <div class="col-md-6">
-                            {% if document.customer_notes %}
-                                <h6 class="fw-bold small">{% trans "ملاحظات للعميل:" %}</h6>
-                                <p class="small text-muted mb-0">{{ document.customer_notes|linebreaksbr }}</p>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-6">
-                            {% if document.notes %}
-                                <h6 class="fw-bold small text-danger">{% trans "ملاحظات داخلية:" %}</h6>
-                                <p class="small text-muted mb-0">{{ document.notes|linebreaksbr }}</p>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
+                {% if line.description and line.product %}
+                  <div class="small text-muted">
+                    {{ line.description }}
+                  </div>
                 {% endif %}
-            </div>
-        </div>
-
-        <div class="mt-3 text-end text-muted small">
-            {% trans "تم الإنشاء بواسطة" %}: {{ document.created_by.get_full_name|default:document.created_by.username }}
-            {% trans "في" %} {{ document.created_at|date:"Y-m-d H:i" }}
-        </div>
+              </td>
+              <td class="text-center">
+                {{ line.quantity|floatformat:3 }}
+              </td>
+              <td class="text-center">
+                {{ line.uom.name }}
+              </td>
+              <td class="text-end font-monospace small">
+                {{ line.unit_price|floatformat:3 }}
+              </td>
+              <td class="text-end small">
+                {% if line.discount_percent > 0 %}
+                  <span class="text-danger">
+                    {{ line.discount_percent|floatformat:1 }}%
+                  </span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td class="text-end fw-semibold font-monospace">
+                {{ line.line_total|floatformat:3 }}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7" class="text-center py-4 text-muted">
+                {% trans "لا توجد بنود مسجلة لهذا المستند بعد." %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-light">
+          <tr>
+            <td colspan="6" class="text-end fw-semibold">
+              {% trans "الإجمالي قبل الضريبة" %}
+            </td>
+            <td class="text-end fw-semibold font-monospace">
+              {{ document.total_before_tax|floatformat:3 }}
+            </td>
+          </tr>
+          {# سطر الضريبة مستقبلاً إذا فعلتها #}
+          <tr class="bg-primary text-white">
+            <td colspan="6" class="text-end fw-bold">
+              {% trans "الإجمالي النهائي" %}
+            </td>
+            <td class="text-end fw-bold h5 mb-0 font-monospace">
+              {{ document.total_amount|floatformat:3 }}
+              <span class="fs-6">{{ document.currency }}</span>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
+
+    {# ================== NOTES ================== #}
+    {% if document.notes or document.customer_notes %}
+      <div class="mt-3 p-3 bg-body-secondary rounded-3">
+        <div class="row gy-3 small">
+          {% if document.customer_notes %}
+            <div class="col-md-6">
+              <h6 class="fw-semibold mb-1">
+                <i class="bi bi-info-circle me-1"></i>
+                {% trans "ملاحظات للعميل" %}
+              </h6>
+              <p class="text-muted mb-0">
+                {{ document.customer_notes|linebreaksbr }}
+              </p>
+            </div>
+          {% endif %}
+
+          {% if document.notes %}
+            <div class="col-md-6">
+              <h6 class="fw-semibold mb-1 text-danger">
+                <i class="bi bi-lock-fill me-1"></i>
+                {% trans "ملاحظات داخلية" %}
+              </h6>
+              <p class="text-muted mb-0">
+                {{ document.notes|linebreaksbr }}
+              </p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
 </div>
+
+{# ================== FOOTER META ================== #}
+<div class="mt-2 text-end text-muted small">
+  {% if document.created_by %}
+    {% trans "تم الإنشاء بواسطة" %}:
+    {{ document.created_by.get_full_name|default:document.created_by.username }}
+  {% endif %}
+  {% if document.created_at %}
+    • {% trans "في" %} {{ document.created_at|date:"Y-m-d H:i" }}
+  {% endif %}
+</div>
+
 {% endblock %}

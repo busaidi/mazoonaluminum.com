@@ -1,16 +1,16 @@
 # sales/views.py
 import json
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy, reverse
 from django.utils.translation import gettext_lazy as _
 from django.views import generic
 from django.core.exceptions import ValidationError
 
-# استيراد الموديلات والخدمات
 from inventory.models import Product
 from .models import SalesDocument, SalesLine, DeliveryNote, DeliveryLine
 from .forms import (
@@ -20,7 +20,7 @@ from .forms import (
     DeliveryLineFormSet,
     DirectDeliveryLineFormSet,
     DirectDeliveryNoteForm,
-    LinkOrderForm
+    LinkOrderForm,
 )
 from .services import SalesService
 
@@ -35,32 +35,42 @@ class SalesDashboardView(LoginRequiredMixin, generic.TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # مسودات (عروض أسعار)
-        context['draft_quotations_count'] = SalesDocument.objects.filter(
-            status=SalesDocument.Status.DRAFT, is_deleted=False
+        # Draft quotations
+        context["draft_quotations_count"] = SalesDocument.objects.filter(
+            status=SalesDocument.Status.DRAFT,
+            is_deleted=False,
         ).count()
 
-        # أوامر مؤكدة بانتظار التسليم
-        context['pending_orders_count'] = SalesDocument.objects.filter(
+        # Confirmed orders waiting for delivery
+        context["pending_orders_count"] = SalesDocument.objects.filter(
             status=SalesDocument.Status.CONFIRMED,
-            delivery_status__in=[SalesDocument.DeliveryStatus.PENDING, SalesDocument.DeliveryStatus.PARTIAL],
-            is_deleted=False
+            delivery_status__in=[
+                SalesDocument.DeliveryStatus.PENDING,
+                SalesDocument.DeliveryStatus.PARTIAL,
+            ],
+            is_deleted=False,
         ).count()
 
-        # الإيرادات المؤكدة
-        total_revenue = SalesDocument.objects.filter(
-            status=SalesDocument.Status.CONFIRMED, is_deleted=False
-        ).aggregate(t=Sum('total_amount'))['t']
-        context['total_revenue'] = total_revenue if total_revenue else 0
+        # Confirmed revenue
+        total_revenue = (
+            SalesDocument.objects.filter(
+                status=SalesDocument.Status.CONFIRMED,
+                is_deleted=False,
+            ).aggregate(t=Sum("total_amount"))["t"]
+        )
+        context["total_revenue"] = total_revenue if total_revenue else 0
 
-        # آخر العمليات
-        context['recent_documents'] = SalesDocument.objects.filter(is_deleted=False).order_by('-date')[:5]
+        # Recent documents
+        context["recent_documents"] = (
+            SalesDocument.objects.filter(is_deleted=False)
+            .order_by("-date", "-id")[:5]
+        )
 
         return context
 
 
 # ===================================================================
-# 1. القائمة الموحدة (Unified List View)
+# 1. Unified List View
 # ===================================================================
 
 class SalesListView(LoginRequiredMixin, generic.ListView):
@@ -70,13 +80,21 @@ class SalesListView(LoginRequiredMixin, generic.ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        queryset = SalesDocument.objects.filter(is_deleted=False).select_related("contact")
+        queryset = (
+            SalesDocument.objects.filter(is_deleted=False)
+            .select_related("contact")
+        )
 
-        q = self.request.GET.get('q')
+        q = self.request.GET.get("q", "").strip()
         if q:
-            queryset = queryset.filter(contact__name__icontains=q) | queryset.filter(id__icontains=q)
+            # Search by contact name, client_reference, or document id
+            queryset = queryset.filter(
+                Q(contact__name__icontains=q)
+                | Q(client_reference__icontains=q)
+                | Q(id__icontains=q)
+            )
 
-        status = self.request.GET.get('status')
+        status = self.request.GET.get("status")
         if status:
             queryset = queryset.filter(status=status)
 
@@ -84,29 +102,35 @@ class SalesListView(LoginRequiredMixin, generic.ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['current_q'] = self.request.GET.get('q', '')
-        context['current_status'] = self.request.GET.get('status', '')
-        context['status_choices'] = SalesDocument.Status.choices
+        context["current_q"] = self.request.GET.get("q", "")
+        context["current_status"] = self.request.GET.get("status", "")
+        context["status_choices"] = SalesDocument.Status.choices
         return context
 
 
 # ===================================================================
-# 2. الميكس (Mixin) لإنشاء وتعديل المستندات
+# 2. Mixin for create/update sales document
 # ===================================================================
 
 class SalesDocumentMixin:
     model = SalesDocument
     form_class = SalesDocumentForm
-    template_name = "sales/form.html"
+    template_name = "sales/sales/form.html"
 
     def get_context_data(self, **kwargs):
         data = super().get_context_data(**kwargs)
-        products = Product.objects.filter(is_active=True).select_related('base_uom', 'alt_uom')
+
+        # Pre-load products data for JS (UOMs, default price, etc.)
+        products = Product.objects.filter(is_active=True).select_related(
+            "base_uom", "alt_uom"
+        )
         products_dict = {}
         for p in products:
             products_dict[str(p.id)] = {
                 "name": p.name,
-                "price": float(p.default_sale_price) if p.default_sale_price else 0.0,
+                "price": float(p.default_sale_price)
+                if p.default_sale_price
+                else 0.0,
                 "base_uom_id": p.base_uom_id,
                 "base_uom_name": p.base_uom.name if p.base_uom else "",
                 "alt_uom_id": p.alt_uom_id if p.alt_uom_id else None,
@@ -116,33 +140,44 @@ class SalesDocumentMixin:
         data["products_dict"] = products_dict
 
         if self.request.POST:
-            data["lines"] = SalesLineFormSet(self.request.POST, instance=self.object)
+            data["lines"] = SalesLineFormSet(
+                self.request.POST,
+                instance=self.object,
+            )
         else:
             data["lines"] = SalesLineFormSet(instance=self.object)
+
         return data
 
     def form_valid(self, form):
+        """
+        Save header + lines in a single transaction.
+        Do NOT call super().form_valid(form) to avoid double save.
+        """
         context = self.get_context_data()
         lines = context["lines"]
 
-        if lines.is_valid():
-            with transaction.atomic():
-                self.object = form.save(commit=False)
-                if not self.object.pk:
-                    self.object.created_by = self.request.user
-
-                self.object.updated_by = self.request.user
-                self.object.save()
-
-                lines.instance = self.object
-                lines.save()
-
-                self.object.recompute_totals()
-
-            messages.success(self.request, _("تم حفظ المستند بنجاح."))
-            return super().form_valid(form)
-        else:
+        if not lines.is_valid():
+            # Re-render with errors from formset
             return self.render_to_response(self.get_context_data(form=form))
+
+        with transaction.atomic():
+            # Save document header
+            self.object = form.save(commit=False)
+            if not self.object.pk:
+                self.object.created_by = self.request.user
+            self.object.updated_by = self.request.user
+            self.object.save()
+
+            # Save lines
+            lines.instance = self.object
+            lines.save()
+
+            # Recompute totals based on saved lines
+            self.object.recompute_totals(save=True)
+
+        messages.success(self.request, _("تم حفظ المستند بنجاح."))
+        return redirect(self.get_success_url())
 
 
 # ===================================================================
@@ -151,12 +186,14 @@ class SalesDocumentMixin:
 
 class SalesCreateView(LoginRequiredMixin, SalesDocumentMixin, generic.CreateView):
     def get_success_url(self):
-        return reverse("sales:document_detail", kwargs={'pk': self.object.pk})
+        return reverse("sales:document_detail", kwargs={"pk": self.object.pk})
 
 
-class SalesDocumentUpdateView(LoginRequiredMixin, SalesDocumentMixin, generic.UpdateView):
+class SalesDocumentUpdateView(
+    LoginRequiredMixin, SalesDocumentMixin, generic.UpdateView
+):
     def get_success_url(self):
-        return reverse("sales:document_detail", kwargs={'pk': self.object.pk})
+        return reverse("sales:document_detail", kwargs={"pk": self.object.pk})
 
 
 class SalesDocumentDetailView(LoginRequiredMixin, generic.DetailView):
@@ -165,8 +202,11 @@ class SalesDocumentDetailView(LoginRequiredMixin, generic.DetailView):
     context_object_name = "document"
 
     def get_queryset(self):
-        return SalesDocument.objects.filter(is_deleted=False).select_related("contact").prefetch_related(
-            "lines__product", "lines__uom")
+        return (
+            SalesDocument.objects.filter(is_deleted=False)
+            .select_related("contact")
+            .prefetch_related("lines__product", "lines__uom")
+        )
 
 
 # ===================================================================
@@ -221,6 +261,7 @@ class SalesDocumentDeleteView(LoginRequiredMixin, generic.DeleteView):
     template_name = "sales/sales/delete.html"
 
     def get_success_url(self):
+        # متوافق مع الروابط في القوالب (قائمة المبيعات)
         return reverse("sales:document_list")
 
     def delete(self, request, *args, **kwargs):
@@ -241,7 +282,11 @@ class DeliveryListView(LoginRequiredMixin, generic.ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        return DeliveryNote.objects.filter(is_deleted=False).select_related("contact", "order").order_by("-date", "-id")
+        return (
+            DeliveryNote.objects.filter(is_deleted=False)
+            .select_related("contact", "order")
+            .order_by("-date", "-id")
+        )
 
 
 class DeliveryDetailView(LoginRequiredMixin, generic.DetailView):
@@ -250,13 +295,19 @@ class DeliveryDetailView(LoginRequiredMixin, generic.DetailView):
     context_object_name = "delivery"
 
     def get_queryset(self):
-        return DeliveryNote.objects.filter(is_deleted=False).select_related("contact", "order").prefetch_related(
-            "lines__product", "lines__uom")
+        return (
+            DeliveryNote.objects.filter(is_deleted=False)
+            .select_related("contact", "order")
+            .prefetch_related("lines__product", "lines__uom")
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        # Show link-order form only for direct deliveries that have a contact
         if not self.object.order and self.object.contact:
-            context['link_order_form'] = LinkOrderForm(contact=self.object.contact)
+            context["link_order_form"] = LinkOrderForm(
+                contact=self.object.contact
+            )
         return context
 
 
@@ -267,7 +318,10 @@ class DirectDeliveryCreateView(LoginRequiredMixin, generic.CreateView):
 
     def get_context_data(self, **kwargs):
         data = super().get_context_data(**kwargs)
-        products = Product.objects.filter(is_active=True).select_related('base_uom', 'alt_uom')
+
+        products = Product.objects.filter(is_active=True).select_related(
+            "base_uom", "alt_uom"
+        )
         products_dict = {}
         for p in products:
             products_dict[str(p.id)] = {
@@ -288,18 +342,19 @@ class DirectDeliveryCreateView(LoginRequiredMixin, generic.CreateView):
         context = self.get_context_data()
         lines = context["lines"]
 
-        if lines.is_valid():
-            with transaction.atomic():
-                self.object = form.save(commit=False)
-                self.object.created_by = self.request.user
-                self.object.save()
-                lines.instance = self.object
-                lines.save()
+        if not lines.is_valid():
+            return self.render_to_response(self.get_context_data(form=form))
 
-            messages.success(self.request, _("تم إنشاء مذكرة التسليم المباشر."))
-            return redirect("sales:delivery_detail", pk=self.object.pk)
+        with transaction.atomic():
+            self.object = form.save(commit=False)
+            self.object.created_by = self.request.user
+            self.object.save()
 
-        return self.render_to_response(self.get_context_data(form=form))
+            lines.instance = self.object
+            lines.save()
+
+        messages.success(self.request, _("تم إنشاء مذكرة التسليم المباشر."))
+        return redirect("sales:delivery_detail", pk=self.object.pk)
 
 
 @transaction.atomic
@@ -326,21 +381,24 @@ class DeliveryDeleteView(LoginRequiredMixin, generic.DeleteView):
 
 
 def link_delivery_to_order_view(request, pk):
-    """ربط تسليم مباشر بأمر بيع"""
+    """Link a direct delivery note to an existing confirmed order."""
     delivery = get_object_or_404(DeliveryNote, pk=pk)
 
-    if request.method == 'POST':
+    if request.method == "POST":
         form = LinkOrderForm(request.POST, contact=delivery.contact)
         if form.is_valid():
-            order = form.cleaned_data['order']
+            order = form.cleaned_data["order"]
             delivery.order = order
             delivery.save()
 
-            # تحديث حالة الأمر
-            SalesService._update_order_delivery_status(order)
+            # Recompute delivery status on the linked order
+            if order:
+                order.recompute_delivery_status(save=True)
 
-            messages.success(request, _("تم ربط التسليم بالأمر بنجاح."))
-            return redirect('sales:delivery_detail', pk=pk)
+            messages.success(
+                request, _("تم ربط التسليم بالأمر بنجاح.")
+            )
+            return redirect("sales:delivery_detail", pk=pk)
 
     messages.error(request, _("حدث خطأ أثناء الربط."))
-    return redirect('sales:delivery_detail', pk=pk)
+    return redirect("sales:delivery_detail", pk=pk)
