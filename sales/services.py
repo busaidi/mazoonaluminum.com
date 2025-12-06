@@ -1,11 +1,16 @@
 # sales/services.py
 from decimal import Decimal
+from typing import Any, Mapping, Optional
 
-from django.db import transaction
 from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from core.models import Notification, AuditLog
+from core.services.audit import log_event
+from core.services.notifications import create_notification
 from .models import SalesDocument, DeliveryNote, DeliveryLine
 
 
@@ -20,16 +25,19 @@ class SalesService:
     # ============================================================
     @staticmethod
     @transaction.atomic
-    def confirm_document(document: SalesDocument) -> SalesDocument:
+    def confirm_document(
+        document: SalesDocument,
+        *,
+        actor=None,  # user (اختياري)
+    ) -> SalesDocument:
         """
-        تأكيد عرض السعر وتحويله إلى أمر بيع (بتغيير الحالة فقط).
+        تأكيد مستند المبيعات.
 
         القواعد:
         - لا يمكن تأكيد مستند ملغي.
         - لا يمكن تأكيد مستند مؤكد مسبقاً.
         - لا يمكن تأكيد مستند بدون بنود.
         """
-        # إعادة تحميل من الداتابيز (اختياري، لكن آمن لو مرّ كائن قديم)
         document.refresh_from_db()
 
         # 1. التحقق من القواعد
@@ -42,16 +50,28 @@ class SalesService:
         if not document.lines.exists():
             raise ValidationError(_("لا يمكن تأكيد مستند بدون أي بنود مبيعات."))
 
-        # 2. تغيير الحالة إلى مؤكد (يصبح أمر بيع)
+        # 2. تغيير الحالة إلى مؤكد
         document.status = SalesDocument.Status.CONFIRMED
-
-        # ملاحظة: يمكن تفعيل هذا إن حبيت تغيير تاريخ الأمر إلى اليوم
-        # document.date = timezone.localdate()
-
+        # document.date = timezone.localdate()  # لو حبيت تعدل التاريخ لليوم
         document.save(update_fields=["status", "updated_at"])
 
-        # تحديث المجاميع فقط للاحتياط
+        # 3. تحديث المجاميع
         document.recompute_totals(save=True)
+
+        # 4. Audit Log + (بدون نتفيكشن افتراضياً)
+        log_sales_document_action(
+            user=actor,
+            document=document,
+            action=AuditLog.Action.STATUS_CHANGE,
+            message=_("تم تأكيد مستند المبيعات رقم %(number)s.") % {
+                "number": document.display_number,
+            },
+            extra={
+                "status": document.status,
+                "total_amount": float(document.total_amount or 0),
+            },
+            notify=False,
+        )
 
         return document
 
@@ -63,6 +83,8 @@ class SalesService:
     def create_delivery_note(
         order: SalesDocument,
         lines_data: list | None = None,
+        *,
+        actor=None,  # user (اختياري)
     ) -> DeliveryNote:
         """
         إنشاء مذكرة تسليم بناءً على أمر بيع مؤكد.
@@ -75,8 +97,8 @@ class SalesService:
             ]
             إذا لم تُمرَّر، سيتم إنشاء تسليم لكل الكميات المتبقية بالكامل.
         """
-        # 1. التحقق
-        if not order.is_order:
+        # 1. التحقق: نعتمد على الحالة الآن (بدل is_order/ kind)
+        if order.status != SalesDocument.Status.CONFIRMED:
             raise ValidationError(
                 _("يجب أن يكون المستند أمر بيع مؤكد لإنشاء مذكرة تسليم.")
             )
@@ -87,6 +109,7 @@ class SalesService:
             order=order,
             date=timezone.localdate(),
             status=DeliveryNote.Status.DRAFT,
+            created_by=actor if getattr(actor, "is_authenticated", False) else None,
         )
 
         # 3. معالجة البنود
@@ -152,6 +175,21 @@ class SalesService:
                 )
             )
 
+        # 4. Audit Log بسيط لمذكرة التسليم
+        log_delivery_note_action(
+            user=actor,
+            delivery=delivery,
+            action=AuditLog.Action.CREATE,
+            message=_(
+                "تم إنشاء مذكرة تسليم من أمر البيع رقم %(number)s."
+            ) % {"number": order.display_number},
+            extra={
+                "order_id": order.pk,
+                "order_number": order.display_number,
+            },
+            notify=False,
+        )
+
         return delivery
 
     # ============================================================
@@ -159,7 +197,11 @@ class SalesService:
     # ============================================================
     @staticmethod
     @transaction.atomic
-    def confirm_delivery(delivery: DeliveryNote) -> DeliveryNote:
+    def confirm_delivery(
+        delivery: DeliveryNote,
+        *,
+        actor=None,  # user (اختياري)
+    ) -> DeliveryNote:
         """
         تأكيد مذكرة التسليم:
         1. تغيير الحالة إلى CONFIRMED.
@@ -179,17 +221,46 @@ class SalesService:
 
         # 1. تغيير الحالة
         delivery.status = DeliveryNote.Status.CONFIRMED
-        # clean() في الموديل سيتأكد من عدم الارتباط بأمر ملغي، إلخ.
-        delivery.clean()
+        delivery.clean()  # التحقق من الربط بأمر إلخ.
         delivery.save(update_fields=["status", "updated_at"])
 
         # 2. خصم المخزون (placeholder)
-        # TODO: استدعاء InventoryService لخصم الكميات هنا، مثال:
-        # InventoryService.decrease_stock_for_delivery(delivery)
+        # TODO: استدعاء InventoryService لخصم الكميات هنا
 
         # 3. تحديث حالة أمر البيع (فقط إذا كان التسليم مرتبطاً بأمر)
         if delivery.order:
             delivery.order.recompute_delivery_status(save=True)
+
+        # 4. Audit Log لمذكرة التسليم
+        log_delivery_note_action(
+            user=actor,
+            delivery=delivery,
+            action=AuditLog.Action.STATUS_CHANGE,
+            message=_("تم تأكيد مذكرة التسليم رقم %(number)s.") % {
+                "number": delivery.display_number,
+            },
+            extra={
+                "status": delivery.status,
+                "order_id": delivery.order_id,
+            },
+            notify=False,
+        )
+
+        # 5. (اختياري) لوج لأمر البيع من ناحية حالة التسليم
+        if delivery.order:
+            log_sales_document_action(
+                user=actor,
+                document=delivery.order,
+                action=AuditLog.Action.STATUS_CHANGE,
+                message=_(
+                    "تم تحديث حالة التسليم لأمر البيع رقم %(number)s."
+                )
+                % {"number": delivery.order.display_number},
+                extra={
+                    "delivery_status": delivery.order.delivery_status,
+                },
+                notify=False,
+            )
 
         return delivery
 
@@ -198,7 +269,11 @@ class SalesService:
     # ============================================================
     @staticmethod
     @transaction.atomic
-    def cancel_order(document: SalesDocument) -> SalesDocument:
+    def cancel_order(
+        document: SalesDocument,
+        *,
+        actor=None,  # user (اختياري)
+    ) -> SalesDocument:
         """
         إلغاء المستند (مع التحقق من عدم وجود تسليمات مؤكدة).
         يعتمد على clean() في الموديل أيضاً.
@@ -206,14 +281,25 @@ class SalesService:
         document.refresh_from_db()
 
         if document.status == SalesDocument.Status.CANCELLED:
-            # يعتبر إلغاءً صامتاً؛ أو يمكنك رفع خطأ لو تحب
             raise ValidationError(_("المستند ملغى بالفعل."))
 
-        # التحقق موجود في الموديل (clean) - سيمنع الإلغاء في حال وجود تسليمات مؤكدة
+        # التحقق موجود في الموديل (clean)
         document.clean()
 
         document.status = SalesDocument.Status.CANCELLED
         document.save(update_fields=["status", "updated_at"])
+
+        # Audit Log
+        log_sales_document_action(
+            user=actor,
+            document=document,
+            action=AuditLog.Action.STATUS_CHANGE,
+            message=_("تم إلغاء مستند المبيعات رقم %(number)s.") % {
+                "number": document.display_number,
+            },
+            extra={"status": document.status},
+            notify=False,
+        )
 
         return document
 
@@ -222,7 +308,11 @@ class SalesService:
     # ============================================================
     @staticmethod
     @transaction.atomic
-    def restore_document(document: SalesDocument) -> SalesDocument:
+    def restore_document(
+        document: SalesDocument,
+        *,
+        actor=None,  # user (اختياري)
+    ) -> SalesDocument:
         """
         استعادة المستند الملغي وتحويله إلى مسودة.
         """
@@ -234,4 +324,122 @@ class SalesService:
         document.status = SalesDocument.Status.DRAFT
         document.save(update_fields=["status", "updated_at"])
 
+        # Audit Log
+        log_sales_document_action(
+            user=actor,
+            document=document,
+            action=AuditLog.Action.STATUS_CHANGE,
+            message=_("تم استعادة مستند المبيعات رقم %(number)s.") % {
+                "number": document.display_number,
+            },
+            extra={"status": document.status},
+            notify=False,
+        )
+
         return document
+
+
+# ============================================================
+# 1) لوج لمستندات المبيعات
+# ============================================================
+
+def log_sales_document_action(
+    *,
+    user,                    # actor (يمكن أن يكون None)
+    document,                # SalesDocument instance
+    action: str | AuditLog.Action,
+    message: str = "",
+    extra: Optional[Mapping[str, Any]] = None,
+    notify: bool = False,
+    notify_recipient=None,   # لو حاب ترسلها لشخص آخر (مثلاً created_by)
+) -> None:
+    """
+    نقطة مركزية لتسجيل أحداث مستندات المبيعات في AuditLog
+    + (اختياري) إنشاء Notification.
+
+    action:
+      - استخدم AuditLog.Action.CREATE / UPDATE / STATUS_CHANGE / DELETE / OTHER
+        أو string بنفس القيم الموجودة في choices.
+    """
+
+    # --- 1) AuditLog ---
+    log_event(
+        action=action,
+        message=message,
+        actor=user,
+        target=document,
+        extra=extra,
+    )
+
+    # --- 2) Notification (اختياري) ---
+    if notify:
+        recipient = notify_recipient or getattr(document, "created_by", None) or user
+
+        if recipient is not None:
+            verb = message or _(
+                "تم تحديث مستند المبيعات رقم %(number)s."
+            ) % {"number": document.display_number}
+
+            # رابط تفصيلي للمستند
+            try:
+                url = reverse("sales:document_detail", args=[document.pk])
+            except Exception:
+                url = ""
+
+            create_notification(
+                recipient=recipient,
+                verb=verb,
+                target=document,
+                level=Notification.Levels.INFO,
+                url=url,
+            )
+
+
+# ============================================================
+# 2) لوج لمذكرات التسليم
+# ============================================================
+
+def log_delivery_note_action(
+    *,
+    user,
+    delivery,                # DeliveryNote instance
+    action: str | AuditLog.Action,
+    message: str = "",
+    extra: Optional[Mapping[str, Any]] = None,
+    notify: bool = False,
+    notify_recipient=None,
+) -> None:
+    """
+    تسجيل أحداث مذكرات التسليم في AuditLog + (اختياري) نتفيكشن.
+    """
+
+    # --- 1) AuditLog ---
+    log_event(
+        action=action,
+        message=message,
+        actor=user,
+        target=delivery,
+        extra=extra,
+    )
+
+    # --- 2) Notification (اختياري) ---
+    if notify:
+        recipient = notify_recipient or getattr(delivery, "created_by", None) or user
+
+        if recipient is not None:
+            verb = message or _(
+                "تم تحديث مذكرة التسليم رقم %(number)s."
+            ) % {"number": delivery.display_number}
+
+            try:
+                url = reverse("sales:delivery_detail", args=[delivery.pk])
+            except Exception:
+                url = ""
+
+            create_notification(
+                recipient=recipient,
+                verb=verb,
+                target=delivery,
+                level=Notification.Levels.INFO,
+                url=url,
+            )

@@ -1,17 +1,15 @@
 {% extends "base.html" %}
 {% load i18n static %}
 
-{% block title %}{% trans "نظام المبيعات" %}{% endblock %}
-
 {% block content %}
 
-<div class="py-3 py-md-4">
+<div class="container-lg py-4">
 
   {# ======================= PAGE HEADER ======================= #}
   <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <div>
-      <h1 class="h3 fw-bold mb-1 text-body">
-        <i class="bi bi-shop me-2 text-primary"></i>
+      <h1 class="h3 fw-bold text-dark mb-1">
+        <i class="bi bi-shop text-primary me-2"></i>
         {% trans "نظام المبيعات" %}
       </h1>
       <p class="text-muted mb-0 small">
@@ -36,8 +34,7 @@
 
         {# 2. الكل (مستندات المبيعات) #}
         <li class="nav-item">
-          <a class="nav-link px-3 py-1
-                     {% if request.resolver_match.url_name == 'document_list' and not request.GET.status %}active{% endif %}"
+          <a class="nav-link px-3 py-1 {% if request.resolver_match.url_name == 'document_list' and not request.GET.status %}active{% endif %}"
              href="{% url 'sales:document_list' %}">
             <i class="bi bi-files me-1"></i>
             {% trans "الكل" %}
@@ -46,7 +43,7 @@
 
         {# 3. عروض الأسعار (فلتر: مسودة / مرسل) #}
         <li class="nav-item">
-          <a class="nav-link px-3 py-1 {% if 'status=draft' in request.get_full_path %}active{% endif %}"
+          <a class="nav-link px-3 py-1 {% if request.GET.status == 'draft' %}active{% endif %}"
              href="{% url 'sales:document_list' %}?status=draft">
             <i class="bi bi-file-earmark-text me-1"></i>
             {% trans "عروض الأسعار" %}
@@ -55,7 +52,7 @@
 
         {# 4. أوامر البيع (فلتر: مؤكد) #}
         <li class="nav-item">
-          <a class="nav-link px-3 py-1 {% if 'status=confirmed' in request.get_full_path %}active{% endif %}"
+          <a class="nav-link px-3 py-1 {% if request.GET.status == 'confirmed' %}active{% endif %}"
              href="{% url 'sales:document_list' %}?status=confirmed">
             <i class="bi bi-cart-check me-1"></i>
             {% trans "أوامر البيع" %}
@@ -71,22 +68,22 @@
           </a>
         </li>
 
-        <li class="border-start mx-2 d-none d-lg-block"></li>
-
-        {# 6. روابط مستقبلية (الفواتير) #}
+        {# 6. العملاء / جهات الاتصال (نفس الفكرة القديمة) #}
         <li class="nav-item">
-          <a class="nav-link px-3 py-1 disabled text-muted" href="#" tabindex="-1" aria-disabled="true">
-            {% trans "الفواتير" %}
+          <a class="nav-link px-3 py-1
+                     {% if request.resolver_match.namespace == 'contacts' %}active{% endif %}"
+             href="{% url 'contacts:contact_list' %}">
+            <i class="bi bi-people me-1"></i>
+            {% trans "العملاء وجهات الاتصال" %}
           </a>
         </li>
+
+        <li class="border-start mx-2 d-none d-lg-block"></li>
 
         {# 7. إجراءات سريعة (Dropdown) #}
         <li class="nav-item dropdown ms-lg-auto">
           <a class="btn btn-primary btn-sm px-3 py-1 dropdown-toggle shadow-sm"
-             data-bs-toggle="dropdown"
-             href="#"
-             role="button"
-             aria-expanded="false">
+             data-bs-toggle="dropdown" href="#" role="button">
             <i class="bi bi-plus-lg"></i>
             <span class="d-none d-md-inline">
               {% trans "إجراء سريع" %}
@@ -108,7 +105,7 @@
               </a>
             </li>
 
-            {# تسليم مباشر جديد #}
+            {# تسليم مباشر #}
             <li>
               <a class="dropdown-item d-flex align-items-center"
                  href="{% url 'sales:delivery_create_direct' %}">
@@ -124,7 +121,7 @@
                  href="{% url 'sales:document_list' %}?status=confirmed"
                  title="{% trans 'يتم إنشاء التسليم من داخل أمر البيع المؤكد' %}">
                 <i class="bi bi-truck text-secondary me-2"></i>
-                {% trans "تسليم (من أمر بيع)" %}
+                {% trans "تسليم من أمر بيع" %}
               </a>
             </li>
           </ul>

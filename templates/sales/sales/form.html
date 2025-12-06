@@ -9,206 +9,195 @@
   {% endif %}
 {% endblock %}
 
+{% block extra_css %}
+<style>
+    .description-input {
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        font-size: 0.9em;
+        color: #6c757d;
+        padding-inline-start: 0;
+        padding-inline-end: 0;
+    }
+    .description-input:focus {
+        border-bottom: 1px dashed #ced4da !important;
+    }
+    .line-total {
+        background-color: #f8f9fa !important;
+        border: none;
+        font-weight: bold;
+        color: #198754;
+    }
+    .lite-row {
+        background-color: rgba(248, 249, 250, 0.5);
+    }
+</style>
+{% endblock %}
+
 {% block sales_content %}
 
-<div class="card shadow-sm border-0 mb-4">
+<div class="card shadow-sm border-0 mb-5">
   {# ================== HEADER ================== #}
-  <div class="card-header bg-body py-3">
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div class="card-header bg-white py-3 border-bottom">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
 
-      <div class="d-flex flex-column gap-1">
-        <div class="d-flex flex-wrap align-items-center gap-2">
-          {% if form.instance.pk %}
-            <h1 class="h5 fw-bold mb-0 text-body">
-              <i class="bi bi-pencil-square me-1"></i>
-              {% trans "تعديل مستند المبيعات" %}
-            </h1>
-            <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle">
-              {{ form.instance.display_number }}
-            </span>
-
-            {# حالة المستند بادج حديثة #}
-            {% if form.instance.status == 'draft' %}
-              <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle">
-                {% trans "مسودة" %}
-              </span>
-            {% elif form.instance.status == 'sent' %}
-              <span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle">
-                {% trans "مرسل" %}
-              </span>
-            {% elif form.instance.status == 'confirmed' %}
-              <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">
-                {% trans "أمر بيع مؤكد" %}
-              </span>
-            {% elif form.instance.status == 'cancelled' %}
-              <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle">
-                {% trans "ملغي" %}
-              </span>
+      <div class="d-flex flex-column">
+        <div class="d-flex align-items-center gap-2">
+          <h5 class="mb-0 fw-bold text-primary">
+            {% if form.instance.pk %}
+              <i class="bi bi-pencil-square"></i> {% trans "تعديل مستند" %}
+              <span class="text-dark font-monospace mx-1">{{ form.instance.display_number }}</span>
+            {% else %}
+              <i class="bi bi-plus-circle"></i> {% trans "إنشاء مستند جديد" %}
             {% endif %}
-          {% else %}
-            <h1 class="h5 fw-bold mb-0 text-body">
-              <i class="bi bi-plus-circle me-1"></i>
-              {% trans "إنشاء مستند مبيعات جديد" %}
-            </h1>
+          </h5>
+
+          {% if form.instance.pk %}
+            {% if form.instance.status == 'draft' %}
+                <span class="badge bg-secondary-subtle text-secondary border">{% trans "مسودة" %}</span>
+            {% elif form.instance.status == 'confirmed' %}
+                <span class="badge bg-success-subtle text-success border">{% trans "أمر بيع" %}</span>
+            {% elif form.instance.status == 'cancelled' %}
+                <span class="badge bg-danger-subtle text-danger border">{% trans "ملغي" %}</span>
+            {% endif %}
           {% endif %}
         </div>
-
-        <p class="small text-muted mb-0">
-          {% trans "قم بتعبئة بيانات العميل، ثم أضف المنتجات أو الخدمات مع الكميات والأسعار." %}
-        </p>
       </div>
 
-      <div class="d-flex flex-wrap gap-2">
-        <a href="{% url 'sales:document_list' %}" class="btn btn-outline-secondary btn-sm">
-          <i class="bi bi-arrow-right-short"></i>
-          {% trans "الرجوع للسجل" %}
-        </a>
-      </div>
-
+      <a href="{% url 'sales:document_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-return-right"></i> {% trans "عودة" %}
+      </a>
     </div>
   </div>
 
   {# ================== BODY ================== #}
-  <div class="card-body">
-
+  <div class="card-body p-4">
     <form method="post" id="sales-form">
       {% csrf_token %}
 
-      {# --------- SECTION: رأس المستند --------- #}
-      <div class="row g-3 mb-3">
+      {# --------- SECTION 1: بيانات المستند --------- #}
+      <div class="row g-3 mb-4">
         <div class="col-md-4">
-          <label class="form-label fw-semibold small">{% trans "العميل" %}</label>
+          <label class="form-label fw-bold small text-muted">{% trans "العميل" %}</label>
           {{ form.contact }}
-          {% if form.contact.errors %}
-            <div class="text-danger small mt-1">{{ form.contact.errors }}</div>
-          {% endif %}
+          {{ form.contact.errors }}
         </div>
-
         <div class="col-md-2">
-          <label class="form-label fw-semibold small">{% trans "التاريخ" %}</label>
+          <label class="form-label fw-bold small text-muted">{% trans "التاريخ" %}</label>
           {{ form.date }}
-          {% if form.date.errors %}
-            <div class="text-danger small mt-1">{{ form.date.errors }}</div>
-          {% endif %}
+          {{ form.date.errors }}
         </div>
-
         <div class="col-md-2">
-          <label class="form-label fw-semibold small">{% trans "تاريخ الانتهاء" %}</label>
-          {{ form.due_date }}
-          {% if form.due_date.errors %}
-            <div class="text-danger small mt-1">{{ form.due_date.errors }}</div>
-          {% endif %}
-        </div>
-
-        <div class="col-md-2">
-          <label class="form-label fw-semibold small">{% trans "العملة" %}</label>
+          <label class="form-label fw-bold small text-muted">{% trans "العملة" %}</label>
           {{ form.currency }}
         </div>
-
         <div class="col-md-4">
-          <label class="form-label fw-semibold small">{% trans "مرجع العميل (PO)" %}</label>
+          <label class="form-label fw-bold small text-muted">{% trans "مرجع العميل (PO)" %}</label>
           {{ form.client_reference }}
-          {% if form.client_reference.errors %}
-            <div class="text-danger small mt-1">{{ form.client_reference.errors }}</div>
-          {% endif %}
         </div>
       </div>
 
-      <div class="row g-3 mb-4">
+      <div class="row g-3 mb-4 bg-light p-3 rounded-3 border-0">
         <div class="col-md-6">
-          <label class="form-label small fw-semibold">{% trans "عنوان الفوترة" %}</label>
+          <label class="form-label small fw-bold">{% trans "عنوان الفوترة" %}</label>
           {{ form.billing_address }}
         </div>
         <div class="col-md-6">
-          <label class="form-label small fw-semibold">{% trans "عنوان الشحن" %}</label>
+          <label class="form-label small fw-bold">{% trans "عنوان الشحن" %}</label>
           {{ form.shipping_address }}
         </div>
       </div>
 
-      <hr class="my-4">
+      <hr class="my-4 text-muted opacity-25">
 
-      {# --------- SECTION: البنود --------- #}
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <div>
-          <h5 class="mb-0 text-body fw-semibold">
-            {% trans "المنتجات / الخدمات" %}
-          </h5>
-          <p class="small text-muted mb-0">
-            {% trans "اختر المنتج، ثم عدّل الكمية والوحدة والسعر والخصم لكل سطر." %}
-          </p>
-        </div>
-
-        <button type="button"
-                class="btn btn-sm btn-outline-primary"
-                id="add-line-btn">
-          <i class="bi bi-plus-lg me-1"></i>
-          {% trans "إضافة سطر" %}
+      {# --------- SECTION 3: جدول المنتجات (Lines) --------- #}
+      <div class="d-flex justify-content-between align-items-end mb-2">
+        <h5 class="fw-bold text-dark mb-0">{% trans "المنتجات والخدمات" %}</h5>
+        <button type="button" class="btn btn-sm btn-primary shadow-sm" id="add-line-btn">
+          <i class="bi bi-plus-lg"></i> {% trans "إضافة سطر" %}
         </button>
       </div>
 
       {{ lines.management_form }}
       {{ lines.non_form_errors }}
 
-      <div class="table-responsive mb-3">
-        <table class="table table-sm table-hover align-middle" id="lines-table">
-          <thead class="table-light small text-muted">
+      <div class="table-responsive border rounded-3 mb-4">
+        <table class="table table-sm table-hover align-middle mb-0" id="lines-table">
+          <thead class="table-light text-muted small">
             <tr>
-              <th style="width: 30%;">{% trans "المنتج / الوصف" %}</th>
+              <th style="width: 35%;" class="ps-3">{% trans "المنتج" %}</th>
               <th style="width: 10%;" class="text-center">{% trans "الكمية" %}</th>
               <th style="width: 12%;" class="text-center">{% trans "الوحدة" %}</th>
               <th style="width: 12%;" class="text-end">{% trans "السعر" %}</th>
               <th style="width: 10%;" class="text-end">{% trans "خصم %" %}</th>
-              <th style="width: 13%;" class="text-end">{% trans "الإجمالي" %}</th>
-              <th style="width: 5%;" class="text-center">❌</th>
+              <th style="width: 15%;" class="text-end pe-3">{% trans "الإجمالي" %}</th>
+              <th style="width: 6%;" class="text-center"></th>
             </tr>
           </thead>
           <tbody>
             {% for line_form in lines %}
-              <tr class="line-form-row">
-                {# hidden fields (id, etc.) #}
-                {% for hidden in line_form.hidden_fields %}
-                  {{ hidden }}
-                {% endfor %}
+              {# === الصف الرئيسي === #}
+              <tr class="line-form-row main-line-row">
+                {% for hidden in line_form.hidden_fields %}{{ hidden }}{% endfor %}
 
-                {# المنتج + الوصف في نفس الخانة (مودرن) #}
-                <td>
-                  <div class="mb-1">
-                    {{ line_form.product }}
-                  </div>
-                  <div class="small text-muted">
-                    {{ line_form.description }}
+                <td class="ps-3 position-relative">
+                  <div class="d-flex gap-2">
+                    <div class="flex-grow-1">
+                      {{ line_form.product }}
+                    </div>
+                    <button type="button"
+                            class="btn btn-sm btn-link text-decoration-none text-muted toggle-desc-btn p-0"
+                            title="{% trans 'إضافة وصف' %}">
+                      <i class="bi bi-card-text"></i>
+                    </button>
                   </div>
                   {% if line_form.product.errors %}
                     <div class="text-danger small mt-1">{{ line_form.product.errors }}</div>
                   {% endif %}
                 </td>
 
-                <td class="text-center">
-                  {{ line_form.quantity }}
+                <td class="text-center">{{ line_form.quantity }}</td>
+                <td class="text-center">{{ line_form.uom }}</td>
+                <td class="text-end">{{ line_form.unit_price }}</td>
+                <td class="text-end">{{ line_form.discount_percent }}</td>
+
+                <td class="text-end pe-3">
+                  {% with widget=line_form.total_display %}
+                    <input type="text"
+                           name="{{ widget.html_name }}"
+                           value="{{ widget.value|default:'0.000' }}"
+                           class="form-control form-control-sm text-end line-total"
+                           readonly
+                           id="{{ widget.id_for_label }}">
+                  {% endwith %}
                 </td>
 
                 <td class="text-center">
-                  {{ line_form.uom }}
-                </td>
-
-                <td class="text-end">
-                  {{ line_form.unit_price }}
-                </td>
-
-                <td class="text-end">
-                  {{ line_form.discount_percent }}
-                </td>
-
-                <td class="text-end">
-                  {{ line_form.total_display }}
-                </td>
-
-                <td class="text-center align-middle">
                   {% if lines.can_delete %}
-                    <div class="form-check d-flex justify-content-center">
-                      {{ line_form.DELETE }}
-                    </div>
+                    <div class="d-none">{{ line_form.DELETE }}</div>
+                    <button type="button" class="btn btn-sm text-danger remove-row-btn" title="{% trans 'حذف' %}">
+                      <i class="bi bi-trash"></i>
+                    </button>
                   {% endif %}
+                </td>
+              </tr>
+
+              {# === صف الوصف تحت السطر === #}
+              <tr class="description-row {% if not line_form.description.value %}d-none{% endif %} lite-row">
+                <td colspan="7" class="border-0 p-0">
+                  <div class="d-flex align-items-center px-4 py-1">
+                    <i class="bi bi-arrow-return-right text-muted small me-2 opacity-50"></i>
+                    <div class="flex-grow-1">
+                      {% with widget=line_form.description %}
+                        <input type="text"
+                               name="{{ widget.html_name }}"
+                               value="{{ widget.value|default:'' }}"
+                               class="form-control description-input"
+                               id="{{ widget.id_for_label }}">
+                      {% endwith %}
+                    </div>
+                  </div>
                 </td>
               </tr>
             {% endfor %}
@@ -216,56 +205,41 @@
         </table>
       </div>
 
-      {# --------- SECTION: الملاحظات + الإجماليات --------- #}
-      <div class="row g-3 mt-2">
-        <div class="col-md-8">
+      {# --------- SECTION 4: الملاحظات والإجماليات --------- #}
+      <div class="row">
+        <div class="col-lg-7">
           <div class="mb-3">
-            <label class="form-label small fw-semibold">
-              {% trans "ملاحظات للعميل" %}
-            </label>
+            <label class="form-label fw-bold small text-muted">{% trans "ملاحظات للعميل" %}</label>
             {{ form.customer_notes }}
           </div>
           <div>
-            <label class="form-label small fw-semibold text-muted">
-              {% trans "ملاحظات داخلية (لا تظهر للعميل)" %}
-            </label>
+            <label class="form-label fw-bold small text-muted">{% trans "ملاحظات داخلية" %}</label>
             {{ form.notes }}
           </div>
         </div>
-
-        <div class="col-md-4">
-          <div class="card border-0 shadow-sm">
-            <div class="card-body p-3">
-              <table class="table table-sm mb-0">
-                <tr>
-                  <th class="small text-muted">
-                    {% trans "الإجمالي قبل الضريبة" %}
-                  </th>
-                  <td class="text-end fw-semibold font-monospace" id="grand-total-display">
-                    0.000
-                  </td>
-                </tr>
-                <tr class="table-primary">
-                  <th class="small fw-bold">
-                    {% trans "الصافي النهائي" %}
-                  </th>
-                  <td class="text-end fw-bold h5 mb-0 text-body" id="final-total-display">
-                    0.000
-                  </td>
-                </tr>
-              </table>
+        <div class="col-lg-1"></div>
+        <div class="col-lg-4">
+          <div class="card bg-light border-0">
+            <div class="card-body">
+              <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">{% trans "الإجمالي قبل الضريبة" %}</span>
+                <span class="fw-bold font-monospace" id="grand-total-display">0.000</span>
+              </div>
+              <hr class="my-2">
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="h6 mb-0 fw-bold text-dark">{% trans "الصافي النهائي" %}</span>
+                <span class="h4 mb-0 fw-bold text-primary font-monospace" id="final-total-display">0.000</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {# --------- أزرار الحفظ --------- #}
-      <div class="d-flex justify-content-center gap-2 mt-4">
-        <button type="submit" class="btn btn-primary px-5">
-          <i class="bi bi-save me-1"></i>
-          {% trans "حفظ" %}
+      <div class="d-flex justify-content-center gap-3 mt-5">
+        <button type="submit" class="btn btn-primary px-5 py-2 fw-bold shadow-sm">
+          <i class="bi bi-check-lg"></i> {% trans "حفظ المستند" %}
         </button>
-        <a href="{% url 'sales:document_list' %}" class="btn btn-outline-secondary px-4">
+        <a href="{% url 'sales:document_list' %}" class="btn btn-outline-secondary px-4 py-2">
           {% trans "إلغاء" %}
         </a>
       </div>
@@ -274,40 +248,60 @@
   </div>
 </div>
 
-{# قالب السطر الفارغ لإضافته ديناميكياً #}
+{# ====== قوالب النسخ (Hidden Templates) ====== #}
 <table style="display:none;">
-  <tr id="empty-form-row" class="line-form-row">
-    <td>
-      <div class="mb-1">
-        {{ lines.empty_form.product }}
-      </div>
-      <div class="small text-muted">
-        {{ lines.empty_form.description }}
-      </div>
-    </td>
-    <td class="text-center">
-      {{ lines.empty_form.quantity }}
-    </td>
-    <td class="text-center">
-      {{ lines.empty_form.uom }}
-    </td>
-    <td class="text-end">
-      {{ lines.empty_form.unit_price }}
-    </td>
-    <td class="text-end">
-      {{ lines.empty_form.discount_percent }}
-    </td>
-    <td class="text-end">
-      <input type="text"
-             class="form-control form-control-sm line-total"
-             readonly>
-    </td>
-    <td class="text-center align-middle">
-      <button type="button" class="btn btn-outline-danger btn-sm remove-row-btn">
-        <i class="bi bi-x-lg"></i>
-      </button>
-    </td>
-  </tr>
+  <tbody id="empty-rows-container">
+
+    <tr id="empty-main-row" class="line-form-row main-line-row">
+      <td class="ps-3">
+        <div class="d-flex gap-2">
+          <div class="flex-grow-1">{{ lines.empty_form.product }}</div>
+          <button type="button" class="btn btn-sm btn-link text-decoration-none text-muted toggle-desc-btn p-0">
+            <i class="bi bi-card-text"></i>
+          </button>
+        </div>
+      </td>
+      <td class="text-center">{{ lines.empty_form.quantity }}</td>
+      <td class="text-center">{{ lines.empty_form.uom }}</td>
+      <td class="text-end">{{ lines.empty_form.unit_price }}</td>
+      <td class="text-end">{{ lines.empty_form.discount_percent }}</td>
+
+      <td class="text-end pe-3">
+        {% with widget=lines.empty_form.total_display %}
+          <input type="text"
+                 name="{{ widget.html_name }}"
+                 value="{{ widget.value|default:'0.000' }}"
+                 class="form-control form-control-sm text-end line-total"
+                 readonly
+                 id="{{ widget.id_for_label }}">
+        {% endwith %}
+      </td>
+
+      <td class="text-center">
+        <button type="button" class="btn btn-sm text-danger remove-row-btn">
+          <i class="bi bi-trash"></i>
+        </button>
+      </td>
+    </tr>
+
+    <tr id="empty-desc-row" class="description-row d-none lite-row">
+      <td colspan="7" class="border-0 p-0">
+        <div class="d-flex align-items-center px-4 py-1">
+          <i class="bi bi-arrow-return-right text-muted small me-2 opacity-50"></i>
+          <div class="flex-grow-1">
+            {% with widget=lines.empty_form.description %}
+              <input type="text"
+                     name="{{ widget.html_name }}"
+                     value="{{ widget.value|default:'' }}"
+                     class="form-control description-input"
+                     id="{{ widget.id_for_label }}">
+            {% endwith %}
+          </div>
+        </div>
+      </td>
+    </tr>
+
+  </tbody>
 </table>
 
 {% endblock %}
@@ -318,16 +312,50 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
-  // --- 1. تهيئة المتغيرات ---
   const productsDataElement = document.getElementById('products-data');
   if (!productsDataElement) return;
 
   const productsData = JSON.parse(productsDataElement.textContent);
   const tableBody = document.querySelector('#lines-table tbody');
   const totalFormsInput = document.getElementById('id_lines-TOTAL_FORMS');
-  const emptyRowTemplate = document.getElementById('empty-form-row');
+  const emptyMainTemplate = document.getElementById('empty-main-row');
+  const emptyDescTemplate = document.getElementById('empty-desc-row');
 
-  // --- 2. عند تغيير المنتج ---
+  // --- 1. إظهار/إخفاء الوصف + الحذف ---
+  tableBody.addEventListener('click', function(e) {
+    const toggleBtn = e.target.closest('.toggle-desc-btn');
+    if (toggleBtn) {
+      const mainRow = toggleBtn.closest('.main-line-row');
+      const descRow = mainRow.nextElementSibling;
+      if (descRow && descRow.classList.contains('description-row')) {
+        descRow.classList.toggle('d-none');
+        if (!descRow.classList.contains('d-none')) {
+          const input = descRow.querySelector('input');
+          if (input) input.focus();
+        }
+      }
+      return;
+    }
+
+    const removeBtn = e.target.closest('.remove-row-btn');
+    if (removeBtn) {
+      const mainRow = removeBtn.closest('.main-line-row');
+      const descRow = mainRow.nextElementSibling;
+
+      const deleteCheckbox = mainRow.querySelector('input[name$="-DELETE"]');
+      if (deleteCheckbox) {
+        deleteCheckbox.checked = true;
+        mainRow.style.display = 'none';
+        if (descRow) descRow.style.display = 'none';
+      } else {
+        mainRow.remove();
+        if (descRow) descRow.remove();
+      }
+      calculateGrandTotal();
+    }
+  });
+
+  // --- 2. تغيير المنتج ---
   function handleProductChange(row) {
     const productSelect = row.querySelector('.product-select');
     const productId = productSelect ? productSelect.value : null;
@@ -336,32 +364,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (productId && productsData[productId]) {
       const data = productsData[productId];
-
-      // السعر الأساسي
-      if (priceInput) {
-        priceInput.value = data.price;
-      }
-
-      // خيارات الوحدات
+      if (priceInput) priceInput.value = data.price;
       if (uomSelect) {
         uomSelect.innerHTML = '';
-
-        if (data.base_uom_id) {
-          const optBase = new Option(data.base_uom_name, data.base_uom_id);
-          uomSelect.add(optBase);
-        }
-
-        if (data.alt_uom_id) {
-          const optAlt = new Option(data.alt_uom_name, data.alt_uom_id);
-          uomSelect.add(optAlt);
-        }
+        if (data.base_uom_id) uomSelect.add(new Option(data.base_uom_name, data.base_uom_id));
+        if (data.alt_uom_id) uomSelect.add(new Option(data.alt_uom_name, data.alt_uom_id));
       }
     }
-
     calculateRowTotal(row);
   }
 
-  // --- 3. عند تغيير الوحدة (تحديث السعر حسب الـ alt_factor) ---
+  // --- 3. تغيير الوحدة ---
   function handleUomChange(row) {
     const productSelect = row.querySelector('.product-select');
     const uomSelect = row.querySelector('.uom-select');
@@ -379,46 +392,36 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       priceInput.value = Number(newPrice).toFixed(3);
-
       priceInput.style.backgroundColor = "#e8f0fe";
       setTimeout(() => priceInput.style.backgroundColor = "", 300);
     }
-
     calculateRowTotal(row);
   }
 
   // --- 4. حساب إجمالي السطر ---
   function calculateRowTotal(row) {
-    const qtyInput = row.querySelector('.qty-input');
-    const priceInput = row.querySelector('.price-input');
-    const discountInput = row.querySelector('.discount-input');
+    const qty = parseFloat(row.querySelector('.qty-input')?.value || 0);
+    const price = parseFloat(row.querySelector('.price-input')?.value || 0);
+    const discount = parseFloat(row.querySelector('.discount-input')?.value || 0);
     const totalDisplay = row.querySelector('.line-total');
 
-    const qty = qtyInput ? parseFloat(qtyInput.value) || 0 : 0;
-    const price = priceInput ? parseFloat(priceInput.value) || 0 : 0;
-    const discount = discountInput ? parseFloat(discountInput.value) || 0 : 0;
-
     let total = qty * price;
-
     if (discount > 0) {
       total = total * (100 - discount) / 100;
     }
 
-    if (totalDisplay) {
-      totalDisplay.value = total.toFixed(3);
-    }
-
+    if (totalDisplay) totalDisplay.value = total.toFixed(3);
     calculateGrandTotal();
   }
 
-  // --- 5. حساب الإجمالي الكلي ---
+  // --- 5. الإجمالي الكلي ---
   function calculateGrandTotal() {
     let grandTotal = 0;
-    const rows = tableBody.querySelectorAll('.line-form-row');
+    const mainRows = tableBody.querySelectorAll('.main-line-row');
 
-    rows.forEach(row => {
-      const deleteInput = row.querySelector('input[name$="-DELETE"]');
-      if (deleteInput && deleteInput.checked) return;
+    mainRows.forEach(row => {
+      const deleteCheckbox = row.querySelector('input[name$="-DELETE"]');
+      if (deleteCheckbox && deleteCheckbox.checked) return;
       if (row.style.display === 'none') return;
 
       const totalField = row.querySelector('.line-total');
@@ -434,35 +437,26 @@ document.addEventListener('DOMContentLoaded', function() {
     if (finalEl) finalEl.textContent = grandTotal.toFixed(3);
   }
 
-  // --- 6. الاستماع للأحداث على جسم الجدول (Event Delegation) ---
+  // --- 6. مراقبة الأحداث على الحقول الرقمية ---
   tableBody.addEventListener('change', function(e) {
     const target = e.target;
-    const row = target.closest('tr');
-
+    const row = target.closest('.main-line-row');
     if (!row) return;
 
     if (target.classList.contains('product-select')) {
       handleProductChange(row);
     } else if (target.classList.contains('uom-select')) {
       handleUomChange(row);
-    } else if (
-      target.classList.contains('qty-input') ||
-      target.classList.contains('price-input') ||
-      target.classList.contains('discount-input')
-    ) {
+    } else if (target.matches('.qty-input, .price-input, .discount-input')) {
       calculateRowTotal(row);
     }
   });
 
   tableBody.addEventListener('input', function(e) {
     const target = e.target;
-    if (
-      target.classList.contains('qty-input') ||
-      target.classList.contains('discount-input') ||
-      target.classList.contains('price-input')
-    ) {
-      const row = target.closest('tr');
-      if (row) calculateRowTotal(row);
+    const row = target.closest('.main-line-row');
+    if (row && target.matches('.qty-input, .price-input, .discount-input')) {
+      calculateRowTotal(row);
     }
   });
 
@@ -471,27 +465,29 @@ document.addEventListener('DOMContentLoaded', function() {
   if (addLineBtn) {
     addLineBtn.addEventListener('click', function() {
       const formIdx = totalFormsInput.value;
-      const newRow = emptyRowTemplate.cloneNode(true);
 
-      newRow.removeAttribute('id');
-      newRow.style.display = 'table-row';
-      newRow.innerHTML = newRow.innerHTML.replace(/__prefix__/g, formIdx);
+      const newMain = emptyMainTemplate.cloneNode(true);
+      const newDesc = emptyDescTemplate.cloneNode(true);
 
-      const removeBtn = newRow.querySelector('.remove-row-btn');
-      if (removeBtn) {
-        removeBtn.addEventListener('click', function() {
-          newRow.remove();
-          calculateGrandTotal();
-        });
-      }
+      newMain.removeAttribute('id');
+      newDesc.removeAttribute('id');
 
-      tableBody.appendChild(newRow);
+      newMain.style.display = '';
+      // نخلي الوصف مخفي افتراضياً:
+      newDesc.classList.add('d-none');
+
+      newMain.innerHTML = newMain.innerHTML.replace(/__prefix__/g, formIdx);
+      newDesc.innerHTML = newDesc.innerHTML.replace(/__prefix__/g, formIdx);
+
+      tableBody.appendChild(newMain);
+      tableBody.appendChild(newDesc);
+
       totalFormsInput.value = parseInt(formIdx) + 1;
     });
   }
 
-  // --- 8. الحساب الأولي عند تحميل الصفحة (لأسطر موجودة) ---
-  const existingRows = tableBody.querySelectorAll('.line-form-row');
+  // --- 8. تشغيل أولي لحساب الإجماليات للأسطر الموجودة ---
+  const existingRows = tableBody.querySelectorAll('.main-line-row');
   existingRows.forEach(row => calculateRowTotal(row));
 
 });
