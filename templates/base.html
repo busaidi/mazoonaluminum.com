@@ -13,6 +13,7 @@
   <meta name="description"
         content="{% block meta_description %}High-quality aluminum systems, profiles, and solutions by Mazoon Aluminum.{% endblock %}">
 
+  {# --- SEO & Meta Logic --- #}
   {% with cur_path=request.path host=request.get_host scheme=request.scheme %}
     {% if cur_path|slice:":4" == "/en/" %}
       {% with path_no_lang=cur_path|slice:"4:" %}
@@ -42,81 +43,34 @@
     {% endif %}
   {% endwith %}
 
-  <meta property="og:title"
-        content="{% block og_title %}{% block og_title_inner %}Mazoon Aluminum{% endblock %}{% endblock %}">
-  <meta property="og:description"
-        content="{% block og_description %}{% endblock %}">
-  <meta property="og:type"
-        content="{% block og_type %}website{% endblock %}">
-  <meta property="og:url"
-        content="{% block og_url %}{{ request.build_absolute_uri }}{% endblock %}">
-  <meta property="og:image"
-        content="{% block og_image %}{% static 'img/mazoon/og-home.webp' %}{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}{% block og_title_inner %}Mazoon Aluminum{% endblock %}{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}{% endblock %}">
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:url" content="{% block og_url %}{{ request.build_absolute_uri }}{% endblock %}">
+  <meta property="og:image" content="{% block og_image %}{% static 'img/mazoon/og-home.webp' %}{% endblock %}">
 
-  <meta name="twitter:card"
-        content="{% block twitter_card %}summary_large_image{% endblock %}">
-  <meta name="twitter:title"
-        content="{% block twitter_title %}{% endblock %}">
-  <meta name="twitter:description"
-        content="{% block twitter_description %}{% endblock %}">
-  <meta name="twitter:image"
-        content="{% block twitter_image %}{% static 'img/mazoon/og-home.webp' %}{% endblock %}">
+  <meta name="twitter:card" content="{% block twitter_card %}summary_large_image{% endblock %}">
+  <meta name="twitter:title" content="{% block twitter_title %}{% endblock %}">
+  <meta name="twitter:description" content="{% block twitter_description %}{% endblock %}">
+  <meta name="twitter:image" content="{% block twitter_image %}{% static 'img/mazoon/og-home.webp' %}{% endblock %}">
 
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
+  {# --- CSS --- #}
   {% if LANGUAGE_CODE == "ar" %}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.rtl.min.css"
-          rel="stylesheet"
-          crossorigin="anonymous"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.rtl.min.css" rel="stylesheet" crossorigin="anonymous"/>
   {% else %}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
-          rel="stylesheet"
-          crossorigin="anonymous"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous"/>
   {% endif %}
 
-  <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
   <link rel="stylesheet" href="{% static 'css/mazoon_style.css' %}"/>
 
   {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-body-tertiary text-body d-flex flex-column min-vh-100">
 
-{# ======== الشريط العلوي الصغير (Top Bar) ========= #}
-{#<header class="bg-body-secondary border-bottom small">#}
-{#  <div class="container-lg d-flex justify-content-between align-items-center py-1 gap-2">#}
-{##}
-    {# معلومات التواصل الأساسية #}
-{#    <div class="d-flex flex-wrap align-items-center gap-3 text-muted">#}
-{#      <span class="d-flex align-items-center gap-1">#}
-{#        <i class="bi bi-telephone"></i>#}
-{#        <span>+968 9XX XXX XX</span>#}
-{#      </span>#}
-{#      <span class="d-flex align-items-center gap-1 d-none d-lg-inline-flex">#}
-{#        <i class="bi bi-envelope"></i>#}
-{#        <span>info@mazoonaluminum.com</span>#}
-{#      </span>#}
-{#    </div>#}
-{##}
-    {# CTA سريع لأصحاب الورش + واتساب #}
-{#    <div class="d-flex flex-wrap align-items-center gap-2">#}
-{#      <span class="text-muted d-none d-lg-inline">#}
-{#        {% trans "حلول خاصة للورش والمشاريع الكبيرة" %}#}
-{#      </span>#}
-{#      <a href="https://wa.me/9689XXXXXXX"#}
-{#         class="btn btn-sm btn-outline-success d-flex align-items-center gap-1">#}
-{#        <i class="bi bi-whatsapp"></i>#}
-{#        <span>{% trans "تواصل عبر واتساب" %}</span>#}
-{#      </a>#}
-{#      <a href="{% url 'contact' %}"#}
-{#         class="btn btn-sm btn-primary">#}
-{#        {% trans "استشارة سريعة" %}#}
-{#      </a>#}
-{#    </div>#}
-{##}
-{#  </div>#}
-{#</header>#}
+{# ======================= NAVBAR ======================= #}
 <nav class="navbar navbar-expand-lg bg-body border-bottom shadow-sm sticky-top">
   <div class="container-lg">
     <a class="navbar-brand fw-bold d-flex align-items-center gap-2 py-2" href="{% url 'home' %}">
@@ -137,37 +91,32 @@
     </button>
 
     <div class="collapse navbar-collapse" id="mainNavbar">
-      {# روابط عامة #}
+      {# روابط عامة (يسار) #}
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
-             href="{% url 'home' %}">{% trans "الرئيسية" %}</a>
+          <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'home' %}">{% trans "الرئيسية" %}</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}"
-             href="{% url 'about' %}">{% trans "من نحن" %}</a>
+          <a class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}" href="{% url 'about' %}">{% trans "من نحن" %}</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.url_name == 'lab' %}active{% endif %}"
-             href="{% url 'lab' %}">{% trans "المختبر" %}</a>
+          <a class="nav-link {% if request.resolver_match.url_name == 'lab' %}active{% endif %}" href="{% url 'lab' %}">{% trans "المختبر" %}</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.url_name == 'blog_list' or request.resolver_match.url_name == 'blog_detail' %}active{% endif %}"
-             href="{% url 'blog_list' %}">{% trans "المدونة" %}</a>
+          <a class="nav-link {% if request.resolver_match.url_name == 'blog_list' %}active{% endif %}" href="{% url 'blog_list' %}">{% trans "المدونة" %}</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.url_name == 'product_list' %}active{% endif %}"
-             href="{% url 'product_list' %}">{% trans "المنتجات" %}</a>
+          <a class="nav-link {% if request.resolver_match.url_name == 'product_list' %}active{% endif %}" href="{% url 'product_list' %}">{% trans "المنتجات" %}</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.url_name == 'contact' %}active{% endif %}"
-             href="{% url 'contact' %}">{% trans "اتصل بنا" %}</a>
+          <a class="nav-link {% if request.resolver_match.url_name == 'contact' %}active{% endif %}" href="{% url 'contact' %}">{% trans "اتصل بنا" %}</a>
         </li>
       </ul>
 
-      {# يمين/يسار النافبار #}
+      {# روابط المستخدم والأدوات (يمين) #}
       <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center gap-2">
 
+        {# رابط بوابة الزبون (لأي مستخدم مسجل دخول) #}
         {% if user.is_authenticated and user.customer_profile %}
           <li class="nav-item">
             <a class="nav-link {% if request.resolver_match.namespace == 'portal' %}active{% endif %}"
@@ -177,41 +126,44 @@
           </li>
         {% endif %}
 
+        {# >>>>> قائمة التطبيقات (للموظفين فقط) <<<<< #}
         {% if user.is_authenticated %}
           {% if user.is_staff or user.is_superuser %}
-
-            <li class="nav-item">
-              <a class="nav-link {% if request.resolver_match.namespace == 'sales' %}active{% endif %}"
-                 href="{% url 'sales:dashboard' %}">
-                {% trans "المبيعات" %}
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="appsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                {% trans "التطبيقات" %}
               </a>
-            </li>
-
-            <li class="nav-item">
-              <a class="nav-link {% if request.resolver_match.namespace == 'inventory' %}active{% endif %}"
-                 href="{% url 'inventory:dashboard' %}">
-                {% trans "المخزون" %}
-              </a>
-            </li>
-
-            <li class="nav-item">
-              <a class="nav-link {% if request.resolver_match.namespace == 'accounting' %}active{% endif %}"
-                 href="{% url 'accounting:dashboard' %}">
-                {% trans "المحاسبة" %}
-              </a>
-            </li>
-
-            <li class="nav-item">
-              <a class="nav-link {% if request.resolver_match.namespace == 'core' and request.resolver_match.url_name == 'audit_log_list' %}active{% endif %}"
-                 href="{% url 'core:audit_log_list' %}">
-                {% trans "سجل التدقيق" %}
-              </a>
+              <ul class="dropdown-menu shadow-sm border-0" aria-labelledby="appsDropdown">
+                <li>
+                  <a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'sales:dashboard' %}">
+                    <i class="bi bi-shop text-primary"></i> {% trans "المبيعات" %}
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'inventory:dashboard' %}">
+                    <i class="bi bi-box-seam text-warning"></i> {% trans "المخزون" %}
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'accounting:dashboard' %}">
+                    <i class="bi bi-calculator text-success"></i> {% trans "المحاسبة" %}
+                  </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <a class="dropdown-item d-flex align-items-center gap-2" href="{% url 'core:audit_log_list' %}">
+                    <i class="bi bi-clock-history text-secondary"></i> {% trans "سجل التدقيق" %}
+                  </a>
+                </li>
+              </ul>
             </li>
           {% endif %}
         {% endif %}
 
+        {# التنبيهات #}
         {% include "core/notifications/_navbar_dropdown.html" %}
 
+        {# قائمة المستخدم #}
         {% if user.is_authenticated %}
           <li class="nav-item dropdown">
             <a class="nav-link d-flex align-items-center gap-2"
@@ -235,7 +187,7 @@
               </li>
               <li><hr class="dropdown-divider"></li>
               <li>
-                <a class="dropdown-item" href="{% comment %}{% url 'portal:profile' %}{% endcomment %}">
+                <a class="dropdown-item" href="#">
                   {% trans "الملف الشخصي" %}
                 </a>
               </li>
@@ -259,6 +211,7 @@
           </li>
         {% endif %}
 
+        {# تبديل الثيم #}
         <li class="nav-item">
           <button class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
                   type="button"
@@ -269,6 +222,7 @@
           </button>
         </li>
 
+        {# اللغة #}
         <li class="nav-item">
           <form action="{% url 'set_language' %}" method="post" class="d-flex align-items-center">
             {% csrf_token %}
@@ -287,6 +241,7 @@
   </div>
 </nav>
 
+{# ======================= CONTENT ======================= #}
 <main class="py-4 py-md-5 flex-grow-1">
   <div class="container-lg">
 

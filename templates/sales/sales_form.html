@@ -15,81 +15,121 @@
     <form method="post" id="salesForm" novalidate>
         {% csrf_token %}
 
+        {# ================= HEADER ================= #}
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
             <div>
-                <h1 class="h3 fw-bold text-dark mb-1">
+                <h1 class="h3 fw-bold text-body mb-1">
                     {% if form.instance.pk %}
-                        <i class="bi bi-pencil-square text-primary me-2"></i>{% trans "تعديل:" %} <span class="text-primary">{{ form.instance.display_number }}</span>
+                        <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis align-middle ms-1">
+                            <i class="bi bi-pencil-square"></i>
+                        </span>
+                        <span class="align-middle ms-1">{% trans "تعديل مستند" %}</span>
+                        <span class="text-primary align-middle">#{{ form.instance.display_number }}</span>
                     {% else %}
-                        <i class="bi bi-plus-circle text-primary me-2"></i>{% trans "إنشاء مستند جديد" %}
+                        <span class="badge rounded-pill bg-success-subtle text-success-emphasis align-middle ms-1">
+                            <i class="bi bi-plus-lg"></i>
+                        </span>
+                        <span class="align-middle ms-1">{% trans "إنشاء مستند جديد" %}</span>
                     {% endif %}
                 </h1>
-                <p class="text-body-secondary mb-0">
-                    {% trans "الرجاء تعبئة تفاصيل المستند بدقة." %}
+                <p class="text-muted small mb-0">
+                    {% trans "أضف العميل ثم البنود مع الكميات والوحدات والأسعار." %}
                 </p>
             </div>
-            <div class="d-flex gap-2">
-                <a href="{% url 'sales:quotation_list' %}" class="btn btn-light border shadow-sm">
-                    {% trans "إلغاء" %}
+
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'sales:quotation_list' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-right-circle ms-1"></i> {% trans "رجوع" %}
                 </a>
-                <button type="submit" class="btn btn-primary px-4 shadow-sm fw-semibold">
-                    <i class="bi bi-check-lg me-1"></i> {% trans "حفظ المستند" %}
+                <button type="submit" class="btn btn-sm btn-primary px-3">
+                    <i class="bi bi-check-lg ms-1"></i> {% trans "حفظ" %}
                 </button>
             </div>
         </div>
 
-        {% if form.errors %}
-            <div class="alert alert-danger shadow-sm rounded-3 border-0 d-flex align-items-center mb-4" role="alert">
-                <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+        {# ================= ERRORS ================= #}
+        {% if form.errors or lines.non_form_errors %}
+            <div class="alert alert-danger shadow-sm rounded-3 border-0 d-flex align-items-start mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill fs-4 ms-3 mt-1"></i>
                 <div>
-                    <strong>{% trans "يرجى تصحيح الأخطاء التالية:" %}</strong>
+                    <strong class="d-block mb-1">{% trans "يرجى مراجعة الأخطاء التالية:" %}</strong>
                     {{ form.errors }}
+                    {{ lines.non_form_errors }}
                 </div>
             </div>
         {% endif %}
 
+        {# ================= HEADER CARD ================= #}
         <div class="card border-0 shadow-sm rounded-3 mb-4">
-            <div class="card-header bg-transparent border-0 pt-3 pb-0">
-                <h6 class="fw-bold text-primary mb-0">
-                    <i class="bi bi-info-circle me-1"></i> {% trans "البيانات الأساسية" %}
-                </h6>
+            <div class="card-header bg-body-tertiary border-0 py-2">
+                <span class="badge text-bg-primary-subtle text-primary-emphasis rounded-pill me-2">
+                    <i class="bi bi-person-vcard"></i>
+                </span>
+                <span class="fw-semibold small text-secondary text-uppercase">{% trans "بيانات المستند" %}</span>
             </div>
-            <div class="card-body">
+
+            <div class="card-body pb-3">
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label small text-uppercase fw-bold text-secondary">{{ form.contact.label }} <span class="text-danger">*</span></label>
+                        <label class="form-label small fw-semibold text-secondary">{{ form.contact.label }} <span class="text-danger">*</span></label>
                         {{ form.contact }}
-                        {% if form.contact.errors %}<div class="text-danger small mt-1">{{ form.contact.errors.0 }}</div>{% endif %}
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small text-uppercase fw-bold text-secondary">{{ form.date.label }}</label>
-                        {{ form.date }}
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small text-uppercase fw-bold text-secondary">{{ form.due_date.label }}</label>
-                        {{ form.due_date }}
-                        {% if form.due_date.errors %}<div class="text-danger small mt-1">{{ form.due_date.errors.0 }}</div>{% endif %}
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label small text-uppercase fw-bold text-secondary">{{ form.client_reference.label }}</label>
+                        <label class="form-label small fw-semibold text-secondary">{{ form.date.label }}</label>
+                        {{ form.date }}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-secondary">{{ form.due_date.label }}</label>
+                        {{ form.due_date }}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-secondary">{{ form.client_reference.label }}</label>
                         {{ form.client_reference }}
                     </div>
+
                     <div class="col-md-8">
-                        <label class="form-label small text-uppercase fw-bold text-secondary">{{ form.notes.label }}</label>
+                        <label class="form-label small fw-semibold text-secondary">{{ form.notes.label }}</label>
                         {{ form.notes }}
-                        <div class="form-text text-muted small">{% trans "ملاحظات داخلية لا تظهر للعميل." %}</div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <style>
+            .line-description-wrapper input {
+                border: 0;
+                border-radius: 0;
+                border-bottom: 1px dashed #d0d4d8;
+                background: transparent;
+                padding: 2px 0 !important;
+                font-size: 0.78rem;
+                color: #6c757d;
+            }
+            .line-description-wrapper input:focus {
+                border-bottom-color: #0d6efd !important;
+                background: #fff !important;
+                outline: none;
+                box-shadow: none;
+            }
+            .line-description-wrapper input::placeholder {
+                color: #b7bec5;
+            }
+        </style>
+
+        {# ================= LINES TABLE ================= #}
         <div class="card border-0 shadow-sm rounded-3 mb-4">
-            <div class="card-header bg-transparent border-0 py-3 d-flex justify-content-between align-items-center">
-                <h6 class="fw-bold text-primary mb-0">
-                    <i class="bi bi-box-seam me-1"></i> {% trans "بنود المنتجات" %}
-                </h6>
-                <button type="button" class="btn btn-sm btn-primary bg-primary-subtle text-primary border-0 fw-bold" id="add-line-btn">
+            <div class="card-header bg-body-tertiary border-0 py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <span class="badge text-bg-primary-subtle text-primary-emphasis rounded-pill me-2">
+                        <i class="bi bi-box-seam"></i>
+                    </span>
+                    <span class="fw-semibold small text-secondary text-uppercase">{% trans "بنود المنتجات" %}</span>
+                </div>
+
+                <button type="button" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" id="add-line-btn">
                     <i class="bi bi-plus-lg"></i> {% trans "إضافة سطر" %}
                 </button>
             </div>
@@ -97,48 +137,50 @@
             <div class="card-body p-0">
                 <div class="table-responsive">
                     {{ lines.management_form }}
-                    <table class="table table-hover align-middle mb-0" id="lines-table">
-                        <thead class="bg-body-tertiary text-uppercase small fw-bold">
+
+                    <table class="table table-sm align-middle mb-0" id="lines-table">
+                        <thead class="bg-body text-uppercase text-muted small">
                             <tr>
-                                <th style="width: 25%" class="ps-4 text-secondary border-0">{% trans "المنتج" %}</th>
-                                <th style="width: 20%" class="text-secondary border-0">{% trans "الوصف" %}</th>
-                                <th style="width: 10%" class="text-secondary border-0">{% trans "الكمية" %}</th>
-                                <th style="width: 12%" class="text-secondary border-0">{% trans "الوحدة" %}</th>
-                                <th style="width: 12%" class="text-secondary border-0">{% trans "السعر" %}</th>
-                                <th style="width: 8%" class="text-secondary border-0">{% trans "خصم %" %}</th>
-                                <th style="width: 10%" class="text-end text-secondary border-0">{% trans "الإجمالي" %}</th>
-                                <th style="width: 3%" class="border-0"></th>
+                                <th class="ps-4 border-bottom-0" style="width: 34%">{% trans "المنتج" %} / <span class="text-muted">{% trans "الوصف" %}</span></th>
+                                <th class="text-center border-bottom-0" style="width: 9%">{% trans "الكمية" %}</th>
+                                <th class="text-center border-bottom-0" style="width: 12%">{% trans "الوحدة" %}</th>
+                                <th class="text-center border-bottom-0" style="width: 13%">{% trans "السعر" %}</th>
+                                <th class="text-center border-bottom-0" style="width: 9%">{% trans "خصم %" %}</th>
+                                <th class="text-end border-bottom-0" style="width: 13%">{% trans "الإجمالي" %}</th>
+                                <th class="text-center border-bottom-0" style="width: 4%"></th>
                             </tr>
                         </thead>
-                        <tbody id="lines-body" class="border-top-0">
+
+                        <tbody id="lines-body">
                             {% for line_form in lines.forms %}
                                 <tr class="line-row {% if line_form.instance.pk %}existing-line{% else %}new-line{% endif %}">
-                                    {% for hidden in line_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                    {% for hidden in line_form.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
 
-                                    <td class="ps-4 py-2">
-                                        {{ line_form.product }}
-                                        {% if line_form.product.errors %}
-                                            <div class="text-danger small">{{ line_form.product.errors.0 }}</div>
-                                        {% endif %}
+                                    <td class="ps-4 py-2 align-middle">
+
+                                        <div class="mb-1">{{ line_form.product }}</div>
+
+                                        <div class="line-description-wrapper">
+                                            {{ line_form.description }}
+                                        </div>
                                     </td>
-                                    <td class="py-2">{{ line_form.description }}</td>
-                                    <td class="py-2">{{ line_form.quantity }}</td>
-                                    <td class="py-2">
-                                        {{ line_form.uom }}
-                                        {% if line_form.uom.errors %}
-                                            <div class="text-danger small">{{ line_form.uom.errors.0 }}</div>
-                                        {% endif %}
+
+                                    <td class="text-center py-2">{{ line_form.quantity }}</td>
+                                    <td class="text-center py-2">{{ line_form.uom }}</td>
+                                    <td class="text-center py-2">{{ line_form.unit_price }}</td>
+                                    <td class="text-center py-2">{{ line_form.discount_percent }}</td>
+
+                                    <td class="text-end py-2">
+                                        <input type="text" class="form-control form-control-sm row-total text-end bg-transparent border-0 fw-semibold" readonly value="0.000">
                                     </td>
-                                    <td class="py-2">{{ line_form.unit_price }}</td>
-                                    <td class="py-2">{{ line_form.discount_percent }}</td>
-                                    <td class="py-2 text-end">
-                                        <input type="text" class="form-control row-total text-end bg-transparent border-0 fw-bold" readonly value="0.000">
-                                    </td>
+
                                     <td class="text-center py-2 pe-3">
                                         {% if lines.can_delete %}
                                             <div class="d-none">{{ line_form.DELETE }}</div>
-                                            <button type="button" class="btn btn-outline-danger btn-sm border-0 rounded-circle delete-line-btn" title="{% trans 'حذف السطر' %}">
-                                                <i class="bi bi-trash"></i>
+                                            <button type="button" class="btn btn-sm btn-outline-danger border-0 rounded-circle delete-line-btn">
+                                                <i class="bi bi-x-lg"></i>
                                             </button>
                                         {% endif %}
                                     </td>
@@ -150,32 +192,39 @@
             </div>
         </div>
 
+        {# ================= NOTES + TOTAL ================= #}
         <div class="row g-4">
             <div class="col-lg-8">
                 <div class="card border-0 shadow-sm rounded-3 h-100">
-                    <div class="card-header bg-transparent border-0 pt-3 pb-0">
-                        <h6 class="fw-bold text-primary mb-0">
-                            <i class="bi bi-chat-quote me-1"></i> {% trans "شروط وأحكام" %}
-                        </h6>
+                    <div class="card-header bg-body-tertiary border-0 py-2">
+                        <span class="badge text-bg-primary-subtle text-primary-emphasis rounded-pill me-2">
+                            <i class="bi bi-chat-quote"></i>
+                        </span>
+                        <span class="fw-semibold small text-secondary text-uppercase">{% trans "شروط وأحكام للعميل" %}</span>
                     </div>
+
                     <div class="card-body">
                         {{ form.customer_notes }}
-                        <div class="form-text text-muted small mt-2">
-                            <i class="bi bi-info-circle me-1"></i>
-                            {% trans "هذه الملاحظات ستظهر مطبوعة في أسفل الفاتورة للعميل (مثل تفاصيل الضمان والدفع)." %}
-                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="col-lg-4">
-                <div class="card border-0 shadow-sm rounded-3 h-100 bg-body-tertiary">
-                    <div class="card-body d-flex flex-column justify-content-center align-items-end p-4">
-                        <h6 class="text-uppercase text-secondary fw-bold mb-2 small">{% trans "الإجمالي النهائي" %}</h6>
-                        <h2 class="fw-bold text-success mb-0 display-6">
-                            <span id="grand-total-display">0.000</span>
-                            <span class="fs-5 text-muted ms-1">{{ form.instance.currency }}</span>
-                        </h2>
+                <div class="card border-0 shadow-sm rounded-3 h-100">
+                    <div class="card-body d-flex flex-column justify-content-between p-3">
+                        <div>
+                            <span class="small text-muted text-uppercase">{% trans "إجمالي المستند" %}</span>
+                            <h2 class="fw-bold text-success mt-2 mb-1 fs-1">
+                                <span id="grand-total-display">0.000</span>
+                                <span class="fs-6 text-muted ms-1">{{ form.instance.currency }}</span>
+                            </h2>
+                        </div>
+
+                        <div class="mt-3 d-flex justify-content-end">
+                            <button type="submit" class="btn btn-sm btn-success px-3">
+                                <i class="bi bi-floppy ms-1"></i> {% trans "حفظ المستند" %}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -184,165 +233,140 @@
     </form>
 </div>
 
+
+{# ========= PRODUCTS DATA JSON ========= #}
 {{ products_dict|json_script:"products-data" }}
 
+{# ========= EMPTY FORM TEMPLATE ========= #}
 <script type="text/template" id="empty-form-template">
-    <tr class="line-row new-line">
-        <td class="ps-4 py-2">{{ lines.empty_form.product }}</td>
-        <td class="py-2">{{ lines.empty_form.description }}</td>
-        <td class="py-2">{{ lines.empty_form.quantity }}</td>
-        <td class="py-2">{{ lines.empty_form.uom }}</td>
-        <td class="py-2">{{ lines.empty_form.unit_price }}</td>
-        <td class="py-2">{{ lines.empty_form.discount_percent }}</td>
-        <td class="py-2 text-end">
-            <input type="text" class="form-control row-total text-end bg-transparent border-0 fw-bold" readonly value="0.000">
-        </td>
-        <td class="text-center py-2 pe-3">
-            <div class="d-none">{{ lines.empty_form.DELETE }}</div>
-            <button type="button" class="btn btn-outline-danger btn-sm border-0 rounded-circle delete-line-btn">
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </td>
-        {% for hidden in lines.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
-    </tr>
+<tr class="line-row new-line">
+    {% for hidden in lines.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+    <td class="ps-4 py-2 align-middle">
+        <div class="mb-1">{{ lines.empty_form.product }}</div>
+        <div class="line-description-wrapper">{{ lines.empty_form.description }}</div>
+    </td>
+    <td class="text-center py-2">{{ lines.empty_form.quantity }}</td>
+    <td class="text-center py-2">{{ lines.empty_form.uom }}</td>
+    <td class="text-center py-2">{{ lines.empty_form.unit_price }}</td>
+    <td class="text-center py-2">{{ lines.empty_form.discount_percent }}</td>
+    <td class="text-end py-2">
+        <input type="text" class="form-control form-control-sm row-total text-end bg-transparent border-0 fw-semibold" readonly value="0.000">
+    </td>
+    <td class="text-center py-2 pe-3">
+        <div class="d-none">{{ lines.empty_form.DELETE }}</div>
+        <button type="button" class="btn btn-sm btn-outline-danger border-0 rounded-circle delete-line-btn">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </td>
+</tr>
 </script>
 
+{# ========= JS: UNCHANGED LOGIC ========= #}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log("Sales Form JS initialized (Full Width UI).");
+document.addEventListener('DOMContentLoaded', function() {
 
-        const dataScript = document.getElementById('products-data');
-        if (!dataScript) return;
-        const productsData = JSON.parse(dataScript.textContent);
+    const productsData = JSON.parse(document.getElementById('products-data').textContent);
+    const totalFormsInput = document.getElementById('id_lines-TOTAL_FORMS');
+    const linesBody = document.getElementById('lines-body');
+    const emptyFormTemplate = document.getElementById('empty-form-template').innerHTML;
 
-        const totalFormsInput = document.getElementById('id_lines-TOTAL_FORMS');
-        const linesBody = document.getElementById('lines-body');
-        const emptyFormTemplate = document.getElementById('empty-form-template').innerHTML;
-        const addBtn = document.getElementById('add-line-btn');
+    function updateRowUOMs(row, keepSelectedValue = false) {
+        const p = row.querySelector('.product-select');
+        const u = row.querySelector('.uom-select');
+        if (!p || !u) return;
+        const productId = p.value;
+        const old = u.value;
+        u.innerHTML = '';
 
-        function updateRowUOMs(row, keepSelectedValue = false) {
-            const productSelect = row.querySelector('.product-select');
-            const uomSelect = row.querySelector('.uom-select');
-            if (!productSelect || !uomSelect) return;
+        if (productId && productsData[productId]) {
+            const pd = productsData[productId];
+            if (pd.base_uom_id) u.add(new Option(pd.base_uom_name, pd.base_uom_id));
+            if (pd.alt_uom_id) u.add(new Option(pd.alt_uom_name, pd.alt_uom_id));
 
-            const productId = productSelect.value;
-            const currentUomValue = uomSelect.value;
-            uomSelect.innerHTML = '';
-
-            if (productId && productsData[productId]) {
-                const pData = productsData[productId];
-                uomSelect.add(new Option(pData.base_uom_name, pData.base_uom_id));
-                if (pData.alt_uom_id) {
-                    uomSelect.add(new Option(pData.alt_uom_name, pData.alt_uom_id));
-                }
-                if (keepSelectedValue && currentUomValue) {
-                    let exists = false;
-                    for (let i = 0; i < uomSelect.options.length; i++) {
-                        if (uomSelect.options[i].value == currentUomValue) exists = true;
-                    }
-                    if (exists) uomSelect.value = currentUomValue;
-                    else uomSelect.value = pData.base_uom_id;
-                } else {
-                    uomSelect.value = pData.base_uom_id;
-                    updateRowPrice(row);
-                }
+            if (keepSelectedValue && old) {
+                let found = false;
+                for (let o of u.options) if (o.value == old) found = true;
+                u.value = found ? old : pd.base_uom_id;
             } else {
-                uomSelect.add(new Option('---------', ''));
+                u.value = pd.base_uom_id;
+                updatePrice(row);
             }
         }
+    }
 
-        function updateRowPrice(row) {
-            const productSelect = row.querySelector('.product-select');
-            const uomSelect = row.querySelector('.uom-select');
-            const priceInput = row.querySelector('.price-input');
-            if (!productSelect || !uomSelect || !priceInput) return;
+    function updatePrice(row) {
+        const p = row.querySelector('.product-select');
+        const u = row.querySelector('.uom-select');
+        const price = row.querySelector('.price-input');
+        if (!p || !u || !price) return;
 
-            const productId = productSelect.value;
-            const uomId = uomSelect.value;
+        const productId = p.value;
+        const uomId = u.value;
 
-            if (productId && productsData[productId]) {
-                const pData = productsData[productId];
-                let basePrice = parseFloat(pData.price) || 0;
-                if (String(uomId) === String(pData.alt_uom_id) && pData.alt_uom_id) {
-                    const factor = parseFloat(pData.alt_factor) || 1;
-                    priceInput.value = (basePrice * factor).toFixed(3);
-                } else {
-                    priceInput.value = basePrice.toFixed(3);
-                }
-                calculateRowTotal(row);
+        if (productsData[productId]) {
+            const pd = productsData[productId];
+            let base = parseFloat(pd.price) || 0;
+            if (String(uomId) === String(pd.alt_uom_id) && pd.alt_uom_id) {
+                price.value = (base * parseFloat(pd.alt_factor || 1)).toFixed(3);
+            } else {
+                price.value = base.toFixed(3);
             }
+            updateTotal(row);
         }
+    }
 
-        function calculateRowTotal(row) {
-            const qtyInput = row.querySelector('.qty-input');
-            const priceInput = row.querySelector('.price-input');
-            const discInput = row.querySelector('.discount-input');
-            const totalDisplay = row.querySelector('.row-total');
-            if (!qtyInput || !priceInput) return;
+    function updateTotal(row) {
+        const q = parseFloat(row.querySelector('.qty-input')?.value || 0);
+        const pr = parseFloat(row.querySelector('.price-input')?.value || 0);
+        const d = parseFloat(row.querySelector('.discount-input')?.value || 0);
+        const totalEl = row.querySelector('.row-total');
+        let total = q * pr;
+        if (d > 0) total *= (1 - d / 100);
+        totalEl.value = total.toFixed(3);
+        updateGrand();
+    }
 
-            let qty = parseFloat(qtyInput.value) || 0;
-            let price = parseFloat(priceInput.value) || 0;
-            let discount = parseFloat(discInput ? discInput.value : 0) || 0;
-            let total = qty * price;
-            if (discount > 0) total = total * (1 - (discount / 100));
-            totalDisplay.value = total.toFixed(3);
-            calculateGrandTotal();
-        }
+    function updateGrand() {
+        let g = 0;
+        linesBody.querySelectorAll('.row-total').forEach(t => g += parseFloat(t.value || 0));
+        document.getElementById('grand-total-display').textContent = g.toFixed(3);
+    }
 
-        function calculateGrandTotal() {
-            let grandTotal = 0;
-            const rows = linesBody.querySelectorAll('tr.line-row');
-            rows.forEach(row => {
-                if (row.style.display !== 'none') {
-                    const rowTotalInput = row.querySelector('.row-total');
-                    grandTotal += parseFloat(rowTotalInput.value) || 0;
-                }
-            });
-            document.getElementById('grand-total-display').textContent = grandTotal.toFixed(3);
-        }
+    function attach(row) {
+        row.querySelectorAll('input').forEach(i => i.addEventListener('input', () => updateTotal(row)));
+        row.querySelector('.product-select')?.addEventListener('change', () => updateRowUOMs(row, false));
+        row.querySelector('.uom-select')?.addEventListener('change', () => updatePrice(row));
+    }
 
-        function attachEventsToRow(row) {
-            const productSelect = row.querySelector('.product-select');
-            const uomSelect = row.querySelector('.uom-select');
-            const inputs = row.querySelectorAll('input');
-            if (productSelect) productSelect.addEventListener('change', function() { updateRowUOMs(row, false); });
-            if (uomSelect) uomSelect.addEventListener('change', function() { updateRowPrice(row); });
-            inputs.forEach(input => input.addEventListener('input', function() { calculateRowTotal(row); }));
-        }
-
-        if (addBtn) {
-            addBtn.addEventListener('click', function() {
-                const currentFormCount = parseInt(totalFormsInput.value);
-                const newRowHtml = emptyFormTemplate.replace(/__prefix__/g, currentFormCount);
-                linesBody.insertAdjacentHTML('beforeend', newRowHtml);
-                totalFormsInput.value = currentFormCount + 1;
-                const newRow = linesBody.lastElementChild;
-                attachEventsToRow(newRow);
-                updateRowUOMs(newRow, false);
-            });
-        }
-
-        linesBody.addEventListener('click', function(e) {
-            if (e.target.closest('.delete-line-btn')) {
-                const row = e.target.closest('tr');
-                const deleteCheckbox = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
-                if (row.classList.contains('existing-line')) {
-                    row.style.display = 'none';
-                    if (deleteCheckbox) deleteCheckbox.checked = true;
-                } else {
-                    row.remove();
-                }
-                calculateGrandTotal();
-            }
-        });
-
-        const existingRows = linesBody.querySelectorAll('tr.line-row');
-        existingRows.forEach(row => {
-            attachEventsToRow(row);
-            updateRowUOMs(row, true);
-            calculateRowTotal(row);
-        });
-        calculateGrandTotal();
+    document.getElementById('add-line-btn').addEventListener('click', () => {
+        const c = parseInt(totalFormsInput.value);
+        const html = emptyFormTemplate.replace(/__prefix__/g, c);
+        linesBody.insertAdjacentHTML('beforeend', html);
+        totalFormsInput.value = c + 1;
+        const row = linesBody.lastElementChild;
+        attach(row);
+        updateRowUOMs(row);
     });
+
+    linesBody.addEventListener('click', e => {
+        const btn = e.target.closest('.delete-line-btn');
+        if (!btn) return;
+        const row = btn.closest('tr');
+        const del = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+        if (row.classList.contains('existing-line')) {
+            row.style.display = 'none';
+            if (del) del.checked = true;
+        } else row.remove();
+        updateGrand();
+    });
+
+    linesBody.querySelectorAll('tr').forEach(row => {
+        attach(row);
+        updateRowUOMs(row, true);
+        updateTotal(row);
+    });
+
+});
 </script>
+
 {% endblock %}
