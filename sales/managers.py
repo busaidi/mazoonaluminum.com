@@ -1,7 +1,10 @@
 # sales/managers.py
 from django.db import models
 from django.db.models import Q
+import datetime
 
+# تأكد من استيراد الموديلات بشكل صحيح لتجنب Circular Import إذا لزم الأمر
+# ولكن بما أننا نمرر الكائنات كـ arguments، فالأمر آمن غالباً.
 from contacts.models import Contact
 from inventory.models import Product
 
@@ -10,17 +13,12 @@ from inventory.models import Product
 # QuerySet و Manager لمستندات المبيعات
 # ===================================================================
 
-
 class SalesDocumentQuerySet(models.QuerySet):
     """
-    QuerySet مخصص لمستندات المبيعات:
-    - دعم soft delete (is_deleted)
-    - فلاتر حسب النوع (عرض سعر / أمر بيع)
-    - فلاتر حسب الحالة والفوترة
+    QuerySet مخصص لمستندات المبيعات.
     """
 
     # -------- soft delete --------
-
     def alive(self):
         return self.filter(is_deleted=False)
 
@@ -30,16 +28,14 @@ class SalesDocumentQuerySet(models.QuerySet):
     def with_deleted(self):
         return self.all()
 
-    # -------- النوع: عرض / أمر --------
-
+    # -------- النوع --------
     def quotations(self):
         return self.alive().filter(kind="quotation")
 
     def orders(self):
         return self.alive().filter(kind="order")
 
-    # -------- الحالة: مسودة / مؤكد / ملغي --------
-
+    # -------- الحالة العامة --------
     def drafts(self):
         return self.alive().filter(status="draft")
 
@@ -49,263 +45,200 @@ class SalesDocumentQuerySet(models.QuerySet):
     def cancelled(self):
         return self.alive().filter(status="cancelled")
 
-    # -------- الفوترة --------
+    # -------- حالة التسليم (جديد) --------
+    def pending_delivery(self):
+        """الطلبات التي لم يتم تسليمها أو تم تسليمها جزئياً"""
+        return self.alive().filter(kind="order", delivery_status__in=["pending", "partial"])
 
+    def fully_delivered(self):
+        return self.alive().filter(kind="order", delivery_status="delivered")
+
+    # -------- الفوترة --------
     def invoiced(self):
         return self.alive().filter(is_invoiced=True)
 
     def not_invoiced(self):
         return self.alive().filter(is_invoiced=False)
 
-    # -------- بحسب جهة الاتصال --------
+    # -------- التواريخ (جديد) --------
+    def date_range(self, start_date, end_date):
+        """فلترة المستندات ضمن نطاق زمني معين"""
+        if start_date and end_date:
+            return self.alive().filter(date__range=(start_date, end_date))
+        return self.alive()
 
-    def for_contact(self, contact: Contact | int):
-        contact_id = contact.pk if isinstance(contact, Contact) else contact
+    # -------- العملاء والبحث --------
+    def for_contact(self, contact):
+        contact_id = contact.pk if hasattr(contact, "pk") else contact
         return self.alive().filter(contact_id=contact_id)
 
     def search(self, query):
         """
-        بحث شامل في المستندات:
-        - رقم المستند (ID)
-        - اسم العميل
-        - رقم هاتف العميل
-        - مرجع العميل (Client Ref)
+        بحث شامل: ID, اسم العميل, هاتف, المرجع
         """
         if not query:
             return self
 
-        # نحاول تحويل البحث لرقم إذا كان المستخدم يبحث عن ID
         lookup = (
                 Q(contact__name__icontains=query) |
                 Q(contact__phone__icontains=query) |
-                Q(client_reference__icontains=query)
+                Q(client_reference__icontains=query) |
+                Q(display_number__icontains=query)  # إذا كنت تحفظ رقم العرض في قاعدة البيانات
         )
 
-        # إذا كان البحث رقمي، ربما يبحث عن رقم المستند مباشرة
-        if query.isdigit():
+        if str(query).isdigit():
             lookup |= Q(pk=query)
 
         return self.alive().filter(lookup)
 
 
 class SalesDocumentManager(models.Manager):
-    """
-    Manager افتراضي لـ SalesDocument.
-    الافتراضي: يعيد السجلات غير المحذوفة فقط (alive).
-    """
-
-    def _base_queryset(self) -> SalesDocumentQuerySet:
+    def _base_queryset(self):
         return SalesDocumentQuerySet(self.model, using=self._db)
 
     def get_queryset(self):
         return self._base_queryset().alive()
 
-    # -------- الوصول للسجلات المحذوفة --------
+    # تمرير الميثودات من QuerySet إلى Manager
+    def with_deleted(self): return self._base_queryset().with_deleted()
 
-    def with_deleted(self):
-        return self._base_queryset().with_deleted()
+    def quotations(self): return self.get_queryset().quotations()
 
-    def only_deleted(self):
-        return self._base_queryset().deleted()
+    def orders(self): return self.get_queryset().orders()
 
-    # -------- Wrappers --------
+    def drafts(self): return self.get_queryset().drafts()
 
-    def quotations(self):
-        return self.get_queryset().quotations()
+    def confirmed(self): return self.get_queryset().confirmed()
 
-    def orders(self):
-        return self.get_queryset().orders()
+    def cancelled(self): return self.get_queryset().cancelled()
 
-    def drafts(self):
-        return self.get_queryset().drafts()
+    # الجديدة
+    def pending_delivery(self): return self.get_queryset().pending_delivery()
 
-    def confirmed(self):
-        return self.get_queryset().confirmed()
+    def fully_delivered(self): return self.get_queryset().fully_delivered()
 
-    def cancelled(self):
-        return self.get_queryset().cancelled()
+    def date_range(self, start, end): return self.get_queryset().date_range(start, end)
 
-    def invoiced(self):
-        return self.get_queryset().invoiced()
+    def invoiced(self): return self.get_queryset().invoiced()
 
-    def not_invoiced(self):
-        return self.get_queryset().not_invoiced()
+    def not_invoiced(self): return self.get_queryset().not_invoiced()
 
-    def for_contact(self, contact: Contact | int):
-        return self.get_queryset().for_contact(contact)
+    def for_contact(self, contact): return self.get_queryset().for_contact(contact)
 
-    def search(self, query):
-        return self.get_queryset().search(query)
+    def search(self, query): return self.get_queryset().search(query)
 
 
 # ===================================================================
 # QuerySet و Manager لبنود المبيعات
 # ===================================================================
 
-
 class SalesLineQuerySet(models.QuerySet):
-    """
-    QuerySet لبنود المبيعات.
-    """
-
     def for_document(self, document):
         doc_id = document.pk if hasattr(document, "pk") else document
         return self.filter(document_id=doc_id)
 
-    def for_product(self, product: Product | int):
-        product_id = product.pk if isinstance(product, Product) else product
+    def for_product(self, product):
+        product_id = product.pk if hasattr(product, "pk") else product
         return self.filter(product_id=product_id)
 
-    def for_contact(self, contact: Contact | int):
-        contact_id = contact.pk if isinstance(contact, Contact) else contact
+    def for_contact(self, contact):
+        contact_id = contact.pk if hasattr(contact, "pk") else contact
         return self.filter(document__contact_id=contact_id)
 
-    def quotations(self):
-        return self.filter(document__kind="quotation")
+    def quotations(self): return self.filter(document__kind="quotation")
 
-    def orders(self):
-        return self.filter(document__kind="order")
+    def orders(self): return self.filter(document__kind="order")
 
 
 class SalesLineManager(models.Manager):
-    def get_queryset(self):
-        return SalesLineQuerySet(self.model, using=self._db)
+    def get_queryset(self): return SalesLineQuerySet(self.model, using=self._db)
 
-    def for_document(self, document):
-        return self.get_queryset().for_document(document)
+    def for_document(self, doc): return self.get_queryset().for_document(doc)
 
-    def for_product(self, product: Product | int):
-        return self.get_queryset().for_product(product)
+    def for_product(self, prod): return self.get_queryset().for_product(prod)
 
-    def for_contact(self, contact: Contact | int):
-        return self.get_queryset().for_contact(contact)
+    def for_contact(self, cont): return self.get_queryset().for_contact(cont)
 
-    def quotations(self):
-        return self.get_queryset().quotations()
+    def quotations(self): return self.get_queryset().quotations()
 
-    def orders(self):
-        return self.get_queryset().orders()
+    def orders(self): return self.get_queryset().orders()
 
 
 # ===================================================================
 # QuerySet و Manager لمذكرات التسليم
 # ===================================================================
 
-
 class DeliveryNoteQuerySet(models.QuerySet):
-    """
-    QuerySet لمذكرات التسليم مع دعم البحث المتقدم عن العميل.
-    """
-
     # -------- soft delete --------
+    def alive(self): return self.filter(is_deleted=False)
 
-    def alive(self):
-        return self.filter(is_deleted=False)
+    def deleted(self): return self.filter(is_deleted=True)
 
-    def deleted(self):
-        return self.filter(is_deleted=True)
-
-    def with_deleted(self):
-        return self.all()
+    def with_deleted(self): return self.all()
 
     # -------- الحالة --------
+    def drafts(self): return self.alive().filter(status="draft")
 
-    def drafts(self):
-        return self.alive().filter(status="draft")
+    def confirmed(self): return self.alive().filter(status="confirmed")
 
-    def confirmed(self):
-        return self.alive().filter(status="confirmed")
+    def cancelled(self): return self.alive().filter(status="cancelled")
 
-    def cancelled(self):
-        return self.alive().filter(status="cancelled")
-
-    # -------- بحسب أمر البيع / العميل --------
-
+    # -------- بحسب العميل / الأمر --------
     def for_order(self, order):
         order_id = order.pk if hasattr(order, "pk") else order
         return self.alive().filter(order_id=order_id)
 
-    def for_contact(self, contact: Contact | int):
-        """
-        بحث عن العميل في حقل المذكرة أو حقل الأمر المرتبط.
-        """
-        contact_id = contact.pk if isinstance(contact, Contact) else contact
+    def for_contact(self, contact):
+        contact_id = contact.pk if hasattr(contact, "pk") else contact
+        # بحث ذكي: في المذكرة مباشرة أو في الأمر المرتبط
         return self.alive().filter(
             Q(contact_id=contact_id) | Q(order__contact_id=contact_id)
         )
 
 
 class DeliveryNoteManager(models.Manager):
-    def _base_queryset(self) -> DeliveryNoteQuerySet:
-        return DeliveryNoteQuerySet(self.model, using=self._db)
+    def _base_queryset(self): return DeliveryNoteQuerySet(self.model, using=self._db)
 
-    def get_queryset(self):
-        return self._base_queryset().alive()
+    def get_queryset(self): return self._base_queryset().alive()
 
-    def with_deleted(self):
-        return self._base_queryset().with_deleted()
+    def with_deleted(self): return self._base_queryset().with_deleted()
 
-    def only_deleted(self):
-        return self._base_queryset().deleted()
+    def drafts(self): return self.get_queryset().drafts()
 
-    def drafts(self):
-        return self.get_queryset().drafts()
+    def confirmed(self): return self.get_queryset().confirmed()
 
-    def confirmed(self):
-        return self.get_queryset().confirmed()
+    def cancelled(self): return self.get_queryset().cancelled()
 
-    def cancelled(self):
-        return self.get_queryset().cancelled()
+    def for_order(self, order): return self.get_queryset().for_order(order)
 
-    def for_order(self, order):
-        return self.get_queryset().for_order(order)
-
-    def for_contact(self, contact: Contact | int):
-        return self.get_queryset().for_contact(contact)
+    def for_contact(self, contact): return self.get_queryset().for_contact(contact)
 
 
 # ===================================================================
 # QuerySet و Manager لبنود التسليم
 # ===================================================================
 
-
 class DeliveryLineQuerySet(models.QuerySet):
-    """
-    QuerySet لبنود التسليم.
-    """
-
     def for_delivery(self, delivery):
         delivery_id = delivery.pk if hasattr(delivery, "pk") else delivery
         return self.filter(delivery_id=delivery_id)
 
-    def for_product(self, product: Product | int):
-        product_id = product.pk if isinstance(product, Product) else product
+    def for_product(self, product):
+        product_id = product.pk if hasattr(product, "pk") else product
         return self.filter(product_id=product_id)
 
-    def for_order(self, order):
-        order_id = order.pk if hasattr(order, "pk") else order
-        return self.filter(delivery__order_id=order_id)
-
-    def for_contact(self, contact: Contact | int):
-        contact_id = contact.pk if isinstance(contact, Contact) else contact
+    def for_contact(self, contact):
+        contact_id = contact.pk if hasattr(contact, "pk") else contact
         return self.filter(
-            Q(delivery__contact_id=contact_id)
-            | Q(delivery__order__contact_id=contact_id)
+            Q(delivery__contact_id=contact_id) | Q(delivery__order__contact_id=contact_id)
         )
 
 
 class DeliveryLineManager(models.Manager):
-    def get_queryset(self):
-        return DeliveryLineQuerySet(self.model, using=self._db)
+    def get_queryset(self): return DeliveryLineQuerySet(self.model, using=self._db)
 
-    def for_delivery(self, delivery):
-        return self.get_queryset().for_delivery(delivery)
+    def for_delivery(self, delivery): return self.get_queryset().for_delivery(delivery)
 
-    def for_product(self, product: Product | int):
-        return self.get_queryset().for_product(product)
+    def for_product(self, product): return self.get_queryset().for_product(product)
 
-    def for_order(self, order):
-        return self.get_queryset().for_order(order)
-
-    def for_contact(self, contact: Contact | int):
-        return self.get_queryset().for_contact(contact)
+    def for_contact(self, contact): return self.get_queryset().for_contact(contact)

@@ -1,0 +1,99 @@
+{% extends "sales/base_sales.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "مذكرات التسليم" %}{% endblock %}
+
+{% block sales_content %}
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="m-0 font-weight-bold text-primary">
+            <i class="bi bi-truck me-1"></i> {% trans "سجل تسليم المواد" %}
+        </h5>
+
+        <div>
+            <a href="{% url 'sales:delivery_create_direct' %}" class="btn btn-outline-primary btn-sm shadow-sm me-2">
+                <i class="bi bi-lightning-charge"></i> {% trans "تسليم مباشر" %}
+            </a>
+
+            <a href="{% url 'sales:document_list' %}?status=confirmed" class="btn btn-primary btn-sm shadow-sm">
+                <i class="bi bi-file-earmark-check"></i> {% trans "من أمر بيع" %}
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body">
+
+        {% if deliveries %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>{% trans "رقم المذكرة" %}</th>
+                        <th>{% trans "التاريخ" %}</th>
+                        <th>{% trans "العميل" %}</th>
+                        <th>{% trans "مرجع الأمر" %}</th>
+                        <th>{% trans "الحالة" %}</th>
+                        <th class="text-center">{% trans "إجراءات" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dn in deliveries %}
+                    <tr>
+                        <td class="fw-bold font-monospace">
+                            <a href="{% url 'sales:delivery_detail' dn.pk %}" class="text-decoration-none">
+                                {{ dn.display_number }}
+                            </a>
+                        </td>
+                        <td>{{ dn.date|date:"Y-m-d" }}</td>
+                        <td>{{ dn.contact.name }}</td>
+                        <td>
+                            {% if dn.order %}
+                                <a href="{% url 'sales:document_detail' dn.order.pk %}" class="text-muted text-decoration-none small">
+                                    <i class="bi bi-link-45deg"></i> {{ dn.order.display_number }}
+                                </a>
+                            {% else %}
+                                <span class="badge bg-light text-dark border">{% trans "مباشر" %}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if dn.status == 'draft' %}
+                                <span class="badge bg-secondary">{% trans "مسودة" %}</span>
+                            {% elif dn.status == 'confirmed' %}
+                                <span class="badge bg-success">{% trans "تم التسليم" %}</span>
+                            {% elif dn.status == 'cancelled' %}
+                                <span class="badge bg-danger">{% trans "ملغي" %}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'sales:delivery_detail' dn.pk %}" class="btn btn-sm btn-outline-secondary" title="{% trans 'عرض التفاصيل' %}">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-box-seam fs-1 d-block mb-3"></i>
+                <p>{% trans "لا توجد مذكرات تسليم حتى الآن." %}</p>
+            </div>
+        {% endif %}
+
+        {% if is_paginated %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">{% trans "السابق" %}</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">{{ page_obj.number }}</span></li>
+                {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">{% trans "التالي" %}</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

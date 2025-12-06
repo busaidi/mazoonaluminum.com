@@ -1,0 +1,350 @@
+{% extends "sales/base_sales.html" %}
+{% load i18n static %}
+
+{% block title %}
+    {% if form.instance.pk %}
+        {{ form.instance.display_number }} | {% trans "تعديل" %}
+    {% else %}
+        {% trans "مستند جديد" %}
+    {% endif %}
+{% endblock %}
+
+{% block sales_content %}
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between bg-white">
+        <h6 class="m-0 font-weight-bold text-primary">
+            {% if form.instance.pk %}
+                <i class="bi bi-pencil-square"></i> {% trans "تعديل المستند" %}
+                <span class="text-dark mx-2">{{ form.instance.display_number }}</span>
+                <span class="badge bg-secondary">{{ form.instance.get_status_display }}</span>
+            {% else %}
+                <i class="bi bi-plus-circle"></i> {% trans "إنشاء مستند مبيعات جديد" %}
+            {% endif %}
+        </h6>
+    </div>
+
+    <div class="card-body">
+        <form method="post" id="sales-form">
+            {% csrf_token %}
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold">{% trans "العميل" %}</label>
+                    {{ form.contact }}
+                    {{ form.contact.errors }}
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label class="form-label fw-bold">{% trans "التاريخ" %}</label>
+                    {{ form.date }}
+                    {{ form.date.errors }}
+                </div>
+                <div class="col-md-2 mb-3">
+                    <label class="form-label fw-bold">{% trans "العملة" %}</label>
+                    {{ form.currency }}
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold">{% trans "مرجع العميل (PO)" %}</label>
+                    {{ form.client_reference }}
+                </div>
+            </div>
+
+            <div class="row">
+                 <div class="col-md-6 mb-3">
+                    <label class="form-label">{% trans "عنوان الفوترة" %}</label>
+                    {{ form.billing_address }}
+                </div>
+                 <div class="col-md-6 mb-3">
+                    <label class="form-label">{% trans "عنوان الشحن" %}</label>
+                    {{ form.shipping_address }}
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0 text-dark">{% trans "المنتجات / الخدمات" %}</h5>
+            </div>
+
+            {{ lines.management_form }}
+            {{ lines.non_form_errors }}
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="lines-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 25%;">{% trans "المنتج" %}</th>
+                            <th style="width: 20%;">{% trans "الوصف" %}</th>
+                            <th style="width: 10%;">{% trans "الكمية" %}</th>
+                            <th style="width: 10%;">{% trans "الوحدة" %}</th>
+                            <th style="width: 12%;">{% trans "السعر" %}</th>
+                            <th style="width: 8%;">{% trans "خصم %" %}</th>
+                            <th style="width: 10%;">{% trans "الإجمالي" %}</th>
+                            <th style="width: 5%;" class="text-center">❌</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for line_form in lines %}
+                            <tr class="line-form-row">
+                                {% for hidden in line_form.hidden_fields %}
+                                    {{ hidden }}
+                                {% endfor %}
+
+                                <td>
+                                    {{ line_form.product }}
+                                    {% if line_form.product.errors %}
+                                        <div class="text-danger small">{{ line_form.product.errors }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ line_form.description }}</td>
+                                <td>{{ line_form.quantity }}</td>
+                                <td>{{ line_form.uom }}</td>
+                                <td>{{ line_form.unit_price }}</td>
+                                <td>{{ line_form.discount_percent }}</td>
+                                <td>
+                                    {{ line_form.total_display }}
+                                </td>
+                                <td class="text-center align-middle">
+                                    {% if lines.can_delete %}
+                                        {{ line_form.DELETE }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <button type="button" class="btn btn-sm btn-outline-primary mb-3" id="add-line-btn">
+                <i class="bi bi-plus-lg"></i> {% trans "إضافة سطر جديد" %}
+            </button>
+
+            <div class="row mt-4">
+                <div class="col-md-8">
+                    <label class="form-label">{% trans "ملاحظات للعميل" %}</label>
+                    {{ form.customer_notes }}
+                    <br>
+                    <label class="form-label text-muted small">{% trans "ملاحظات داخلية (لا تظهر للعميل)" %}</label>
+                    {{ form.notes }}
+                </div>
+                <div class="col-md-4">
+                    <table class="table table-sm table-bordered shadow-sm">
+                        <tr>
+                            <th>{% trans "الإجمالي قبل الضريبة" %}</th>
+                            <td class="text-end font-weight-bold" id="grand-total-display">0.000</td>
+                        </tr>
+                        <tr class="table-primary">
+                            <th class="h5">{% trans "الصافي النهائي" %}</th>
+                            <td class="text-end h5 fw-bold text-dark" id="final-total-display">0.000</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-center gap-2 mt-5 mb-3">
+                <button type="submit" class="btn btn-primary px-5">
+                    <i class="bi bi-save"></i> {% trans "حفظ" %}
+                </button>
+                <a href="{% url 'sales:document_list' %}" class="btn btn-secondary px-4">
+                    {% trans "إلغاء" %}
+                </a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<table style="display:none;">
+    <tr id="empty-form-row" class="line-form-row">
+        <td>
+             {{ lines.empty_form.product }}
+        </td>
+        <td>{{ lines.empty_form.description }}</td>
+        <td>{{ lines.empty_form.quantity }}</td>
+        <td>{{ lines.empty_form.uom }}</td>
+        <td>{{ lines.empty_form.unit_price }}</td>
+        <td>{{ lines.empty_form.discount_percent }}</td>
+        <td>
+             <input type="text" class="form-control line-total" readonly>
+        </td>
+        <td class="text-center align-middle">
+            <button type="button" class="btn btn-outline-danger btn-sm remove-row-btn">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </td>
+    </tr>
+</table>
+
+{% endblock %}
+
+
+{% block extra_body %}
+{{ products_dict|json_script:"products-data" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+    // --- 1. تهيئة المتغيرات ---
+    const productsDataElement = document.getElementById('products-data');
+    if (!productsDataElement) return;
+
+    const productsData = JSON.parse(productsDataElement.textContent);
+    const tableBody = document.querySelector('#lines-table tbody');
+    const totalFormsInput = document.getElementById('id_lines-TOTAL_FORMS');
+    const emptyRowTemplate = document.getElementById('empty-form-row');
+
+    // --- 2. دالة التحديث عند تغيير المنتج ---
+    function handleProductChange(row) {
+        const productSelect = row.querySelector('.product-select');
+        const productId = productSelect.value;
+        const uomSelect = row.querySelector('.uom-select');
+        const priceInput = row.querySelector('.price-input');
+
+        if (productId && productsData[productId]) {
+            const data = productsData[productId];
+
+            // 1. تحديث السعر الأساسي مبدئياً
+            priceInput.value = data.price;
+
+            // 2. تحديث خيارات الوحدات (UOM)
+            uomSelect.innerHTML = '';
+
+            // إضافة الوحدة الأساسية
+            if (data.base_uom_id) {
+                const opt = new Option(data.base_uom_name, data.base_uom_id);
+                uomSelect.add(opt);
+            }
+
+            // إضافة الوحدة البديلة إذا وجدت
+            if (data.alt_uom_id) {
+                const opt = new Option(data.alt_uom_name, data.alt_uom_id);
+                uomSelect.add(opt);
+            }
+        }
+        // بعد التحديث، نحسب الإجمالي
+        calculateRowTotal(row);
+    }
+
+    // --- 3. (جديد) دالة تحديث السعر عند تغيير الوحدة ---
+    function handleUomChange(row) {
+        const productSelect = row.querySelector('.product-select');
+        const uomSelect = row.querySelector('.uom-select');
+        const priceInput = row.querySelector('.price-input');
+
+        const productId = productSelect.value;
+        const selectedUomId = parseInt(uomSelect.value);
+
+        if (productId && productsData[productId]) {
+            const data = productsData[productId];
+            let newPrice = data.price; // السعر الافتراضي (الأساسي)
+
+            // التحقق: هل الوحدة المختارة هي الوحدة البديلة؟
+            if (data.alt_uom_id && selectedUomId === data.alt_uom_id) {
+                // المعادلة: السعر الأساسي * معامل التحويل
+                newPrice = data.price * data.alt_factor;
+            }
+
+            // تحديث حقل السعر
+            priceInput.value = newPrice.toFixed(3);
+
+            // وميض بسيط لتنبيه المستخدم بتغير السعر (اختياري)
+            priceInput.style.backgroundColor = "#e8f0fe";
+            setTimeout(() => priceInput.style.backgroundColor = "", 300);
+        }
+
+        calculateRowTotal(row);
+    }
+
+    // --- 4. دالة حساب إجمالي السطر ---
+    function calculateRowTotal(row) {
+        const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
+        const price = parseFloat(row.querySelector('.price-input').value) || 0;
+        const discount = parseFloat(row.querySelector('.discount-input').value) || 0;
+
+        let total = qty * price;
+
+        if (discount > 0) {
+            total = total * (100 - discount) / 100;
+        }
+
+        const totalDisplay = row.querySelector('.line-total');
+        if (totalDisplay) {
+            totalDisplay.value = total.toFixed(3);
+        }
+
+        calculateGrandTotal();
+    }
+
+    // --- 5. دالة حساب الإجمالي الكلي ---
+    function calculateGrandTotal() {
+        let grandTotal = 0;
+        const rows = tableBody.querySelectorAll('.line-form-row');
+
+        rows.forEach(row => {
+            const deleteInput = row.querySelector('input[name$="-DELETE"]');
+            if (deleteInput && deleteInput.checked) return;
+            if (row.style.display === 'none') return;
+
+            const totalField = row.querySelector('.line-total');
+            if (totalField) {
+                grandTotal += parseFloat(totalField.value) || 0;
+            }
+        });
+
+        document.getElementById('grand-total-display').textContent = grandTotal.toFixed(3);
+        document.getElementById('final-total-display').textContent = grandTotal.toFixed(3);
+    }
+
+    // --- 6. Event Delegation (الاستماع للأحداث) ---
+    tableBody.addEventListener('change', function(e) {
+        const target = e.target;
+        const row = target.closest('tr');
+
+        if (target.classList.contains('product-select')) {
+            handleProductChange(row);
+        } else if (target.classList.contains('uom-select')) {
+            // هنا التغيير: نستدعي دالة تغيير الوحدة
+            handleUomChange(row);
+        } else if (
+            target.classList.contains('qty-input') ||
+            target.classList.contains('price-input') ||
+            target.classList.contains('discount-input')
+        ) {
+            calculateRowTotal(row);
+        }
+    });
+
+    tableBody.addEventListener('input', function(e) {
+        if (e.target.classList.contains('qty-input') ||
+            e.target.classList.contains('discount-input') ||
+            e.target.classList.contains('price-input')) { // أضفنا السعر أيضاً للحساب الفوري
+             calculateRowTotal(e.target.closest('tr'));
+        }
+    });
+
+    // --- 7. إضافة سطر جديد ---
+    document.getElementById('add-line-btn').addEventListener('click', function() {
+        const formIdx = totalFormsInput.value;
+        const newRow = emptyRowTemplate.cloneNode(true);
+        newRow.removeAttribute('id');
+        newRow.style.display = 'table-row';
+        newRow.innerHTML = newRow.innerHTML.replace(/__prefix__/g, formIdx);
+
+        const removeBtn = newRow.querySelector('.remove-row-btn');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function() {
+                newRow.remove();
+                calculateGrandTotal();
+            });
+        }
+
+        tableBody.appendChild(newRow);
+        totalFormsInput.value = parseInt(formIdx) + 1;
+    });
+
+    // --- 8. الحساب الأولي عند التحميل ---
+    const existingRows = tableBody.querySelectorAll('.line-form-row');
+    existingRows.forEach(row => calculateRowTotal(row));
+
+});
+</script>
+{% endblock %}

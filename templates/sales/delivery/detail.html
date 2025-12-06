@@ -1,0 +1,176 @@
+{% extends "sales/base_sales.html" %}
+{% load i18n humanize %}
+
+{% block title %}{{ delivery.display_number }} | {% trans "تفاصيل التسليم" %}{% endblock %}
+
+{% block sales_content %}
+<div class="row">
+
+    <div class="col-lg-3 order-lg-2 mb-4">
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="text-muted text-uppercase small fw-bold">{% trans "حالة التسليم" %}</h6>
+                <div class="mb-4">
+                    {% if delivery.status == 'draft' %}
+                        <span class="badge bg-secondary w-100 py-2 fs-6">
+                            <i class="bi bi-pencil"></i> {% trans "مسودة" %}
+                        </span>
+                    {% elif delivery.status == 'confirmed' %}
+                        <span class="badge bg-success w-100 py-2 fs-6">
+                            <i class="bi bi-check-circle"></i> {% trans "تم التسليم" %}
+                        </span>
+                    {% elif delivery.status == 'cancelled' %}
+                        <span class="badge bg-danger w-100 py-2 fs-6">
+                            <i class="bi bi-x-circle"></i> {% trans "ملغي" %}
+                        </span>
+                    {% endif %}
+                </div>
+
+                <h6 class="text-muted text-uppercase small fw-bold">{% trans "الإجراءات" %}</h6>
+                <div class="d-grid gap-2">
+
+                    {% if delivery.status == 'draft' %}
+                        <a href="{% url 'sales:delivery_confirm' delivery.pk %}" class="btn btn-success"
+                           onclick="return confirm('{% trans "تأكيد التسليم؟ سيتم خصم الكميات من المخزون فوراً." %}')">
+                            <i class="bi bi-check2-all"></i> {% trans "تأكيد التسليم" %}
+                        </a>
+                    {% endif %}
+
+                    {% if not delivery.order and delivery.contact and link_order_form %}
+                        <button type="button" class="btn btn-warning text-dark" data-bs-toggle="modal" data-bs-target="#linkOrderModal">
+                            <i class="bi bi-link-45deg"></i> {% trans "ربط بأمر بيع" %}
+                        </button>
+                    {% endif %}
+
+                    <a href="{% url 'sales:delivery_delete' delivery.pk %}" class="btn btn-outline-danger mt-2"
+                       onclick="return confirm('{% trans "هل أنت متأكد من حذف هذا السجل؟" %}')">
+                        <i class="bi bi-trash"></i> {% trans "حذف" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-light py-2">
+                <i class="bi bi-person"></i> {% trans "بيانات العميل" %}
+            </div>
+            <div class="card-body">
+                <h6 class="fw-bold mb-1">
+                    <a href="#" class="text-decoration-none text-dark">{{ delivery.contact.name }}</a>
+                </h6>
+                {% if delivery.contact.phone %}
+                    <p class="text-muted small mb-1"><i class="bi bi-telephone me-1"></i> {{ delivery.contact.phone }}</p>
+                {% endif %}
+                {% if delivery.contact.address %}
+                    <p class="text-muted small mb-0"><i class="bi bi-geo-alt me-1"></i> {{ delivery.contact.address }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-9 order-lg-1">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-0 fw-bold font-monospace text-primary">{{ delivery.display_number }}</h4>
+                        <span class="text-muted small">
+                            <i class="bi bi-calendar3"></i> {{ delivery.date|date:"l, j F Y" }}
+                        </span>
+                    </div>
+                    <div class="text-end">
+                        <button class="btn btn-light btn-sm border" onclick="window.print()">
+                            <i class="bi bi-printer"></i> {% trans "طباعة" %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body border-bottom bg-light bg-opacity-10">
+                <div class="row">
+                    <div class="col-md-6">
+                        <small class="text-muted text-uppercase fw-bold">{% trans "أمر البيع المرتبط" %}</small>
+                        <p class="mb-0 fs-5">
+                            {% if delivery.order %}
+                                <a href="{% url 'sales:document_detail' delivery.order.pk %}" class="text-decoration-none fw-bold">
+                                    {{ delivery.order.display_number }}
+                                </a>
+                            {% else %}
+                                <span class="badge bg-light text-dark border">{% trans "تسليم مباشر (بدون أمر)" %}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        {% if delivery.notes %}
+                            <small class="text-muted text-uppercase fw-bold">{% trans "ملاحظات" %}</small>
+                            <p class="mb-0 small text-dark">{{ delivery.notes }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-striped mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="5%">#</th>
+                            <th width="40%">{% trans "المنتج" %}</th>
+                            <th width="25%">{% trans "الوصف" %}</th>
+                            <th width="15%" class="text-center">{% trans "الكمية" %}</th>
+                            <th width="15%" class="text-center">{% trans "الوحدة" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for line in delivery.lines.all %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <span class="fw-bold text-dark">{{ line.product.name }}</span>
+                            </td>
+                            <td class="text-muted small">{{ line.description|default:"-" }}</td>
+                            <td class="text-center fw-bold fs-6">{{ line.quantity|floatformat:3 }}</td>
+                            <td class="text-center small">{{ line.uom.name }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card-footer bg-white small text-muted text-end">
+                {% trans "تم الإنشاء بواسطة:" %} {{ delivery.created_by }} | {{ delivery.created_at|timesince }}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if link_order_form %}
+<div class="modal fade" id="linkOrderModal" tabindex="-1" aria-labelledby="linkOrderLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" action="{% url 'sales:delivery_link_order' delivery.pk %}">
+            {% csrf_token %}
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="linkOrderLabel">{% trans "ربط بأمر بيع موجود" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info small">
+                        <i class="bi bi-info-circle-fill me-1"></i>
+                        {% trans "اختر أمر البيع الذي يخص هذه المواد. ستظهر فقط الأوامر المؤكدة لهذا العميل." %}
+                    </div>
+
+                    {{ link_order_form.as_p }}
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "إلغاء" %}</button>
+                    <button type="submit" class="btn btn-primary">{% trans "حفظ الربط" %}</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

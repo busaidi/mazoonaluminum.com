@@ -400,7 +400,7 @@ class PaymentDetailView(AccountingBaseView, DetailView):
 class PaymentDeleteView(AccountingStaffRequiredMixin, DeleteView):
     model = Payment
     success_url = reverse_lazy("accounting:payment_list")
-    template_name = "accounting/confirm_delete.html"
+    template_name = "accounting/delete.html"
 
 
 # ============================================================

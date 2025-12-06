@@ -1,0 +1,160 @@
+{% extends "sales/base_sales.html" %}
+{% load i18n humanize %}
+
+{% block sales_content %}
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="m-0 font-weight-bold text-primary">
+            <i class="bi bi-list-ul me-1"></i> {% trans "سجل المبيعات" %}
+        </h5>
+        <a href="{% url 'sales:document_create' %}" class="btn btn-primary btn-sm shadow-sm">
+            <i class="bi bi-plus-lg"></i> {% trans "مستند جديد" %}
+        </a>
+    </div>
+
+    <div class="card-body">
+        <form method="get" class="row g-2 mb-4 bg-light p-3 rounded">
+            <div class="col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" class="form-control border-start-0"
+                           placeholder="{% trans 'بحث برقم المستند، اسم العميل...' %}" value="{{ current_q }}">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select">
+                    <option value="">{% trans "-- كل الحالات --" %}</option>
+                    {% for key, label in status_choices %}
+                        <option value="{{ key }}" {% if current_status == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-dark w-100">{% trans "تصفية" %}</button>
+            </div>
+            {% if current_q or current_status %}
+            <div class="col-md-2">
+                <a href="{% url 'sales:document_list' %}" class="btn btn-outline-secondary w-100">{% trans "إلغاء الفلاتر" %}</a>
+            </div>
+            {% endif %}
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th width="15%">{% trans "الرقم" %}</th>
+                        <th width="25%">{% trans "العميل" %}</th>
+                        <th width="15%">{% trans "التاريخ" %}</th>
+                        <th width="15%">{% trans "الحالة" %}</th>
+                        <th width="15%" class="text-end">{% trans "الإجمالي" %}</th>
+                        <th width="15%" class="text-center">{% trans "التسليم" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in documents %}
+                    <tr>
+                        <td class="fw-bold">
+                            <a href="{% url 'sales:document_detail' doc.pk %}" class="text-decoration-none font-monospace">
+                                {{ doc.display_number }}
+                            </a>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-dark">{{ doc.contact.name }}</div>
+                            {% if doc.client_reference %}
+                                <small class="text-muted"><i class="bi bi-hash"></i> {{ doc.client_reference }}</small>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted small">
+                            <i class="bi bi-calendar3"></i> {{ doc.date|date:"Y-m-d" }}
+                        </td>
+                        <td>
+                            {% if doc.status == 'draft' %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary">
+                                    {% trans "مسودة" %}
+                                </span>
+                            {% elif doc.status == 'confirmed' %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success">
+                                    <i class="bi bi-check-circle-fill"></i> {% trans "أمر بيع" %}
+                                </span>
+                            {% elif doc.status == 'cancelled' %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">
+                                    {% trans "ملغي" %}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end fw-bold text-dark">
+                            {{ doc.total_amount|floatformat:3 }} <small class="text-muted">{{ doc.currency }}</small>
+                        </td>
+                        <td class="text-center">
+                            {% if doc.is_order %}
+                                {% if doc.delivery_status == 'pending' %}
+                                    <span class="badge rounded-pill bg-warning text-dark" title="{% trans 'بانتظار التسليم' %}">
+                                        <i class="bi bi-hourglass"></i>
+                                    </span>
+                                {% elif doc.delivery_status == 'partial' %}
+                                    <span class="badge rounded-pill bg-info text-dark" title="{% trans 'تسليم جزئي' %}">
+                                        <i class="bi bi-pie-chart-fill"></i>
+                                    </span>
+                                {% elif doc.delivery_status == 'delivered' %}
+                                    <span class="badge rounded-pill bg-success" title="{% trans 'تم التسليم' %}">
+                                        <i class="bi bi-check-all"></i>
+                                    </span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <div class="text-muted mb-3">
+                                <i class="bi bi-inbox fs-1"></i>
+                            </div>
+                            <h6 class="fw-bold">{% trans "لا توجد مستندات" %}</h6>
+                            <p class="text-muted small">{% trans "لم يتم العثور على سجلات تطابق بحثك." %}</p>
+                            <a href="{% url 'sales:document_create' %}" class="btn btn-sm btn-primary">
+                                {% trans "إنشاء مستند جديد" %}
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if is_paginated %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ current_q }}&status={{ current_status }}">
+                            {% trans "السابق" %}
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">{% trans "السابق" %}</span></li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ current_q }}&status={{ current_status }}">
+                            {% trans "التالي" %}
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">{% trans "التالي" %}</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

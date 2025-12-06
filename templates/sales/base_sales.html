@@ -30,71 +30,81 @@
           </a>
         </li>
 
-        {# 2. عروض الأسعار #}
+        {# 2. الكل (مستندات المبيعات) #}
         <li class="nav-item">
-          <a class="nav-link px-3 py-1 {% if 'quotation' in request.path %}active{% endif %}"
-             href="{% url 'sales:quotation_list' %}">
-             {% trans "عروض الأسعار" %}
+          <a class="nav-link px-3 py-1 {% if request.resolver_match.url_name == 'document_list' and not request.GET.status %}active{% endif %}"
+             href="{% url 'sales:document_list' %}">
+             <i class="bi bi-files me-1"></i> {% trans "الكل" %}
           </a>
         </li>
 
-        {# 3. أوامر البيع #}
+        {# 3. عروض الأسعار (فلتر: مسودة / مرسل) #}
         <li class="nav-item">
-          <a class="nav-link px-3 py-1 {% if 'orders' in request.path %}active{% endif %}"
-             href="{% url 'sales:order_list' %}">
-             {% trans "أوامر البيع" %}
+          <a class="nav-link px-3 py-1 {% if 'status=draft' in request.get_full_path %}active{% endif %}"
+             href="{% url 'sales:document_list' %}?status=draft">
+             <i class="bi bi-file-earmark-text me-1"></i> {% trans "عروض الأسعار" %}
           </a>
         </li>
 
-        {# 4. مذكرات التسليم #}
+        {# 4. أوامر البيع (فلتر: مؤكد) #}
+        <li class="nav-item">
+          <a class="nav-link px-3 py-1 {% if 'status=confirmed' in request.get_full_path %}active{% endif %}"
+             href="{% url 'sales:document_list' %}?status=confirmed">
+             <i class="bi bi-cart-check me-1"></i> {% trans "أوامر البيع" %}
+          </a>
+        </li>
+
+        {# 5. مذكرات التسليم #}
         <li class="nav-item">
           <a class="nav-link px-3 py-1 {% if 'deliveries' in request.path %}active{% endif %}"
              href="{% url 'sales:delivery_list' %}">
-             {% trans "مذكرات التسليم" %}
+             <i class="bi bi-truck me-1"></i> {% trans "مذكرات التسليم" %}
           </a>
         </li>
 
         <li class="border-start mx-2 d-none d-lg-block"></li>
 
-        {# 5. روابط مستقبلية (معطلة) #}
+        {# 6. روابط مستقبلية #}
         <li class="nav-item">
           <a class="nav-link px-3 py-1 disabled text-muted" href="#">
             {% trans "الفواتير" %}
           </a>
         </li>
-        <li class="nav-item">
-          <a class="nav-link px-3 py-1 disabled text-muted" href="#">
-            {% trans "التقارير" %}
-          </a>
-        </li>
 
-        {# 6. إجراءات سريعة (أقصى اليمين) #}
+        {# 7. إجراءات سريعة (Dropdown) #}
         <li class="nav-item dropdown ms-lg-auto">
           <a class="btn btn-primary btn-sm px-3 py-1 dropdown-toggle shadow-sm"
              data-bs-toggle="dropdown" href="#" role="button">
-            <i class="bi bi-plus-lg"></i> {% trans "إجراء سريع" %}
+            <i class="bi bi-plus-lg"></i> <span class="d-none d-md-inline">{% trans "إجراء سريع" %}</span>
           </a>
           <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
             <li>
-                <h6 class="dropdown-header text-uppercase small">{% trans "إنشاء مستند جديد" %}</h6>
+                <h6 class="dropdown-header text-uppercase small">{% trans "عمليات جديدة" %}</h6>
             </li>
+
+            {# رابط موحد للإنشاء #}
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="{% url 'sales:quotation_create' %}">
+              <a class="dropdown-item d-flex align-items-center" href="{% url 'sales:document_create' %}">
                 <i class="bi bi-file-earmark-plus text-primary me-2"></i>
-                {% trans "عرض سعر" %}
+                {% trans "مستند مبيعات جديد" %}
               </a>
             </li>
+
+            {# رابط التسليم المباشر (جديد) #}
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="{% url 'sales:order_create' %}">
-                <i class="bi bi-cart-plus text-success me-2"></i>
-                {% trans "أمر بيع" %}
+              <a class="dropdown-item d-flex align-items-center" href="{% url 'sales:delivery_create_direct' %}">
+                <i class="bi bi-lightning-charge text-warning me-2"></i>
+                {% trans "تسليم مباشر (عاجل)" %}
               </a>
             </li>
+
             <li><hr class="dropdown-divider"></li>
+
             <li>
-              <a class="dropdown-item d-flex align-items-center" href="{% url 'sales:delivery_create' %}">
-                <i class="bi bi-truck text-info me-2"></i>
-                {% trans "مذكرة تسليم" %}
+              <a class="dropdown-item d-flex align-items-center text-muted" href="{% url 'sales:document_list' %}?status=confirmed"
+                 title="{% trans 'يتم إنشاء التسليم من داخل أمر البيع المؤكد' %}">
+                <i class="bi bi-truck text-secondary me-2"></i>
+                {% trans "تسليم (من أمر بيع)" %}
               </a>
             </li>
           </ul>
@@ -104,11 +114,12 @@
     </div>
   </div>
 
-  {# ======================= SALES CONTENT ======================= #}
-  <div>
+  {# ======================= CONTENT BLOCK ======================= #}
+  <div class="fade-in">
     {% block sales_content %}{% endblock %}
   </div>
 
 </div>
 
-{% endblock %}
+{% endblock content %}
+
