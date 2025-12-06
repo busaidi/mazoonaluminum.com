@@ -40,35 +40,82 @@ class SalesDashboardView(LoginRequiredMixin, generic.TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Draft quotations
-        context["draft_quotations_count"] = SalesDocument.objects.filter(
-            status=SalesDocument.Status.DRAFT,
-            is_deleted=False,
+        base_qs = (
+            SalesDocument.objects.filter(is_deleted=False)
+            .select_related("contact")
+        )
+
+        # إجمالي المستندات والمبالغ
+        total_sales_amount = base_qs.aggregate(t=Sum("total_amount"))["t"] or 0
+        total_documents_count = base_qs.count()
+
+        # مسودات (نعتبرها عروض أسعار)
+        draft_qs = base_qs.filter(status=SalesDocument.Status.DRAFT)
+        draft_quotations_count = draft_qs.count()
+        draft_total_amount = draft_qs.aggregate(t=Sum("total_amount"))["t"] or 0
+
+        # أوامر مؤكدة
+        confirmed_qs = base_qs.filter(status=SalesDocument.Status.CONFIRMED)
+        confirmed_orders_count = confirmed_qs.count()
+        confirmed_total_amount = confirmed_qs.aggregate(t=Sum("total_amount"))["t"] or 0
+
+        # ملغية
+        cancelled_documents_count = base_qs.filter(
+            status=SalesDocument.Status.CANCELLED
         ).count()
 
-        # Confirmed orders waiting for delivery
-        context["pending_orders_count"] = SalesDocument.objects.filter(
-            status=SalesDocument.Status.CONFIRMED,
+        # أوامر مؤكدة بإنتظار التسليم / تسليم جزئي
+        pending_orders_qs = confirmed_qs.filter(
             delivery_status__in=[
                 SalesDocument.DeliveryStatus.PENDING,
                 SalesDocument.DeliveryStatus.PARTIAL,
-            ],
-            is_deleted=False,
-        ).count()
-
-        # Confirmed revenue
-        total_revenue = (
-            SalesDocument.objects.filter(
-                status=SalesDocument.Status.CONFIRMED,
-                is_deleted=False,
-            ).aggregate(t=Sum("total_amount"))["t"]
+            ]
         )
-        context["total_revenue"] = total_revenue if total_revenue else 0
+        pending_orders_count = pending_orders_qs.count()
 
-        # Recent documents
-        context["recent_documents"] = (
-            SalesDocument.objects.filter(is_deleted=False)
-            .order_by("-date", "-id")[:5]
+        # مذكرات التسليم
+        delivery_qs = (
+            DeliveryNote.objects.filter(is_deleted=False)
+            .select_related("contact", "order")
+        )
+        delivery_notes_count = delivery_qs.count()
+
+        # أحدث مستندات (عام)
+        recent_documents = base_qs.order_by("-date", "-id")[:5]
+
+        # أحدث مسودات (نستخدمها كـ "Latest quotations")
+        latest_drafts = draft_qs.order_by("-date", "-id")[:5]
+
+        # أحدث أوامر مؤكدة
+        latest_orders = confirmed_qs.order_by("-date", "-id")[:5]
+
+        # أحدث مذكرات تسليم
+        latest_deliveries = delivery_qs.order_by("-date", "-id")[:5]
+
+        # أعلى العملاء حسب إجمالي المبيعات (للمستندات المؤكدة)
+        top_customers = (
+            confirmed_qs.values("contact_id", "contact__name")
+            .annotate(total_sales=Sum("total_amount"))
+            .order_by("-total_sales")[:5]
+        )
+
+        context.update(
+            {
+                "total_sales_amount": total_sales_amount,
+                "total_documents_count": total_documents_count,
+                "draft_quotations_count": draft_quotations_count,
+                "draft_total_amount": draft_total_amount,
+                "confirmed_orders_count": confirmed_orders_count,
+                "confirmed_total_amount": confirmed_total_amount,
+                "cancelled_documents_count": cancelled_documents_count,
+                "pending_orders_count": pending_orders_count,
+                "delivery_notes_count": delivery_notes_count,
+                "recent_documents": recent_documents,
+                "latest_drafts": latest_drafts,
+                "latest_orders": latest_orders,
+                "latest_deliveries": latest_deliveries,
+                "top_customers": top_customers,
+            }
         )
 
         return context

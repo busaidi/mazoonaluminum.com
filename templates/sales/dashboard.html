@@ -1,210 +1,511 @@
 {% extends "sales/base_sales.html" %}
 {% load i18n humanize %}
 
+{% block title %}
+  {% trans "لوحة تحكم المبيعات" %}
+{% endblock %}
+
 {% block sales_content %}
 
-{# ====================== HEADER ====================== #}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center mb-3 gap-2">
-  <div>
-    <h2 class="h4 fw-bold mb-1 text-body">
-      {% trans "لوحة التحكم" %}
-    </h2>
-    <p class="text-muted mb-0 small">
-      {% trans "نظرة عامة سريعة على عروض الأسعار، أوامر البيع، وحالة التسليم." %}
-    </p>
+<div class="container-fluid">
+
+  {# ===== القسم العلوي: عنوان + كارد تحكم ===== #}
+  <div class="mb-4">
+
+    <div class="card border-0 shadow-sm mb-3 bg-body">
+      <div class="card-body d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div>
+          <h1 class="h4 fw-bold mb-1 text-body">
+            {% trans "لوحة التحكم في المبيعات" %}
+          </h1>
+          <p class="text-secondary small mb-0">
+            {% trans "نظرة سريعة على عروض الأسعار وأوامر البيع ومذكرات التسليم داخل نظام مزون ERP." %}
+          </p>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+          <a href="{% url 'sales:document_create' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-file-earmark-plus ms-1"></i>
+            {% trans "مستند مبيعات جديد" %}
+          </a>
+
+          <a href="{% url 'sales:document_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-list-ul ms-1"></i>
+            {% trans "كل مستندات المبيعات" %}
+          </a>
+
+          <a href="{% url 'sales:delivery_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-truck ms-1"></i>
+            {% trans "مذكرات التسليم" %}
+          </a>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <div class="d-flex gap-2 flex-wrap">
-    <a href="{% url 'sales:document_create' %}" class="btn btn-primary btn-sm shadow-sm">
-      <i class="bi bi-plus-lg me-1"></i>
-      {% trans "مستند مبيعات جديد" %}
-    </a>
-    <a href="{% url 'sales:delivery_create_direct' %}" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-lightning-charge me-1"></i>
-      {% trans "تسليم مباشر" %}
-    </a>
-  </div>
-</div>
+  {# ===== الصف الأول: كروت إجمالية (مثل القديم) ===== #}
+  <div class="row g-3 mb-4">
 
-{# ====================== KPI CARDS ====================== #}
-<div class="row g-3 mb-4">
-  {# مسودات عروض الأسعار #}
-  <div class="col-md-4">
-    <div class="card shadow-sm border-0 h-100 border-start border-4 border-warning">
-      <div class="card-body py-3">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="text-muted text-uppercase small mb-1">
-              {% trans "مسودات العروض" %}
-            </h6>
-            <div class="d-flex align-items-baseline gap-1">
-              <span class="h4 fw-bold mb-0 text-body">{{ draft_quotations_count }}</span>
-              <span class="text-muted small">{% trans "مستند" %}</span>
+    <div class="col-md-3 col-sm-6">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body d-flex flex-column justify-content-between">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary-emphasis"
+                 style="width: 2.4rem; height: 2.4rem;">
+              <i class="bi bi-cash-coin"></i>
             </div>
+            <span class="text-secondary small text-end">
+              {% trans "إجمالي مستندات المبيعات" %}
+            </span>
           </div>
-          <div class="bg-warning bg-opacity-10 p-3 rounded-circle">
-            <i class="bi bi-file-earmark-text text-warning fs-4"></i>
+          <div class="fs-4 fw-bold mb-1">
+            {{ total_sales_amount|default:0|floatformat:3 }} <span class="fs-6">OMR</span>
           </div>
+          <div class="small text-secondary">
+            {% blocktrans with c=total_documents_count %}
+              عدد المستندات: {{ c }}
+            {% endblocktrans %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body d-flex flex-column justify-content-between">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-info-subtle text-info-emphasis"
+                 style="width: 2.4rem; height: 2.4rem;">
+              <i class="bi bi-file-earmark-text"></i>
+            </div>
+            <span class="text-secondary small text-end">
+              {% trans "مسودات / عروض أسعار" %}
+            </span>
+          </div>
+          <div class="fs-3 fw-bold mb-1">
+            {{ draft_quotations_count|default:0 }}
+          </div>
+          <div class="small text-secondary">
+            {% blocktrans with t=draft_total_amount|default:0|floatformat:3 %}
+              إجمالي القيمة: {{ t }} OMR
+            {% endblocktrans %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body d-flex flex-column justify-content-between">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success-subtle text-success-emphasis"
+                 style="width: 2.4rem; height: 2.4rem;">
+              <i class="bi bi-bag-check"></i>
+            </div>
+            <span class="text-secondary small text-end">
+              {% trans "أوامر بيع مؤكدة" %}
+            </span>
+          </div>
+          <div class="fs-3 fw-bold mb-1">
+            {{ confirmed_orders_count|default:0 }}
+          </div>
+          <div class="small text-secondary">
+            {% blocktrans with t=confirmed_total_amount|default:0|floatformat:3 %}
+              إجمالي القيمة: {{ t }} OMR
+            {% endblocktrans %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body d-flex flex-column justify-content-between">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-warning-subtle text-warning-emphasis"
+                 style="width: 2.4rem; height: 2.4rem;">
+              <i class="bi bi-truck"></i>
+            </div>
+          <span class="text-secondary small text-end">
+            {% trans "مذكرات التسليم" %}
+          </span>
+        </div>
+        <div class="fs-3 fw-bold mb-1">
+          {{ delivery_notes_count|default:0 }}
+        </div>
+        <div class="small text-secondary">
+          {% blocktrans with c=pending_orders_count|default:0 %}
+            أوامر بإنتظار التسليم / جزئي: {{ c }}
+          {% endblocktrans %}
         </div>
       </div>
     </div>
   </div>
 
-  {# أوامر قيد التسليم #}
-  <div class="col-md-4">
-    <div class="card shadow-sm border-0 h-100 border-start border-4 border-primary">
-      <div class="card-body py-3">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="text-muted text-uppercase small mb-1">
-              {% trans "طلبات قيد التسليم" %}
-            </h6>
-            <div class="d-flex align-items-baseline gap-1">
-              <span class="h4 fw-bold mb-0 text-body">{{ pending_orders_count }}</span>
-              <span class="text-muted small">{% trans "أمر بيع" %}</span>
+  </div>
+
+  {# ===== الصف الثاني: حالة الوثائق (Draft / Confirmed / Pending / Cancelled) ===== #}
+  <div class="row g-3 mb-4">
+
+    <div class="col-md-3 col-sm-6">
+      <div class="card h-100 border-0 shadow-sm bg-body-tertiary">
+        <div class="card-body d-flex flex-column justify-content-between">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-body text-secondary"
+                 style="width: 2.4rem; height: 2.4rem;">
+              <i class="bi bi-pencil-square"></i>
             </div>
+            <span class="text-secondary small text-end">
+              {% trans "مسودات" %}
+            </span>
           </div>
-          <div class="bg-primary bg-opacity-10 p-3 rounded-circle">
-            <i class="bi bi-truck text-primary fs-4"></i>
+          <div class="fs-3 fw-bold mb-1">
+            {{ draft_quotations_count|default:0 }}
+          </div>
+          <div class="small text-secondary">
+            {% trans "مستندات قيد الإعداد." %}
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  {# الإيرادات المؤكدة #}
-  <div class="col-md-4">
-    <div class="card shadow-sm border-0 h-100 border-start border-4 border-success">
-      <div class="card-body py-3">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="text-muted text-uppercase small mb-1">
-              {% trans "إيرادات مؤكدة" %}
-            </h6>
-            <div class="d-flex align-items-baseline gap-1">
-              <span class="h4 fw-bold mb-0 text-body">
-                {{ total_revenue|floatformat:3|intcomma }}
-              </span>
-              <span class="text-muted small">OMR</span>
+    <div class="col-md-3 col-sm-6">
+      <div class="card h-100 border-0 shadow-sm bg-body-tertiary">
+        <div class="card-body d-flex flex-column justify-content-between">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-body text-success"
+                 style="width: 2.4rem; height: 2.4rem;">
+              <i class="bi bi-check2-square"></i>
             </div>
+            <span class="text-secondary small text-end">
+              {% trans "مؤكدة" %}
+            </span>
           </div>
-          <div class="bg-success bg-opacity-10 p-3 rounded-circle">
-            <i class="bi bi-currency-dollar text-success fs-4"></i>
+          <div class="fs-3 fw-bold mb-1">
+            {{ confirmed_orders_count|default:0 }}
+          </div>
+          <div class="small text-secondary">
+            {% trans "مستندات تم تأكيدها من العميل." %}
           </div>
         </div>
       </div>
     </div>
-  </div>
-</div>
 
-{# ====================== RECENT DOCUMENTS TABLE ====================== #}
-<div class="card shadow-sm border-0">
-  <div class="card-header bg-body py-3 d-flex justify-content-between align-items-center">
-    <h5 class="mb-0 fw-bold text-body">
-      {% trans "آخر مستندات المبيعات" %}
-    </h5>
-    <a href="{% url 'sales:document_list' %}" class="btn btn-sm btn-outline-secondary">
-      <i class="bi bi-list-ul me-1"></i>
-      {% trans "عرض الكل" %}
-    </a>
-  </div>
+    <div class="col-md-3 col-sm-6">
+      <div class="card h-100 border-0 shadow-sm bg-body-tertiary">
+        <div class="card-body d-flex flex-column justify-content-between">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-body text-primary"
+                 style="width: 2.4rem; height: 2.4rem;">
+              <i class="bi bi-box-arrow-down"></i>
+            </div>
+            <span class="text-secondary small text-end">
+              {% trans "في إنتظار التسليم" %}
+            </span>
+          </div>
+          <div class="fs-3 fw-bold mb-1">
+            {{ pending_orders_count|default:0 }}
+          </div>
+          <div class="small text-secondary">
+            {% trans "أوامر تحتاج إلى استكمال التسليم." %}
+          </div>
+        </div>
+      </div>
+    </div>
 
-  <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0">
-      <thead class="table-light">
-        <tr>
-          <th class="small text-muted">{% trans "الرقم" %}</th>
-          <th class="small text-muted">{% trans "العميل" %}</th>
-          <th class="small text-muted">{% trans "التاريخ" %}</th>
-          <th class="small text-muted">{% trans "حالة المستند" %}</th>
-          <th class="small text-muted">{% trans "حالة التسليم" %}</th>
-          <th class="text-end small text-muted">{% trans "القيمة" %}</th>
-          <th class="text-end small text-muted"></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for doc in recent_documents %}
-          <tr>
-            <td class="fw-semibold font-monospace">
-              {{ doc.display_number }}
-            </td>
-            <td>
-              {{ doc.contact.name }}
-            </td>
-            <td>
-              {{ doc.date|date:"Y-m-d" }}
-            </td>
-            <td>
-              {# حالة المستند (status) #}
-              {% if doc.status == 'draft' %}
-                <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle">
-                  {% trans "مسودة" %}
-                </span>
-              {% elif doc.status == 'sent' %}
-                <span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle">
-                  {% trans "مرسل" %}
-                </span>
-              {% elif doc.status == 'confirmed' %}
-                <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">
-                  {% trans "مؤكد" %}
-                </span>
-              {% elif doc.status == 'cancelled' %}
-                <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle">
-                  {% trans "ملغي" %}
-                </span>
-              {% else %}
-                <span class="badge bg-light text-muted">
-                  {{ doc.get_status_display }}
-                </span>
-              {% endif %}
-            </td>
-            <td>
-              {# حالة التسليم (delivery_status) #}
-              {% if doc.delivery_status == 'pending' %}
-                <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle">
-                  {% trans "قيد الانتظار" %}
-                </span>
-              {% elif doc.delivery_status == 'partial' %}
-                <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle">
-                  {% trans "تسليم جزئي" %}
-                </span>
-              {% elif doc.delivery_status == 'delivered' %}
-                <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">
-                  {% trans "تم التسليم" %}
-                </span>
-              {% else %}
-                <span class="badge bg-light text-muted">
-                  {{ doc.get_delivery_status_display }}
-                </span>
-              {% endif %}
-            </td>
-            <td class="text-end font-monospace">
-              {{ doc.total_amount|floatformat:3 }}
-            </td>
-            <td class="text-end">
-              <a href="{% url 'sales:document_detail' doc.pk %}"
-                 class="btn btn-sm btn-light border">
-                <i class="bi bi-eye"></i>
-              </a>
-            </td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="7" class="text-center py-4 text-muted">
-              {% trans "لا توجد بيانات لعرضها في الوقت الحالي." %}
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="col-md-3 col-sm-6">
+      <div class="card h-100 border-0 shadow-sm bg-body-tertiary">
+        <div class="card-body d-flex flex-column justify-content-between">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-body text-danger"
+                 style="width: 2.4rem; height: 2.4rem;">
+              <i class="bi bi-x-octagon"></i>
+            </div>
+            <span class="text-secondary small text-end">
+              {% trans "ملغاة" %}
+            </span>
+          </div>
+          <div class="fs-3 fw-bold mb-1">
+            {{ cancelled_documents_count|default:0 }}
+          </div>
+          <div class="small text-secondary">
+            {% trans "مستندات تم إلغاءها ولا تدخل في الإجماليات." %}
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <div class="card-footer bg-body text-center border-top-0 py-3">
-    <a href="{% url 'sales:document_list' %}" class="text-decoration-none fw-semibold small">
-      {% trans "عرض السجل الكامل" %}
-      <i class="bi bi-arrow-left-short"></i>
-    </a>
+  {# ===== الصف الثالث: آخر المستندات + أفضل العملاء ===== #}
+  <div class="row g-3 mb-4">
+
+    {# أحدث مسودات (نعتبرها عروض أسعار) #}
+    <div class="col-lg-4">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-body border-0 d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-info-subtle text-info-emphasis"
+                  style="width: 2rem; height: 2rem;">
+              <i class="bi bi-file-earmark-text small"></i>
+            </span>
+            <div>
+              <h2 class="h6 fw-bold mb-0">
+                {% trans "آخر المسودات" %}
+              </h2>
+              <p class="text-secondary small mb-0">
+                {% trans "أحدث عروض الأسعار / المسودات المسجلة في النظام." %}
+              </p>
+            </div>
+          </div>
+          <a href="{% url 'sales:document_list' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-list-ul ms-1"></i>
+            {% trans "عرض الكل" %}
+          </a>
+        </div>
+        <div class="card-body">
+          {% if latest_drafts %}
+            <div class="table-responsive">
+              <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="small text-muted">{% trans "الرقم" %}</th>
+                    <th class="small text-muted">{% trans "التاريخ" %}</th>
+                    <th class="small text-muted">{% trans "العميل" %}</th>
+                    <th class="small text-muted text-end">{% trans "الإجمالي" %}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for doc in latest_drafts %}
+                    <tr>
+                      <td class="small text-nowrap">
+                        <a href="{% url 'sales:document_detail' doc.pk %}"
+                           class="link-body-emphasis text-decoration-none"
+                           dir="ltr">
+                          {{ doc.display_number }}
+                        </a>
+                      </td>
+                      <td class="small text-nowrap">
+                        {{ doc.date }}
+                      </td>
+                      <td class="small">
+                        {{ doc.contact }}
+                      </td>
+                      <td class="small text-end text-nowrap">
+                        {{ doc.total_amount|default:0|floatformat:3 }} OMR
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="text-secondary small mb-0">
+              {% trans "لا توجد مسودات حديثة." %}
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# أحدث أوامر بيع مؤكدة #}
+    <div class="col-lg-4">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-body border-0 d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success-subtle text-success-emphasis"
+                  style="width: 2rem; height: 2rem;">
+              <i class="bi bi-bag-check small"></i>
+            </span>
+            <div>
+              <h2 class="h6 fw-bold mb-0">
+                {% trans "آخر أوامر البيع المؤكدة" %}
+              </h2>
+              <p class="text-secondary small mb-0">
+                {% trans "أحدث أوامر البيع التي تم تأكيدها." %}
+              </p>
+            </div>
+          </div>
+          <a href="{% url 'sales:document_list' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-list-ul ms-1"></i>
+            {% trans "عرض الكل" %}
+          </a>
+        </div>
+        <div class="card-body">
+          {% if latest_orders %}
+            <div class="table-responsive">
+              <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="small text-muted">{% trans "الرقم" %}</th>
+                    <th class="small text-muted">{% trans "التاريخ" %}</th>
+                    <th class="small text-muted">{% trans "العميل" %}</th>
+                    <th class="small text-muted text-end">{% trans "الإجمالي" %}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for doc in latest_orders %}
+                    <tr>
+                      <td class="small text-nowrap">
+                        <a href="{% url 'sales:document_detail' doc.pk %}"
+                           class="link-body-emphasis text-decoration-none"
+                           dir="ltr">
+                          {{ doc.display_number }}
+                        </a>
+                      </td>
+                      <td class="small text-nowrap">
+                        {{ doc.date }}
+                      </td>
+                      <td class="small">
+                        {{ doc.contact }}
+                      </td>
+                      <td class="small text-end text-nowrap">
+                        {{ doc.total_amount|default:0|floatformat:3 }} OMR
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="text-secondary small mb-0">
+              {% trans "لا توجد أوامر مؤكدة حديثًا." %}
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# آخر مذكرات التسليم + أفضل العملاء #}
+    <div class="col-lg-4">
+
+      <div class="card shadow-sm border-0 mb-3">
+        <div class="card-header bg-body border-0 d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-warning-subtle text-warning-emphasis"
+                  style="width: 2rem; height: 2rem;">
+              <i class="bi bi-truck small"></i>
+            </span>
+            <div>
+              <h2 class="h6 fw-bold mb-0">
+                {% trans "آخر مذكرات التسليم" %}
+              </h2>
+              <p class="text-secondary small mb-0">
+                {% trans "أحدث عمليات التسليم المسجلة." %}
+              </p>
+            </div>
+          </div>
+          <a href="{% url 'sales:delivery_list' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-list-ul ms-1"></i>
+            {% trans "عرض الكل" %}
+          </a>
+        </div>
+        <div class="card-body">
+          {% if latest_deliveries %}
+            <div class="table-responsive">
+              <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="small text-muted">{% trans "الرقم" %}</th>
+                    <th class="small text-muted">{% trans "التاريخ" %}</th>
+                    <th class="small text-muted">{% trans "العميل" %}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for d in latest_deliveries %}
+                    <tr>
+                      <td class="small text-nowrap">
+                        <a href="{% url 'sales:delivery_detail' d.pk %}"
+                           class="link-body-emphasis text-decoration-none"
+                           dir="ltr">
+                          {{ d.display_number }}
+                        </a>
+                      </td>
+                      <td class="small text-nowrap">
+                        {{ d.date }}
+                      </td>
+                      <td class="small">
+                        {{ d.contact }}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="text-secondary small mb-0">
+              {% trans "لا توجد مذكرات تسليم حديثة." %}
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h2 class="h6 fw-bold mb-2">
+            {% trans "أفضل العملاء حسب إجمالي المبيعات" %}
+          </h2>
+
+          {% if top_customers %}
+            <div class="table-responsive">
+              <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="small text-muted">{% trans "العميل" %}</th>
+                    <th class="small text-muted text-end">{% trans "إجمالي المبيعات" %}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for c in top_customers %}
+                    <tr>
+                      <td class="small">
+                        {{ c.contact__name }}
+                      </td>
+                      <td class="small text-end text-nowrap">
+                        {{ c.total_sales|default:0|floatformat:3 }} OMR
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="text-secondary small mb-0">
+              {% trans "لا توجد بيانات كافية لعرض أفضل العملاء." %}
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
   </div>
+
+  {# ===== شريط الأكشن السريع (مثل Quick Actions) ===== #}
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
+      <span class="text-secondary small d-inline-flex align-items-center">
+        <i class="bi bi-lightning-charge ms-1"></i>
+        {% trans "إجراءات سريعة" %}
+      </span>
+
+      <a href="{% url 'sales:document_create' %}" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-file-earmark-plus ms-1"></i>
+        {% trans "مستند مبيعات جديد" %}
+      </a>
+
+      <a href="{% url 'sales:document_list' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-list-ul ms-1"></i>
+        {% trans "كل مستندات المبيعات" %}
+      </a>
+
+      <a href="{% url 'sales:delivery_list' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-truck ms-1"></i>
+        {% trans "مذكرات التسليم" %}
+      </a>
+    </div>
+  </div>
+
 </div>
 
 {% endblock %}
