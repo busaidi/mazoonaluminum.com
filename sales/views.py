@@ -1,11 +1,14 @@
 # sales/views.py
 
+import json
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Sum, Q
-from django.shortcuts import get_object_or_404, redirect
+from django.forms.models import inlineformset_factory
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy, reverse
 from django.utils.translation import gettext_lazy as _
 from django.views import generic
@@ -13,15 +16,16 @@ from django.views import generic
 from core.models import AuditLog
 from inventory.models import Product
 
-from .models import SalesDocument, SalesLine, DeliveryNote, DeliveryLine
+from .models import SalesDocument, SalesLine, DeliveryNote, DeliveryLine, DECIMAL_ZERO
 from .forms import (
     SalesDocumentForm,
     SalesLineFormSet,
     DeliveryNoteForm,
     DeliveryLineFormSet,
+    DeliveryFromOrderLineFormSet,  # ✅ مهم لهذا الفيو
     DirectDeliveryLineFormSet,
     DirectDeliveryNoteForm,
-    LinkOrderForm,
+    LinkOrderForm, DeliveryLineForm,
 )
 from .services import (
     SalesService,
@@ -172,7 +176,7 @@ class SalesDocumentMixin:
     def get_context_data(self, **kwargs):
         data = super().get_context_data(**kwargs)
 
-        # Pre-load products data for JS (UOMs, default price, etc.)
+        # تحميل بيانات المنتجات (سعر + UOM) للجافاسكربت
         products = Product.objects.filter(is_active=True).select_related(
             "base_uom", "alt_uom"
         )
@@ -189,7 +193,8 @@ class SalesDocumentMixin:
             }
         data["products_dict"] = products_dict
 
-        if self.request.POST:
+        # formset للأسطر
+        if self.request.method == "POST":
             data["lines"] = SalesLineFormSet(
                 self.request.POST,
                 instance=self.object,
@@ -199,37 +204,39 @@ class SalesDocumentMixin:
 
         return data
 
+    def form_invalid(self, form):
+        """
+        لو الفورم الأساسي نفسه فيه أخطاء (client, date, ...),
+        نعيد نفس الصفحة مع عرض الأخطاء + الفورمسيت.
+        """
+        context = self.get_context_data(form=form)
+        return self.render_to_response(context)
+
     def form_valid(self, form):
         """
-        Save header + lines in a single transaction.
-        Do NOT call super().form_valid(form) to avoid double save.
+        حفظ الهيدر + الأسطر في ترانزاكشن واحدة.
         """
         context = self.get_context_data()
         lines = context["lines"]
 
         if not lines.is_valid():
-            # Re-render with errors from formset
+            # إعادة عرض الصفحة مع أخطاء الفورمسيت
             return self.render_to_response(self.get_context_data(form=form))
 
-        # نحدد هل هذا إنشاء أم تعديل قبل الحفظ
         is_create = self.object is None or not getattr(self.object, "pk", None)
 
         with transaction.atomic():
-            # Save document header
             self.object = form.save(commit=False)
             if is_create:
                 self.object.created_by = self.request.user
             self.object.updated_by = self.request.user
             self.object.save()
 
-            # Save lines
             lines.instance = self.object
             lines.save()
 
-            # Recompute totals based on saved lines
             self.object.recompute_totals(save=True)
 
-            # -------- Audit + Notification (اختياري) --------
             action = AuditLog.Action.CREATE if is_create else AuditLog.Action.UPDATE
             if is_create:
                 msg = _("تم إنشاء مستند مبيعات رقم %(number)s.") % {
@@ -246,7 +253,6 @@ class SalesDocumentMixin:
                 action=action,
                 message=msg,
                 extra={
-                    # "kind": self.object.kind,  # تم حذفها لأن الحقل غير موجود
                     "status": self.object.status,
                     "total_amount": float(self.object.total_amount or 0),
                 },
@@ -255,7 +261,6 @@ class SalesDocumentMixin:
 
         messages.success(self.request, _("تم حفظ المستند بنجاح."))
         return redirect(self.get_success_url())
-
 
 
 # ===================================================================
@@ -267,9 +272,7 @@ class SalesCreateView(LoginRequiredMixin, SalesDocumentMixin, generic.CreateView
         return reverse("sales:document_detail", kwargs={"pk": self.object.pk})
 
 
-class SalesDocumentUpdateView(
-    LoginRequiredMixin, SalesDocumentMixin, generic.UpdateView
-):
+class SalesDocumentUpdateView(LoginRequiredMixin, SalesDocumentMixin, generic.UpdateView):
     def get_success_url(self):
         return reverse("sales:document_detail", kwargs={"pk": self.object.pk})
 
@@ -355,6 +358,7 @@ def create_delivery_from_order_view(request, pk):
         return redirect("sales:document_detail", pk=pk)
 
 
+@transaction.atomic
 def cancel_document_view(request, pk):
     document = get_object_or_404(SalesDocument, pk=pk)
     try:
@@ -377,6 +381,7 @@ def cancel_document_view(request, pk):
     return redirect("sales:document_detail", pk=pk)
 
 
+@transaction.atomic
 def restore_document_view(request, pk):
     document = get_object_or_404(SalesDocument, pk=pk)
     try:
@@ -488,6 +493,7 @@ class DirectDeliveryCreateView(LoginRequiredMixin, generic.CreateView):
                 "alt_uom_name": p.alt_uom.name if p.alt_uom else "",
             }
         data["products_dict"] = products_dict
+        data["products_json"] = json.dumps(products_dict)
 
         if self.request.POST:
             data["lines"] = DirectDeliveryLineFormSet(self.request.POST)
@@ -500,7 +506,9 @@ class DirectDeliveryCreateView(LoginRequiredMixin, generic.CreateView):
         lines = context["lines"]
 
         if not lines.is_valid():
-            return self.render_to_response(self.get_context_data(form=form))
+            context["form"] = form
+            context["lines"] = lines
+            return self.render_to_response(context)
 
         with transaction.atomic():
             self.object = form.save(commit=False)
@@ -626,3 +634,141 @@ def link_delivery_to_order_view(request, pk):
 
     messages.error(request, _("حدث خطأ أثناء الربط."))
     return redirect("sales:delivery_detail", pk=pk)
+
+
+# ===================================================================
+# 6. Delivery From Order (CreateView + ModelFormSet)
+# ===================================================================
+
+@transaction.atomic
+def delivery_from_order_create_view(request, pk):
+    """
+    إنشاء مذكرة تسليم من أمر بيع:
+
+    - يعرض كل سطور أمر البيع كبنود في الجدول.
+    - يملأ الكمية الافتراضية من remaining_quantity.
+    - يمنع إدخال كمية أكبر من المتبقي.
+    """
+    order = get_object_or_404(SalesDocument, pk=pk)
+
+    # سطور أمر البيع اللي بنبني عليها الفورمسيت
+    sales_lines_qs = (
+        order.lines
+        .select_related("product", "uom")
+        .order_by("id")
+    )
+    lines_count = sales_lines_qs.count()
+
+    # 👈 نبني FormSet مخصص بعدد سطور الأمر
+    DeliveryFromOrderFormSet = inlineformset_factory(
+        DeliveryNote,
+        DeliveryLine,
+        form=DeliveryLineForm,
+        extra=lines_count,   # نفس عدد السطور
+        can_delete=False,
+    )
+
+    if request.method == "POST":
+        # مهم: الinstance فيه order + contact عشان ما يطلع خطأ contact
+        delivery_instance = DeliveryNote(
+            order=order,
+            contact=order.contact,
+        )
+        form = DeliveryNoteForm(request.POST, instance=delivery_instance)
+
+        lines_formset = DeliveryFromOrderFormSet(
+            request.POST,
+            instance=delivery_instance,
+        )
+
+        # أولاً نتأكد أن الفورم والفورمسيت صحيحين
+        if form.is_valid() and lines_formset.is_valid():
+            has_qty_error = False
+
+            # 🔒 منع إدخال كمية أكبر من المتبقي
+            for line_form in lines_formset.forms:
+                if not line_form.cleaned_data:
+                    continue
+
+                sales_line = line_form.cleaned_data.get("sales_line")
+                qty = line_form.cleaned_data.get("quantity")
+
+                # سطر فاضي أو كمية صفرية نتجاهله
+                if not sales_line or qty in (None, DECIMAL_ZERO):
+                    continue
+
+                if qty > sales_line.remaining_quantity:
+                    line_form.add_error(
+                        "quantity",
+                        _(
+                            "لا يمكن تسليم كمية أكبر من الكمية المتبقية (%(remaining)s)."
+                        )
+                        % {"remaining": sales_line.remaining_quantity},
+                    )
+                    has_qty_error = True
+
+            if has_qty_error:
+                # نعيد عرض الصفحة مع الأخطاء
+                context = {
+                    "form": form,
+                    "lines": lines_formset,
+                    "order": order,
+                }
+                return render(request, "sales/delivery/from_order_form.html", context)
+
+            # ✅ الحفظ الفعلي
+            with transaction.atomic():
+                delivery = form.save(commit=False)
+
+                # order/contact موجودين في الinstance من قبل
+                if request.user.is_authenticated:
+                    delivery.created_by = request.user
+                    delivery.updated_by = request.user
+                delivery.save()
+
+                lines_formset.instance = delivery
+                lines_formset.save()
+
+                # تحديث حالة التسليم للأمر
+                order.recompute_delivery_status(save=True)
+
+            messages.success(
+                request,
+                _("تم إنشاء مذكرة تسليم مرتبطة بأمر البيع %(number)s.")
+                % {"number": order.display_number},
+            )
+            return redirect("sales:delivery_detail", pk=delivery.pk)
+
+        # لو الفورم أو الفورمسيت فيهم أخطاء
+        context = {
+            "form": form,
+            "lines": lines_formset,
+            "order": order,
+        }
+        return render(request, "sales/delivery/from_order_form.html", context)
+
+    else:
+        # GET: نبني الفورم + الفورمسيت مع initial من سطور الأمر
+        delivery_instance = DeliveryNote(
+            order=order,
+            contact=order.contact,
+        )
+        form = DeliveryNoteForm(instance=delivery_instance)
+
+        lines_formset = DeliveryFromOrderFormSet(instance=delivery_instance)
+
+        # نعبي initial لكل فورم من سطر الأمر المقابل
+        for form_line, sl in zip(lines_formset.forms, sales_lines_qs):
+            form_line.initial["sales_line"] = sl.pk
+            form_line.initial["product"] = sl.product
+            form_line.initial["uom"] = sl.uom
+            form_line.initial["quantity"] = sl.remaining_quantity
+            form_line.initial["description"] = sl.description or ""
+
+        context = {
+            "form": form,
+            "lines": lines_formset,
+            "order": order,
+        }
+        return render(request, "sales/delivery/from_order_form.html", context)
+

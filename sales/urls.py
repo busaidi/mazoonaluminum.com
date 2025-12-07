@@ -23,10 +23,10 @@ urlpatterns = [
     path("documents/<int:pk>/restore/", views.restore_document_view, name="document_restore"),
     path("documents/<int:pk>/delete/", views.SalesDocumentDeleteView.as_view(), name="document_delete"),
 
-    # التسليم المرتبط بأمر بيع
+    # ✅ إنشاء مذكرة تسليم من أمر بيع (CBV)
     path(
         "documents/<int:pk>/create-delivery/",
-        views.create_delivery_from_order_view,
+        views.delivery_from_order_create_view,
         name="document_create_delivery",
     ),
 

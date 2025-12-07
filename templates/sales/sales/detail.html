@@ -114,12 +114,13 @@
         {% endif %}
 
         {% if document.is_order and document.delivery_status != 'delivered' %}
-          <a href="{% url 'sales:document_create_delivery' document.pk %}"
-             class="btn btn-info btn-sm text-white">
-            <i class="bi bi-truck me-1"></i>
-            {% trans "تسليم مواد" %}
-          </a>
-        {% endif %}
+  <a href="{% url 'sales:document_create_delivery' document.pk %}"
+     class="btn btn-info btn-sm text-white">
+    <i class="bi bi-truck me-1"></i>
+    {% trans "تسليم مواد" %}
+  </a>
+{% endif %}
+
 
         {% if document.status != 'cancelled' %}
           <a href="{% url 'sales:document_cancel' document.pk %}"

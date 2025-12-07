@@ -81,23 +81,19 @@ class SalesService:
     @staticmethod
     @transaction.atomic
     def create_delivery_note(
-        order: SalesDocument,
-        lines_data: list | None = None,
-        *,
-        actor=None,  # user (اختياري)
+            order: SalesDocument,
+            lines_data: list | None = None,
+            *,
+            actor=None,  # user (اختياري)
     ) -> DeliveryNote:
         """
         إنشاء مذكرة تسليم بناءً على أمر بيع مؤكد.
 
         :param order: مستند مبيعات بحالة CONFIRMED
-        :param lines_data: قائمة اختيارية من الدكت:
-            [
-              {"sales_line_id": 123, "quantity": "5.000"},
-              ...
-            ]
-            إذا لم تُمرَّر، سيتم إنشاء تسليم لكل الكميات المتبقية بالكامل.
+        :param lines_data: قائمة اختيارية من الدكت للتسليم الجزئي:
+            [{"sales_line_id": 123, "quantity": "5.000"}, ...]
         """
-        # 1. التحقق: نعتمد على الحالة الآن (بدل is_order/ kind)
+        # 1. التحقق: نعتمد على الحالة
         if order.status != SalesDocument.Status.CONFIRMED:
             raise ValidationError(
                 _("يجب أن يكون المستند أمر بيع مؤكد لإنشاء مذكرة تسليم.")
@@ -112,6 +108,17 @@ class SalesService:
             created_by=actor if getattr(actor, "is_authenticated", False) else None,
         )
 
+        # --- تحسين الأداء (Optimization) ---
+        # نحول القائمة إلى قاموس (Dictionary) لتسريع البحث من O(N) إلى O(1)
+        # المفتاح هو ID السطر (كنص لضمان التوافق)
+        lines_map = {}
+        if lines_data:
+            for item in lines_data:
+                sid = str(item.get("sales_line_id", ""))
+                if sid:
+                    lines_map[sid] = item
+        # -----------------------------------
+
         # 3. معالجة البنود
         items_created = 0
         order_lines = order.lines.all()
@@ -119,24 +126,23 @@ class SalesService:
         for line in order_lines:
             remaining = line.remaining_quantity
 
-            # تخطي الأسطر المكتملة
+            # تخطي الأسطر المكتملة (التي رصيدها صفر)
             if remaining <= 0:
                 continue
 
             qty_to_deliver = remaining
 
             # دعم التسليم الجزئي المخصص (إذا تم تمرير lines_data)
-            if lines_data:
-                target_data = next(
-                    (item for item in lines_data if item["sales_line_id"] == line.id),
-                    None,
-                )
+            if lines_data is not None:
+                # نبحث في الـ Map بدلاً من البحث في القائمة
+                target_data = lines_map.get(str(line.id))
+
                 if not target_data:
-                    # هذا السطر لم يتم اختياره للتسليم
+                    # هذا السطر لم يتم اختياره من قبل المستخدم، لذا نتخطاه
                     continue
 
                 try:
-                    qty_to_deliver = Decimal(target_data["quantity"])
+                    qty_to_deliver = Decimal(str(target_data["quantity"]))
                 except (KeyError, ValueError, TypeError):
                     raise ValidationError(
                         _(
@@ -145,15 +151,21 @@ class SalesService:
                         % {"product": line.product or line.description}
                     )
 
+            # التحقق من تجاوز الكمية المتبقية
             if qty_to_deliver > remaining:
                 raise ValidationError(
                     _(
-                        "الكمية المراد تسليمها للمنتج %(product)s "
-                        "تتجاوز الكمية المتبقية في أمر البيع."
+                        "الكمية المراد تسليمها للمنتج %(product)s (%(qty)s) "
+                        "تتجاوز الكمية المتبقية (%(rem)s)."
                     )
-                    % {"product": line.product or line.description}
+                    % {
+                        "product": line.product or line.description,
+                        "qty": qty_to_deliver,
+                        "rem": remaining
+                    }
                 )
 
+            # إنشاء بند التسليم
             if qty_to_deliver > 0:
                 DeliveryLine.objects.create(
                     delivery=delivery,
@@ -165,17 +177,18 @@ class SalesService:
                 )
                 items_created += 1
 
+        # التحقق النهائي: هل تم إنشاء أي بنود؟
         if items_created == 0:
-            # لا يوجد ما يُسلّم فعليًا، احذف المسودة
+            # لا يوجد ما يُسلّم فعليًا، احذف المسودة لتجنب وجود مستندات فارغة
             delivery.delete()
-            raise ValidationError(
-                _(
-                    "لم يتم إنشاء مذكرة تسليم لأن جميع الكميات قد تم تسليمها بالفعل "
-                    "أو لم يتم اختيار أي بنود للتسليم."
-                )
-            )
+            msg = _("لم يتم إنشاء مذكرة تسليم.")
+            if lines_data:
+                msg += _(" لم يتم اختيار أي بنود، أو الكميات المدخلة غير صحيحة.")
+            else:
+                msg += _(" جميع الكميات في هذا الأمر تم تسليمها بالفعل.")
+            raise ValidationError(msg)
 
-        # 4. Audit Log بسيط لمذكرة التسليم
+        # 4. Audit Log
         log_delivery_note_action(
             user=actor,
             delivery=delivery,

@@ -1,6 +1,7 @@
 # sales/forms.py
 from django import forms
-from django.forms import inlineformset_factory
+from django.forms import inlineformset_factory, modelformset_factory
+from django.forms.formsets import formset_factory
 from django.utils.translation import gettext_lazy as _
 
 from .models import SalesDocument, SalesLine, DeliveryNote, DeliveryLine
@@ -101,22 +102,6 @@ class SalesDocumentForm(forms.ModelForm):
 # ===================================================================
 
 class SalesLineForm(forms.ModelForm):
-    """
-    Single sales line form (used inside a formset).
-    UI-only total_display for showing the computed line_total.
-    """
-    total_display = forms.CharField(
-        required=False,
-        disabled=True,
-        label=_("الإجمالي"),
-        widget=forms.TextInput(
-            attrs={
-                "class": "form-control line-total",
-                "readonly": True,
-            }
-        ),
-    )
-
     class Meta:
         model = SalesLine
         fields = [
@@ -130,36 +115,37 @@ class SalesLineForm(forms.ModelForm):
         widgets = {
             "product": forms.Select(
                 attrs={
-                    "class": "form-control product-select",
+                    "class": "form-control form-control-sm table-input product-select",
                 }
             ),
             "description": forms.TextInput(
                 attrs={
-                    "class": "form-control",
-                    "placeholder": _("وصف..."),
+                    "class": "form-control description-input",
+                    "placeholder": "أدخل وصفاً إضافياً لهذا البند...",
                 }
             ),
             "quantity": forms.NumberInput(
                 attrs={
-                    "class": "form-control qty-input",
+                    "class": "form-control form-control-sm table-input qty-input text-center",
                     "step": "0.001",
-                    "min": "0.001",  # متوافق مع الفالديشن في الموديل (أكبر من صفر)
+                    "min": "0",
                 }
             ),
             "uom": forms.Select(
                 attrs={
-                    "class": "form-control uom-select",
+                    "class": "form-control form-control-sm table-input uom-select text-center",
                 }
             ),
             "unit_price": forms.NumberInput(
                 attrs={
-                    "class": "form-control price-input",
+                    "class": "form-control form-control-sm table-input price-input text-end",
                     "step": "0.001",
+                    "min": "0",
                 }
             ),
             "discount_percent": forms.NumberInput(
                 attrs={
-                    "class": "form-control discount-input",
+                    "class": "form-control form-control-sm table-input discount-input text-end",
                     "step": "0.01",
                     "min": "0",
                     "max": "100",
@@ -167,15 +153,11 @@ class SalesLineForm(forms.ModelForm):
             ),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # لو السطر موجود في الداتابيز، استخدم line_total من الموديل
-        if self.instance.pk:
-            self.fields["total_display"].initial = self.instance.line_total
-        else:
-            # في السطر الجديد خله 0.000 بدل ما يكون فاضي
-            self.fields["total_display"].initial = "0.000"
+    def clean_quantity(self):
+        qty = self.cleaned_data.get("quantity") or 0
+        if qty <= 0:
+            raise forms.ValidationError("الكمية يجب أن تكون أكبر من صفر.")
+        return qty
 
 
 SalesLineFormSet = inlineformset_factory(
@@ -210,22 +192,19 @@ class DeliveryLineForm(forms.ModelForm):
     """
     Delivery line when note is linked to a Sales Order:
     - product/uom تأتي من سطر المبيعات وتظهر فقط (disabled).
-    - يمكن تعديل الوصف والكمية فقط.
+    - يجب تمرير sales_line كحقل مخفي لربط البيانات.
     """
+
     class Meta:
         model = DeliveryLine
-        fields = ["product", "description", "quantity", "uom"]
+        fields = ["sales_line", "product", "description", "quantity", "uom"]
         widgets = {
+            "sales_line": forms.HiddenInput(),
             "product": forms.Select(
-                attrs={
-                    "class": "form-control",
-                    "disabled": True,
-                }
+                attrs={"class": "form-control", "disabled": True}
             ),
             "description": forms.TextInput(
-                attrs={
-                    "class": "form-control",
-                }
+                attrs={"class": "form-control"}
             ),
             "quantity": forms.NumberInput(
                 attrs={
@@ -235,22 +214,70 @@ class DeliveryLineForm(forms.ModelForm):
                 }
             ),
             "uom": forms.Select(
-                attrs={
-                    "class": "form-control",
-                    "disabled": True,
-                }
+                attrs={"class": "form-control", "disabled": True}
             ),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # الحقول المعطّلة لا تُرسل في POST، لذلك نخليها غير مطلوبة لتجاوز التحقق
+        self.fields["product"].required = False
+        self.fields["uom"].required = False
+        # sales_line مطلوب لكي نتمكن من جلب البيانات منه
+        self.fields["sales_line"].required = True
 
+    def clean(self):
+        cleaned_data = super().clean()
+
+        sales_line = cleaned_data.get("sales_line")
+        quantity = cleaned_data.get("quantity")
+
+        # نحافظ على تعبئة المنتج والوحدة من سطر المبيعات
+        if sales_line:
+            self.instance.product = sales_line.product
+            self.instance.uom = sales_line.uom
+
+            if not cleaned_data.get("description"):
+                self.instance.description = sales_line.description
+
+        # 🔴 منع إدخال كمية أكبر من المتبقي في أمر البيع (تحقق فوري في الفورم)
+        if sales_line and quantity is not None:
+            remaining = sales_line.remaining_quantity
+            if quantity > remaining:
+                self.add_error(
+                    "quantity",
+                    _(
+                        "كمية هذا التسليم (%(qty)s) تتجاوز الكمية المتبقية في أمر البيع "
+                        "(المتاح حالياً: %(rem)s)."
+                    )
+                    % {
+                        "qty": quantity,
+                        "rem": remaining,
+                    },
+                )
+
+        return cleaned_data
+
+
+
+# هذا الفورمسيت يُستخدم في شاشة تعديل / عرض مذكرة تسليم موجودة
 DeliveryLineFormSet = inlineformset_factory(
     DeliveryNote,
     DeliveryLine,
     form=DeliveryLineForm,
-    extra=0,   # لربط المذكرة بسطور أمر جاهزة
+    extra=0,
     can_delete=True,
 )
 
+# ===================================================================
+# Delivery From Order: FormSet مستقل مبني على DeliveryLineForm
+# ===================================================================
+
+DeliveryFromOrderLineFormSet = formset_factory(
+    DeliveryLineForm,
+    extra=0,
+    can_delete=False,
+)
 
 # ===================================================================
 # Direct Delivery Forms (تسليم مباشر بدون أمر)

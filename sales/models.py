@@ -217,8 +217,6 @@ class SalesDocument(BaseModel):
         - PARTIAL: some, but not all, quantity is delivered
         - DELIVERED: all quantity is delivered
         """
-        from decimal import Decimal  # local import just for type clarity
-
         total_qty = (
             self.lines.aggregate(s=models.Sum("quantity")).get("s") or DECIMAL_ZERO
         )
@@ -320,8 +318,9 @@ class SalesLine(TimeStampedModel, UserStampedModel):
             errors["unit_price"] = _("سعر الوحدة لا يمكن أن يكون سالباً.")
 
         if self.discount_percent is not None:
-            if self.discount_percent < Decimal("0.00") or self.discount_percent > Decimal(
-                "100.00"
+            if (
+                self.discount_percent < Decimal("0.00")
+                or self.discount_percent > Decimal("100.00")
             ):
                 errors["discount_percent"] = _(
                     "نسبة الخصم يجب أن تكون بين 0% و 100%."
@@ -363,16 +362,27 @@ class SalesLine(TimeStampedModel, UserStampedModel):
 
     @property
     def remaining_quantity(self) -> Decimal:
-        return (self.quantity or DECIMAL_ZERO) - self.delivered_quantity
+        """
+        Remaining quantity that is still allowed to be delivered.
+        Never returns a negative number.
+        """
+        remaining = (self.quantity or DECIMAL_ZERO) - self.delivered_quantity
+        if remaining < DECIMAL_ZERO:
+            return DECIMAL_ZERO
+        return remaining
 
     def save(self, *args, **kwargs) -> None:
-        # Ensure line_total is always computed from quantity/price/discount
+        """
+        - Ensure line_total is always computed from quantity/price/discount.
+        - Do NOT persist document totals here to avoid N saves per formset.
+          The view should call document.recompute_totals(save=True) once
+          after formset.save().
+        """
         self.line_total = self.compute_line_total()
         super().save(*args, **kwargs)
 
-        # Update parent document totals after saving the line
         if self.document_id:
-            self.document.recompute_totals(save=True)
+            self.document.recompute_totals(save=False)
 
 
 # ===================================================================
@@ -522,29 +532,52 @@ class DeliveryLine(TimeStampedModel, UserStampedModel):
         Validate delivery line:
         - quantity > 0
         - If linked to a sales_line & order, they must match.
-        - If delivery is CONFIRMED: do not exceed remaining sales quantity.
+        - If delivery is CONFIRMED: do not exceed remaining sales quantity
+          (taking into account edits to existing confirmed lines).
         """
         errors = {}
 
+        # 1) Basic quantity validation
         if self.quantity is not None and self.quantity <= DECIMAL_ZERO:
             errors["quantity"] = _("كمية التسليم يجب أن تكون أكبر من صفر.")
 
+        # 2) Ensure sales_line belongs to the same order linked to this delivery
         if self.sales_line and self.delivery and self.delivery.order:
             if self.sales_line.document_id != self.delivery.order_id:
                 errors["sales_line"] = _(
                     "بند الطلب المحدد لا ينتمي لأمر البيع المرتبط بمذكرة التسليم."
                 )
 
-        # Over-delivery protection only when the note is being confirmed
+        # 3) Over-delivery protection (only when the note is CONFIRMED)
         if (
             self.sales_line
             and self.delivery
             and self.delivery.status == DeliveryNote.Status.CONFIRMED
         ):
+            # Remaining quantity on the sales line (based on other confirmed deliveries)
             remaining = self.sales_line.remaining_quantity
+
+            # If we are editing an existing line, we should "return" the old quantity
+            # to the remaining balance before comparing with the new quantity.
+            if self.pk:
+                try:
+                    original_line = type(self).objects.get(pk=self.pk)
+                except type(self).DoesNotExist:
+                    original_line = None
+
+                if (
+                    original_line
+                    and original_line.delivery
+                    and original_line.delivery.status == DeliveryNote.Status.CONFIRMED
+                    and original_line.quantity is not None
+                ):
+                    # Add back the original quantity to the remaining amount
+                    remaining += original_line.quantity
+
             if self.quantity and self.quantity > remaining:
                 errors["quantity"] = _(
-                    "كمية التسليم تتجاوز الكمية المتبقية في أمر البيع."
+                    "كمية التسليم تتجاوز الكمية المتبقية في أمر البيع. "
+                    f"المتاح حالياً: {remaining}"
                 )
 
         if errors:

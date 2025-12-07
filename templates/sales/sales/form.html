@@ -11,43 +11,72 @@
 
 {% block extra_css %}
 <style>
+    .table-input {
+        border: 1px solid transparent;
+        background-color: transparent;
+        box-shadow: none !important;
+        font-size: 0.95rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+    .table-input:hover, .table-input:focus {
+        background-color: #fff;
+        border-color: #dee2e6;
+    }
+    .table-input:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1) !important;
+    }
+
     .description-input {
         background-color: transparent !important;
         border: none !important;
         box-shadow: none !important;
         font-size: 0.9em;
         color: #6c757d;
-        padding-inline-start: 0;
-        padding-inline-end: 0;
     }
     .description-input:focus {
         border-bottom: 1px dashed #ced4da !important;
+        color: #212529;
     }
+
     .line-total {
         background-color: #f8f9fa !important;
         border: none;
-        font-weight: bold;
+        font-weight: 700;
         color: #198754;
+        cursor: default;
     }
+
     .lite-row {
-        background-color: rgba(248, 249, 250, 0.5);
+        background-color: rgba(248, 249, 250, 0.7);
+    }
+
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    input[type=number] {
+        -moz-appearance: textfield;
     }
 </style>
 {% endblock %}
 
 {% block sales_content %}
-
 <div class="card shadow-sm border-0 mb-5">
-  {# ================== HEADER ================== #}
+
   <div class="card-header bg-white py-3 border-bottom">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-
       <div class="d-flex flex-column">
         <div class="d-flex align-items-center gap-2">
           <h5 class="mb-0 fw-bold text-primary">
             {% if form.instance.pk %}
               <i class="bi bi-pencil-square"></i> {% trans "تعديل مستند" %}
-              <span class="text-dark font-monospace mx-1">{{ form.instance.display_number }}</span>
+              <span class="text-dark font-monospace mx-1 bg-light px-2 rounded border">
+                {{ form.instance.display_number }}
+              </span>
             {% else %}
               <i class="bi bi-plus-circle"></i> {% trans "إنشاء مستند جديد" %}
             {% endif %}
@@ -55,78 +84,103 @@
 
           {% if form.instance.pk %}
             {% if form.instance.status == 'draft' %}
-                <span class="badge bg-secondary-subtle text-secondary border">{% trans "مسودة" %}</span>
+              <span class="badge bg-secondary-subtle text-secondary border">{% trans "مسودة" %}</span>
             {% elif form.instance.status == 'confirmed' %}
-                <span class="badge bg-success-subtle text-success border">{% trans "أمر بيع" %}</span>
+              <span class="badge bg-success-subtle text-success border">{% trans "أمر بيع" %}</span>
             {% elif form.instance.status == 'cancelled' %}
-                <span class="badge bg-danger-subtle text-danger border">{% trans "ملغي" %}</span>
+              <span class="badge bg-danger-subtle text-danger border">{% trans "ملغي" %}</span>
             {% endif %}
           {% endif %}
         </div>
       </div>
-
       <a href="{% url 'sales:document_list' %}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-return-right"></i> {% trans "عودة" %}
+        <i class="bi bi-arrow-return-right"></i> {% trans "عودة للقائمة" %}
       </a>
     </div>
   </div>
 
-  {# ================== BODY ================== #}
   <div class="card-body p-4">
     <form method="post" id="sales-form">
       {% csrf_token %}
 
-      {# --------- SECTION 1: بيانات المستند --------- #}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger small mb-3">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
       <div class="row g-3 mb-4">
         <div class="col-md-4">
-          <label class="form-label fw-bold small text-muted">{% trans "العميل" %}</label>
+          <label class="form-label fw-bold small text-muted">
+            {% trans "العميل" %} <span class="text-danger">*</span>
+          </label>
           {{ form.contact }}
-          {{ form.contact.errors }}
+          {% if form.contact.errors %}
+            <div class="text-danger small mt-1">{{ form.contact.errors|join:", " }}</div>
+          {% endif %}
         </div>
         <div class="col-md-2">
-          <label class="form-label fw-bold small text-muted">{% trans "التاريخ" %}</label>
+          <label class="form-label fw-bold small text-muted">
+            {% trans "التاريخ" %} <span class="text-danger">*</span>
+          </label>
           {{ form.date }}
-          {{ form.date.errors }}
+          {% if form.date.errors %}
+            <div class="text-danger small mt-1">{{ form.date.errors|join:", " }}</div>
+          {% endif %}
         </div>
         <div class="col-md-2">
           <label class="form-label fw-bold small text-muted">{% trans "العملة" %}</label>
           {{ form.currency }}
         </div>
         <div class="col-md-4">
-          <label class="form-label fw-bold small text-muted">{% trans "مرجع العميل (PO)" %}</label>
+          <label class="form-label fw-bold small text-muted">
+            {% trans "مرجع العميل (PO)" %}
+          </label>
           {{ form.client_reference }}
         </div>
       </div>
 
-      <div class="row g-3 mb-4 bg-light p-3 rounded-3 border-0">
+      <div class="row g-3 mb-4 bg-light p-3 rounded-3 border-0 mx-0">
         <div class="col-md-6">
-          <label class="form-label small fw-bold">{% trans "عنوان الفوترة" %}</label>
+          <label class="form-label small fw-bold text-muted">
+            <i class="bi bi-receipt"></i> {% trans "عنوان الفوترة" %}
+          </label>
           {{ form.billing_address }}
         </div>
         <div class="col-md-6">
-          <label class="form-label small fw-bold">{% trans "عنوان الشحن" %}</label>
+          <label class="form-label small fw-bold text-muted">
+            <i class="bi bi-truck"></i> {% trans "عنوان الشحن" %}
+          </label>
           {{ form.shipping_address }}
         </div>
       </div>
 
       <hr class="my-4 text-muted opacity-25">
 
-      {# --------- SECTION 3: جدول المنتجات (Lines) --------- #}
       <div class="d-flex justify-content-between align-items-end mb-2">
-        <h5 class="fw-bold text-dark mb-0">{% trans "المنتجات والخدمات" %}</h5>
+        <h5 class="fw-bold text-dark mb-0">
+          <i class="bi bi-box-seam"></i> {% trans "المنتجات والخدمات" %}
+        </h5>
         <button type="button" class="btn btn-sm btn-primary shadow-sm" id="add-line-btn">
           <i class="bi bi-plus-lg"></i> {% trans "إضافة سطر" %}
         </button>
       </div>
 
       {{ lines.management_form }}
-      {{ lines.non_form_errors }}
 
-      <div class="table-responsive border rounded-3 mb-4">
+      {% if lines.non_form_errors %}
+        <div class="alert alert-danger py-2 mb-2 small">
+          {{ lines.non_form_errors }}
+        </div>
+      {% endif %}
+
+      <div class="table-responsive border rounded-3 mb-4" style="min-height: 200px;">
         <table class="table table-sm table-hover align-middle mb-0" id="lines-table">
           <thead class="table-light text-muted small">
             <tr>
-              <th style="width: 35%;" class="ps-3">{% trans "المنتج" %}</th>
+              <th style="width: 35%;" class="ps-3">
+                {% trans "المنتج" %} <span class="text-danger">*</span>
+              </th>
               <th style="width: 10%;" class="text-center">{% trans "الكمية" %}</th>
               <th style="width: 12%;" class="text-center">{% trans "الوحدة" %}</th>
               <th style="width: 12%;" class="text-end">{% trans "السعر" %}</th>
@@ -137,7 +191,6 @@
           </thead>
           <tbody>
             {% for line_form in lines %}
-              {# === الصف الرئيسي === #}
               <tr class="line-form-row main-line-row">
                 {% for hidden in line_form.hidden_fields %}{{ hidden }}{% endfor %}
 
@@ -145,22 +198,40 @@
                   <div class="d-flex gap-2">
                     <div class="flex-grow-1">
                       {{ line_form.product }}
+                      {% if line_form.product.errors %}
+                        <div class="text-danger small mt-1" style="font-size: 0.75rem;">
+                          {{ line_form.product.errors|join:", " }}
+                        </div>
+                      {% endif %}
                     </div>
                     <button type="button"
-                            class="btn btn-sm btn-link text-decoration-none text-muted toggle-desc-btn p-0"
-                            title="{% trans 'إضافة وصف' %}">
+                            class="btn btn-sm btn-link text-decoration-none toggle-desc-btn p-0 {% if line_form.description.value %}text-primary{% else %}text-muted{% endif %}"
+                            title="{% trans 'إضافة وصف إضافي' %}">
                       <i class="bi bi-card-text"></i>
                     </button>
                   </div>
-                  {% if line_form.product.errors %}
-                    <div class="text-danger small mt-1">{{ line_form.product.errors }}</div>
+                </td>
+
+                <td class="text-center">
+                  {{ line_form.quantity }}
+                  {% if line_form.quantity.errors %}
+                    <div class="text-danger small mt-1" style="font-size: 0.7rem;">
+                      {{ line_form.quantity.errors|join:", " }}
+                    </div>
                   {% endif %}
                 </td>
 
-                <td class="text-center">{{ line_form.quantity }}</td>
-                <td class="text-center">{{ line_form.uom }}</td>
-                <td class="text-end">{{ line_form.unit_price }}</td>
-                <td class="text-end">{{ line_form.discount_percent }}</td>
+                <td class="text-center">
+                  {{ line_form.uom }}
+                </td>
+
+                <td class="text-end">
+                  {{ line_form.unit_price }}
+                </td>
+
+                <td class="text-end">
+                  {{ line_form.discount_percent }}
+                </td>
 
                 <td class="text-end pe-3">
                   {% with widget=line_form.total_display %}
@@ -183,7 +254,6 @@
                 </td>
               </tr>
 
-              {# === صف الوصف تحت السطر === #}
               <tr class="description-row {% if not line_form.description.value %}d-none{% endif %} lite-row">
                 <td colspan="7" class="border-0 p-0">
                   <div class="d-flex align-items-center px-4 py-1">
@@ -194,6 +264,7 @@
                                name="{{ widget.html_name }}"
                                value="{{ widget.value|default:'' }}"
                                class="form-control description-input"
+                               placeholder="{% trans 'أدخل وصفاً إضافياً لهذا البند...' %}"
                                id="{{ widget.id_for_label }}">
                       {% endwith %}
                     </div>
@@ -205,7 +276,6 @@
         </table>
       </div>
 
-      {# --------- SECTION 4: الملاحظات والإجماليات --------- #}
       <div class="row">
         <div class="col-lg-7">
           <div class="mb-3">
@@ -219,16 +289,25 @@
         </div>
         <div class="col-lg-1"></div>
         <div class="col-lg-4">
-          <div class="card bg-light border-0">
+          <div class="card bg-light border-0 shadow-sm mt-3 mt-lg-0">
             <div class="card-body">
               <div class="d-flex justify-content-between mb-2">
-                <span class="text-muted">{% trans "الإجمالي قبل الضريبة" %}</span>
+                <span class="text-muted small">{% trans "الإجمالي قبل الضريبة" %}</span>
                 <span class="fw-bold font-monospace" id="grand-total-display">0.000</span>
+              </div>
+              <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted small">{% trans "الضريبة" %} (0%)</span>
+                <span class="fw-bold font-monospace">0.000</span>
               </div>
               <hr class="my-2">
               <div class="d-flex justify-content-between align-items-center">
                 <span class="h6 mb-0 fw-bold text-dark">{% trans "الصافي النهائي" %}</span>
-                <span class="h4 mb-0 fw-bold text-primary font-monospace" id="final-total-display">0.000</span>
+                <div class="text-end">
+                  <span class="h4 mb-0 fw-bold text-primary font-monospace" id="final-total-display">0.000</span>
+                  <span class="small text-muted ms-1">
+                    {{ form.currency.value|default:form.currency.initial|default:"OMR" }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -248,14 +327,15 @@
   </div>
 </div>
 
-{# ====== قوالب النسخ (Hidden Templates) ====== #}
 <table style="display:none;">
   <tbody id="empty-rows-container">
-
     <tr id="empty-main-row" class="line-form-row main-line-row">
+      {% for hidden in lines.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
       <td class="ps-3">
         <div class="d-flex gap-2">
-          <div class="flex-grow-1">{{ lines.empty_form.product }}</div>
+          <div class="flex-grow-1">
+            {{ lines.empty_form.product }}
+          </div>
           <button type="button" class="btn btn-sm btn-link text-decoration-none text-muted toggle-desc-btn p-0">
             <i class="bi bi-card-text"></i>
           </button>
@@ -265,19 +345,17 @@
       <td class="text-center">{{ lines.empty_form.uom }}</td>
       <td class="text-end">{{ lines.empty_form.unit_price }}</td>
       <td class="text-end">{{ lines.empty_form.discount_percent }}</td>
-
       <td class="text-end pe-3">
-        {% with widget=lines.empty_form.total_display %}
-          <input type="text"
-                 name="{{ widget.html_name }}"
-                 value="{{ widget.value|default:'0.000' }}"
-                 class="form-control form-control-sm text-end line-total"
-                 readonly
-                 id="{{ widget.id_for_label }}">
-        {% endwith %}
+        <input type="text"
+               name="{{ lines.empty_form.total_display.html_name }}"
+               value="0.000"
+               class="form-control form-control-sm text-end line-total"
+               readonly>
       </td>
-
       <td class="text-center">
+        {% if lines.can_delete %}
+          <div class="d-none">{{ lines.empty_form.DELETE }}</div>
+        {% endif %}
         <button type="button" class="btn btn-sm text-danger remove-row-btn">
           <i class="bi bi-trash"></i>
         </button>
@@ -289,21 +367,16 @@
         <div class="d-flex align-items-center px-4 py-1">
           <i class="bi bi-arrow-return-right text-muted small me-2 opacity-50"></i>
           <div class="flex-grow-1">
-            {% with widget=lines.empty_form.description %}
-              <input type="text"
-                     name="{{ widget.html_name }}"
-                     value="{{ widget.value|default:'' }}"
-                     class="form-control description-input"
-                     id="{{ widget.id_for_label }}">
-            {% endwith %}
+            <input type="text"
+                   name="{{ lines.empty_form.description.html_name }}"
+                   class="form-control description-input"
+                   placeholder="{% trans 'أدخل وصفاً إضافياً...' %}">
           </div>
         </div>
       </td>
     </tr>
-
   </tbody>
 </table>
-
 {% endblock %}
 
 {% block extra_body %}
@@ -311,17 +384,24 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-
   const productsDataElement = document.getElementById('products-data');
   if (!productsDataElement) return;
-
   const productsData = JSON.parse(productsDataElement.textContent);
+
   const tableBody = document.querySelector('#lines-table tbody');
   const totalFormsInput = document.getElementById('id_lines-TOTAL_FORMS');
   const emptyMainTemplate = document.getElementById('empty-main-row');
   const emptyDescTemplate = document.getElementById('empty-desc-row');
 
-  // --- 1. إظهار/إخفاء الوصف + الحذف ---
+  function initSelect2(element) {
+    if (typeof $ !== 'undefined' && $.fn.select2) {
+      $(element).find('.select2').select2({
+        width: '100%',
+        theme: 'bootstrap-5'
+      });
+    }
+  }
+
   tableBody.addEventListener('click', function(e) {
     const toggleBtn = e.target.closest('.toggle-desc-btn');
     if (toggleBtn) {
@@ -332,6 +412,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!descRow.classList.contains('d-none')) {
           const input = descRow.querySelector('input');
           if (input) input.focus();
+          toggleBtn.classList.add('text-primary');
+          toggleBtn.classList.remove('text-muted');
+        } else {
+          const input = descRow.querySelector('input');
+          if (input && !input.value.trim()) {
+            toggleBtn.classList.remove('text-primary');
+            toggleBtn.classList.add('text-muted');
+          }
         }
       }
       return;
@@ -355,26 +443,43 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // --- 2. تغيير المنتج ---
   function handleProductChange(row) {
     const productSelect = row.querySelector('.product-select');
     const productId = productSelect ? productSelect.value : null;
     const uomSelect = row.querySelector('.uom-select');
     const priceInput = row.querySelector('.price-input');
+    const qtyInput = row.querySelector('.qty-input');
 
     if (productId && productsData[productId]) {
       const data = productsData[productId];
-      if (priceInput) priceInput.value = data.price;
+
+      if (priceInput) {
+        priceInput.value = Number(data.price || 0).toFixed(3);
+        priceInput.style.backgroundColor = "#e8f0fe";
+        setTimeout(() => priceInput.style.backgroundColor = "", 500);
+      }
+
       if (uomSelect) {
         uomSelect.innerHTML = '';
-        if (data.base_uom_id) uomSelect.add(new Option(data.base_uom_name, data.base_uom_id));
-        if (data.alt_uom_id) uomSelect.add(new Option(data.alt_uom_name, data.alt_uom_id));
+        if (data.base_uom_id) {
+          uomSelect.add(new Option(data.base_uom_name, data.base_uom_id, true, true));
+        }
+        if (data.alt_uom_id) {
+          uomSelect.add(new Option(data.alt_uom_name, data.alt_uom_id));
+        }
       }
+
+      if (qtyInput && !qtyInput.value) {
+        qtyInput.value = 1;
+      }
+    } else {
+      if (priceInput) priceInput.value = '';
+      if (uomSelect) uomSelect.innerHTML = '';
     }
+
     calculateRowTotal(row);
   }
 
-  // --- 3. تغيير الوحدة ---
   function handleUomChange(row) {
     const productSelect = row.querySelector('.product-select');
     const uomSelect = row.querySelector('.uom-select');
@@ -385,20 +490,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (productId && productsData[productId] && priceInput && uomSelect) {
       const data = productsData[productId];
-      let newPrice = data.price;
+      let newPrice = data.price || 0;
 
       if (data.alt_uom_id && selectedUomId === data.alt_uom_id) {
-        newPrice = data.price * data.alt_factor;
+        newPrice = (data.price || 0) * (data.alt_factor || 1);
       }
 
       priceInput.value = Number(newPrice).toFixed(3);
       priceInput.style.backgroundColor = "#e8f0fe";
       setTimeout(() => priceInput.style.backgroundColor = "", 300);
     }
+
     calculateRowTotal(row);
   }
 
-  // --- 4. حساب إجمالي السطر ---
   function calculateRowTotal(row) {
     const qty = parseFloat(row.querySelector('.qty-input')?.value || 0);
     const price = parseFloat(row.querySelector('.price-input')?.value || 0);
@@ -410,11 +515,13 @@ document.addEventListener('DOMContentLoaded', function() {
       total = total * (100 - discount) / 100;
     }
 
-    if (totalDisplay) totalDisplay.value = total.toFixed(3);
+    if (totalDisplay) {
+      totalDisplay.value = total.toFixed(3);
+    }
+
     calculateGrandTotal();
   }
 
-  // --- 5. الإجمالي الكلي ---
   function calculateGrandTotal() {
     let grandTotal = 0;
     const mainRows = tableBody.querySelectorAll('.main-line-row');
@@ -437,7 +544,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (finalEl) finalEl.textContent = grandTotal.toFixed(3);
   }
 
-  // --- 6. مراقبة الأحداث على الحقول الرقمية ---
   tableBody.addEventListener('change', function(e) {
     const target = e.target;
     const row = target.closest('.main-line-row');
@@ -460,7 +566,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // --- 7. إضافة سطر جديد ---
   const addLineBtn = document.getElementById('add-line-btn');
   if (addLineBtn) {
     addLineBtn.addEventListener('click', function() {
@@ -471,10 +576,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       newMain.removeAttribute('id');
       newDesc.removeAttribute('id');
-
       newMain.style.display = '';
-      // نخلي الوصف مخفي افتراضياً:
-      newDesc.classList.add('d-none');
 
       newMain.innerHTML = newMain.innerHTML.replace(/__prefix__/g, formIdx);
       newDesc.innerHTML = newDesc.innerHTML.replace(/__prefix__/g, formIdx);
@@ -483,13 +585,15 @@ document.addEventListener('DOMContentLoaded', function() {
       tableBody.appendChild(newDesc);
 
       totalFormsInput.value = parseInt(formIdx) + 1;
+
+      initSelect2(newMain);
     });
   }
 
-  // --- 8. تشغيل أولي لحساب الإجماليات للأسطر الموجودة ---
   const existingRows = tableBody.querySelectorAll('.main-line-row');
   existingRows.forEach(row => calculateRowTotal(row));
 
+  initSelect2(document);
 });
 </script>
 {% endblock %}

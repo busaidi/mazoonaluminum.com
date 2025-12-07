@@ -1,0 +1,207 @@
+{% extends "sales/base_sales.html" %}
+{% load i18n %}
+
+{% block title %}
+  {% trans "مذكرة تسليم من أمر بيع" %}
+{% endblock %}
+
+{% block sales_content %}
+
+<div class="card shadow-sm border-0 mb-3">
+  {# ========== HEADER ========== #}
+  <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="h5 fw-bold mb-1 text-body">
+        <i class="bi bi-truck-flatbed me-2 text-primary"></i>
+        {% trans "إنشاء مذكرة تسليم من أمر بيع" %}
+      </h1>
+      <p class="text-muted small mb-0">
+        {% blocktrans with number=order.display_number %}
+          أمر البيع رقم {{ number }}
+        {% endblocktrans %}
+      </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'sales:document_detail' order.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-right-short"></i> {% trans "عودة لأمر البيع" %}
+      </a>
+      <a href="{% url 'sales:delivery_list' %}" class="btn btn-light btn-sm">
+        <i class="bi bi-truck"></i> {% trans "سجل مذكرات التسليم" %}
+      </a>
+    </div>
+  </div>
+
+  {# ========== BODY ========== #}
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {# ----- رأس مذكرة التسليم ----- #}
+      <div class="row g-3 mb-3">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold small">
+            {% trans "العميل" %}
+          </label>
+          <div class="form-control form-control-sm bg-body-tertiary">
+            {{ order.contact.name }}
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label fw-semibold small">
+            {% trans "تاريخ التسليم" %}
+          </label>
+          {{ form.date }}
+          {% if form.date.errors %}
+            <div class="text-danger small mt-1">{{ form.date.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="col-12">
+          <label class="form-label fw-semibold small">
+            {% trans "ملاحظات" %}
+          </label>
+          {{ form.notes }}
+          {% if form.notes.errors %}
+            <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+          {% endif %}
+          <div class="form-text small text-muted">
+            {% trans "مثال: رقم المركبة، اسم المستلم، أو أي تفاصيل إضافية أخرى." %}
+          </div>
+        </div>
+      </div>
+
+      <hr class="my-4">
+
+      {# ----- بنود التسليم ----- #}
+      <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+        <div>
+          <h5 class="h6 mb-1 text-body fw-bold">
+            {% trans "البنود المراد تسليمها" %}
+          </h5>
+          <p class="text-muted small mb-0">
+            {% trans "الكميات الافتراضية هنا هي الكميات المتبقية من أمر البيع. يمكنك تقليل الكمية للتسليم الجزئي." %}
+          </p>
+        </div>
+      </div>
+
+      {{ lines.management_form }}
+      {{ lines.non_form_errors }}
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-3">
+          <thead class="table-light small text-muted">
+            <tr>
+              <th width="30%">{% trans "المنتج" %}</th>
+              <th width="30%">{% trans "الوصف" %}</th>
+              <th width="13%" class="text-center">{% trans "الكمية المتبقية" %}</th>
+              <th width="13%" class="text-center">{% trans "كمية هذا التسليم" %}</th>
+              <th width="14%" class="text-center">{% trans "الوحدة" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for line_form in lines %}
+              {# نجيب سطر الطلب المرتبط لأغراض اللون + الكمية المتبقية #}
+              {% with sl=line_form.initial.sales_line|default:line_form.instance.sales_line %}
+                <tr class="line-form-row {% if sl and sl.remaining_quantity <= 0 %}table-secondary text-muted{% endif %}">
+                  {# hidden fields: id, delivery, sales_line, ... #}
+                  {% for hidden in line_form.hidden_fields %}
+                    {{ hidden }}
+                  {% endfor %}
+
+                  {# المنتج #}
+                  <td>
+                    {% if line_form.initial.product %}
+                      <div class="fw-semibold">{{ line_form.initial.product.name }}</div>
+                    {% elif line_form.instance.product %}
+                      <div class="fw-semibold">{{ line_form.instance.product.name }}</div>
+                    {% else %}
+                      {{ line_form.product }}
+                    {% endif %}
+                  </td>
+
+                  {# الوصف #}
+                  <td>
+                    {% if line_form.initial.description %}
+                      <div class="small text-muted">
+                        {{ line_form.initial.description }}
+                      </div>
+                    {% else %}
+                      {{ line_form.description }}
+                    {% endif %}
+                  </td>
+
+                  {# الكمية المتبقية (للعرض فقط) #}
+                  <td class="text-center">
+                    {% if sl %}
+                      <span class="badge bg-body-secondary text-dark fw-semibold">
+                        {{ sl.remaining_quantity|floatformat:3 }}
+                      </span>
+                    {% else %}
+                      —
+                    {% endif %}
+                  </td>
+
+                  {# كمية هذا التسليم (Editable) #}
+                  <td class="text-center">
+                    {{ line_form.quantity }}
+                    {% if line_form.quantity.errors %}
+                      <div class="text-danger small mt-1">
+                        {{ line_form.quantity.errors }}
+                      </div>
+                    {% endif %}
+                  </td>
+
+                  {# الوحدة #}
+                  <td class="text-center">
+                    {% if line_form.initial.uom %}
+                      {{ line_form.initial.uom.name }}
+                    {% elif line_form.instance.uom %}
+                      {{ line_form.instance.uom.name }}
+                    {% else %}
+                      {{ line_form.uom }}
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endwith %}
+            {% empty %}
+              <tr>
+                <td colspan="5" class="text-center py-4 text-muted">
+                  {% trans "لا توجد كميات متبقية لهذا الأمر، أو تم تسليمه بالكامل." %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {# ----- أزرار الحفظ ----- #}
+      <div class="d-flex justify-content-center gap-2 mt-4">
+        <button type="submit" class="btn btn-primary px-5">
+          <i class="bi bi-save"></i> {% trans "حفظ مذكرة التسليم" %}
+        </button>
+        <a href="{% url 'sales:document_detail' order.pk %}" class="btn btn-outline-secondary px-4">
+          {% trans "إلغاء" %}
+        </a>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{# ===== JS إضافي: Auto-focus على أول خانة كمية ===== #}
+{% block extra_js %}
+  {{ block.super }}
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      // Auto-focus على أول input للكمية
+      const firstQty = document.querySelector('input[name$="-quantity"]');
+      if (firstQty) {
+        firstQty.focus();
+        firstQty.select();
+      }
+    });
+  </script>
+{% endblock %}
