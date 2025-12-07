@@ -657,19 +657,20 @@ def delivery_from_order_create_view(request, pk):
         .select_related("product", "uom")
         .order_by("id")
     )
-    lines_count = sales_lines_qs.count()
+    sales_lines = list(sales_lines_qs)
+    lines_count = len(sales_lines)
 
-    # 👈 نبني FormSet مخصص بعدد سطور الأمر
+    # 👈 FormSet مخصص بعدد سطور الأمر
     DeliveryFromOrderFormSet = inlineformset_factory(
         DeliveryNote,
         DeliveryLine,
         form=DeliveryLineForm,
-        extra=lines_count,   # نفس عدد السطور
+        extra=lines_count,
         can_delete=False,
     )
 
     if request.method == "POST":
-        # مهم: الinstance فيه order + contact عشان ما يطلع خطأ contact
+        # instance فيه order + contact عشان ما يطلع خطأ contact
         delivery_instance = DeliveryNote(
             order=order,
             contact=order.contact,
@@ -681,7 +682,6 @@ def delivery_from_order_create_view(request, pk):
             instance=delivery_instance,
         )
 
-        # أولاً نتأكد أن الفورم والفورمسيت صحيحين
         if form.is_valid() and lines_formset.is_valid():
             has_qty_error = False
 
@@ -708,10 +708,12 @@ def delivery_from_order_create_view(request, pk):
                     has_qty_error = True
 
             if has_qty_error:
-                # نعيد عرض الصفحة مع الأخطاء
+                # نعيد عرض الصفحة مع الأخطاء + ربط كل فورم بسطره
+                line_rows = list(zip(lines_formset.forms, sales_lines))
                 context = {
                     "form": form,
                     "lines": lines_formset,
+                    "line_rows": line_rows,
                     "order": order,
                 }
                 return render(request, "sales/delivery/from_order_form.html", context)
@@ -720,7 +722,6 @@ def delivery_from_order_create_view(request, pk):
             with transaction.atomic():
                 delivery = form.save(commit=False)
 
-                # order/contact موجودين في الinstance من قبل
                 if request.user.is_authenticated:
                     delivery.created_by = request.user
                     delivery.updated_by = request.user
@@ -740,9 +741,11 @@ def delivery_from_order_create_view(request, pk):
             return redirect("sales:delivery_detail", pk=delivery.pk)
 
         # لو الفورم أو الفورمسيت فيهم أخطاء
+        line_rows = list(zip(lines_formset.forms, sales_lines))
         context = {
             "form": form,
             "lines": lines_formset,
+            "line_rows": line_rows,
             "order": order,
         }
         return render(request, "sales/delivery/from_order_form.html", context)
@@ -758,16 +761,20 @@ def delivery_from_order_create_view(request, pk):
         lines_formset = DeliveryFromOrderFormSet(instance=delivery_instance)
 
         # نعبي initial لكل فورم من سطر الأمر المقابل
-        for form_line, sl in zip(lines_formset.forms, sales_lines_qs):
+        for form_line, sl in zip(lines_formset.forms, sales_lines):
             form_line.initial["sales_line"] = sl.pk
             form_line.initial["product"] = sl.product
             form_line.initial["uom"] = sl.uom
             form_line.initial["quantity"] = sl.remaining_quantity
             form_line.initial["description"] = sl.description or ""
 
+        # 👈 هنا نربط كل line_form مع sales_line عشان التمبلت
+        line_rows = list(zip(lines_formset.forms, sales_lines))
+
         context = {
             "form": form,
             "lines": lines_formset,
+            "line_rows": line_rows,
             "order": order,
         }
         return render(request, "sales/delivery/from_order_form.html", context)

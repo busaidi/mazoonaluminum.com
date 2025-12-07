@@ -100,70 +100,53 @@
             </tr>
           </thead>
           <tbody>
-            {% for line_form in lines %}
-              {# نجيب سطر الطلب المرتبط لأغراض اللون + الكمية المتبقية #}
-              {% with sl=line_form.initial.sales_line|default:line_form.instance.sales_line %}
-                <tr class="line-form-row {% if sl and sl.remaining_quantity <= 0 %}table-secondary text-muted{% endif %}">
-                  {# hidden fields: id, delivery, sales_line, ... #}
-                  {% for hidden in line_form.hidden_fields %}
-                    {{ hidden }}
-                  {% endfor %}
+            {# نلف على أزواج (line_form, sl) بدل الفورمسيت فقط #}
+            {% for line_form, sl in line_rows %}
+              <tr class="line-form-row {% if sl.remaining_quantity <= 0 %}table-secondary text-muted{% endif %}">
+                {# hidden fields: id, delivery, sales_line, ... #}
+                {% for hidden in line_form.hidden_fields %}
+                  {{ hidden }}
+                {% endfor %}
 
-                  {# المنتج #}
-                  <td>
-                    {% if line_form.initial.product %}
-                      <div class="fw-semibold">{{ line_form.initial.product.name }}</div>
-                    {% elif line_form.instance.product %}
-                      <div class="fw-semibold">{{ line_form.instance.product.name }}</div>
-                    {% else %}
-                      {{ line_form.product }}
-                    {% endif %}
-                  </td>
+                {# المنتج #}
+                <td>
+                  <div class="fw-semibold">
+                    {{ sl.product.name }}
+                  </div>
+                </td>
 
-                  {# الوصف #}
-                  <td>
-                    {% if line_form.initial.description %}
-                      <div class="small text-muted">
-                        {{ line_form.initial.description }}
-                      </div>
-                    {% else %}
-                      {{ line_form.description }}
-                    {% endif %}
-                  </td>
+                {# الوصف #}
+                <td>
+                  {{ line_form.description }}
+                  {% if line_form.description.errors %}
+                    <div class="text-danger small mt-1">
+                      {{ line_form.description.errors }}
+                    </div>
+                  {% endif %}
+                </td>
 
-                  {# الكمية المتبقية (للعرض فقط) #}
-                  <td class="text-center">
-                    {% if sl %}
-                      <span class="badge bg-body-secondary text-dark fw-semibold">
-                        {{ sl.remaining_quantity|floatformat:3 }}
-                      </span>
-                    {% else %}
-                      —
-                    {% endif %}
-                  </td>
+                {# الكمية المتبقية (للعرض فقط) #}
+                <td class="text-center">
+                  <span class="badge bg-body-secondary text-dark fw-semibold">
+                    {{ sl.remaining_quantity|floatformat:3 }}
+                  </span>
+                </td>
 
-                  {# كمية هذا التسليم (Editable) #}
-                  <td class="text-center">
-                    {{ line_form.quantity }}
-                    {% if line_form.quantity.errors %}
-                      <div class="text-danger small mt-1">
-                        {{ line_form.quantity.errors }}
-                      </div>
-                    {% endif %}
-                  </td>
+                {# كمية هذا التسليم (Editable) #}
+                <td class="text-center">
+                  {{ line_form.quantity }}
+                  {% if line_form.quantity.errors %}
+                    <div class="text-danger small mt-1">
+                      {{ line_form.quantity.errors }}
+                    </div>
+                  {% endif %}
+                </td>
 
-                  {# الوحدة #}
-                  <td class="text-center">
-                    {% if line_form.initial.uom %}
-                      {{ line_form.initial.uom.name }}
-                    {% elif line_form.instance.uom %}
-                      {{ line_form.instance.uom.name }}
-                    {% else %}
-                      {{ line_form.uom }}
-                    {% endif %}
-                  </td>
-                </tr>
-              {% endwith %}
+                {# الوحدة #}
+                <td class="text-center">
+                  {{ sl.uom.name }}
+                </td>
+              </tr>
             {% empty %}
               <tr>
                 <td colspan="5" class="text-center py-4 text-muted">
@@ -174,6 +157,7 @@
           </tbody>
         </table>
       </div>
+
 
       {# ----- أزرار الحفظ ----- #}
       <div class="d-flex justify-content-center gap-2 mt-4">
