@@ -2,6 +2,7 @@
 
 from decimal import Decimal
 from pathlib import Path
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Sum, F, Q
@@ -9,7 +10,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from solo.models import SingletonModel
 
-from core.models import TimeStampedModel, BaseModel
+from core.models import BaseModel
 from inventory.managers import (
     ProductCategoryManager,
     ProductManager,
@@ -21,7 +22,12 @@ from inventory.managers import (
 from uom.models import UnitOfMeasure
 
 
+# ============================================================
+# ثوابت الأرقام العشرية
+# ============================================================
 DECIMAL_ZERO = Decimal("0.000")
+DECIMAL_ONE = Decimal("1.000")
+DECIMAL_HUNDRED = Decimal("100.000")
 
 
 # ============================================================
@@ -70,6 +76,10 @@ class ProductCategory(BaseModel):
         verbose_name = _("تصنيف منتج")
         verbose_name_plural = _("تصنيفات المنتجات")
         ordering = ("name",)
+        indexes = [
+            models.Index(fields=["slug"], name="prodcat_slug_idx"),
+            models.Index(fields=["is_active"], name="prodcat_active_idx"),
+        ]
 
     def __str__(self) -> str:
         if self.parent:
@@ -117,12 +127,9 @@ class ProductCategory(BaseModel):
 
 
 # ============================================================
-# المنتجات
+# دالة مسار حفظ صورة المنتج
 # ============================================================
-
-
-# دالة مسار حفظ الصورة
-def product_image_upload_to(instance, filename):
+def product_image_upload_to(instance: "Product", filename: str) -> str:
     """
     مسار حفظ صورة المنتج داخل MEDIA_ROOT.
     مثال: products/MZN-46-FRAME/main.jpg
@@ -132,10 +139,17 @@ def product_image_upload_to(instance, filename):
     return f"products/{safe_code}/main{ext}"
 
 
+# ============================================================
+# المنتجات
+# ============================================================
 class Product(BaseModel):
     """
     المنتج الأساسي للمخزون.
-    يُستخدم في المخزون / الأوامر / الفواتير.
+    يُستخدم في:
+      - المخزون (StockMove / StockLevel)
+      - أوامر البيع والشراء
+      - الفواتير
+
     نشر المنتج للموقع/البوابة يتحكم به الحقل is_published.
     """
 
@@ -143,6 +157,10 @@ class Product(BaseModel):
         STOCKABLE = "stockable", _("صنف مخزني")
         SERVICE = "service", _("خدمة")
         CONSUMABLE = "consumable", _("مستهلكات")
+
+    # ----------------------------
+    # بيانات أساسية
+    # ----------------------------
 
     category = models.ForeignKey(
         ProductCategory,
@@ -165,6 +183,30 @@ class Product(BaseModel):
         verbose_name=_("اسم المنتج"),
     )
 
+    short_description = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("وصف مختصر"),
+        help_text=_("سطر واحد يظهر في القوائم والجداول."),
+    )
+
+    description = models.TextField(
+        blank=True,
+        verbose_name=_("وصف تفصيلي"),
+    )
+
+    product_type = models.CharField(
+        max_length=20,
+        choices=ProductType.choices,
+        default=ProductType.STOCKABLE,
+        verbose_name=_("نوع المنتج"),
+        help_text=_("يحدد إذا كان المنتج مخزني، خدمة أو مستهلكات."),
+    )
+
+    # ----------------------------
+    # الأسعار الافتراضية
+    # ----------------------------
+
     default_sale_price = models.DecimalField(
         max_digits=12,
         decimal_places=3,
@@ -181,30 +223,9 @@ class Product(BaseModel):
         help_text=_("يُستخدم للتقارير الداخلية وتقدير تكلفة المخزون (اختياري)."),
     )
 
-    short_description = models.CharField(
-        max_length=255,
-        blank=True,
-        verbose_name=_("وصف مختصر"),
-        help_text=_("سطر واحد يظهر في القوائم والجداول."),
-    )
-
-    description = models.TextField(
-        blank=True,
-        verbose_name=_("وصف تفصيلي"),
-    )
-
-    # نوع المنتج (مخزني / خدمة / مستهلكات)
-    product_type = models.CharField(
-        max_length=20,
-        choices=ProductType.choices,
-        default=ProductType.STOCKABLE,
-        verbose_name=_("نوع المنتج"),
-        help_text=_("يحدد إذا كان المنتج مخزني، خدمة أو مستهلكات."),
-    )
-
-    # ============================
+    # ----------------------------
     # وحدات القياس
-    # ============================
+    # ----------------------------
 
     base_uom = models.ForeignKey(
         UnitOfMeasure,
@@ -261,9 +282,9 @@ class Product(BaseModel):
         ),
     )
 
-    # ============================
-    # أعلام الحالة والمخزون
-    # ============================
+    # ----------------------------
+    # صورة وحالة المنتج
+    # ----------------------------
 
     image = models.ImageField(
         upload_to=product_image_upload_to,
@@ -297,15 +318,53 @@ class Product(BaseModel):
         verbose_name = _("منتج")
         verbose_name_plural = _("المنتجات")
         ordering = ("code",)
+        indexes = [
+            models.Index(fields=["code"], name="product_code_idx"),
+            models.Index(fields=["is_active"], name="product_active_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.code} – {self.name}"
 
     # ============================
+    # التحقق (Validation)
+    # ============================
+
+    def clean(self):
+        super().clean()
+
+        # أسعار غير سالبة
+        if self.default_sale_price is not None and self.default_sale_price < 0:
+            raise ValidationError(_("سعر البيع الافتراضي لا يمكن أن يكون سالباً."))
+
+        if self.default_cost_price is not None and self.default_cost_price < 0:
+            raise ValidationError(_("سعر التكلفة لا يمكن أن يكون سالباً."))
+
+        # ربط الوحدة البديلة مع عامل التحويل
+        if self.alt_uom and (self.alt_factor is None or self.alt_factor <= 0):
+            raise ValidationError(
+                _("يجب إدخال عامل تحويل أكبر من صفر عند ضبط وحدة بديلة.")
+            )
+
+        if self.alt_factor and not self.alt_uom:
+            raise ValidationError(
+                _("لا يمكن ضبط عامل تحويل بدون تحديد الوحدة البديلة.")
+            )
+
+        # وزن لكل وحدة أساس
+        if self.weight_per_base is not None:
+            if self.weight_per_base < 0:
+                raise ValidationError(_("الوزن لكل وحدة أساس لا يمكن أن يكون سالباً."))
+            if not self.weight_uom:
+                raise ValidationError(
+                    _("يجب تحديد وحدة الوزن عند ضبط الوزن لكل وحدة أساس.")
+                )
+
+    # ============================
     # تحويل الكميات بين الوحدات
     # ============================
 
-    def convert_qty(self, qty, from_uom, to_uom):
+    def convert_qty(self, qty, from_uom, to_uom) -> Decimal:
         """
         تحويل الكمية بين الوحدة الأساسية والبديلة باستخدام alt_factor.
 
@@ -337,7 +396,7 @@ class Product(BaseModel):
 
         raise ValueError("تحويل غير مدعوم لهذا المنتج (الوحدة غير مرتبطة).")
 
-    def to_base(self, qty, uom=None):
+    def to_base(self, qty, uom=None) -> Decimal:
         """
         يرجع الكمية دائماً بوحدة القياس الأساسية.
         إذا لم تُحدد وحدة، يُفترض أن الكمية بوحدة الأساس.
@@ -350,7 +409,7 @@ class Product(BaseModel):
 
         return self.convert_qty(qty=qty, from_uom=uom, to_uom=self.base_uom)
 
-    def to_alt(self, qty, uom=None):
+    def to_alt(self, qty, uom=None) -> Decimal:
         """
         يرجع الكمية بوحدة القياس البديلة (إذا كانت مضبوطة).
         إذا لم تُحدد وحدة، يُفترض أن الكمية بوحدة الأساس.
@@ -364,11 +423,14 @@ class Product(BaseModel):
         from_uom = uom or self.base_uom
         return self.convert_qty(qty=qty, from_uom=from_uom, to_uom=self.alt_uom)
 
-    def qty_to_weight(self, qty, qty_uom=None):
+    # ============================
+    # تحويل كميات ↔ أوزان
+    # ============================
+
+    def qty_to_weight(self, qty, qty_uom=None) -> Decimal:
         """
         تحويل أي كمية (أساس أو بديلة) إلى وزن بوحدة الوزن weight_uom.
 
-        الخطوات:
         1) تحويل الكمية إلى وحدة الأساس.
         2) ضربها في الوزن لكل وحدة أساس weight_per_base.
         """
@@ -381,12 +443,11 @@ class Product(BaseModel):
         qty_base = self.to_base(qty=qty, uom=qty_uom)
         return qty_base * Decimal(self.weight_per_base)
 
-    def weight_to_qty(self, weight, to_uom=None):
+    def weight_to_qty(self, weight, to_uom=None) -> Decimal:
         """
         تحويل وزن (بوحدة الوزن) إلى كمية (أساس أو بديلة).
 
-        الخطوات:
-        1) حساب كمية وحدة الأساس: qty_base = weight / weight_per_base
+        1) qty_base = weight / weight_per_base
         2) إذا كانت to_uom وحدة بديلة، تحويل من أساس إلى بديلة.
         """
         if weight is None:
@@ -414,7 +475,11 @@ class Product(BaseModel):
 
         raise ValueError("وحدة الهدف غير مدعومة لهذا المنتج.")
 
-    def get_price_for_uom(self, uom=None, kind="sale") -> Decimal:
+    # ============================
+    # الأسعار حسب الوحدة
+    # ============================
+
+    def get_price_for_uom(self, uom=None, kind: str = "sale") -> Decimal:
         """
         ترجع السعر حسب نوعه (بيع أو تكلفة) وبحسب وحدة القياس:
 
@@ -428,7 +493,6 @@ class Product(BaseModel):
            (لأن 1 وحدة بديلة = alt_factor من الأساس)
         """
 
-        # --- اختيار نوع السعر (بيع أو تكلفة) ---
         if kind == "sale":
             base_price = self.default_sale_price
         elif kind == "cost":
@@ -436,17 +500,16 @@ class Product(BaseModel):
         else:
             raise ValueError("kind يجب أن يكون 'sale' أو 'cost'.")
 
-        # --- إذا الوحدة الأساسية → نرجع السعر مباشرة ---
         if uom is None or uom == self.base_uom:
             return Decimal(base_price)
 
-        # --- إذا الوحدة البديلة → نطبّق alt_factor ---
         if uom == self.alt_uom:
             if not self.alt_factor:
-                raise ValueError("لم يتم ضبط عامل التحويل للوحدة البديلة لهذا المنتج.")
+                raise ValueError(
+                    "لم يتم ضبط عامل التحويل للوحدة البديلة لهذا المنتج."
+                )
             return Decimal(base_price) * Decimal(self.alt_factor)
 
-        # --- وحدة غير مرتبطة بالمنتج ---
         raise ValueError("وحدة القياس المطلوبة غير مرتبطة بهذا المنتج.")
 
     # ============================
@@ -457,6 +520,8 @@ class Product(BaseModel):
     def total_on_hand(self) -> Decimal:
         """
         إجمالي الكمية المتوفرة لهذا المنتج في كل المستودعات / المواقع.
+        ملاحظة: عند استخدامه في قوائم كبيرة قد يسبب N+1 Query.
+        يفضّل استخدام annotate في الـ View / Manager عند عرض جداول.
         """
         agg = self.stock_levels.aggregate(total=Sum("quantity_on_hand"))
         return agg["total"] or DECIMAL_ZERO
@@ -515,7 +580,6 @@ class Product(BaseModel):
         return None
 
 
-
 # ============================================================
 # المستودعات
 # ============================================================
@@ -553,6 +617,10 @@ class Warehouse(BaseModel):
         verbose_name = _("مستودع")
         verbose_name_plural = _("المستودعات")
         ordering = ("code",)
+        indexes = [
+            models.Index(fields=["code"], name="wh_code_idx"),
+            models.Index(fields=["is_active"], name="wh_active_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.code} – {self.name}"
@@ -562,16 +630,13 @@ class Warehouse(BaseModel):
         """
         جميع أرصدة المخزون في هذا المستودع مع ربط المنتج والموقع.
         """
-        return (
-            self.stock_levels
-            .select_related("product", "location")
-            .all()
-        )
+        return self.stock_levels.select_related("product", "location").all()
 
     @property
     def total_quantity_on_hand(self) -> Decimal:
         """
         إجمالي الكمية المتوفرة في هذا المستودع (كل المنتجات وكل المواقع).
+        ملاحظة: يفضّل استخدام annotate في التقارير الكبيرة.
         """
         agg = self.stock_levels.aggregate(total=Sum("quantity_on_hand"))
         return agg["total"] or DECIMAL_ZERO
@@ -652,6 +717,10 @@ class StockLocation(BaseModel):
         verbose_name_plural = _("مواقع المخزون")
         unique_together = ("warehouse", "code")
         ordering = ("warehouse__code", "code")
+        indexes = [
+            models.Index(fields=["warehouse", "code"], name="stockloc_wh_code_idx"),
+            models.Index(fields=["type"], name="stockloc_type_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.warehouse.code}/{self.code} – {self.name}"
@@ -793,9 +862,10 @@ class StockMove(BaseModel):
           - TRANSFER → من إعدادات المخزون
 
         تُستخدم البادئة في pattern مثل: {prefix}-{seq:05d}
-        """
-        from inventory.models import InventorySettings  # import محلي لتجنب الدوران
 
+        ملاحظة:
+        - نتجنب أي import من inventory.models هنا لتفادي أي circular import.
+        """
         try:
             ctx = super().get_numbering_context() or {}
         except AttributeError:
@@ -822,7 +892,6 @@ class StockMove(BaseModel):
     def clean(self):
         super().clean()
 
-        # تحقق من الحقول المطلوبة حسب نوع الحركة
         if self.move_type == self.MoveType.IN:
             if not self.to_warehouse or not self.to_location:
                 raise ValidationError(
@@ -886,6 +955,13 @@ class StockMove(BaseModel):
     def save(self, *args, **kwargs):
         """
         يربط تحديث المخزون بتغيير حالة الحركة (status).
+
+        ⚠ ملاحظة مهمّة:
+        - عند استخدام bulk_create / bulk_update لن يتم استدعاء save()
+          وبالتالي لن يتم تطبيق apply_stock_move_status_change.
+        - يفضّل استخدام خدمات (services) مثل:
+          inventory.services.confirm_stock_move(...) في العمليات
+          الحرجة أو المتكررة.
 
         المنطق في apply_stock_move_status_change:
           - يمر على self.lines ويحدث StockLevel حسب:
@@ -967,6 +1043,13 @@ class StockMoveLine(BaseModel):
     class Meta:
         verbose_name = _("بند حركة مخزون")
         verbose_name_plural = _("بنود حركات المخزون")
+        indexes = [
+            # لتسريع الاستعلامات التي تبحث عن حركات منتج معيّن
+            models.Index(
+                fields=["product", "move"],
+                name="stockmoveline_prod_move_idx",
+            ),
+        ]
 
     def __str__(self) -> str:
         uom_code = self.uom.code if self.uom_id else "?"
@@ -1093,8 +1176,34 @@ class StockLevel(BaseModel):
             ),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.product} @ {self.warehouse} / {self.location}"
+
+    # ============================
+    # التحقق (Validation)
+    # ============================
+
+    def clean(self):
+        """
+        تأكد أن الموقع يتبع نفس المستودع المحدد.
+
+        نستخدم values_list للحصول على warehouse_id للموقع فقط،
+        لتقليل الـ overhead وعدم تحميل الكائن كامل.
+        """
+        super().clean()
+
+        if self.location_id and self.warehouse_id:
+            loc_warehouse_id = StockLocation.objects.values_list(
+                "warehouse_id", flat=True
+            ).get(pk=self.location_id)
+            if loc_warehouse_id != self.warehouse_id:
+                raise ValidationError(
+                    _("الموقع المختار لا يتبع نفس المستودع المحدد في رصيد المخزون.")
+                )
+
+    # ============================
+    # خصائص مساعدة
+    # ============================
 
     @property
     def qty(self) -> Decimal:
@@ -1102,10 +1211,6 @@ class StockLevel(BaseModel):
         اسم قديم متوافق مع الخلف: alias لـ quantity_on_hand.
         """
         return self.quantity_on_hand
-
-    # ============================
-    # خصائص مساعدة
-    # ============================
 
     @property
     def available_quantity(self) -> Decimal:

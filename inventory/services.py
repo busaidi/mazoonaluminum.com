@@ -1,5 +1,7 @@
 # inventory/services.py
 
+from __future__ import annotations
+
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -12,7 +14,6 @@ from core.services.audit import log_event
 
 from .models import StockLevel, StockMove
 
-
 DECIMAL_ZERO = Decimal("0.000")
 
 
@@ -20,7 +21,12 @@ DECIMAL_ZERO = Decimal("0.000")
 # دوال مساعدة لسجل التدقيق لحركات المخزون
 # ============================================================
 
-def _build_move_audit_extra(move: StockMove, *, factor: Decimal | None = None) -> dict:
+
+def _build_move_audit_extra(
+    move: StockMove,
+    *,
+    factor: Decimal | None = None,
+) -> dict:
     """
     يبني دكشنري موحّد للمعلومات الإضافية لكل حدث متعلق بحركة مخزون.
     مفيد لعرض تفاصيل الحركة لاحقاً في سجل التدقيق.
@@ -86,8 +92,15 @@ def _build_reservation_audit_extra(
 # دوال أساسية لتعديل أرصدة المخزون
 # ============================================================
 
+
 @transaction.atomic
-def _adjust_stock_level(*, product, warehouse, location, delta: Decimal) -> StockLevel:
+def _adjust_stock_level(
+    *,
+    product,
+    warehouse,
+    location,
+    delta: Decimal,
+) -> StockLevel:
     """
     يعدّل مستوى المخزون (quantity_on_hand) بمقدار delta
     *بالوحدة الأساسية للمنتج* (base_uom).
@@ -214,90 +227,138 @@ def _apply_move_delta(move: StockMove, *, factor: Decimal) -> None:
 
 
 # ============================================================
-# منطق التحديث بناءً على حالة الحركة (status)
+# واجهة صريحة لتأكيد / إلغاء حركات المخزون
 # ============================================================
 
-def apply_stock_move_status_change(
-    *, move: StockMove, old_status: str | None, is_create: bool
-) -> None:
+
+@transaction.atomic
+def confirm_stock_move(move: StockMove, user=None) -> StockMove:
     """
-    تطبّق / تعكس أثر الحركة على المخزون بناءً على تغيير الحالة (status).
-
-    القواعد:
-
-      عند الإنشاء (is_create=True):
-        - DRAFT      → لا شيء
-        - DONE       → تطبيق الحركة (factor = +1)
-        - CANCELLED  → لا شيء
-
-      عند التعديل:
-        - DRAFT      → DONE       => factor = +1
-        - CANCELLED  → DONE       => factor = +1   (إعادة تفعيل)
-        - DONE       → CANCELLED  => factor = -1   (إلغاء بعد التطبيق)
-        - DONE       → DRAFT      => factor = -1   (رجوع لمسودة)
-        - باقي الانتقالات لا تغيّر المخزون.
-
-    بالإضافة لذلك:
-      - نسجل جميع الانتقالات التي تؤثر على المخزون في AuditLog.Action.STATUS_CHANGE
-        مع معلومات إضافية عن الحركة.
+    تأكيد حركة مخزون:
+      - يسمح بالانتقال من:
+          DRAFT      → DONE
+          CANCELLED  → DONE  (إعادة تفعيل إن أردت هذا السلوك)
+      - لو كانت الحركة منفذة مسبقاً → لا شيء (لا نعيد التطبيق).
+      - يطبّق تأثير الحركة على المخزون (factor = +1).
     """
-    new_status = move.status
+    # نعيد تحميل الحركة مع قفل الصف لتفادي السباقات
+    move = StockMove.objects.select_for_update().get(pk=move.pk)
+    old_status = move.status
 
-    # إنشاء جديد
-    if is_create:
-        if new_status == StockMove.Status.DONE:
-            factor = Decimal("1")
-            _apply_move_delta(move, factor=factor)
+    if old_status == StockMove.Status.DONE:
+        # سبق وتم التأكيد، لا تعيد التطبيق مرة أخرى
+        return move
 
-            # سجل تدقيق: تطبيق حركة جديدة مباشرة كـ DONE
-            log_event(
-                action=AuditLog.Action.STATUS_CHANGE,
-                message=_("تم تطبيق حركة المخزون رقم %(id)s عند الإنشاء (إلى منفذة).") % {
-                    "id": move.pk,
-                },
-                actor=None,  # لا يوجد request هنا، نتركها بدون actor
-                target=move,
-                extra=_build_move_audit_extra(move, factor=factor),
-            )
-        return
+    if old_status not in (StockMove.Status.DRAFT, StockMove.Status.CANCELLED):
+        raise ValidationError(_("لا يمكن تأكيد حركة من هذه الحالة."))
 
-    # تحديث موجود مسبقاً
-    if old_status is None or old_status == new_status:
-        # لا يوجد تغيير في الحالة
-        return
+    # نتأكد من صلاحية البيانات (from / to .. إلخ) قبل التطبيق
+    move.full_clean()
 
-    transition_map: dict[tuple[str, str], Decimal] = {
-        (StockMove.Status.DRAFT, StockMove.Status.DONE): Decimal("1"),
-        (StockMove.Status.CANCELLED, StockMove.Status.DONE): Decimal("1"),
-        (StockMove.Status.DONE, StockMove.Status.CANCELLED): Decimal("-1"),
-        (StockMove.Status.DONE, StockMove.Status.DRAFT): Decimal("-1"),
-    }
+    # تحديث الحالة فقط
+    move.status = StockMove.Status.DONE
+    move.save(update_fields=["status"])
 
-    factor = transition_map.get((old_status, new_status))
-    if factor is None:
-        # انتقال لا يؤثر على المخزون (مثلاً DRAFT → CANCELLED)
-        return
-
+    # تطبيق أثر الحركة على المخزون
+    factor = Decimal("1")
     _apply_move_delta(move, factor=factor)
 
-    # سجل التدقيق لهذا الانتقال
+    # سجل تدقيق
     status_labels = dict(StockMove.Status.choices)
-    old_label = status_labels.get(old_status, old_status)
-    new_label = status_labels.get(new_status, new_status)
+    log_event(
+        action=AuditLog.Action.STATUS_CHANGE,
+        message=_(
+            "تم تأكيد حركة المخزون رقم %(id)s (من %(old)s إلى %(new)s)."
+        )
+        % {
+            "id": move.pk,
+            "old": status_labels.get(old_status, old_status),
+            "new": status_labels.get(StockMove.Status.DONE, "DONE"),
+        },
+        actor=user,
+        target=move,
+        extra=_build_move_audit_extra(move, factor=factor),
+    )
+
+    return move
+
+
+@transaction.atomic
+def cancel_stock_move(move: StockMove, user=None) -> StockMove:
+    """
+    إلغاء حركة مخزون:
+      - لو كانت مسودة DRAFT  → نغيّر الحالة فقط (بدون أثر مخزني).
+      - لو كانت منفذة DONE   → نعكس الأثر (factor = -1) ثم نغيّر الحالة إلى CANCELLED.
+      - لو كانت ملغاة CANCELLED مسبقاً → لا شيء.
+    """
+    move = StockMove.objects.select_for_update().get(pk=move.pk)
+    old_status = move.status
+
+    if old_status == StockMove.Status.CANCELLED:
+        # ملغاة مسبقاً
+        return move
+
+    factor: Decimal | None = None
+
+    if old_status == StockMove.Status.DONE:
+        # عكس أثر الحركة على المخزون
+        factor = Decimal("-1")
+        _apply_move_delta(move, factor=factor)
+    elif old_status == StockMove.Status.DRAFT:
+        # لا يوجد أثر مخزون لتعديله
+        factor = Decimal("0")
+    else:
+        raise ValidationError(_("لا يمكن إلغاء حركة من هذه الحالة."))
+
+    # تحديث الحالة إلى CANCELLED
+    move.status = StockMove.Status.CANCELLED
+    move.save(update_fields=["status"])
+
+    # سجل تدقيق
+    status_labels = dict(StockMove.Status.choices)
 
     log_event(
         action=AuditLog.Action.STATUS_CHANGE,
         message=_(
-            "تغيير حالة حركة المخزون رقم %(id)s من %(old)s إلى %(new)s."
-        ) % {
+            "تم إلغاء حركة المخزون رقم %(id)s (من %(old)s إلى %(new)s)."
+        )
+        % {
             "id": move.pk,
-            "old": old_label,
-            "new": new_label,
+            "old": status_labels.get(old_status, old_status),
+            "new": status_labels.get(StockMove.Status.CANCELLED, "CANCELLED"),
         },
-        actor=None,
+        actor=user,
         target=move,
-        extra=_build_move_audit_extra(move, factor=factor),
+        extra=_build_move_audit_extra(
+            move,
+            factor=factor if factor is not None else Decimal("0"),
+        ),
     )
+
+    return move
+
+
+# ============================================================
+# منطق التحديث بناءً على حالة الحركة (status) – Legacy
+# ============================================================
+
+
+def apply_stock_move_status_change(
+    *,
+    move: StockMove,
+    old_status: str | None,
+    is_create: bool,
+) -> None:
+    """
+    👈 دالة قديمة (Legacy) فقط للتوافق مع أي كود قديم.
+
+    يفضّل استخدام:
+      - confirm_stock_move(move, user)
+      - cancel_stock_move(move, user)
+
+    لا تقوم بأي تعديل على المخزون الآن.
+    """
+    return
 
 
 def apply_stock_move_on_delete(move: StockMove) -> None:
@@ -317,9 +378,8 @@ def apply_stock_move_on_delete(move: StockMove) -> None:
         action=AuditLog.Action.STATUS_CHANGE,
         message=_(
             "تم حذف حركة المخزون رقم %(id)s وتم عكس أثرها على المخزون."
-        ) % {
-            "id": move.pk,
-        },
+        )
+        % {"id": move.pk},
         actor=None,
         target=move,
         extra=_build_move_audit_extra(move, factor=factor),
@@ -329,6 +389,8 @@ def apply_stock_move_on_delete(move: StockMove) -> None:
 # ============================================================
 # دوال حجز المخزون (للطلبيات)
 # ============================================================
+
+
 @transaction.atomic
 def reserve_stock_for_order(
     *,
@@ -386,7 +448,8 @@ def reserve_stock_for_order(
         action=AuditLog.Action.UPDATE,
         message=_(
             "تم حجز كمية %(qty)s من المنتج %(product)s في المستودع %(wh)s."
-        ) % {
+        )
+        % {
             "qty": quantity,
             "product": getattr(product, "code", str(product)),
             "wh": getattr(warehouse, "code", str(warehouse)),
@@ -459,7 +522,8 @@ def release_stock_reservation(
         action=AuditLog.Action.UPDATE,
         message=_(
             "تم فك حجز كمية %(qty)s من المنتج %(product)s في المستودع %(wh)s."
-        ) % {
+        )
+        % {
             "qty": quantity,
             "product": getattr(product, "code", str(product)),
             "wh": getattr(warehouse, "code", str(warehouse)),
@@ -471,7 +535,7 @@ def release_stock_reservation(
             warehouse=warehouse,
             location=location,
             quantity=quantity,
-            before_available=None,  # هنا الأهم هو الحجز قبل/بعد
+            before_available=None,
             after_reserved=level.quantity_reserved,
         ),
     )
@@ -502,6 +566,7 @@ def get_available_stock(*, product, warehouse, location) -> Decimal:
 # ملخصات وتقارير بسيطة للمخزون
 # ============================================================
 
+
 def get_stock_summary_per_warehouse():
     """
     ملخص إجمالي الكمية لكل مستودع.
@@ -512,8 +577,7 @@ def get_stock_summary_per_warehouse():
       - total_qty
     """
     return (
-        StockLevel.objects
-        .select_related("warehouse")
+        StockLevel.objects.select_related("warehouse")
         .values("warehouse__code", "warehouse__name")
         .annotate(total_qty=Sum("quantity_on_hand"))
         .order_by("warehouse__code")
@@ -528,8 +592,7 @@ def get_low_stock_levels():
     مع select_related للعرض في القوالب بدون مشكلة N+1.
     """
     return (
-        StockLevel.objects
-        .select_related("product", "warehouse", "location")
+        StockLevel.objects.select_related("product", "warehouse", "location")
         .filter(
             min_stock__gt=DECIMAL_ZERO,
             quantity_on_hand__lt=F("min_stock"),
@@ -540,6 +603,7 @@ def get_low_stock_levels():
 # ============================================================
 # فلاتر جاهزة لقوائم المخزون / الحركات / المنتجات
 # ============================================================
+
 
 def filter_below_min_stock_levels(qs):
     """
