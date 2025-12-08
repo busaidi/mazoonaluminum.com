@@ -9,6 +9,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.exceptions import ValidationError
 from django.db.models import Sum, Q, F, Case, When, IntegerField
 from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy, reverse
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import (
@@ -18,6 +19,7 @@ from django.views.generic import (
     CreateView,
     UpdateView,
 )
+from django.views.generic.base import View
 
 from core.models import AuditLog, Notification
 from core.services.audit import log_event
@@ -1156,108 +1158,113 @@ class InventorySettingsView(InventoryStaffRequiredMixin, UpdateView):
         return response
 
 
-class StockMoveConfirmView(InventoryStaffRequiredMixin, DetailView):
-    """
-    تأكيد حركة مخزون موجودة باستخدام السيرفس confirm_stock_move:
+# ============================================================
+# تأكيد / إلغاء حركات المخزون
+# ============================================================
 
-    - يسمح فقط بتأكيد حركة ليست في حالة CANCELLED.
-    - لو كانت DONE مسبقًا → لا يعيد التطبيق.
-    - عند النجاح:
-        * يتم تسجيل الأوديت داخل السيرفس.
-        * يتم إرسال رسالة نجاح للمستخدم.
-        * يتم إرسال نوتفيكيشن لبقية الستاف.
+class StockMoveConfirmView(InventoryStaffRequiredMixin, View):
     """
-    model = StockMove
-    context_object_name = "stockmove"
+    تأكيد حركة مخزون:
 
-    def post(self, request, *args, **kwargs):
-        self.object = self.get_object()
+    - يستدعي السيرفس confirm_stock_move لتحديث الأرصدة وتغيير الحالة إلى DONE.
+    - يسجل حدث في سجل الأوديت.
+    - يرسل نوتفيكيشن لبقية مستخدمي الستاف في المخزون.
+    """
+
+    def post(self, request, pk, *args, **kwargs):
+        move = get_object_or_404(StockMove, pk=pk)
         user = request.user
 
         try:
-            move = confirm_stock_move(self.object, user=user)
-            messages.success(
-                request,
-                _("تم تأكيد حركة المخزون رقم %(id)s بنجاح.") % {"id": move.pk},
-            )
-
-            # 🔔 نوتفيكيشن لبقية الستاف
-            move_url = reverse("inventory:move_detail", args=[move.pk])
-            _notify_inventory_staff(
-                actor=user,
-                verb=_("تم تأكيد حركة المخزون رقم %(id)s.") % {"id": move.pk},
-                target=move,
-                level=Notification.Levels.SUCCESS,
-                url=move_url,
-            )
-
+            move = confirm_stock_move(move, user=user)
         except ValidationError as e:
-            # لو السيرفس رفض التغيير (مثلاً حركة ملغاة أو بيانات ناقصة)
-            error_msg = e.messages[0] if hasattr(e, "messages") and e.messages else str(e)
-            messages.error(request, error_msg)
+            # رسالة خطأ للمستخدم
+            messages.error(request, "; ".join(e.messages))
+            return HttpResponseRedirect(
+                reverse("inventory:move_detail", kwargs={"pk": move.pk})
+            )
 
-        # في جميع الأحوال نرجع لصفحة التفاصيل
-        return HttpResponseRedirect(
-            reverse("inventory:move_detail", args=[self.object.pk])
+        messages.success(
+            request,
+            _("تم تأكيد حركة المخزون وتحديث الأرصدة بنجاح."),
         )
 
-    def get(self, request, *args, **kwargs):
-        """
-        لو أحد فتح الرابط بـ GET نرجعه مباشرة لصفحة التفاصيل
-        (التأكيد مطلوب عبر POST من الفورم/الزر).
-        """
-        self.object = self.get_object()
-        return HttpResponseRedirect(
-            reverse("inventory:move_detail", args=[self.object.pk])
+        # --- الأوديت: تغيير حالة الحركة إلى DONE ---
+        log_event(
+            action=AuditLog.Action.STATUS_CHANGE,
+            message=_("تم تأكيد حركة المخزون رقم %(id)s") % {"id": move.pk},
+            actor=user if user.is_authenticated else None,
+            target=move,
+            extra={
+                "status": move.status,
+                "move_type": move.move_type,
+                "from_warehouse_id": move.from_warehouse_id,
+                "to_warehouse_id": move.to_warehouse_id,
+            },
         )
 
+        # --- النوتفيكيشن: تأكيد حركة مخزون ---
+        move_url = reverse("inventory:move_detail", args=[move.pk])
+        _notify_inventory_staff(
+            actor=user,
+            verb=_("تم تأكيد حركة المخزون رقم %(id)s") % {"id": move.pk},
+            target=move,
+            level=Notification.Levels.SUCCESS,
+            url=move_url,
+        )
+
+        return HttpResponseRedirect(move_url)
 
 
-class StockMoveCancelView(InventoryStaffRequiredMixin, DetailView):
+class StockMoveCancelView(InventoryStaffRequiredMixin, View):
     """
-    إلغاء حركة مخزون باستخدام السيرفس cancel_stock_move:
+    إلغاء حركة مخزون:
 
-    - DRAFT  → CANCELLED (بدون أثر مخزني).
-    - DONE   → CANCELLED (يعكس أثر الحركة على المخزون).
-    - CANCELLED مسبقًا → لا شيء.
+    - مسموح فقط من حالة DRAFT.
+    - لا يعدّل أرصدة المخزون (السيرفس لا يلمس الأرصدة).
+    - يسجل حدث أوديت ويرسل نوتفيكيشن.
     """
-    model = StockMove
-    context_object_name = "stockmove"
 
-    def post(self, request, *args, **kwargs):
-        self.object = self.get_object()
+    def post(self, request, pk, *args, **kwargs):
+        move = get_object_or_404(StockMove, pk=pk)
         user = request.user
 
         try:
-            move = cancel_stock_move(self.object, user=user)
-            messages.success(
-                request,
-                _("تم إلغاء حركة المخزون رقم %(id)s بنجاح.") % {"id": move.pk},
-            )
-
-            # 🔔 نوتفيكيشن لبقية الستاف
-            move_url = reverse("inventory:move_detail", args=[move.pk])
-            _notify_inventory_staff(
-                actor=user,
-                verb=_("تم إلغاء حركة المخزون رقم %(id)s.") % {"id": move.pk},
-                target=move,
-                level=Notification.Levels.WARNING,
-                url=move_url,
-            )
-
+            move = cancel_stock_move(move, user=user)
         except ValidationError as e:
-            error_msg = e.messages[0] if hasattr(e, "messages") and e.messages else str(e)
-            messages.error(request, error_msg)
+            messages.error(request, "; ".join(e.messages))
+            return HttpResponseRedirect(
+                reverse("inventory:move_detail", kwargs={"pk": move.pk})
+            )
 
-        return HttpResponseRedirect(
-            reverse("inventory:move_detail", args=[self.object.pk])
+        messages.success(
+            request,
+            _("تم إلغاء حركة المخزون بنجاح."),
         )
 
-    def get(self, request, *args, **kwargs):
-        """
-        مثل confirm: لو GET نرجعه لصفحة التفاصيل مباشرة.
-        """
-        self.object = self.get_object()
-        return HttpResponseRedirect(
-            reverse("inventory:move_detail", args=[self.object.pk])
+        # --- الأوديت: تغيير حالة الحركة إلى CANCELLED ---
+        log_event(
+            action=AuditLog.Action.STATUS_CHANGE,
+            message=_("تم إلغاء حركة المخزون رقم %(id)s") % {"id": move.pk},
+            actor=user if user.is_authenticated else None,
+            target=move,
+            extra={
+                "status": move.status,
+                "move_type": move.move_type,
+                "from_warehouse_id": move.from_warehouse_id,
+                "to_warehouse_id": move.to_warehouse_id,
+            },
         )
+
+        # --- النوتفيكيشن: إلغاء حركة مخزون ---
+        move_url = reverse("inventory:move_detail", args=[move.pk])
+        _notify_inventory_staff(
+            actor=user,
+            verb=_("تم إلغاء حركة المخزون رقم %(id)s") % {"id": move.pk},
+            target=move,
+            level=Notification.Levels.WARNING,
+            url=move_url,
+        )
+
+        return HttpResponseRedirect(move_url)
+

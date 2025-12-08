@@ -36,7 +36,9 @@ class StockMoveForm(forms.ModelForm):
             "note",
         ]
         widgets = {
-            "move_date": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "move_date": forms.DateTimeInput(
+                attrs={"type": "datetime-local"}
+            ),
         }
 
     def __init__(self, *args, **kwargs):
@@ -53,22 +55,26 @@ class StockMoveForm(forms.ModelForm):
         self.fields["reference"].label = _("مرجع خارجي")
         self.fields["note"].label = _("ملاحظات")
 
-        # Bootstrap classes
+        # Bootstrap classes (sm)
         for name, field in self.fields.items():
             widget = field.widget
             css = widget.attrs.get("class", "")
+
             if isinstance(widget, (forms.Select, forms.SelectMultiple)):
                 widget.attrs["class"] = (
-                    css.replace("form-control", "") + " form-select"
+                    css.replace("form-control", "") + " form-select form-select-sm"
                 ).strip()
             elif isinstance(widget, forms.CheckboxInput):
                 widget.attrs["class"] = (css + " form-check-input").strip()
             else:
-                widget.attrs["class"] = (css + " form-control").strip()
+                widget.attrs["class"] = (
+                    css + " form-control form-control-sm"
+                ).strip()
 
     def clean(self):
         cleaned = super().clean()
 
+        move_type = cleaned.get("move_type")
         from_wh = cleaned.get("from_warehouse")
         from_loc = cleaned.get("from_location")
         to_wh = cleaned.get("to_warehouse")
@@ -86,6 +92,32 @@ class StockMoveForm(forms.ModelForm):
                 "to_location",
                 _("الموقع المختار لا يتبع المخزن المحدد في حقل (إلى مخزن)."),
             )
+
+        # منطق إلزام الحقول حسب نوع الحركة
+        if move_type == StockMove.MoveType.IN:
+            # وارد: فقط الوجهة إلزامية
+            if not to_wh:
+                self.add_error("to_warehouse", _("حركة الوارد تتطلب تحديد مخزن الوجهة."))
+            if not to_loc:
+                self.add_error("to_location", _("حركة الوارد تتطلب تحديد موقع الوجهة."))
+
+        elif move_type == StockMove.MoveType.OUT:
+            # صادر: فقط المصدر إلزامي
+            if not from_wh:
+                self.add_error("from_warehouse", _("حركة الصادر تتطلب تحديد مخزن المصدر."))
+            if not from_loc:
+                self.add_error("from_location", _("حركة الصادر تتطلب تحديد موقع المصدر."))
+
+        elif move_type == StockMove.MoveType.TRANSFER:
+            # تحويل: المصدر + الوجهة إلزاميين
+            if not from_wh:
+                self.add_error("from_warehouse", _("حركة التحويل تتطلب تحديد مخزن المصدر."))
+            if not from_loc:
+                self.add_error("from_location", _("حركة التحويل تتطلب تحديد موقع المصدر."))
+            if not to_wh:
+                self.add_error("to_warehouse", _("حركة التحويل تتطلب تحديد مخزن الوجهة."))
+            if not to_loc:
+                self.add_error("to_location", _("حركة التحويل تتطلب تحديد موقع الوجهة."))
 
         return cleaned
 
@@ -120,18 +152,21 @@ class StockMoveLineForm(forms.ModelForm):
         if product:
             self._limit_uom_to_product(product)
 
-        # Bootstrap classes
+        # Bootstrap classes (sm)
         for name, field in self.fields.items():
             widget = field.widget
             css = widget.attrs.get("class", "")
+
             if isinstance(widget, (forms.Select, forms.SelectMultiple)):
                 widget.attrs["class"] = (
-                    css.replace("form-control", "") + " form-select"
+                    css.replace("form-control", "") + " form-select form-select-sm"
                 ).strip()
             elif isinstance(widget, forms.CheckboxInput):
                 widget.attrs["class"] = (css + " form-check-input").strip()
             else:
-                widget.attrs["class"] = (css + " form-control").strip()
+                widget.attrs["class"] = (
+                    css + " form-control form-control-sm"
+                ).strip()
 
     # ============================
     # Helpers

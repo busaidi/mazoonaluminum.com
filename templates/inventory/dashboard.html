@@ -291,9 +291,9 @@
             <tr>
               <th>{% trans "التاريخ" %}</th>
               <th>{% trans "رقم الحركة" %}</th>
-              <th>{% trans "المنتج" %}</th>
               <th>{% trans "النوع" %}</th>
-              <th class="text-end">{% trans "الكمية" %}</th>
+              <th class="text-end">{% trans "عدد البنود" %}</th>
+              <th class="text-end">{% trans "إجمالي الكمية" %}</th>
               <th>{% trans "من" %}</th>
               <th>{% trans "إلى" %}</th>
               <th>{% trans "الحالة" %}</th>
@@ -313,15 +313,6 @@
                   </a>
                 </td>
                 <td class="small">
-                  {% if move.product %}
-                    <a href="{% url 'inventory:product_list' %}?q={{ move.product.code }}">
-                      {{ move.product.code }}
-                    </a>
-                  {% else %}
-                    <span class="text-muted">—</span>
-                  {% endif %}
-                </td>
-                <td class="small">
                   {% if move.move_type == "in" %}
                     <span class="badge bg-success-subtle text-success border">{% trans "واردة" %}</span>
                   {% elif move.move_type == "out" %}
@@ -334,12 +325,11 @@
                     </span>
                   {% endif %}
                 </td>
+                <td class="text-end small">
+                  {{ move.lines.count }}
+                </td>
                 <td class="text-end fw-semibold small">
-                  {% if move.quantity %}
-                    {{ move.quantity }}{% if move.uom %} {{ move.uom }}{% endif %}
-                  {% else %}
-                    <span class="text-muted">—</span>
-                  {% endif %}
+                  {{ move.total_lines_quantity|default:"0.000" }}
                 </td>
                 <td class="small">
                   {% if move.from_warehouse %}

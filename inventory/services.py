@@ -7,6 +7,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import F, Sum, Q
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from core.models import AuditLog
@@ -89,7 +90,7 @@ def _build_reservation_audit_extra(
 
 
 # ============================================================
-# دوال أساسية لتعديل أرصدة المخزون
+# دوال أساسية لتعديل أرصدة المخزون (core)
 # ============================================================
 
 
@@ -151,7 +152,7 @@ def _apply_move_delta(move: StockMove, *, factor: Decimal) -> None:
 
     factor:
       +1  = تطبيق الحركة (posting)
-      -1  = عكس الحركة (unposting أو حذف)
+      -1  = عكس الحركة (unposting أو إلغاء)
 
     المنطق يعتمد على:
       - move.lines (StockMoveLine)
@@ -163,11 +164,18 @@ def _apply_move_delta(move: StockMove, *, factor: Decimal) -> None:
         return
 
     for line in lines:
+        product = line.product
+
         # لو المنتج لا يُتابَع في المخزون نتجاهله
-        if not line.product.is_stock_item:
+        if not getattr(product, "is_stock_item", True):
             continue
 
-        base_qty = line.get_base_quantity() or DECIMAL_ZERO
+        # نحاول استخدام get_base_quantity لو موجودة
+        if hasattr(line, "get_base_quantity"):
+            base_qty = line.get_base_quantity() or DECIMAL_ZERO
+        else:
+            base_qty = line.quantity or DECIMAL_ZERO
+
         qty = base_qty * factor
         if qty == 0:
             continue
@@ -180,7 +188,7 @@ def _apply_move_delta(move: StockMove, *, factor: Decimal) -> None:
                 )
 
             _adjust_stock_level(
-                product=line.product,
+                product=product,
                 warehouse=move.to_warehouse,
                 location=move.to_location,
                 delta=qty,  # الكمية بالـ base_uom
@@ -194,7 +202,7 @@ def _apply_move_delta(move: StockMove, *, factor: Decimal) -> None:
                 )
 
             _adjust_stock_level(
-                product=line.product,
+                product=product,
                 warehouse=move.from_warehouse,
                 location=move.from_location,
                 delta=-qty,
@@ -213,17 +221,20 @@ def _apply_move_delta(move: StockMove, *, factor: Decimal) -> None:
                 )
 
             _adjust_stock_level(
-                product=line.product,
+                product=product,
                 warehouse=move.from_warehouse,
                 location=move.from_location,
                 delta=-qty,
             )
             _adjust_stock_level(
-                product=line.product,
+                product=product,
                 warehouse=move.to_warehouse,
                 location=move.to_location,
                 delta=qty,
             )
+
+        else:  # احتياط لأنواع مستقبلية
+            raise ValidationError(_("نوع حركة المخزون غير معروف."))
 
 
 # ============================================================
@@ -235,14 +246,27 @@ def _apply_move_delta(move: StockMove, *, factor: Decimal) -> None:
 def confirm_stock_move(move: StockMove, user=None) -> StockMove:
     """
     تأكيد حركة مخزون:
+
       - يسمح بالانتقال من:
           DRAFT      → DONE
-          CANCELLED  → DONE  (إعادة تفعيل إن أردت هذا السلوك)
-      - لو كانت الحركة منفذة مسبقاً → لا شيء (لا نعيد التطبيق).
+          CANCELLED  → DONE  (إعادة تفعيل لو حاب)
+      - لو كانت الحركة DONE مسبقاً → لا شيء (لا نعيد التطبيق).
       - يطبّق تأثير الحركة على المخزون (factor = +1).
     """
-    # نعيد تحميل الحركة مع قفل الصف لتفادي السباقات
-    move = StockMove.objects.select_for_update().get(pk=move.pk)
+    # إعادة جلب الحركة مع lock + الـ lines + المستودعات
+    move = (
+        StockMove.objects
+        .select_for_update()
+        .prefetch_related("lines__product", "lines__uom")
+        .select_related(
+            "from_warehouse",
+            "to_warehouse",
+            "from_location",
+            "to_location",
+        )
+        .get(pk=move.pk)
+    )
+
     old_status = move.status
 
     if old_status == StockMove.Status.DONE:
@@ -252,16 +276,42 @@ def confirm_stock_move(move: StockMove, user=None) -> StockMove:
     if old_status not in (StockMove.Status.DRAFT, StockMove.Status.CANCELLED):
         raise ValidationError(_("لا يمكن تأكيد حركة من هذه الحالة."))
 
-    # نتأكد من صلاحية البيانات (from / to .. إلخ) قبل التطبيق
-    move.full_clean()
+    lines = list(move.lines.all())
+    if not lines:
+        raise ValidationError(_("لا يمكن تأكيد الحركة بدون بنود مخزون."))
 
-    # تحديث الحالة فقط
-    move.status = StockMove.Status.DONE
-    move.save(update_fields=["status"])
+    # التحقق الأساسي على from/to حسب نوع الحركة
+    if move.move_type in (StockMove.MoveType.OUT, StockMove.MoveType.TRANSFER):
+        if not move.from_warehouse or not move.from_location:
+            raise ValidationError(_("حركة الإخراج / التحويل تتطلب تحديد مخزن وموقع مصدر."))
+
+    if move.move_type in (StockMove.MoveType.IN, StockMove.MoveType.TRANSFER):
+        if not move.to_warehouse or not move.to_location:
+            raise ValidationError(_("حركة الإدخال / التحويل تتطلب تحديد مخزن وموقع مستقبِل."))
 
     # تطبيق أثر الحركة على المخزون
     factor = Decimal("1")
     _apply_move_delta(move, factor=factor)
+
+    # تحديث الحالة إلى DONE
+    move.status = StockMove.Status.DONE
+
+    # نحدد الحقول الموجودة فعلياً في الموديل (concrete fields)
+    concrete_field_names = {f.name for f in move._meta.concrete_fields}
+
+    update_fields = ["status"]
+
+    # لو عندنا حقل done_at في الموديل
+    if "done_at" in concrete_field_names:
+        move.done_at = timezone.now()
+        update_fields.append("done_at")
+
+    # لو عندنا حقل done_by في الموديل
+    if user is not None and "done_by" in concrete_field_names:
+        move.done_by = user
+        update_fields.append("done_by")
+
+    move.save(update_fields=update_fields)
 
     # سجل تدقيق
     status_labels = dict(StockMove.Status.choices)
@@ -287,36 +337,56 @@ def confirm_stock_move(move: StockMove, user=None) -> StockMove:
 def cancel_stock_move(move: StockMove, user=None) -> StockMove:
     """
     إلغاء حركة مخزون:
-      - لو كانت مسودة DRAFT  → نغيّر الحالة فقط (بدون أثر مخزني).
-      - لو كانت منفذة DONE   → نعكس الأثر (factor = -1) ثم نغيّر الحالة إلى CANCELLED.
-      - لو كانت ملغاة CANCELLED مسبقاً → لا شيء.
+
+      - لو كانت DRAFT   → إلغاء بدون أثر مخزني.
+      - لو كانت DONE    → عكس الأثر (factor = -1) ثم تغيير الحالة إلى CANCELLED.
+      - لو كانت CANCELLED مسبقاً → يرفع خطأ.
     """
-    move = StockMove.objects.select_for_update().get(pk=move.pk)
+    move = (
+        StockMove.objects
+        .select_for_update()
+        .prefetch_related("lines__product", "lines__uom")
+        .select_related(
+            "from_warehouse",
+            "to_warehouse",
+            "from_location",
+            "to_location",
+        )
+        .get(pk=move.pk)
+    )
+
     old_status = move.status
 
     if old_status == StockMove.Status.CANCELLED:
-        # ملغاة مسبقاً
-        return move
+        raise ValidationError(_("تم إلغاء هذه الحركة مسبقًا."))
 
     factor: Decimal | None = None
 
-    if old_status == StockMove.Status.DONE:
+    if old_status == StockMove.Status.DRAFT:
+        # لا يوجد أثر مخزون لتعديله
+        factor = Decimal("0")
+
+    elif old_status == StockMove.Status.DONE:
         # عكس أثر الحركة على المخزون
         factor = Decimal("-1")
         _apply_move_delta(move, factor=factor)
-    elif old_status == StockMove.Status.DRAFT:
-        # لا يوجد أثر مخزون لتعديله
-        factor = Decimal("0")
+
     else:
         raise ValidationError(_("لا يمكن إلغاء حركة من هذه الحالة."))
 
-    # تحديث الحالة إلى CANCELLED
     move.status = StockMove.Status.CANCELLED
-    move.save(update_fields=["status"])
+    move.cancelled_at = timezone.now()
+    if user is not None and hasattr(move, "cancelled_by"):
+        move.cancelled_by = user
+
+    update_fields = ["status", "cancelled_at"]
+    if hasattr(move, "cancelled_by"):
+        update_fields.append("cancelled_by")
+
+    move.save(update_fields=update_fields)
 
     # سجل تدقيق
     status_labels = dict(StockMove.Status.choices)
-
     log_event(
         action=AuditLog.Action.STATUS_CHANGE,
         message=_(
@@ -339,7 +409,7 @@ def cancel_stock_move(move: StockMove, user=None) -> StockMove:
 
 
 # ============================================================
-# منطق التحديث بناءً على حالة الحركة (status) – Legacy
+# منطق التحديث عند تغيير الحالة / الحذف (للتوافق مع كود قديم)
 # ============================================================
 
 
@@ -600,11 +670,6 @@ def get_low_stock_levels():
     )
 
 
-# ============================================================
-# فلاتر جاهزة لقوائم المخزون / الحركات / المنتجات
-# ============================================================
-
-
 def filter_below_min_stock_levels(qs):
     """
     يطبّق فلتر 'تحت الحد الأدنى' على QuerySet معيّن لمستويات المخزون.
@@ -623,6 +688,11 @@ def get_low_stock_total() -> int:
     """
     base_qs = StockLevel.objects.all()
     return filter_below_min_stock_levels(base_qs).count()
+
+
+# ============================================================
+# فلاتر جاهزة لقوائم المخزون / الحركات / المنتجات
+# ============================================================
 
 
 def filter_stock_moves_queryset(
@@ -701,3 +771,24 @@ def filter_products_queryset(
         qs = qs.filter(is_published=True)
 
     return qs
+
+
+# ============================================================
+# هيلبر بسيط (قد يُستخدم في أماكن أخرى)
+# ============================================================
+
+
+def _get_stock_level(product, warehouse, location) -> StockLevel:
+    """
+    إرجاع مستوى المخزون (StockLevel) للمنتج + المخزن + الموقع.
+    إذا لم يوجد، يتم إنشاؤه (بكمية 0 افتراضيًا).
+    """
+    stock_level, _created = StockLevel.objects.get_or_create(
+        product=product,
+        warehouse=warehouse,
+        location=location,
+        defaults={
+            "quantity_on_hand": Decimal("0.000"),
+        },
+    )
+    return stock_level
