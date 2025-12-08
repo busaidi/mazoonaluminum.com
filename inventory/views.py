@@ -6,6 +6,7 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.core.exceptions import ValidationError
 from django.db.models import Sum, Q, F, Case, When, IntegerField
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy, reverse
@@ -44,7 +45,7 @@ from .services import (
     filter_below_min_stock_levels,
     get_low_stock_total,
     filter_stock_moves_queryset,
-    filter_products_queryset,
+    filter_products_queryset, cancel_stock_move, confirm_stock_move,
 )
 
 User = get_user_model()
@@ -1153,3 +1154,110 @@ class InventorySettingsView(InventoryStaffRequiredMixin, UpdateView):
         )
 
         return response
+
+
+class StockMoveConfirmView(InventoryStaffRequiredMixin, DetailView):
+    """
+    تأكيد حركة مخزون موجودة باستخدام السيرفس confirm_stock_move:
+
+    - يسمح فقط بتأكيد حركة ليست في حالة CANCELLED.
+    - لو كانت DONE مسبقًا → لا يعيد التطبيق.
+    - عند النجاح:
+        * يتم تسجيل الأوديت داخل السيرفس.
+        * يتم إرسال رسالة نجاح للمستخدم.
+        * يتم إرسال نوتفيكيشن لبقية الستاف.
+    """
+    model = StockMove
+    context_object_name = "stockmove"
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        user = request.user
+
+        try:
+            move = confirm_stock_move(self.object, user=user)
+            messages.success(
+                request,
+                _("تم تأكيد حركة المخزون رقم %(id)s بنجاح.") % {"id": move.pk},
+            )
+
+            # 🔔 نوتفيكيشن لبقية الستاف
+            move_url = reverse("inventory:move_detail", args=[move.pk])
+            _notify_inventory_staff(
+                actor=user,
+                verb=_("تم تأكيد حركة المخزون رقم %(id)s.") % {"id": move.pk},
+                target=move,
+                level=Notification.Levels.SUCCESS,
+                url=move_url,
+            )
+
+        except ValidationError as e:
+            # لو السيرفس رفض التغيير (مثلاً حركة ملغاة أو بيانات ناقصة)
+            error_msg = e.messages[0] if hasattr(e, "messages") and e.messages else str(e)
+            messages.error(request, error_msg)
+
+        # في جميع الأحوال نرجع لصفحة التفاصيل
+        return HttpResponseRedirect(
+            reverse("inventory:move_detail", args=[self.object.pk])
+        )
+
+    def get(self, request, *args, **kwargs):
+        """
+        لو أحد فتح الرابط بـ GET نرجعه مباشرة لصفحة التفاصيل
+        (التأكيد مطلوب عبر POST من الفورم/الزر).
+        """
+        self.object = self.get_object()
+        return HttpResponseRedirect(
+            reverse("inventory:move_detail", args=[self.object.pk])
+        )
+
+
+
+class StockMoveCancelView(InventoryStaffRequiredMixin, DetailView):
+    """
+    إلغاء حركة مخزون باستخدام السيرفس cancel_stock_move:
+
+    - DRAFT  → CANCELLED (بدون أثر مخزني).
+    - DONE   → CANCELLED (يعكس أثر الحركة على المخزون).
+    - CANCELLED مسبقًا → لا شيء.
+    """
+    model = StockMove
+    context_object_name = "stockmove"
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        user = request.user
+
+        try:
+            move = cancel_stock_move(self.object, user=user)
+            messages.success(
+                request,
+                _("تم إلغاء حركة المخزون رقم %(id)s بنجاح.") % {"id": move.pk},
+            )
+
+            # 🔔 نوتفيكيشن لبقية الستاف
+            move_url = reverse("inventory:move_detail", args=[move.pk])
+            _notify_inventory_staff(
+                actor=user,
+                verb=_("تم إلغاء حركة المخزون رقم %(id)s.") % {"id": move.pk},
+                target=move,
+                level=Notification.Levels.WARNING,
+                url=move_url,
+            )
+
+        except ValidationError as e:
+            error_msg = e.messages[0] if hasattr(e, "messages") and e.messages else str(e)
+            messages.error(request, error_msg)
+
+        return HttpResponseRedirect(
+            reverse("inventory:move_detail", args=[self.object.pk])
+        )
+
+    def get(self, request, *args, **kwargs):
+        """
+        مثل confirm: لو GET نرجعه لصفحة التفاصيل مباشرة.
+        """
+        self.object = self.get_object()
+        return HttpResponseRedirect(
+            reverse("inventory:move_detail", args=[self.object.pk])
+        )

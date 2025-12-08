@@ -122,6 +122,17 @@ urlpatterns = [
         views.StockMoveUpdateView.as_view(),
         name="move_update",
     ),
+    # ✅ تأكيد / إلغاء حركة المخزون (باستخدام السيرفس confirm_stock_move / cancel_stock_move)
+    path(
+        "moves/<int:pk>/confirm/",
+        views.StockMoveConfirmView.as_view(),
+        name="move_confirm",
+    ),
+    path(
+        "moves/<int:pk>/cancel/",
+        views.StockMoveCancelView.as_view(),
+        name="move_cancel",
+    ),
 
     # ------------------------
     # Stock levels
@@ -156,5 +167,6 @@ urlpatterns = [
         name="settings",
     ),
 ]
+
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
