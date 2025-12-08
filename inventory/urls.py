@@ -36,6 +36,12 @@ urlpatterns = [
         views.ProductCategoryUpdateView.as_view(),
         name="category_update",
     ),
+    # (لو حبيت مستقبلاً تضيف حذف)
+    # path(
+    #     "categories/<int:pk>/delete/",
+    #     views.ProductCategoryDeleteView.as_view(),
+    #     name="category_delete",
+    # ),
 
     # ------------------------
     # Products
@@ -135,7 +141,7 @@ urlpatterns = [
     ),
 
     # ------------------------
-    # Stock levels
+    # Stock levels (READ-ONLY)
     # ------------------------
     path(
         "stock-levels/",
@@ -143,20 +149,13 @@ urlpatterns = [
         name="stocklevel_list",
     ),
     path(
-        "stock-levels/create/",
-        views.StockLevelCreateView.as_view(),
-        name="stocklevel_create",
-    ),
-    path(
         "stock-levels/<int:pk>/",
         views.StockLevelDetailView.as_view(),
         name="stocklevel_detail",
     ),
-    path(
-        "stock-levels/<int:pk>/edit/",
-        views.StockLevelUpdateView.as_view(),
-        name="stocklevel_update",
-    ),
+    # ❌ شيلنا الـ create/update لأنه تعديل مباشر على الرصيد
+    # path("stock-levels/create/", ...)
+    # path("stock-levels/<int:pk>/edit/", ...)
 
     # ------------------------
     # Inventory settings
