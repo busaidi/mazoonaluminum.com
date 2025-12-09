@@ -46,7 +46,7 @@
             <button class="btn btn-light border shadow-sm" onclick="window.print()" title="{% trans 'طباعة بطاقة الصنف' %}">
                 <i class="bi bi-printer"></i>
             </button>
-            <a href="#" class="btn btn-outline-primary shadow-sm disabled">
+            <a href="{% url 'inventory:product_update' product.code %}" class="btn btn-outline-primary shadow-sm">
                 <i class="bi bi-pencil-square me-1"></i> {% trans "تعديل" %}
             </a>
         </div>

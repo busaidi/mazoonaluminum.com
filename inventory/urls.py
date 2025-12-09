@@ -73,10 +73,26 @@ urlpatterns = [
     # ==============================
     # 4. البيانات الأساسية (Master Data)
     # ==============================
+    # Products
     path("products/", views.ProductListView.as_view(), name="product_list"),
+    path("products/create/", views.ProductCreateView.as_view(), name="product_create"),
     path("products/<str:code>/", views.ProductDetailView.as_view(), name="product_detail"),
+    path("products/<str:code>/edit/", views.ProductUpdateView.as_view(), name="product_update"),
 
+    # Warehouses
     path("warehouses/", views.WarehouseListView.as_view(), name="warehouse_list"),
+    path("warehouses/create/", views.WarehouseCreateView.as_view(), name="warehouse_create"),
+    path("warehouses/<int:pk>/edit/", views.WarehouseUpdateView.as_view(), name="warehouse_update"),
+
+# Categories
+    path("categories/", views.ProductCategoryListView.as_view(), name="category_list"),
+    path("categories/create/", views.ProductCategoryCreateView.as_view(), name="category_create"),
+    path("categories/<int:pk>/edit/", views.ProductCategoryUpdateView.as_view(), name="category_update"),
+
+    # Stock Locations
+    path("locations/", views.StockLocationListView.as_view(), name="location_list"),
+    path("locations/create/", views.StockLocationCreateView.as_view(), name="location_create"),
+    path("locations/<int:pk>/edit/", views.StockLocationUpdateView.as_view(), name="location_update"),
 
     # ==============================
     # 5. الإعدادات (Settings)

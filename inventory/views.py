@@ -12,8 +12,10 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 
-from .models import StockMove, Product, Warehouse, StockLevel, ReorderRule, InventorySettings
-from .forms import ReceiptMoveForm, DeliveryMoveForm, TransferMoveForm, StockMoveLineFormSet
+from .models import StockMove, Product, Warehouse, StockLevel, ReorderRule, InventorySettings, StockLocation, \
+    ProductCategory
+from .forms import ReceiptMoveForm, DeliveryMoveForm, TransferMoveForm, StockMoveLineFormSet, WarehouseForm, \
+    ProductForm, StockLocationForm, ProductCategoryForm
 from .services import confirm_stock_move, cancel_stock_move
 
 # ============================================================
@@ -240,10 +242,20 @@ class StockLevelListView(LoginRequiredMixin, ListView):
     paginate_by = 50
 
     def get_queryset(self):
-        # عرض الأرصدة الحقيقية فقط (استبعاد الأصفار)
-        return StockLevel.objects.with_related().exclude(
+        # 1. القائمة الأساسية (استبعاد الأصفار + جلب العلاقات)
+        qs = StockLevel.objects.with_related().exclude(
             quantity_on_hand=0, quantity_reserved=0
         )
+
+        # 2. ✅ (Bonus) دعم الفلترة حسب المستودع من الرابط
+        # الرابط يأتي كـ: ?warehouse=3
+        warehouse_id = self.request.GET.get("warehouse")
+        if warehouse_id:
+            qs = qs.filter(warehouse_id=warehouse_id)
+
+        # 3. ✅ (Fix) حل مشكلة الترتيب UnorderedObjectListWarning
+        # نرتب حسب اسم المستودع أولاً ثم اسم المنتج
+        return qs.order_by("warehouse__name", "product__name")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -345,4 +357,161 @@ class InventorySettingsView(LoginRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_section"] = "inventory_settings"
+        return context
+
+
+# ============================================================
+# إدارة المنتجات (Create / Update)
+# ============================================================
+
+class ProductCreateView(LoginRequiredMixin, CreateView):
+    model = Product
+    form_class = ProductForm
+    template_name = "inventory/products/form.html"
+
+    def get_success_url(self):
+        return reverse("inventory:product_detail", kwargs={"code": self.object.code})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = _("إضافة منتج جديد")
+        context["active_section"] = "inventory_master"
+        return context
+
+
+class ProductUpdateView(LoginRequiredMixin, UpdateView):
+    model = Product
+    form_class = ProductForm
+    template_name = "inventory/products/form.html"
+
+    # لأننا نستخدم code في الرابط بدلاً من pk
+    slug_field = "code"
+    slug_url_kwarg = "code"
+
+    def get_success_url(self):
+        return reverse("inventory:product_detail", kwargs={"code": self.object.code})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = _("تعديل منتج: ") + self.object.code
+        context["active_section"] = "inventory_master"
+        return context
+
+
+# ============================================================
+# إدارة المستودعات (Create / Update)
+# ============================================================
+
+class WarehouseCreateView(LoginRequiredMixin, CreateView):
+    model = Warehouse
+    form_class = WarehouseForm
+    template_name = "inventory/warehouse/form.html"
+    success_url = "/inventory/warehouses/"  # أو استخدام reverse_lazy
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = _("إضافة مستودع جديد")
+        context["active_section"] = "inventory_master"
+        return context
+
+
+class WarehouseUpdateView(LoginRequiredMixin, UpdateView):
+    model = Warehouse
+    form_class = WarehouseForm
+    template_name = "inventory/warehouse/form.html"
+    success_url = "/inventory/warehouses/"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = _("تعديل المستودع: ") + self.object.name
+        context["active_section"] = "inventory_master"
+        return context
+
+
+class ProductCategoryListView(LoginRequiredMixin, ListView):
+    model = ProductCategory
+    template_name = "inventory/categories/list.html"
+    context_object_name = "categories"
+
+    def get_queryset(self):
+        return ProductCategory.objects.select_related("parent").with_products_count().order_by("parent__name", "name")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_section"] = "inventory_master"
+        return context
+
+
+class ProductCategoryCreateView(LoginRequiredMixin, CreateView):
+    model = ProductCategory
+    form_class = ProductCategoryForm
+    template_name = "inventory/categories/form.html"
+    success_url = "/inventory/categories/"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = _("إضافة تصنيف جديد")
+        context["active_section"] = "inventory_master"
+        return context
+
+
+class ProductCategoryUpdateView(LoginRequiredMixin, UpdateView):
+    model = ProductCategory
+    form_class = ProductCategoryForm
+    template_name = "inventory/categories/form.html"
+    success_url = "/inventory/categories/"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = _("تعديل التصنيف: ") + self.object.name
+        context["active_section"] = "inventory_master"
+        return context
+
+
+# ============================================================
+# إدارة مواقع التخزين (Stock Locations)
+# ============================================================
+
+class StockLocationListView(LoginRequiredMixin, ListView):
+    model = StockLocation
+    template_name = "inventory/locations/list.html"
+    context_object_name = "locations"
+
+    def get_queryset(self):
+        qs = StockLocation.objects.select_related("warehouse").all()
+        # فلترة حسب المستودع إذا تم تمريره
+        wh_id = self.request.GET.get("warehouse")
+        if wh_id:
+            qs = qs.filter(warehouse_id=wh_id)
+        return qs.order_by("warehouse__name", "code")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_section"] = "inventory_master"
+        return context
+
+
+class StockLocationCreateView(LoginRequiredMixin, CreateView):
+    model = StockLocation
+    form_class = StockLocationForm
+    template_name = "inventory/locations/form.html"
+    success_url = "/inventory/locations/"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = _("إضافة موقع تخزين")
+        context["active_section"] = "inventory_master"
+        return context
+
+
+class StockLocationUpdateView(LoginRequiredMixin, UpdateView):
+    model = StockLocation
+    form_class = StockLocationForm
+    template_name = "inventory/locations/form.html"
+    success_url = "/inventory/locations/"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = _("تعديل الموقع: ") + self.object.name
+        context["active_section"] = "inventory_master"
         return context

@@ -1,0 +1,58 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block inventory_title %}{{ page_title }}{% endblock %}
+
+{% block inventory_content %}
+<div class="container py-4" style="max-width: 700px;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h4 mb-0 text-gray-800">{{ page_title }}</h1>
+        <a href="{% url 'inventory:warehouse_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-right"></i> {% trans "رجوع" %}
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">{{ form.code.label }}</label>
+                        {{ form.code }}
+                        {{ form.code.errors }}
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">{{ form.name.label }}</label>
+                        {{ form.name }}
+                        {{ form.name.errors }}
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">{{ form.description.label }}</label>
+                        {{ form.description }}
+                    </div>
+
+                    <div class="col-12">
+                        <div class="form-check form-switch p-3 bg-light rounded border">
+                            {{ form.is_active }}
+                            <label class="form-check-label fw-bold" for="{{ form.is_active.id_for_label }}">
+                                {{ form.is_active.label }}
+                            </label>
+                            <div class="form-text small">{% trans "تعطيل المستودع يمنع استخدامه في الحركات الجديدة." %}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i> {% trans "حفظ المستودع" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

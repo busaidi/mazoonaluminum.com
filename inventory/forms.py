@@ -2,9 +2,10 @@
 
 from django import forms
 from django.forms import inlineformset_factory
+from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
-from .models import StockMove, StockMoveLine, Product, StockLocation
+from .models import StockMove, StockMoveLine, Product, StockLocation, Warehouse, ProductCategory
 
 
 # ============================================================
@@ -136,3 +137,97 @@ StockMoveLineFormSet = inlineformset_factory(
     min_num=1,  # ✅ Validation: يجب إدخال بند واحد على الأقل
     validate_min=True,  # تفعيل التحقق من min_num
 )
+
+
+class ProductForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        fields = [
+            "code", "name", "category", "product_type",
+            "base_uom", "default_sale_price", "average_cost",
+            "barcode", "is_stock_item", "is_active", "description"
+        ]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # تطبيق تنسيق Bootstrap
+        for name, field in self.fields.items():
+            if isinstance(field.widget, (forms.TextInput, forms.Textarea, forms.NumberInput)):
+                field.widget.attrs.setdefault("class", "form-control")
+            elif isinstance(field.widget, (forms.Select,)):
+                field.widget.attrs.setdefault("class", "form-select")
+            elif isinstance(field.widget, (forms.CheckboxInput,)):
+                field.widget.attrs.setdefault("class", "form-check-input")
+
+        # تحسينات UX
+        self.fields["category"].empty_label = _("اختر التصنيف...")
+        self.fields["base_uom"].empty_label = _("وحدة القياس...")
+
+
+class WarehouseForm(forms.ModelForm):
+    class Meta:
+        model = Warehouse
+        fields = ["code", "name", "description", "is_active"]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if isinstance(field.widget, (forms.TextInput, forms.Textarea)):
+                field.widget.attrs.setdefault("class", "form-control")
+            elif isinstance(field.widget, (forms.CheckboxInput,)):
+                field.widget.attrs.setdefault("class", "form-check-input")
+
+
+class ProductCategoryForm(forms.ModelForm):
+    class Meta:
+        model = ProductCategory
+        fields = ["name", "slug", "parent", "description", "is_active"]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if isinstance(field.widget, (forms.TextInput, forms.Textarea)):
+                field.widget.attrs.setdefault("class", "form-control")
+            elif isinstance(field.widget, (forms.Select,)):
+                field.widget.attrs.setdefault("class", "form-select")
+            elif isinstance(field.widget, (forms.CheckboxInput,)):
+                field.widget.attrs.setdefault("class", "form-check-input")
+
+        self.fields["parent"].empty_label = _("تصنيف رئيسي (بدون أب)")
+        self.fields["slug"].help_text = _("يترك فارغاً للتوليد التلقائي من الاسم.")
+        self.fields["slug"].required = False  # سنقوم بتوليده في الـ View إذا كان فارغاً
+
+    def clean_slug(self):
+        slug = self.cleaned_data.get("slug")
+        name = self.cleaned_data.get("name")
+        if not slug and name:
+            slug = slugify(name, allow_unicode=True)
+        return slug
+
+
+class StockLocationForm(forms.ModelForm):
+    class Meta:
+        model = StockLocation
+        fields = ["warehouse", "name", "code", "type", "is_active"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if isinstance(field.widget, (forms.TextInput,)):
+                field.widget.attrs.setdefault("class", "form-control")
+            elif isinstance(field.widget, (forms.Select,)):
+                field.widget.attrs.setdefault("class", "form-select")
+            elif isinstance(field.widget, (forms.CheckboxInput,)):
+                field.widget.attrs.setdefault("class", "form-check-input")
+
+        self.fields["warehouse"].empty_label = _("اختر المستودع التابع له...")

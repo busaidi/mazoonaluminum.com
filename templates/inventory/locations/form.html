@@ -1,0 +1,53 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block inventory_title %}{{ page_title }}{% endblock %}
+
+{% block inventory_content %}
+<div class="container py-4" style="max-width: 600px;">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-bold">{{ page_title }}</h5>
+        </div>
+        <div class="card-body p-4">
+            <form method="post">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+
+                <div class="mb-3">
+                    <label class="form-label">{{ form.warehouse.label }}</label>
+                    {{ form.warehouse }}
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-8">
+                        <label class="form-label">{{ form.name.label }}</label>
+                        {{ form.name }}
+                        {{ form.name.errors }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">{{ form.code.label }}</label>
+                        {{ form.code }}
+                        {{ form.code.errors }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{{ form.type.label }}</label>
+                    {{ form.type }}
+                </div>
+
+                <div class="form-check form-switch mb-4">
+                    {{ form.is_active }}
+                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">{{ form.is_active.label }}</label>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'inventory:location_list' %}" class="btn btn-outline-secondary">{% trans "إلغاء" %}</a>
+                    <button type="submit" class="btn btn-primary px-4">{% trans "حفظ" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

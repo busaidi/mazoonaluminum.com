@@ -18,7 +18,7 @@
             <button class="btn btn-light border shadow-sm text-muted" onclick="window.print()">
                 <i class="bi bi-printer"></i>
             </button>
-            <a href="#" class="btn btn-primary shadow-sm disabled" title="{% trans 'يتم تعريف المنتجات من قسم الهندسة' %}">
+            <a href="{% url 'inventory:product_create' %}" class="btn btn-primary shadow-sm" title="{% trans 'يتم تعريف المنتجات من قسم الهندسة' %}">
                 <i class="bi bi-plus-lg me-1"></i> {% trans "منتج جديد" %}
             </a>
         </div>
