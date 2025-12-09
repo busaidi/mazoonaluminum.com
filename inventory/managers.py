@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional
 
 from django.db import models
 from django.db.models import F, Sum, Count, Q
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
         StockLocation,
         StockMove,
         StockLevel,
+        ReorderRule,
     )
 
 DECIMAL_ZERO = Decimal("0.000")
@@ -27,27 +28,20 @@ DECIMAL_ZERO = Decimal("0.000")
 
 class ProductCategoryQuerySet(models.QuerySet["ProductCategory"]):
     def active(self) -> "ProductCategoryQuerySet":
-        """
-        يرجع التصنيفات النشطة فقط.
-        """
+        """يرجع التصنيفات النشطة فقط."""
         return self.filter(is_active=True)
 
     def roots(self) -> "ProductCategoryQuerySet":
-        """
-        يرجع التصنيفات العليا (بدون أب).
-        """
+        """يرجع التصنيفات العليا (بدون أب)."""
         return self.filter(parent__isnull=True)
 
     def children_of(self, parent: "ProductCategory") -> "ProductCategoryQuerySet":
-        """
-        يرجع التصنيفات الفرعية لتصنيف معيّن.
-        """
+        """يرجع التصنيفات الفرعية لتصنيف معيّن."""
         return self.filter(parent=parent)
 
     def with_products_count(self) -> "ProductCategoryQuerySet":
         """
         يضيف حقل products_count لعدد المنتجات النشطة في كل تصنيف.
-        مفيد للعرض في القوائم.
         """
         return self.annotate(
             products_count=Count(
@@ -58,9 +52,6 @@ class ProductCategoryQuerySet(models.QuerySet["ProductCategory"]):
 
 
 class ProductCategoryManager(models.Manager.from_queryset(ProductCategoryQuerySet)):  # type: ignore[misc]
-    """
-    Manager خاص بتصنيفات المنتجات.
-    """
     pass
 
 
@@ -70,57 +61,63 @@ class ProductCategoryManager(models.Manager.from_queryset(ProductCategoryQuerySe
 
 class ProductQuerySet(models.QuerySet["Product"]):
     def active(self) -> "ProductQuerySet":
-        """
-        يرجع المنتجات النشطة فقط.
-        """
         return self.filter(is_active=True)
 
     def published(self) -> "ProductQuerySet":
-        """
-        يرجع المنتجات المنشورة في الموقع / البوابة.
-        (نستخدم المنتجات النشطة فقط).
-        """
         return self.active().filter(is_published=True)
 
-    # ===== حسب نوع المنتج (product_type) =====
+    # ===== حسب نوع المنتج (Dynamic Choices) =====
 
     def stockable(self) -> "ProductQuerySet":
-        """
-        المنتجات المخزنية (stockable).
-        """
-        return self.filter(product_type="stockable")
+        return self.filter(product_type=self.model.ProductType.STOCKABLE)
 
     def services(self) -> "ProductQuerySet":
-        """
-        المنتجات من نوع خدمة (service).
-        """
-        return self.filter(product_type="service")
+        return self.filter(product_type=self.model.ProductType.SERVICE)
 
     def consumables(self) -> "ProductQuerySet":
-        """
-        المنتجات من نوع مستهلكات (consumable).
-        """
-        return self.filter(product_type="consumable")
+        return self.filter(product_type=self.model.ProductType.CONSUMABLE)
 
     def stock_items(self) -> "ProductQuerySet":
-        """
-        المنتجات التي تُتابَع في المخزون فعلياً.
-        - نوع المنتج مخزني stockable
-        - الحقل is_stock_item = True
-        """
+        """المنتجات التي تُتابَع في المخزون فعلياً."""
         return self.stockable().filter(is_stock_item=True)
 
+    def for_sales(self) -> "ProductQuerySet":
+        """
+        المنتجات المتاحة للبيع (مخزنية أو خدمية).
+        """
+        return self.active().filter(
+            Q(product_type=self.model.ProductType.STOCKABLE) |
+            Q(product_type=self.model.ProductType.SERVICE)
+        )
+
+    # ===== تحسينات الأداء والبحث =====
+
     def with_category(self) -> "ProductQuerySet":
-        """
-        يعمل select_related للتصنيف لتحسين الأداء في القوائم والتفاصيل.
-        """
         return self.select_related("category")
+
+    def with_stock_summary(self) -> "ProductQuerySet":
+        """
+        يضيف حقولاً محسوبة: total_qty, total_reserved.
+        """
+        return self.annotate(
+            total_qty=Sum("stock_levels__quantity_on_hand", default=DECIMAL_ZERO),
+            total_reserved=Sum("stock_levels__quantity_reserved", default=DECIMAL_ZERO),
+        )
+
+    def search(self, query: Optional[str]) -> "ProductQuerySet":
+        """
+        بحث ذكي في الكود، الاسم، والباركود.
+        """
+        if not query:
+            return self
+        return self.filter(
+            Q(code__icontains=query) |
+            Q(name__icontains=query) |
+            Q(barcode__icontains=query)
+        )
 
 
 class ProductManager(models.Manager.from_queryset(ProductQuerySet)):  # type: ignore[misc]
-    """
-    Manager خاص بالمنتجات.
-    """
     pass
 
 
@@ -130,34 +127,15 @@ class ProductManager(models.Manager.from_queryset(ProductQuerySet)):  # type: ig
 
 class WarehouseQuerySet(models.QuerySet["Warehouse"]):
     def active(self) -> "WarehouseQuerySet":
-        """
-        يرجع المستودعات النشطة فقط.
-        """
         return self.filter(is_active=True)
 
     def with_total_qty(self) -> "WarehouseQuerySet":
-        """
-        يضيف حقل total_qty لكل مستودع (مجموع quantity_on_hand من StockLevel).
-        ملاحظة: هذا يعتمد على relation: warehouse.stock_levels
-        """
         return self.annotate(
-            total_qty=Sum("stock_levels__quantity_on_hand")
+            total_qty=Sum("stock_levels__quantity_on_hand", default=DECIMAL_ZERO)
         )
-
-    def with_low_stock(self) -> "WarehouseQuerySet":
-        """
-        يرجع المستودعات التي تحتوي على الأقل على صنف واحد تحت الحد الأدنى للمخزون.
-        """
-        return self.filter(
-            stock_levels__min_stock__gt=DECIMAL_ZERO,
-            stock_levels__quantity_on_hand__lt=F("stock_levels__min_stock"),
-        ).distinct()
 
 
 class WarehouseManager(models.Manager.from_queryset(WarehouseQuerySet)):  # type: ignore[misc]
-    """
-    Manager خاص بالمستودعات.
-    """
     pass
 
 
@@ -167,52 +145,30 @@ class WarehouseManager(models.Manager.from_queryset(WarehouseQuerySet)):  # type
 
 class StockLocationQuerySet(models.QuerySet["StockLocation"]):
     def active(self) -> "StockLocationQuerySet":
-        """
-        يرجع مواقع المخزون النشطة فقط.
-        """
         return self.filter(is_active=True)
 
     def for_warehouse(self, warehouse: "Warehouse") -> "StockLocationQuerySet":
-        """
-        يرجع المواقع التابعة لمستودع معيّن.
-        """
         return self.filter(warehouse=warehouse)
 
+    # ===== Dynamic Choices =====
+
     def internal(self) -> "StockLocationQuerySet":
-        """
-        مواقع من نوع داخلي.
-        """
-        return self.filter(type="internal")
+        return self.filter(type=self.model.LocationType.INTERNAL)
 
     def supplier(self) -> "StockLocationQuerySet":
-        """
-        مواقع من نوع مورد.
-        """
-        return self.filter(type="supplier")
+        return self.filter(type=self.model.LocationType.SUPPLIER)
 
     def customer(self) -> "StockLocationQuerySet":
-        """
-        مواقع من نوع عميل.
-        """
-        return self.filter(type="customer")
+        return self.filter(type=self.model.LocationType.CUSTOMER)
 
     def scrap(self) -> "StockLocationQuerySet":
-        """
-        مواقع من نوع تالفة (Scrap).
-        """
-        return self.filter(type="scrap")
+        return self.filter(type=self.model.LocationType.SCRAP)
 
     def transit(self) -> "StockLocationQuerySet":
-        """
-        مواقع من نوع قيد النقل (Transit).
-        """
-        return self.filter(type="transit")
+        return self.filter(type=self.model.LocationType.TRANSIT)
 
 
 class StockLocationManager(models.Manager.from_queryset(StockLocationQuerySet)):  # type: ignore[misc]
-    """
-    Manager خاص بمواقع المخزون.
-    """
     pass
 
 
@@ -221,106 +177,51 @@ class StockLocationManager(models.Manager.from_queryset(StockLocationQuerySet)):
 # ============================================================
 
 class StockMoveQuerySet(models.QuerySet["StockMove"]):
-    # ===== فلاتر الحالة =====
-
+    # ===== فلاتر الحالة (Dynamic Choices) =====
     def draft(self) -> "StockMoveQuerySet":
-        """
-        حركات في حالة مسودة.
-        """
-        return self.filter(status="draft")
+        return self.filter(status=self.model.Status.DRAFT)
 
     def done(self) -> "StockMoveQuerySet":
-        """
-        حركات منفذة.
-        """
-        return self.filter(status="done")
+        return self.filter(status=self.model.Status.DONE)
 
     def cancelled(self) -> "StockMoveQuerySet":
-        """
-        حركات ملغاة.
-        """
-        return self.filter(status="cancelled")
+        return self.filter(status=self.model.Status.CANCELLED)
 
     def not_cancelled(self) -> "StockMoveQuerySet":
-        """
-        جميع الحركات ما عدا الملغاة.
-        """
-        return self.exclude(status="cancelled")
+        return self.exclude(status=self.model.Status.CANCELLED)
 
-    # ===== فلاتر نوع الحركة =====
-
+    # ===== فلاتر نوع الحركة (Dynamic Choices) =====
     def incoming(self) -> "StockMoveQuerySet":
-        """
-        حركات واردة (IN).
-        """
-        return self.filter(move_type="in")
+        return self.filter(move_type=self.model.MoveType.IN)
 
     def outgoing(self) -> "StockMoveQuerySet":
-        """
-        حركات صادرة (OUT).
-        """
-        return self.filter(move_type="out")
+        return self.filter(move_type=self.model.MoveType.OUT)
 
     def transfers(self) -> "StockMoveQuerySet":
-        """
-        حركات تحويل بين مستودعات/مواقع (TRANSFER).
-        """
-        return self.filter(move_type="transfer")
+        return self.filter(move_type=self.model.MoveType.TRANSFER)
 
     # ===== فلاتر مساعدة =====
-
     def for_product(self, product: "Product") -> "StockMoveQuerySet":
-        """
-        يرجع الحركات التي تحتوي على المنتج المحدد في أحد البنود (StockMoveLine).
-        """
         return self.filter(lines__product=product).distinct()
 
     def for_warehouse(self, warehouse: "Warehouse") -> "StockMoveQuerySet":
-        """
-        يرجع أي حركة يكون فيها المستودع المحدد إما مصدر أو وجهة.
-        """
         return self.filter(
             Q(from_warehouse=warehouse) | Q(to_warehouse=warehouse)
         )
 
-    def for_location(self, location: "StockLocation") -> "StockMoveQuerySet":
-        """
-        يرجع أي حركة يكون فيها الموقع المحدد إما مصدر أو وجهة.
-        """
-        return self.filter(
-            Q(from_location=location) | Q(to_location=location)
-        )
-
     def with_related(self) -> "StockMoveQuerySet":
-        """
-        يحسّن الأداء في القوائم بالتالي:
-          - select_related للمستودعات والمواقع (من/إلى)
-          - prefetch_related للبنود والمنتجات ووحدات القياس
-        """
         return (
             self.select_related(
-                "from_warehouse",
-                "to_warehouse",
-                "from_location",
-                "to_location",
+                "from_warehouse", "to_warehouse",
+                "from_location", "to_location",
             )
             .prefetch_related(
-                "lines",
-                "lines__product",
-                "lines__uom",
+                "lines", "lines__product", "lines__uom",
             )
         )
 
 
 class StockMoveManager(models.Manager.from_queryset(StockMoveQuerySet)):  # type: ignore[misc]
-    """
-    Manager خاص بحركات المخزون.
-
-    ملاحظة:
-    - عمليات تغيير الحالة (confirm / cancel) يفضّل أن تكون عبر services:
-      confirm_stock_move / cancel_stock_move
-      وليس عبر Manager مباشرة، حتى تبقى قواعد العمل في مكان واحد.
-    """
     pass
 
 
@@ -330,46 +231,57 @@ class StockMoveManager(models.Manager.from_queryset(StockMoveQuerySet)):  # type
 
 class StockLevelQuerySet(models.QuerySet["StockLevel"]):
     def below_min(self) -> "StockLevelQuerySet":
-        """
-        أرصدة المخزون التي تكون الكمية المتوفرة فيها أقل من الحد الأدنى.
-        """
+        """(Legacy) يعتمد على حقل min_stock القديم."""
         return self.filter(
             min_stock__gt=DECIMAL_ZERO,
             quantity_on_hand__lt=F("min_stock"),
         )
 
     def available(self) -> "StockLevelQuerySet":
-        """
-        أرصدة المخزون التي فيها كمية متاحة (الكمية المتوفرة - المحجوزة > 0).
-
-        الصيغة:
-        quantity_on_hand > quantity_reserved
-        """
-        return self.filter(
-            quantity_on_hand__gt=F("quantity_reserved")
-        )
+        """الكمية المتاحة (المتوفرة > المحجوزة)."""
+        return self.filter(quantity_on_hand__gt=F("quantity_reserved"))
 
     def for_warehouse(self, warehouse: "Warehouse") -> "StockLevelQuerySet":
-        """
-        أرصدة مخزون لمستودع معيّن.
-        """
         return self.filter(warehouse=warehouse)
 
     def for_product(self, product: "Product") -> "StockLevelQuerySet":
-        """
-        أرصدة مخزون لمنتج معيّن.
-        """
         return self.filter(product=product)
 
     def with_related(self) -> "StockLevelQuerySet":
-        """
-        select_related للمنتج والمستودع والموقع لتحسين الأداء.
-        """
         return self.select_related("product", "warehouse", "location")
 
 
 class StockLevelManager(models.Manager.from_queryset(StockLevelQuerySet)):  # type: ignore[misc]
-    """
-    Manager خاص بأرصدة المخزون.
-    """
+    pass
+
+
+# ============================================================
+# ReorderRule
+# ============================================================
+
+class ReorderRuleQuerySet(models.QuerySet["ReorderRule"]):
+    def active(self) -> "ReorderRuleQuerySet":
+        return self.filter(is_active=True)
+
+    def for_warehouse(self, warehouse: "Warehouse") -> "ReorderRuleQuerySet":
+        return self.filter(warehouse=warehouse)
+
+    def for_product(self, product: "Product") -> "ReorderRuleQuerySet":
+        return self.filter(product=product)
+
+    def for_location(self, location: "StockLocation") -> "ReorderRuleQuerySet":
+        return self.filter(location=location)
+
+    def with_related(self) -> "ReorderRuleQuerySet":
+        return self.select_related("product", "warehouse", "location")
+
+    def below_min(self) -> List["ReorderRule"]:
+        """
+        يرجع قائمة بالقواعد التي أصبح رصيدها أقل من الحد الأدنى المحدد.
+        ملاحظة: تُرجع List وليس QuerySet لأن الحساب يتم في بايثون.
+        """
+        return [rule for rule in self.iterator() if rule.is_below_min()]
+
+
+class ReorderRuleManager(models.Manager.from_queryset(ReorderRuleQuerySet)):  # type: ignore[misc]
     pass

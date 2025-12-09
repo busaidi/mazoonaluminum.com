@@ -6,139 +6,150 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import F, Sum, Q
-from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
+from django.db.models import F, Sum
+from django.utils.translation import gettext as _
 
 from core.models import AuditLog
 from core.services.audit import log_event
 
-from .models import StockLevel, StockMove
+from .models import (
+    StockLevel,
+    StockMove,
+    StockMoveLine,
+    InventorySettings,
+    Product
+)
 
 DECIMAL_ZERO = Decimal("0.000")
 
 
 # ============================================================
-# دوال مساعدة لسجل التدقيق لحركات المخزون
+# دوال مساعدة لسجل التدقيق (Audit Helpers)
 # ============================================================
 
-
-def _build_move_audit_extra(
-    move: StockMove,
-    *,
-    factor: Decimal | None = None,
-) -> dict:
-    """
-    يبني دكشنري موحّد للمعلومات الإضافية لكل حدث متعلق بحركة مخزون.
-    مفيد لعرض تفاصيل الحركة لاحقاً في سجل التدقيق.
-    """
+def _build_move_audit_extra(move: StockMove, *, factor: Decimal | None = None) -> dict:
+    """بناء بيانات إضافية لسجل التدقيق عند تغيير حالة الحركة."""
     try:
         lines_count = move.lines.count()
+        total_qty = move.lines.aggregate(t=Sum("quantity"))["t"] or 0
     except Exception:
         lines_count = 0
-
-    try:
-        total_lines_quantity = move.total_lines_quantity
-    except Exception:
-        total_lines_quantity = DECIMAL_ZERO
+        total_qty = 0
 
     extra = {
         "move_type": move.move_type,
         "status": move.status,
-        "from_warehouse_id": move.from_warehouse_id,
-        "to_warehouse_id": move.to_warehouse_id,
-        "from_location_id": move.from_location_id,
-        "to_location_id": move.to_location_id,
+        "reference": move.reference,
         "lines_count": lines_count,
-        "total_lines_quantity": str(total_lines_quantity),
+        "total_quantity": str(total_qty),
     }
 
-    if factor is not None:
-        extra["factor"] = str(factor)
+    if move.from_warehouse_id: extra["from_warehouse"] = move.from_warehouse.code
+    if move.to_warehouse_id: extra["to_warehouse"] = move.to_warehouse.code
+    if factor is not None: extra["factor"] = str(factor)
 
     return extra
 
 
-def _build_reservation_audit_extra(
-    *,
-    product,
-    warehouse,
-    location,
-    quantity: Decimal,
-    before_available: Decimal | None = None,
-    after_reserved: Decimal | None = None,
-) -> dict:
-    """
-    دكشنري موحّد لمعلومات حجز / فك حجز المخزون،
-    بحيث نظام النتفيكشن يقدر يستخدمه لو حاب.
-    """
-    extra = {
-        "product_id": getattr(product, "pk", None),
-        "product_code": getattr(product, "code", None),
-        "warehouse_id": getattr(warehouse, "pk", None),
-        "warehouse_code": getattr(warehouse, "code", None),
-        "location_id": getattr(location, "pk", None),
-        "quantity": str(quantity),
+def _build_reservation_audit_extra(stock_level: StockLevel, delta: Decimal) -> dict:
+    """بيانات إضافية عند الحجز أو فك الحجز."""
+    return {
+        "product": stock_level.product.code,
+        "warehouse": stock_level.warehouse.code,
+        "location": stock_level.location.code,
+        "delta_reserved": str(delta),
+        "current_reserved": str(stock_level.quantity_reserved),
     }
 
-    if before_available is not None:
-        extra["available_before"] = str(before_available)
-    if after_reserved is not None:
-        extra["reserved_after"] = str(after_reserved)
 
-    return extra
+# ============================================================
+# منطق التكلفة (Global Weighted Average Cost)
+# ============================================================
+
+def _update_product_average_cost(move: StockMove) -> None:
+    """
+    تحديث متوسط التكلفة للمنتجات بناءً على حركة واردة (IN).
+    المعادلة:
+    New Avg = ((Current Qty * Current Avg) + (Incoming Qty * Incoming Cost)) / (Current Qty + Incoming Qty)
+    """
+    if move.move_type != StockMove.MoveType.IN:
+        return
+
+    # استخدام select_related لتقليل الاستعلامات
+    for line in move.lines.select_related("product").all():
+        if line.product.product_type != Product.ProductType.STOCKABLE:
+            continue
+
+        incoming_qty = line.get_base_quantity()
+        incoming_cost = line.cost_price or DECIMAL_ZERO
+
+        if incoming_qty <= 0:
+            continue
+
+        # 🔒 Critical Section: قفل المنتج لمنع Race Condition على average_cost
+        product = Product.objects.select_for_update().get(pk=line.product_id)
+
+        current_total_qty = product.total_on_hand
+        current_avg_cost = product.average_cost or DECIMAL_ZERO
+
+        current_total_value = current_total_qty * current_avg_cost
+        incoming_total_value = incoming_qty * incoming_cost
+
+        new_total_qty = current_total_qty + incoming_qty
+
+        if new_total_qty > 0:
+            new_avg_cost = (current_total_value + incoming_total_value) / new_total_qty
+            product.average_cost = new_avg_cost
+            product.save(update_fields=["average_cost"])
+
+
+def _snapshot_out_cost(move: StockMove) -> None:
+    """
+    للحركات الصادرة (OUT): ننسخ متوسط التكلفة الحالي للمنتج إلى البند.
+    """
+    if move.move_type != StockMove.MoveType.OUT:
+        return
+
+    updates = []
+    for line in move.lines.select_related("product").all():
+        if line.cost_price == DECIMAL_ZERO and line.product.average_cost > 0:
+            line.cost_price = line.product.average_cost
+            updates.append(line)
+
+    if updates:
+        StockMoveLine.objects.bulk_update(updates, ["cost_price"])
 
 
 # ============================================================
-# دوال أساسية لتعديل أرصدة المخزون (core)
+# دوال التحديث الجوهري (Core Adjustment)
 # ============================================================
 
-
-@transaction.atomic
 def _adjust_stock_level(
-    *,
-    product,
-    warehouse,
-    location,
-    delta: Decimal,
+        *,
+        product: Product,
+        warehouse,
+        location,
+        delta: Decimal,
 ) -> StockLevel:
     """
-    يعدّل مستوى المخزون (quantity_on_hand) بمقدار delta
-    *بالوحدة الأساسية للمنتج* (base_uom).
+    تعديل رصيد المخزون (quantity_on_hand).
 
-    - إذا لم يوجد StockLevel لهذا (المنتج + المستودع + الموقع) يتم إنشاؤه بصفر.
-    - نستخدم select_for_update + F expressions لسلامة التوازي.
-    - لا يسمح بأن تصبح الكمية المتوفرة أقل من صفر (متوافق مع CheckConstraint).
+    ملاحظات للمطورين:
+    - يجب استدعاؤها دائماً من داخل سياق @transaction.atomic خارجي.
+    - تقوم بعمل select_for_update على StockLevel لقفل السجل أثناء التعديل.
     """
-    level, _ = (
-        StockLevel.objects.select_for_update()
-        .get_or_create(
-            product=product,
-            warehouse=warehouse,
-            location=location,
-            defaults={
-                "quantity_on_hand": DECIMAL_ZERO,
-                "quantity_reserved": DECIMAL_ZERO,
-                "min_stock": DECIMAL_ZERO,
-            },
-        )
+    level, _ = StockLevel.objects.select_for_update().get_or_create(
+        product=product,
+        warehouse=warehouse,
+        location=location,
+        defaults={
+            "quantity_on_hand": DECIMAL_ZERO,
+            "quantity_reserved": DECIMAL_ZERO,
+            "min_stock": DECIMAL_ZERO,
+        },
     )
 
-    delta = Decimal(delta or 0)
-
     if delta != 0:
-        # نحسب القيمة الجديدة للتأكد أنها لن تصبح سالبة
-        current = level.quantity_on_hand or DECIMAL_ZERO
-        new_value = current + delta
-        if new_value < 0:
-            raise ValidationError(
-                _(
-                    "لا يمكن أن يصبح رصيد المخزون سالباً. "
-                    "الرصيد الحالي: %(current)s، التغيير المطلوب: %(delta)s."
-                ),
-                params={"current": current, "delta": delta},
-            )
-
         level.quantity_on_hand = F("quantity_on_hand") + delta
         level.save(update_fields=["quantity_on_hand"])
         level.refresh_from_db(fields=["quantity_on_hand"])
@@ -146,188 +157,148 @@ def _adjust_stock_level(
     return level
 
 
-def _apply_move_delta(move: StockMove, *, factor: Decimal) -> None:
+def _validate_negative_stock(move: StockMove) -> None:
     """
-    يطبّق تأثير حركة مخزون واحدة على StockLevel *على مستوى البنود*.
-
-    factor:
-      +1  = تطبيق الحركة (posting)
-      -1  = عكس الحركة (unposting أو إلغاء)
-
-    المنطق يعتمد على:
-      - move.lines (StockMoveLine)
-      - line.get_base_quantity()  → الكمية بوحدة الأساس للمنتج
-      - move.move_type لتحديد الاتجاه (IN / OUT / TRANSFER)
+    يتحقق من أن الحركات الصادرة أو التحويلات لن تُنقص المخزون عن الصفر
+    إذا كان الإعداد يمنع المخزون السالب.
     """
-    lines = list(move.lines.select_related("product", "uom"))
-    if not lines:
+    settings = InventorySettings.get_solo()
+    if settings.allow_negative_stock:
         return
 
-    for line in lines:
-        product = line.product
+    if move.move_type == StockMove.MoveType.IN:
+        return
 
-        # لو المنتج لا يُتابَع في المخزون نتجاهله
+    source_wh = move.from_warehouse
+    source_loc = move.from_location
+
+    if not source_wh or not source_loc:
+        return
+
+    # تجميع الكميات المطلوبة + تخزين أسماء المنتجات
+    requirements = {}
+    product_names = {}
+
+    for line in move.lines.select_related("product").all():
+        key = (line.product_id, source_wh.id, source_loc.id)
+        qty = line.get_base_quantity()
+
+        requirements[key] = requirements.get(key, DECIMAL_ZERO) + qty
+        product_names[line.product_id] = line.product.name
+
+    # التحقق من الأرصدة
+    for (prod_id, wh_id, loc_id), required_qty in requirements.items():
+        try:
+            # 🔒 Lock: قفل السجل لمنع أي صرف متزامن يكسر الرصيد
+            level = StockLevel.objects.select_for_update().get(
+                product_id=prod_id,
+                warehouse_id=wh_id,
+                location_id=loc_id
+            )
+            current_qty = level.quantity_on_hand
+        except StockLevel.DoesNotExist:
+            current_qty = DECIMAL_ZERO
+
+        if current_qty < required_qty:
+            prod_name = product_names.get(prod_id, _("منتج غير معروف"))
+
+            raise ValidationError(
+                _(
+                    "لا يتوفر رصيد كافٍ للمنتج '%(prod)s'. "
+                    "الموجود: %(curr)s، المطلوب: %(req)s. "
+                    "(الإعدادات تمنع المخزون السالب)"
+                ) % {
+                    "prod": prod_name,
+                    "curr": current_qty,
+                    "req": required_qty
+                }
+            )
+
+
+def _apply_move_delta(move: StockMove, *, factor: Decimal) -> None:
+    """
+    توجيه الكميات للمستودعات الصحيحة بناءً على نوع الحركة.
+    """
+    for line in move.lines.select_related("product", "uom").iterator():
+        product = line.product
         if not getattr(product, "is_stock_item", True):
             continue
 
-        # نحاول استخدام get_base_quantity لو موجودة
-        if hasattr(line, "get_base_quantity"):
-            base_qty = line.get_base_quantity() or DECIMAL_ZERO
-        else:
-            base_qty = line.quantity or DECIMAL_ZERO
+        qty = line.get_base_quantity() * factor
+        if qty == 0: continue
 
-        qty = base_qty * factor
-        if qty == 0:
-            continue
-
-        # حركة واردة: نضيف للـ destination
         if move.move_type == StockMove.MoveType.IN:
-            if not move.to_warehouse or not move.to_location:
-                raise ValidationError(
-                    _("حركة واردة تتطلب مستودعاً وموقعاً للوجهة.")
-                )
-
             _adjust_stock_level(
                 product=product,
                 warehouse=move.to_warehouse,
                 location=move.to_location,
-                delta=qty,  # الكمية بالـ base_uom
+                delta=qty
             )
 
-        # حركة صادرة: نطرح من المصدر
         elif move.move_type == StockMove.MoveType.OUT:
-            if not move.from_warehouse or not move.from_location:
-                raise ValidationError(
-                    _("حركة صادرة تتطلب مستودعاً وموقعاً للمصدر.")
-                )
-
             _adjust_stock_level(
                 product=product,
                 warehouse=move.from_warehouse,
                 location=move.from_location,
-                delta=-qty,
+                delta=-qty
             )
 
-        # تحويل: من المصدر إلى الوجهة
         elif move.move_type == StockMove.MoveType.TRANSFER:
-            if not (
-                move.from_warehouse
-                and move.from_location
-                and move.to_warehouse
-                and move.to_location
-            ):
-                raise ValidationError(
-                    _("حركة تحويل تتطلب تحديد المصدر والوجهة (مستودع + موقع لكل منهما).")
-                )
-
             _adjust_stock_level(
                 product=product,
                 warehouse=move.from_warehouse,
                 location=move.from_location,
-                delta=-qty,
+                delta=-qty
             )
             _adjust_stock_level(
                 product=product,
                 warehouse=move.to_warehouse,
                 location=move.to_location,
-                delta=qty,
+                delta=qty
             )
 
-        else:  # احتياط لأنواع مستقبلية
-            raise ValidationError(_("نوع حركة المخزون غير معروف."))
-
 
 # ============================================================
-# واجهة صريحة لتأكيد / إلغاء حركات المخزون
+# العمليات الرئيسية (Public Services)
 # ============================================================
-
 
 @transaction.atomic
 def confirm_stock_move(move: StockMove, user=None) -> StockMove:
     """
-    تأكيد حركة مخزون:
-
-      - يسمح بالانتقال من:
-          DRAFT      → DONE
-          CANCELLED  → DONE  (إعادة تفعيل لو حاب)
-      - لو كانت الحركة DONE مسبقاً → لا شيء (لا نعيد التطبيق).
-      - يطبّق تأثير الحركة على المخزون (factor = +1).
+    تأكيد حركة المخزون (DRAFT -> DONE).
     """
-    # إعادة جلب الحركة مع lock + الـ lines + المستودعات
-    move = (
-        StockMove.objects
-        .select_for_update()
-        .prefetch_related("lines__product", "lines__uom")
-        .select_related(
-            "from_warehouse",
-            "to_warehouse",
-            "from_location",
-            "to_location",
-        )
-        .get(pk=move.pk)
-    )
+    move = StockMove.objects.select_for_update().get(pk=move.pk)
 
-    old_status = move.status
-
-    if old_status == StockMove.Status.DONE:
-        # سبق وتم التأكيد، لا تعيد التطبيق مرة أخرى
+    if move.status == StockMove.Status.DONE:
         return move
 
-    if old_status not in (StockMove.Status.DRAFT, StockMove.Status.CANCELLED):
-        raise ValidationError(_("لا يمكن تأكيد حركة من هذه الحالة."))
+    if move.status != StockMove.Status.DRAFT:
+        raise ValidationError(_("لا يمكن تأكيد حركة ليست في حالة مسودة."))
 
-    lines = list(move.lines.all())
-    if not lines:
-        raise ValidationError(_("لا يمكن تأكيد الحركة بدون بنود مخزون."))
+    # 1. فحص السالب
+    _validate_negative_stock(move)
 
-    # التحقق الأساسي على from/to حسب نوع الحركة
-    if move.move_type in (StockMove.MoveType.OUT, StockMove.MoveType.TRANSFER):
-        if not move.from_warehouse or not move.from_location:
-            raise ValidationError(_("حركة الإخراج / التحويل تتطلب تحديد مخزن وموقع مصدر."))
+    # 2. تحديث التكاليف
+    if move.move_type == StockMove.MoveType.IN:
+        _update_product_average_cost(move)
 
-    if move.move_type in (StockMove.MoveType.IN, StockMove.MoveType.TRANSFER):
-        if not move.to_warehouse or not move.to_location:
-            raise ValidationError(_("حركة الإدخال / التحويل تتطلب تحديد مخزن وموقع مستقبِل."))
+    if move.move_type == StockMove.MoveType.OUT:
+        _snapshot_out_cost(move)
 
-    # تطبيق أثر الحركة على المخزون
-    factor = Decimal("1")
-    _apply_move_delta(move, factor=factor)
+    # 3. ترحيل الكميات
+    _apply_move_delta(move, factor=Decimal("1"))
 
-    # تحديث الحالة إلى DONE
+    # 4. تحديث الحالة
     move.status = StockMove.Status.DONE
+    move.save(update_fields=["status"])
 
-    # نحدد الحقول الموجودة فعلياً في الموديل (concrete fields)
-    concrete_field_names = {f.name for f in move._meta.concrete_fields}
-
-    update_fields = ["status"]
-
-    # لو عندنا حقل done_at في الموديل
-    if "done_at" in concrete_field_names:
-        move.done_at = timezone.now()
-        update_fields.append("done_at")
-
-    # لو عندنا حقل done_by في الموديل
-    if user is not None and "done_by" in concrete_field_names:
-        move.done_by = user
-        update_fields.append("done_by")
-
-    move.save(update_fields=update_fields)
-
-    # سجل تدقيق
-    status_labels = dict(StockMove.Status.choices)
+    # 5. Audit Log
     log_event(
         action=AuditLog.Action.STATUS_CHANGE,
-        message=_(
-            "تم تأكيد حركة المخزون رقم %(id)s (من %(old)s إلى %(new)s)."
-        )
-        % {
-            "id": move.pk,
-            "old": status_labels.get(old_status, old_status),
-            "new": status_labels.get(StockMove.Status.DONE, "DONE"),
-        },
+        message=f"Stock Move confirmed: {move.reference or move.pk}",
         actor=user,
         target=move,
-        extra=_build_move_audit_extra(move, factor=factor),
+        extra=_build_move_audit_extra(move, factor=Decimal("1"))
     )
 
     return move
@@ -336,459 +307,122 @@ def confirm_stock_move(move: StockMove, user=None) -> StockMove:
 @transaction.atomic
 def cancel_stock_move(move: StockMove, user=None) -> StockMove:
     """
-    إلغاء حركة مخزون:
-
-      - لو كانت DRAFT   → إلغاء بدون أثر مخزني.
-      - لو كانت DONE    → عكس الأثر (factor = -1) ثم تغيير الحالة إلى CANCELLED.
-      - لو كانت CANCELLED مسبقاً → يرفع خطأ.
+    إلغاء حركة المخزون.
     """
-    move = (
-        StockMove.objects
-        .select_for_update()
-        .prefetch_related("lines__product", "lines__uom")
-        .select_related(
-            "from_warehouse",
-            "to_warehouse",
-            "from_location",
-            "to_location",
-        )
-        .get(pk=move.pk)
-    )
+    move = StockMove.objects.select_for_update().get(pk=move.pk)
 
-    old_status = move.status
+    if move.status == StockMove.Status.CANCELLED:
+        raise ValidationError(_("الحركة ملغاة بالفعل."))
 
-    if old_status == StockMove.Status.CANCELLED:
-        raise ValidationError(_("تم إلغاء هذه الحركة مسبقًا."))
+    # حفظ الحالة القديمة لتحديد ما إذا كان يجب عكس المخزون
+    was_done = (move.status == StockMove.Status.DONE)
 
-    factor: Decimal | None = None
-
-    if old_status == StockMove.Status.DRAFT:
-        # لا يوجد أثر مخزون لتعديله
-        factor = Decimal("0")
-
-    elif old_status == StockMove.Status.DONE:
-        # عكس أثر الحركة على المخزون
-        factor = Decimal("-1")
-        _apply_move_delta(move, factor=factor)
-
-    else:
-        raise ValidationError(_("لا يمكن إلغاء حركة من هذه الحالة."))
+    if was_done:
+        _apply_move_delta(move, factor=Decimal("-1"))
 
     move.status = StockMove.Status.CANCELLED
-    move.cancelled_at = timezone.now()
-    if user is not None and hasattr(move, "cancelled_by"):
-        move.cancelled_by = user
+    move.save(update_fields=["status"])
 
-    update_fields = ["status", "cancelled_at"]
-    if hasattr(move, "cancelled_by"):
-        update_fields.append("cancelled_by")
-
-    move.save(update_fields=update_fields)
-
-    # سجل تدقيق
-    status_labels = dict(StockMove.Status.choices)
     log_event(
         action=AuditLog.Action.STATUS_CHANGE,
-        message=_(
-            "تم إلغاء حركة المخزون رقم %(id)s (من %(old)s إلى %(new)s)."
-        )
-        % {
-            "id": move.pk,
-            "old": status_labels.get(old_status, old_status),
-            "new": status_labels.get(StockMove.Status.CANCELLED, "CANCELLED"),
-        },
+        message=f"Stock Move cancelled: {move.reference or move.pk}",
         actor=user,
         target=move,
         extra=_build_move_audit_extra(
             move,
-            factor=factor if factor is not None else Decimal("0"),
-        ),
+            factor=Decimal("-1") if was_done else None
+        )
     )
 
     return move
 
 
 # ============================================================
-# منطق التحديث عند تغيير الحالة / الحذف (للتوافق مع كود قديم)
+# خدمات الحجز (Reservation Services)
 # ============================================================
-
-
-def apply_stock_move_status_change(
-    *,
-    move: StockMove,
-    old_status: str | None,
-    is_create: bool,
-) -> None:
-    """
-    👈 دالة قديمة (Legacy) فقط للتوافق مع أي كود قديم.
-
-    يفضّل استخدام:
-      - confirm_stock_move(move, user)
-      - cancel_stock_move(move, user)
-
-    لا تقوم بأي تعديل على المخزون الآن.
-    """
-    return
-
-
-def apply_stock_move_on_delete(move: StockMove) -> None:
-    """
-    تُستدعى عند حذف حركة مخزون لعكس الأثر *فقط إذا كانت الحركة في حالة DONE*.
-
-    - تعكس أثر الحركة على المخزون (factor = -1)
-    - تسجل حدثًا في سجل التدقيق (STATUS_CHANGE) بأن الحركة المحذوفة تم عكسها.
-    """
-    if move.status != StockMove.Status.DONE:
-        return
-
-    factor = Decimal("-1")
-    _apply_move_delta(move, factor=factor)
-
-    log_event(
-        action=AuditLog.Action.STATUS_CHANGE,
-        message=_(
-            "تم حذف حركة المخزون رقم %(id)s وتم عكس أثرها على المخزون."
-        )
-        % {"id": move.pk},
-        actor=None,
-        target=move,
-        extra=_build_move_audit_extra(move, factor=factor),
-    )
-
-
-# ============================================================
-# دوال حجز المخزون (للطلبيات)
-# ============================================================
-
 
 @transaction.atomic
-def reserve_stock_for_order(
-    *,
-    product,
-    warehouse,
-    location,
-    quantity: Decimal,
-    allow_negative: bool = False,
+def reserve_stock(
+        product: Product,
+        warehouse,
+        location,
+        quantity: Decimal,
+        check_availability: bool = True,
+        user=None
 ) -> StockLevel:
     """
-    يحجز كمية من المخزون (quantity_reserved) لأجل طلب (Sales Order مثلاً).
-
-    - يزيد quantity_reserved
-    - لا يغيّر quantity_on_hand
-    - يمكن ربطه بمناداة من OrderLine في تطبيق آخر.
-
-    إذا allow_negative=False:
-      - لا يسمح بحجز أكثر من الكمية المتاحة (on_hand - reserved).
+    حجز كمية (زيادة quantity_reserved).
     """
-    quantity = Decimal(quantity or 0)
     if quantity <= 0:
-        raise ValidationError(_("كمية الحجز يجب أن تكون أكبر من صفر."))
+        raise ValidationError(_("كمية الحجز يجب أن تكون موجبة."))
 
-    level, _ = (
-        StockLevel.objects.select_for_update()
-        .get_or_create(
-            product=product,
-            warehouse=warehouse,
-            location=location,
-            defaults={
-                "quantity_on_hand": DECIMAL_ZERO,
-                "quantity_reserved": DECIMAL_ZERO,
-                "min_stock": DECIMAL_ZERO,
-            },
-        )
+    # ضمان وجود الـ StockLevel
+    level = _adjust_stock_level(
+        product=product, warehouse=warehouse, location=location, delta=0
     )
 
-    available = (level.quantity_on_hand or DECIMAL_ZERO) - (
-        level.quantity_reserved or DECIMAL_ZERO
-    )
-    if not allow_negative and available < quantity:
-        raise ValidationError(
-            _(
-                "لا توجد كمية كافية للحجز. المتاح: %(available)s، المطلوب حجزه: %(requested)s."
-            ),
-            params={"available": available, "requested": quantity},
-        )
+    if check_availability:
+        available = level.available_quantity
+        if available < quantity:
+            raise ValidationError(
+                _("الكمية المتاحة (%(avail)s) غير كافية للحجز المطلوب (%(req)s).")
+                % {"avail": available, "req": quantity}
+            )
 
     level.quantity_reserved = F("quantity_reserved") + quantity
     level.save(update_fields=["quantity_reserved"])
     level.refresh_from_db(fields=["quantity_reserved"])
 
-    # 🔔 سجل تدقيق / نتفيكشن للحجز
     log_event(
         action=AuditLog.Action.UPDATE,
-        message=_(
-            "تم حجز كمية %(qty)s من المنتج %(product)s في المستودع %(wh)s."
-        )
-        % {
-            "qty": quantity,
-            "product": getattr(product, "code", str(product)),
-            "wh": getattr(warehouse, "code", str(warehouse)),
-        },
-        actor=None,
+        message=f"Reserved stock for {product.code}",
+        actor=user,
         target=level,
-        extra=_build_reservation_audit_extra(
-            product=product,
-            warehouse=warehouse,
-            location=location,
-            quantity=quantity,
-            before_available=available,
-            after_reserved=level.quantity_reserved,
-        ),
+        extra=_build_reservation_audit_extra(level, quantity)
     )
 
     return level
 
 
 @transaction.atomic
-def release_stock_reservation(
-    *,
-    product,
-    warehouse,
-    location,
-    quantity: Decimal,
+def release_stock(
+        product: Product,
+        warehouse,
+        location,
+        quantity: Decimal,
+        user=None
 ) -> StockLevel:
     """
-    يفك الحجز عن كمية من المخزون (يقلل quantity_reserved).
-
-    يُستخدم عند:
-      - إلغاء الطلب
-      - تحويل الطلب لشحنة فعلية (StockMove OUT) حيث سيتم تقليل on_hand أيضاً.
+    فك حجز كمية (إنقاص quantity_reserved).
     """
-    quantity = Decimal(quantity or 0)
     if quantity <= 0:
-        raise ValidationError(_("كمية فك الحجز يجب أن تكون أكبر من صفر."))
+        raise ValidationError(_("الكمية يجب أن تكون موجبة."))
 
-    try:
-        level = (
-            StockLevel.objects.select_for_update()
-            .get(
-                product=product,
-                warehouse=warehouse,
-                location=location,
-            )
-        )
-    except StockLevel.DoesNotExist:
-        raise ValidationError(
-            _("لا يوجد مخزون محجوز لفكه لهذا المنتج في هذا الموقع.")
-        )
+    level = StockLevel.objects.select_for_update().get(
+        product=product, warehouse=warehouse, location=location
+    )
 
-    if (level.quantity_reserved or DECIMAL_ZERO) < quantity:
-        raise ValidationError(
-            _(
-                "لا يمكن فك حجز كمية أكبر من الكمية المحجوزة. "
-                "المحجوز: %(reserved)s، المطلوب فكّه: %(requested)s."
-            ),
-            params={"reserved": level.quantity_reserved, "requested": quantity},
-        )
-
-    before_reserved = level.quantity_reserved or DECIMAL_ZERO
+    if level.quantity_reserved < quantity:
+        raise ValidationError(_("لا يمكن فك حجز كمية أكبر من المحجوز فعلياً."))
 
     level.quantity_reserved = F("quantity_reserved") - quantity
     level.save(update_fields=["quantity_reserved"])
     level.refresh_from_db(fields=["quantity_reserved"])
 
-    # 🔔 سجل تدقيق / نتفيكشن لفك الحجز
     log_event(
         action=AuditLog.Action.UPDATE,
-        message=_(
-            "تم فك حجز كمية %(qty)s من المنتج %(product)s في المستودع %(wh)s."
-        )
-        % {
-            "qty": quantity,
-            "product": getattr(product, "code", str(product)),
-            "wh": getattr(warehouse, "code", str(warehouse)),
-        },
-        actor=None,
+        message=f"Released stock reservation for {product.code}",
+        actor=user,
         target=level,
-        extra=_build_reservation_audit_extra(
-            product=product,
-            warehouse=warehouse,
-            location=location,
-            quantity=quantity,
-            before_available=None,
-            after_reserved=level.quantity_reserved,
-        ),
+        extra=_build_reservation_audit_extra(level, -quantity)
     )
 
     return level
 
 
-def get_available_stock(*, product, warehouse, location) -> Decimal:
-    """
-    يعيد الكمية المتاحة (on_hand - reserved) لموقع معين.
-    مفيدة قبل تأكيد طلب جديد.
-    """
-    try:
-        level = StockLevel.objects.get(
-            product=product,
-            warehouse=warehouse,
-            location=location,
-        )
-    except StockLevel.DoesNotExist:
-        return DECIMAL_ZERO
-
-    return (level.quantity_on_hand or DECIMAL_ZERO) - (
-        level.quantity_reserved or DECIMAL_ZERO
-    )
-
-
 # ============================================================
-# ملخصات وتقارير بسيطة للمخزون
+# دوال التوافق (Legacy)
 # ============================================================
 
-
-def get_stock_summary_per_warehouse():
-    """
-    ملخص إجمالي الكمية لكل مستودع.
-
-    يرجع QuerySet من dicts:
-      - warehouse__code
-      - warehouse__name
-      - total_qty
-    """
-    return (
-        StockLevel.objects.select_related("warehouse")
-        .values("warehouse__code", "warehouse__name")
-        .annotate(total_qty=Sum("quantity_on_hand"))
-        .order_by("warehouse__code")
-    )
-
-
-def get_low_stock_levels():
-    """
-    جميع مستويات المخزون التي تحت الحد الأدنى:
-      min_stock > 0 && quantity_on_hand < min_stock
-
-    مع select_related للعرض في القوالب بدون مشكلة N+1.
-    """
-    return (
-        StockLevel.objects.select_related("product", "warehouse", "location")
-        .filter(
-            min_stock__gt=DECIMAL_ZERO,
-            quantity_on_hand__lt=F("min_stock"),
-        )
-    )
-
-
-def filter_below_min_stock_levels(qs):
-    """
-    يطبّق فلتر 'تحت الحد الأدنى' على QuerySet معيّن لمستويات المخزون.
-    يُستخدم في شاشة مستويات المخزون وغيرها.
-    """
-    return qs.filter(
-        min_stock__gt=DECIMAL_ZERO,
-        quantity_on_hand__lt=F("min_stock"),
-    )
-
-
-def get_low_stock_total() -> int:
-    """
-    يعيد العدد الإجمالي لمستويات المخزون تحت الحد الأدنى
-    (بدون أي فلاتر بحث).
-    """
-    base_qs = StockLevel.objects.all()
-    return filter_below_min_stock_levels(base_qs).count()
-
-
-# ============================================================
-# فلاتر جاهزة لقوائم المخزون / الحركات / المنتجات
-# ============================================================
-
-
-def filter_stock_moves_queryset(
-    qs,
-    *,
-    q: str | None = None,
-    move_type: str | None = None,
-    status: str | None = None,
-):
-    """
-    يطبّق فلاتر البحث القياسية على QuerySet لحركات المخزون:
-
-      - q         : بحث بالكود / اسم المنتج / المرجع / كود المخزن
-      - move_type : نوع الحركة (in / out / transfer)
-      - status    : حالة الحركة (draft / done / cancelled)
-
-    ملاحظة:
-      - المنتج الآن على مستوى StockMoveLine، لذلك نستخدم lines__product__...
-    """
-    if q:
-        q = q.strip()
-        if q:
-            qs = qs.filter(
-                Q(lines__product__code__icontains=q)
-                | Q(lines__product__name__icontains=q)
-                | Q(reference__icontains=q)
-                | Q(from_warehouse__code__icontains=q)
-                | Q(to_warehouse__code__icontains=q)
-            )
-
-    # فلترة نوع الحركة (نتأكد أن القيمة من الخيارات المسموحة)
-    if move_type in dict(StockMove.MoveType.choices):
-        qs = qs.filter(move_type=move_type)
-
-    # فلترة الحالة
-    if status in dict(StockMove.Status.choices):
-        qs = qs.filter(status=status)
-
-    return qs
-
-
-def filter_products_queryset(
-    qs,
-    *,
-    q: str | None = None,
-    category_id: str | None = None,
-    product_type: str | None = None,
-    only_published: bool = False,
-):
-    """
-    يطبّق فلاتر البحث القياسية على QuerySet للمنتجات:
-
-      - q             : بحث بالكود / الاسم / الوصف المختصر
-      - category_id   : رقم التصنيف (id) لتقييد النتائج
-      - product_type  : نوع المنتج (من choices في الموديل)
-      - only_published: لو True يعرض المنتجات المنشورة فقط
-
-    لا يغيّر select_related أو order_by — هذا مسئولية الفيو.
-    """
-    if q:
-        q = q.strip()
-        if q:
-            qs = qs.filter(
-                Q(code__icontains=q)
-                | Q(name__icontains=q)
-                | Q(short_description__icontains=q)
-            )
-
-    if category_id:
-        qs = qs.filter(category_id=category_id)
-
-    if product_type:
-        qs = qs.filter(product_type=product_type)
-
-    if only_published:
-        qs = qs.filter(is_published=True)
-
-    return qs
-
-
-# ============================================================
-# هيلبر بسيط (قد يُستخدم في أماكن أخرى)
-# ============================================================
-
-
-def _get_stock_level(product, warehouse, location) -> StockLevel:
-    """
-    إرجاع مستوى المخزون (StockLevel) للمنتج + المخزن + الموقع.
-    إذا لم يوجد، يتم إنشاؤه (بكمية 0 افتراضيًا).
-    """
-    stock_level, _created = StockLevel.objects.get_or_create(
-        product=product,
-        warehouse=warehouse,
-        location=location,
-        defaults={
-            "quantity_on_hand": Decimal("0.000"),
-        },
-    )
-    return stock_level
+def apply_stock_move_status_change(*args, **kwargs):
+    pass

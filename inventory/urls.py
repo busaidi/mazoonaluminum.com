@@ -1,171 +1,85 @@
 # inventory/urls.py
 
 from django.urls import path
-from django.conf import settings
-from django.conf.urls.static import static
-
 from . import views
+from .models import StockMove  # ✅ Import Enums for type safety
 
 app_name = "inventory"
 
 urlpatterns = [
-    # ------------------------
-    # Dashboard
-    # ------------------------
-    path(
-        "",
-        views.InventoryDashboardView.as_view(),
-        name="dashboard",
-    ),
+    # ==============================
+    # 1. لوحة التحكم (Dashboard)
+    # ==============================
+    path("", views.DashboardView.as_view(), name="dashboard"),
 
-    # ------------------------
-    # Product categories
-    # ------------------------
-    path(
-        "categories/",
-        views.ProductCategoryListView.as_view(),
-        name="category_list",
-    ),
-    path(
-        "categories/new/",
-        views.ProductCategoryCreateView.as_view(),
-        name="category_create",
-    ),
-    path(
-        "categories/<int:pk>/edit/",
-        views.ProductCategoryUpdateView.as_view(),
-        name="category_update",
-    ),
-    # (لو حبيت مستقبلاً تضيف حذف)
-    # path(
-    #     "categories/<int:pk>/delete/",
-    #     views.ProductCategoryDeleteView.as_view(),
-    #     name="category_delete",
-    # ),
+    # ==============================
+    # 2. العمليات (Operations)
+    # ==============================
+    # ✅ FIX: Using Enum constants instead of magic strings
 
-    # ------------------------
-    # Products
-    # ------------------------
+    # استلام (Receipts) - IN
     path(
-        "products/",
-        views.ProductListView.as_view(),
-        name="product_list",
-    ),
-    path(
-        "products/new/",
-        views.ProductCreateView.as_view(),
-        name="product_create",
-    ),
-    path(
-        "products/<int:pk>/",
-        views.ProductDetailView.as_view(),
-        name="product_detail",
-    ),
-    path(
-        "products/<int:pk>/edit/",
-        views.ProductUpdateView.as_view(),
-        name="product_update",
-    ),
-
-    # ------------------------
-    # Warehouses
-    # ------------------------
-    path(
-        "warehouses/",
-        views.WarehouseListView.as_view(),
-        name="warehouse_list",
-    ),
-    path(
-        "warehouses/new/",
-        views.WarehouseCreateView.as_view(),
-        name="warehouse_create",
-    ),
-    path(
-        "warehouses/<int:pk>/edit/",
-        views.WarehouseUpdateView.as_view(),
-        name="warehouse_update",
-    ),
-
-    # ------------------------
-    # Stock locations
-    # ------------------------
-    path(
-        "locations/",
-        views.StockLocationListView.as_view(),
-        name="location_list",
-    ),
-    path(
-        "locations/new/",
-        views.StockLocationCreateView.as_view(),
-        name="location_create",
-    ),
-    path(
-        "locations/<int:pk>/edit/",
-        views.StockLocationUpdateView.as_view(),
-        name="location_update",
-    ),
-
-    # ------------------------
-    # Stock moves
-    # ------------------------
-    path(
-        "moves/",
+        "operations/receipts/",
         views.StockMoveListView.as_view(),
-        name="move_list",
+        {"move_type": StockMove.MoveType.IN},
+        name="receipt_list"
     ),
     path(
-        "moves/new/",
+        "operations/receipts/create/",
         views.StockMoveCreateView.as_view(),
-        name="move_create",
-    ),
-    path(
-        "moves/<int:pk>/",
-        views.StockMoveDetailView.as_view(),
-        name="move_detail",
-    ),
-    path(
-        "moves/<int:pk>/edit/",
-        views.StockMoveUpdateView.as_view(),
-        name="move_update",
-    ),
-    # ✅ تأكيد / إلغاء حركة المخزون (باستخدام السيرفس confirm_stock_move / cancel_stock_move)
-    path(
-        "moves/<int:pk>/confirm/",
-        views.StockMoveConfirmView.as_view(),
-        name="move_confirm",
-    ),
-    path(
-        "moves/<int:pk>/cancel/",
-        views.StockMoveCancelView.as_view(),
-        name="move_cancel",
+        {"move_type": StockMove.MoveType.IN},
+        name="receipt_create"
     ),
 
-    # ------------------------
-    # Stock levels (READ-ONLY)
-    # ------------------------
+    # صرف (Deliveries) - OUT
     path(
-        "stock-levels/",
-        views.StockLevelListView.as_view(),
-        name="stocklevel_list",
+        "operations/deliveries/",
+        views.StockMoveListView.as_view(),
+        {"move_type": StockMove.MoveType.OUT},
+        name="delivery_list"
     ),
     path(
-        "stock-levels/<int:pk>/",
-        views.StockLevelDetailView.as_view(),
-        name="stocklevel_detail",
+        "operations/deliveries/create/",
+        views.StockMoveCreateView.as_view(),
+        {"move_type": StockMove.MoveType.OUT},
+        name="delivery_create"
     ),
-    # ❌ شيلنا الـ create/update لأنه تعديل مباشر على الرصيد
-    # path("stock-levels/create/", ...)
-    # path("stock-levels/<int:pk>/edit/", ...)
 
-    # ------------------------
-    # Inventory settings
-    # ------------------------
+    # تحويل (Transfers) - TRANSFER
     path(
-        "settings/",
-        views.InventorySettingsView.as_view(),
-        name="settings",
+        "operations/transfers/",
+        views.StockMoveListView.as_view(),
+        {"move_type": StockMove.MoveType.TRANSFER},
+        name="transfer_list"
     ),
+    path(
+        "operations/transfers/create/",
+        views.StockMoveCreateView.as_view(),
+        {"move_type": StockMove.MoveType.TRANSFER},
+        name="transfer_create"
+    ),
+
+    # تفاصيل وإجراءات الحركة
+    path("operations/move/<int:pk>/", views.StockMoveDetailView.as_view(), name="move_detail"),
+    path("operations/move/<int:pk>/confirm/", views.confirm_move_view, name="move_confirm"),
+    path("operations/move/<int:pk>/cancel/", views.cancel_move_view, name="move_cancel"),
+
+    # ==============================
+    # 3. التقارير والمخزون (Reporting)
+    # ==============================
+    path("stock-levels/", views.StockLevelListView.as_view(), name="stock_level_list"),
+    path("reorder-rules/", views.ReorderRuleListView.as_view(), name="reorder_rule_list"),
+
+    # ==============================
+    # 4. البيانات الأساسية (Master Data)
+    # ==============================
+    path("products/", views.ProductListView.as_view(), name="product_list"),
+    path("products/<str:code>/", views.ProductDetailView.as_view(), name="product_detail"),
+
+    path("warehouses/", views.WarehouseListView.as_view(), name="warehouse_list"),
+
+    # ==============================
+    # 5. الإعدادات (Settings)
+    # ==============================
+    path("settings/", views.InventorySettingsView.as_view(), name="settings"),
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

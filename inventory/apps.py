@@ -6,7 +6,3 @@ class InventoryConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "inventory"
     verbose_name = "Inventory"
-
-    def ready(self):
-        # استيراد الإشارات
-        from . import signals  # noqa: F401
