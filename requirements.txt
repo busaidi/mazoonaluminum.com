@@ -21,3 +21,4 @@ sqlparse==0.5.3
 typing_extensions==4.15.0
 tzdata==2025.2
 weasyprint==67.0
+django-import-export==4.3.14

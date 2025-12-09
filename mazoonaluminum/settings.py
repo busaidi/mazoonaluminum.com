@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     # Library for framework only
     "django.contrib.sitemaps",
     "django.contrib.humanize",
+    "import_export",
     # My App
     "contacts.apps.ContactsConfig",
     "core.apps.CoreConfig",
@@ -108,6 +109,10 @@ MODELTRANSLATION_LANGUAGES = ("ar", "en")
 MODELTRANSLATION_FALLBACK_LANGUAGES = {
     "default": ("ar", "en"),
 }
+#sitting for "import_export", app
+IMPORT_EXPORT_USE_TRANSACTIONS = True
+
+
 
 LOCALE_PATHS = [
     BASE_DIR / "locale",

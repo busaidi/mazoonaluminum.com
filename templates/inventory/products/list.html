@@ -15,10 +15,15 @@
             <p class="text-muted small mb-0">{% trans "إدارة الأصناف، الخدمات، ومراقبة الأرصدة الإجمالية." %}</p>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-light border shadow-sm text-muted" onclick="window.print()">
-                <i class="bi bi-printer"></i>
-            </button>
-            <a href="{% url 'inventory:product_create' %}" class="btn btn-primary shadow-sm" title="{% trans 'يتم تعريف المنتجات من قسم الهندسة' %}">
+            <a href="{% url 'inventory:product_export' %}" class="btn btn-outline-success shadow-sm" title="{% trans 'تصدير لـ Excel' %}">
+                <i class="bi bi-file-earmark-excel"></i>
+            </a>
+
+            <a href="{% url 'inventory:product_import' %}" class="btn btn-outline-primary shadow-sm" title="{% trans 'استيراد من Excel' %}">
+                <i class="bi bi-cloud-upload"></i>
+            </a>
+
+            <a href="{% url 'inventory:product_create' %}" class="btn btn-primary shadow-sm">
                 <i class="bi bi-plus-lg me-1"></i> {% trans "منتج جديد" %}
             </a>
         </div>

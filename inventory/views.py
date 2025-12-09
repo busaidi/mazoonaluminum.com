@@ -1,11 +1,12 @@
 # inventory/views.py
 from django.urls.base import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, TemplateView, UpdateView
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils import timezone
+from django.db.models import F, Sum, DecimalField
 from django.urls import reverse
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.db import transaction
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
@@ -13,6 +14,9 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.views.generic.edit import DeleteView
+from tablib import Dataset
+
+from .resources import ProductResource
 from .utils import render_pdf_view
 
 from .models import StockMove, Product, Warehouse, StockLevel, ReorderRule, InventorySettings, StockLocation, \
@@ -109,7 +113,7 @@ class StockMoveListView(LoginRequiredMixin, StockMoveContextMixin, ListView):
 
     def get_queryset(self):
         # ✅ الأداء: جلب العلاقات + استبعاد الملغاة + الترتيب الأحدث أولاً
-        qs = super().get_queryset().with_related().not_cancelled().order_by("-move_date", "-id")
+        qs = super().get_queryset().with_related().order_by("-move_date", "-id")
 
         # الفلترة حسب النوع الممرر في الرابط
         if self.move_type == StockMove.MoveType.IN:
@@ -709,3 +713,133 @@ def stock_move_pdf_view(request, pk):
     filename = f"{doc_type}-{move.reference or move.pk}.pdf"
 
     return render_pdf_view(request, 'inventory/pdf/stock_move_document.html', context, filename)
+
+
+
+
+class InventoryValuationView(LoginRequiredMixin, ListView):
+    model = StockLevel
+    template_name = "inventory/reports/valuation.html"
+    context_object_name = "stock_items"
+    paginate_by = 50
+
+    def get_queryset(self):
+        # 1. الأساس: استبعاد الكميات الصفرية وجلب البيانات المرتبطة
+        qs = StockLevel.objects.select_related("product", "warehouse", "product__category",
+                                               "product__base_uom").exclude(quantity_on_hand=0)
+
+        # 2. الفلترة (حسب المستودع أو التصنيف)
+        self.warehouse_id = self.request.GET.get("warehouse")
+        self.category_id = self.request.GET.get("category")
+
+        if self.warehouse_id:
+            qs = qs.filter(warehouse_id=self.warehouse_id)
+
+        if self.category_id:
+            qs = qs.filter(product__category_id=self.category_id)
+
+        # 3. الحساب: إضافة حقل وهمي 'valuation' = الكمية * التكلفة
+        # نستخدم F expression للحساب داخل الداتابيز (أسرع بكثير)
+        qs = qs.annotate(
+            valuation=F('quantity_on_hand') * F('product__average_cost')
+        )
+
+        return qs.order_by("-valuation")  # ترتيب حسب القيمة الأعلى (الأغلى)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_section"] = "inventory_reports"
+
+        # قوائم الفلترة
+        context["warehouses"] = Warehouse.objects.active()
+        context["categories"] = ProductCategory.objects.all()
+
+        # حساب الإجماليات (Grand Totals) للفوتر والملخص
+        # نستخدم الكويري ست الحالية (بعد الفلترة) لحساب المجموع
+        aggregates = self.get_queryset().aggregate(
+            total_qty=Sum("quantity_on_hand"),
+            total_value=Sum("valuation", output_field=DecimalField())
+        )
+
+        context["total_qty"] = aggregates["total_qty"] or 0
+        context["total_value"] = aggregates["total_value"] or 0
+
+        return context
+
+
+# ============================================================
+# استيراد وتصدير البيانات (Excel Import/Export)
+# ============================================================
+
+@login_required
+def export_products_view(request):
+    """تصدير المنتجات إلى ملف Excel"""
+    product_resource = ProductResource()
+    dataset = product_resource.export()
+
+    response = HttpResponse(dataset.xlsx,
+                            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="products_export.xlsx"'
+    return response
+
+
+# inventory/views.py
+
+# inventory/views.py
+
+@login_required
+def import_products_view(request):
+    """صفحة استيراد المنتجات من Excel مع عرض تفاصيل الأخطاء (مصحح)"""
+    errors = []
+
+    if request.method == 'POST':
+        product_resource = ProductResource()
+        dataset = Dataset()
+
+        if 'import_file' not in request.FILES:
+            messages.error(request, _("الرجاء اختيار ملف."))
+            return redirect('inventory:product_import')
+
+        new_products = request.FILES['import_file']
+
+        if not new_products.name.endswith('xlsx'):
+            messages.error(request, _("عفواً، الصيغة المدعومة هي xlsx فقط."))
+            return redirect('inventory:product_import')
+
+        try:
+            imported_data = dataset.load(new_products.read(), format='xlsx')
+
+            # 1. تجربة الاستيراد (Dry Run)
+            result = product_resource.import_data(dataset, dry_run=True)
+
+            if not result.has_errors():
+                # 2. لا توجد أخطاء -> تنفيذ الحفظ الحقيقي
+                product_resource.import_data(dataset, dry_run=False)
+                messages.success(request, _("تم استيراد المنتجات بنجاح!"))
+                return redirect('inventory:product_list')
+            else:
+                # 3. استخراج الأخطاء (مصحح باستخدام enumerate)
+                # i يبدأ من 0، ونضيف 2 (واحد لأن الإندكس يبدأ بصفر، وواحد لسطر الهيدر في الإكسل)
+                for i, row in enumerate(result.rows):
+                    if row.errors:
+                        for err in row.errors:
+                            line_num = i + 2
+                            err_msg = str(err.error)
+
+                            # تحسين رسائل الخطأ الشائعة ليفهمها المستخدم
+                            if "matching query does not exist" in err_msg:
+                                if "ProductCategory" in err_msg:
+                                    err_msg = _("التصنيف غير موجود. تأكد من تطابق الاسم.")
+                                elif "UnitOfMeasure" in err_msg:
+                                    err_msg = _("وحدة القياس غير موجودة. اكتب الاسم (مثل: متر) وليس الرمز.")
+
+                            errors.append(f"سطر {line_num}: {err_msg}")
+
+                messages.error(request, _("فشلت العملية. يرجى مراجعة قائمة الأخطاء أدناه."))
+
+        except Exception as e:
+            # طباعة الخطأ في الكونسول للمطور للمساعدة في التتبع
+            print(f"Import Error: {e}")
+            messages.error(request, f"حدث خطأ غير متوقع: {str(e)}")
+
+    return render(request, 'inventory/products/import_form.html', {'import_errors': errors})
