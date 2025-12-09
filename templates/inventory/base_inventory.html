@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{# العنوان الافتراضي لتطبيق المخزون — يمكن للصفحات الفرعية تغييره عبر block inventory_title #}
+{% block title %}
+  {% block inventory_title %}{% trans "المخزون" %}{% endblock %}
+{% endblock %}
+
+{# محتوى الصفحة داخل الـ container من base.html #}
+{% block content %}
+
+  {# نافبار تطبيق المخزون (ثانوي تحت النافبار الرئيسي) #}
+  {% include "inventory/includes/navbar.html" %}
+
+  {# مساحة محتوى الإنفنتري — الصفحات الفرعية تكتب هنا #}
+  <div class="mt-3">
+    {% block inventory_content %}{% endblock %}
+  </div>
+
+{% endblock %}

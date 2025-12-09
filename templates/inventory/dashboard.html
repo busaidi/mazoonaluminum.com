@@ -1,0 +1,215 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{# نخصص عنوان الصفحة في التاب والمتا #}
+{% block inventory_title %}{% trans "لوحة تحكم المخزون" %}{% endblock %}
+
+{% block inventory_content %}
+<div class="py-3">
+
+  {# ===== Header / أزرار العمليات السريعة ===== #}
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h1 class="h4 mb-1">{% trans "لوحة تحكم المخزون" %}</h1>
+      <p class="text-muted small mb-0">
+        {% trans "نظرة عامة على حالة المخزون والعمليات الأخيرة." %}
+      </p>
+    </div>
+
+    <div class="btn-group shadow-sm">
+      <a href="{% url 'inventory:receipt_create' %}" class="btn btn-success">
+        <i class="bi bi-arrow-down-circle me-1"></i>
+        {% trans "استلام" %}
+      </a>
+      <a href="{% url 'inventory:delivery_create' %}" class="btn btn-primary">
+        <i class="bi bi-arrow-up-circle me-1"></i>
+        {% trans "صرف" %}
+      </a>
+      <a href="{% url 'inventory:transfer_create' %}" class="btn btn-warning text-dark">
+        <i class="bi bi-arrow-left-right me-1"></i>
+        {% trans "تحويل" %}
+      </a>
+    </div>
+  </div>
+
+  {# ===== كروت الإحصائيات السريعة ===== #}
+  <div class="row g-4 mb-4">
+
+    {# تنبيهات المخزون #}
+    <div class="col-xl-4 col-md-6">
+      <div class="card shadow-sm h-100 border-start border-4 border-danger-subtle">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="text-uppercase small fw-bold text-danger mb-1">
+                {% trans "تنبيهات المخزون" %}
+              </div>
+              <div class="h4 mb-0 fw-bold">
+                {{ low_stock_count }}
+              </div>
+              <small class="text-muted">
+                {% trans "منتجات تحت الحد الأدنى" %}
+              </small>
+            </div>
+            <div class="opacity-25">
+              <i class="bi bi-exclamation-triangle-fill fs-1 text-danger"></i>
+            </div>
+          </div>
+        </div>
+        {% if low_stock_count > 0 %}
+        <div class="card-footer bg-transparent border-0 pt-0">
+          <a href="{% url 'inventory:stock_level_list' %}?filter=low"
+             class="small text-danger text-decoration-none">
+            {% trans "عرض التفاصيل" %} <i class="bi bi-chevron-left small"></i>
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# حركات معلقة (مسودة) #}
+    <div class="col-xl-4 col-md-6">
+      <div class="card shadow-sm h-100 border-start border-4 border-secondary-subtle">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="text-uppercase small fw-bold text-secondary mb-1">
+                {% trans "حركات معلقة (مسودة)" %}
+              </div>
+              <div class="h4 mb-0 fw-bold">
+                {{ draft_moves_count }}
+              </div>
+              <small class="text-muted">
+                {% trans "بانتظار التأكيد" %}
+              </small>
+            </div>
+            <div class="opacity-25">
+              <i class="bi bi-file-earmark-text fs-1 text-secondary"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# إجمالي المنتجات النشطة #}
+    <div class="col-xl-4 col-md-6">
+      <div class="card shadow-sm h-100 border-start border-4 border-primary-subtle">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="text-uppercase small fw-bold text-primary mb-1">
+                {% trans "إجمالي المنتجات النشطة" %}
+              </div>
+              <div class="h4 mb-0 fw-bold">
+                {{ total_products }}
+              </div>
+              <small class="text-muted">
+                {% trans "صنف معرف في النظام" %}
+              </small>
+            </div>
+            <div class="opacity-25">
+              <i class="bi bi-box-seam fs-1 text-primary"></i>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer bg-transparent border-0 pt-0">
+          <a href="{% url 'inventory:product_list' %}"
+             class="small text-primary text-decoration-none">
+            {% trans "إدارة المنتجات" %} <i class="bi bi-chevron-left small"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {# ===== جدول آخر الحركات ===== #}
+  <div class="card shadow-sm">
+    <div class="card-header bg-body d-flex justify-content-between align-items-center">
+      <h2 class="h6 fw-bold mb-0 text-primary">
+        <i class="bi bi-clock-history me-2"></i>
+        {% trans "آخر الحركات" %}
+      </h2>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4">{% trans "المرجع" %}</th>
+            <th>{% trans "النوع" %}</th>
+            <th>{% trans "من" %}</th>
+            <th>{% trans "إلى" %}</th>
+            <th>{% trans "التاريخ" %}</th>
+            <th>{% trans "الحالة" %}</th>
+            <th class="text-end pe-4"></th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for move in latest_moves %}
+          <tr>
+            <td class="ps-4 font-monospace small fw-bold">
+              <a href="{% url 'inventory:move_detail' move.pk %}"
+                 class="text-decoration-none">
+                {{ move.reference|default:move.pk }}
+              </a>
+            </td>
+            <td>
+              {% if move.move_type == 'in' %}
+                <span class="badge rounded-pill bg-success-subtle text-success">
+                  IN
+                </span>
+              {% elif move.move_type == 'out' %}
+                <span class="badge rounded-pill bg-primary-subtle text-primary">
+                  OUT
+                </span>
+              {% else %}
+                <span class="badge rounded-pill bg-warning-subtle text-warning">
+                  TRF
+                </span>
+              {% endif %}
+            </td>
+            <td class="small text-muted">
+              {{ move.from_warehouse.code|default:"-" }}
+            </td>
+            <td class="small text-muted">
+              {{ move.to_warehouse.code|default:"-" }}
+            </td>
+            <td class="small text-muted">
+              {{ move.move_date|date:"Y-m-d" }}
+            </td>
+            <td>
+              {% if move.status == 'done' %}
+                <span class="text-success" title="{% trans 'منفذة' %}">
+                  <i class="bi bi-check-circle-fill"></i>
+                </span>
+              {% elif move.status == 'draft' %}
+                <span class="text-secondary" title="{% trans 'مسودة' %}">
+                  <i class="bi bi-circle"></i>
+                </span>
+              {% else %}
+                <span class="text-danger" title="{% trans 'ملغاة' %}">
+                  <i class="bi bi-x-circle-fill"></i>
+                </span>
+              {% endif %}
+            </td>
+            <td class="text-end pe-4">
+              <a href="{% url 'inventory:move_detail' move.pk %}"
+                 class="btn btn-sm btn-light border">
+                <i class="bi bi-chevron-left"></i>
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted">
+              {% trans "لا توجد حركات حديثة." %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

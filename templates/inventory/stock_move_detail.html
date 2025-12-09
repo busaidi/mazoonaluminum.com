@@ -1,0 +1,170 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block inventory_title %}{{ move.reference|default:move.pk }} | {{ move.get_move_type_display }}{% endblock %}
+
+{% block inventory_content %}
+<div class="py-3">
+
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h1 class="h3 mb-0 text-gray-800">
+                    {{ move.reference|default:move.pk }}
+                </h1>
+                {% if move.status == 'draft' %}
+                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                        {% trans "مسودة" %}
+                    </span>
+                {% elif move.status == 'done' %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                        <i class="bi bi-check-circle-fill me-1"></i> {% trans "منفذة" %}
+                    </span>
+                {% elif move.status == 'cancelled' %}
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                        <i class="bi bi-x-circle-fill me-1"></i> {% trans "ملغاة" %}
+                    </span>
+                {% endif %}
+            </div>
+            <p class="text-muted small mb-0">
+                <i class="bi bi-calendar3 me-1"></i> {{ move.move_date|date:"l, d F Y - H:i" }}
+            </p>
+        </div>
+
+        <div class="d-flex gap-2 print-hide">
+            {% if move.status == 'draft' %}
+                <form action="{% url 'inventory:move_confirm' move.pk %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success" onclick="return confirm('{% trans "هل أنت متأكد من ترحيل هذه الحركة؟ سيتم تحديث المخزون." %}')">
+                        <i class="bi bi-check-lg me-1"></i> {% trans "تأكيد وترحيل" %}
+                    </button>
+                </form>
+            {% elif move.status == 'done' %}
+                <form action="{% url 'inventory:move_cancel' move.pk %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger" onclick="return confirm('{% trans "هل أنت متأكد من إلغاء هذه الحركة؟ سيتم عكس المخزون." %}')">
+                        {% trans "إلغاء الحركة" %}
+                    </button>
+                </form>
+            {% endif %}
+
+            <a href="javascript:window.print()" class="btn btn-light border">
+                <i class="bi bi-printer"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        {% if move.move_type != 'in' %}
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100 border-top border-4 border-primary-subtle">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-3 text-muted text-uppercase small fw-bold">
+                        {% trans "من (المصدر)" %}
+                    </h6>
+                    {% if move.from_warehouse %}
+                        <div class="fw-bold fs-5 text-dark">{{ move.from_warehouse.name }}</div>
+                        <div class="text-secondary small">{{ move.from_location.name }}</div>
+                        <div class="text-muted small mt-1 font-monospace">{{ move.from_warehouse.code }}</div>
+                    {% else %}
+                        <em class="text-muted">{% trans "جهة خارجية / مورد" %}</em>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if move.move_type != 'out' %}
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100 border-top border-4 border-success-subtle">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-3 text-muted text-uppercase small fw-bold">
+                        {% trans "إلى (الوجهة)" %}
+                    </h6>
+                    {% if move.to_warehouse %}
+                        <div class="fw-bold fs-5 text-dark">{{ move.to_warehouse.name }}</div>
+                        <div class="text-secondary small">{{ move.to_location.name }}</div>
+                        <div class="text-muted small mt-1 font-monospace">{{ move.to_warehouse.code }}</div>
+                    {% else %}
+                        <em class="text-muted">{% trans "جهة خارجية / عميل" %}</em>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if move.note %}
+        <div class="col-12">
+            <div class="card bg-light border-0">
+                <div class="card-body py-2">
+                    <small class="fw-bold text-muted">{% trans "ملاحظات:" %}</small>
+                    <span class="text-dark small ms-2">{{ move.note }}</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="h6 mb-0 fw-bold text-primary">{% trans "تفاصيل المنتجات" %}</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4" style="width: 5%">#</th>
+                        <th style="width: 45%">{% trans "المنتج" %}</th>
+                        <th style="width: 25%">{% trans "الكمية" %}</th>
+                        <th style="width: 25%">{% trans "الوحدة" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for line in move.lines.all %}
+                    <tr>
+                        <td class="ps-4 text-muted small">{{ forloop.counter }}</td>
+                        <td>
+                            <div class="fw-medium text-dark">
+                                <a href="{% url 'inventory:product_detail' line.product.code %}" class="text-decoration-none text-dark">
+                                    [{{ line.product.code }}] {{ line.product.name }}
+                                </a>
+                            </div>
+                        </td>
+                        <td class="fw-bold">{{ line.quantity }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ line.uom.name }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <td colspan="2" class="text-end fw-bold">{% trans "الإجمالي:" %}</td>
+                        <td class="fw-bold">{{ move.total_lines_quantity }}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <div class="text-end text-muted small">
+        {% if move.created_at %}
+            <span class="me-3">
+                <i class="bi bi-clock"></i> {% trans "تم الإنشاء:" %} {{ move.created_at|date:"Y-m-d H:i" }}
+            </span>
+        {% endif %}
+        {% if move.status == 'done' %}
+            <span class="text-success">
+                <i class="bi bi-check-all"></i> {% trans "تاريخ الترحيل:" %} {{ move.updated_at|date:"Y-m-d H:i" }}
+            </span>
+        {% endif %}
+    </div>
+
+</div>
+
+<style media="print">
+    .print-hide { display: none !important; }
+    .card { border: 1px solid #ddd !important; box-shadow: none !important; }
+    body { background-color: white; }
+    .badge { border: 1px solid #000; color: #000 !important; background: none !important; }
+</style>
+{% endblock %}

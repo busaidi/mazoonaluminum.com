@@ -18,7 +18,7 @@ from inventory.managers import (
     StockLocationManager,
     StockMoveManager,
     StockLevelManager,
-    WarehouseManager,
+    WarehouseManager, ReorderRuleManager,
 )
 from uom.models import UnitOfMeasure
 
@@ -381,6 +381,15 @@ class Product(BaseModel):
     def total_on_hand(self) -> Decimal:
         """إجمالي الكمية المتوفرة (للعرض فقط)."""
         return self.stock_levels.aggregate(t=Sum("quantity_on_hand"))["t"] or DECIMAL_ZERO
+
+    @property
+    def calculated_available_qty(self):
+        """
+        تستخدم في القوالب عندما يكون المنتج محملاً مع with_stock_summary.
+        """
+        total = getattr(self, 'total_qty', Decimal(0)) or Decimal(0)
+        reserved = getattr(self, 'total_reserved', Decimal(0)) or Decimal(0)
+        return total - reserved
 
     @property
     def image_url(self):
@@ -774,6 +783,8 @@ class ReorderRule(BaseModel):
         default=True,
         verbose_name=_("نشطة"),
     )
+
+    objects = ReorderRuleManager()
 
     class Meta:
         verbose_name = _("قاعدة إعادة طلب")

@@ -1,0 +1,134 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block inventory_title %}{% trans "إعدادات المخزون" %}{% endblock %}
+
+{% block inventory_content %}
+<div class="py-3">
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h4 mb-1 text-gray-800">
+                    <i class="bi bi-gear-wide-connected me-2 text-secondary"></i>
+                    {% trans "إعدادات المخزون" %}
+                </h1>
+                <p class="text-muted small mb-0">{% trans "تهيئة السياسات العامة وتسلسل الترقيم للمستندات." %}</p>
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary px-4">
+                    <i class="bi bi-save me-1"></i> {% trans "حفظ التغييرات" %}
+                </button>
+            </div>
+        </div>
+
+        {% if form.errors %}
+            <div class="alert alert-danger shadow-sm border-0 mb-4">
+                <i class="bi bi-exclamation-circle-fill me-2"></i>
+                {% trans "يرجى تصحيح الأخطاء أدناه." %}
+            </div>
+        {% endif %}
+
+        <div class="row g-4">
+
+            <div class="col-12">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold text-primary">
+                            <i class="bi bi-sliders me-2"></i> {% trans "السياسات العامة" %}
+                        </h6>
+                    </div>
+                    <div class="card-body">
+
+                        <div class="d-flex align-items-start">
+                            <div class="form-check form-switch fs-5 me-3">
+                                {{ form.allow_negative_stock }}
+                            </div>
+                            <div>
+                                <label class="form-check-label fw-bold text-dark mb-1" for="{{ form.allow_negative_stock.id_for_label }}">
+                                    {{ form.allow_negative_stock.label }}
+                                </label>
+                                <p class="text-muted small mb-0 lh-sm">
+                                    {{ form.allow_negative_stock.help_text|default:_("السماح بإخراج مواد من المخزون حتى لو كان الرصيد لا يكفي (سيصبح الرصيد سالباً).") }}
+                                </p>
+                                {% if form.allow_negative_stock.errors %}
+                                    <div class="text-danger small mt-1">{{ form.allow_negative_stock.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white py-3 border-bottom-0">
+                        <h6 class="mb-0 fw-bold text-primary">
+                            <i class="bi bi-123 me-2"></i> {% trans "بادئات الترقيم (Sequences Prefixes)" %}
+                        </h6>
+                    </div>
+                    <div class="card-body bg-light rounded-bottom-2 pt-0 pb-4 px-4">
+                        <p class="text-muted small mb-4 pt-3 border-top">
+                            {% trans "حدد الأحرف التي تسبق الرقم التسلسلي لكل نوع من أنواع الحركات (مثال: IN-0001)." %}
+                        </p>
+
+                        <div class="row g-4">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small text-success">{{ form.stock_move_in_prefix.label }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white text-success border-end-0"><i class="bi bi-arrow-down-circle"></i></span>
+                                    <input type="text" name="{{ form.stock_move_in_prefix.name }}"
+                                           value="{{ form.stock_move_in_prefix.value|default:'' }}"
+                                           class="form-control border-start-0 ps-0" maxlength="10">
+                                </div>
+                                <div class="form-text small">{{ form.stock_move_in_prefix.help_text }}</div>
+                                {{ form.stock_move_in_prefix.errors }}
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small text-primary">{{ form.stock_move_out_prefix.label }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white text-primary border-end-0"><i class="bi bi-arrow-up-circle"></i></span>
+                                    <input type="text" name="{{ form.stock_move_out_prefix.name }}"
+                                           value="{{ form.stock_move_out_prefix.value|default:'' }}"
+                                           class="form-control border-start-0 ps-0" maxlength="10">
+                                </div>
+                                <div class="form-text small">{{ form.stock_move_out_prefix.help_text }}</div>
+                                {{ form.stock_move_out_prefix.errors }}
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small text-warning text-dark-emphasis">{{ form.stock_move_transfer_prefix.label }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white text-warning border-end-0"><i class="bi bi-arrow-left-right"></i></span>
+                                    <input type="text" name="{{ form.stock_move_transfer_prefix.name }}"
+                                           value="{{ form.stock_move_transfer_prefix.value|default:'' }}"
+                                           class="form-control border-start-0 ps-0" maxlength="10">
+                                </div>
+                                <div class="form-text small">{{ form.stock_move_transfer_prefix.help_text }}</div>
+                                {{ form.stock_move_transfer_prefix.errors }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>
+
+{# CSS مخصص لجعل الـ Checkbox يبدو كـ Switch بشكل صحيح #}
+<script>
+    // إضافة كلاس form-switch تلقائياً لحقل allow_negative_stock
+    document.addEventListener("DOMContentLoaded", function() {
+        var negativeStockInput = document.getElementById("{{ form.allow_negative_stock.id_for_label }}");
+        if(negativeStockInput) {
+            negativeStockInput.classList.add("form-check-input");
+            negativeStockInput.setAttribute("role", "switch");
+        }
+    });
+</script>
+{% endblock %}

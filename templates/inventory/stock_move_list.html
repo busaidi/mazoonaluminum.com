@@ -1,22 +1,22 @@
-{% extends "base_inventory.html" %}
+{% extends "inventory/base_inventory.html" %}
 {% load i18n %}
 
-{% block title %}{{ page_title }}{% endblock %}
+{% block inventory_title %}{{ page_title }}{% endblock %}
 
-{% block content %}
-<div class="container-fluid py-4">
+{% block inventory_content %}
+<div class="py-3">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-            <h1 class="h3 mb-0 text-gray-800">
+            <h1 class="h4 mb-1 text-gray-800">
                 <i class="bi bi-arrow-left-right me-2 text-{{ move_type_color }}"></i>
                 {{ page_title }}
             </h1>
-            <p class="text-muted small mt-1">{% trans "عرض وإدارة حركات المخزون" %}</p>
+            <p class="text-muted small mb-0">{% trans "سجل الحركات وإدارتها." %}</p>
         </div>
         <div>
             <a href="{{ create_url }}" class="btn btn-{{ move_type_color }} shadow-sm">
-                <i class="bi bi-plus-lg"></i>
+                <i class="bi bi-plus-lg me-1"></i>
                 {% trans "جديد" %} {{ move_type_label }}
             </a>
         </div>
@@ -24,21 +24,20 @@
 
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body p-3">
-            <form method="get" class="row g-2 align-items-center">
-                <div class="col-md-4">
+            <form method="get" class="row g-2">
+                <div class="col-md-5">
                     <div class="input-group">
                         <span class="input-group-text bg-white border-end-0 text-muted">
                             <i class="bi bi-search"></i>
                         </span>
                         <input type="text" name="q" class="form-control border-start-0 ps-0"
-                               placeholder="{% trans 'بحث بالمرجع، المنتج، أو المستودع...' %}"
+                               placeholder="{% trans 'بحث برقم المرجع، المنتج، أو المستودع...' %}"
                                value="{{ request.GET.q|default:'' }}">
                     </div>
                 </div>
-
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-outline-secondary w-100">
-                        {% trans "تطبيق" %}
+                    <button type="submit" class="btn btn-light border w-100 fw-medium">
+                        {% trans "بحث" %}
                     </button>
                 </div>
             </form>
@@ -46,169 +45,134 @@
     </div>
 
     <div class="card shadow-sm border-0">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-4">{% trans "المرجع" %}</th>
-                            <th>{% trans "التاريخ" %}</th>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-uppercase small text-muted">
+                    <tr>
+                        <th class="ps-4">{% trans "المرجع" %}</th>
+                        <th>{% trans "التاريخ" %}</th>
 
-                            {% if current_move_type != 'in' %}
-                                <th>{% trans "من (المصدر)" %}</th>
+                        {% if current_move_type != 'in' %}
+                            <th>{% trans "من (المصدر)" %}</th>
+                        {% endif %}
+
+                        {% if current_move_type != 'out' %}
+                            <th>{% trans "إلى (الوجهة)" %}</th>
+                        {% endif %}
+
+                        <th>{% trans "الحالة" %}</th>
+                        <th class="text-end pe-4"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for move in moves %}
+                    <tr>
+                        <td class="ps-4 fw-bold font-monospace text-primary">
+                            <a href="{% url 'inventory:move_detail' move.pk %}" class="text-decoration-none">
+                                {{ move.reference|default:move.pk }}
+                            </a>
+                            {% if move.note %}
+                                <i class="bi bi-info-circle text-muted ms-1 small"
+                                   data-bs-toggle="tooltip" title="{{ move.note }}"></i>
                             {% endif %}
+                        </td>
 
-                            {% if current_move_type != 'out' %}
-                                <th>{% trans "إلى (الوجهة)" %}</th>
-                            {% endif %}
+                        <td class="text-muted small">
+                            {{ move.move_date|date:"Y-m-d" }}
+                        </td>
 
-                            <th>{% trans "الحالة" %}</th>
-                            <th class="text-end pe-4">{% trans "إجراءات" %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for move in moves %}
-                        <tr>
-                            <td class="ps-4 fw-medium">
-                                <a href="{% url 'inventory:move_detail' move.pk %}" class="text-decoration-none text-dark">
-                                    {{ move.reference|default:"-" }}
-                                </a>
-                                {% if move.note %}
-                                    <i class="bi bi-info-circle text-muted ms-1 small"
-                                       data-bs-toggle="tooltip" title="{{ move.note }}"></i>
-                                {% endif %}
-                            </td>
-
-                            <td class="text-muted small">
-                                {{ move.move_date|date:"Y-m-d H:i" }}
-                            </td>
-
-                            {% if current_move_type != 'in' %}
-                            <td>
-                                {% if move.from_warehouse %}
-                                    <div class="d-flex flex-column">
-                                        <span class="fw-medium text-dark">{{ move.from_warehouse.name }}</span>
-                                        <span class="small text-muted">{{ move.from_location.name }}</span>
-                                    </div>
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            {% endif %}
-
-                            {% if current_move_type != 'out' %}
-                            <td>
-                                {% if move.to_warehouse %}
-                                    <div class="d-flex flex-column">
-                                        <span class="fw-medium text-dark">{{ move.to_warehouse.name }}</span>
-                                        <span class="small text-muted">{{ move.to_location.name }}</span>
-                                    </div>
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            {% endif %}
-
-                            <td>
-                                {% if move.status == 'draft' %}
-                                    <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill">
-                                        {% trans "مسودة" %}
-                                    </span>
-                                {% elif move.status == 'done' %}
-                                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill">
-                                        <i class="bi bi-check-circle me-1"></i> {% trans "منفذة" %}
-                                    </span>
-                                {% elif move.status == 'cancelled' %}
-                                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill">
-                                        {% trans "ملغاة" %}
-                                    </span>
-                                {% endif %}
-                            </td>
-
-                            <td class="text-end pe-4">
-                                <div class="btn-group">
-                                    <a href="{% url 'inventory:move_detail' move.pk %}"
-                                       class="btn btn-sm btn-light border"
-                                       data-bs-toggle="tooltip" title="{% trans 'عرض التفاصيل' %}">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-
-                                    {% if move.status == 'draft' %}
-                                    <form action="{% url 'inventory:move_confirm' move.pk %}" method="post" class="d-inline">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-outline-success border-start-0"
-                                                onclick="return confirm('{% trans "هل أنت متأكد من تأكيد هذه الحركة؟" %}')"
-                                                data-bs-toggle="tooltip" title="{% trans 'تأكيد وترحيل' %}">
-                                            <i class="bi bi-check-lg"></i>
-                                        </button>
-                                    </form>
-                                    {% endif %}
+                        {% if current_move_type != 'in' %}
+                        <td>
+                            {% if move.from_warehouse %}
+                                <div class="d-flex flex-column">
+                                    <span class="fw-medium text-dark">{{ move.from_warehouse.name }}</span>
+                                    <span class="small text-muted">{{ move.from_location.name }}</span>
                                 </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">
-                                <div class="mb-3">
-                                    <i class="bi bi-inbox fs-1 opacity-50"></i>
+                            {% else %}
+                                <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+
+                        {% if current_move_type != 'out' %}
+                        <td>
+                            {% if move.to_warehouse %}
+                                <div class="d-flex flex-column">
+                                    <span class="fw-medium text-dark">{{ move.to_warehouse.name }}</span>
+                                    <span class="small text-muted">{{ move.to_location.name }}</span>
                                 </div>
-                                <p class="mb-0">{% trans "لا توجد حركات مخزون لعرضها." %}</p>
-                                {% if request.GET.q %}
-                                    <small>{% trans "حاول تغيير معايير البحث." %}</small>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                            {% else %}
+                                <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+
+                        <td>
+                            {% if move.status == 'draft' %}
+                                <span class="badge bg-secondary-subtle text-secondary rounded-pill fw-normal">
+                                    {% trans "مسودة" %}
+                                </span>
+                            {% elif move.status == 'done' %}
+                                <span class="badge bg-success-subtle text-success rounded-pill fw-normal">
+                                    <i class="bi bi-check2 me-1"></i> {% trans "منفذة" %}
+                                </span>
+                            {% elif move.status == 'cancelled' %}
+                                <span class="badge bg-danger-subtle text-danger rounded-pill fw-normal">
+                                    {% trans "ملغاة" %}
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-end pe-4">
+                            <a href="{% url 'inventory:move_detail' move.pk %}"
+                               class="btn btn-sm btn-light border"
+                               title="{% trans 'عرض التفاصيل' %}">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <div class="mb-2"><i class="bi bi-inbox fs-1 opacity-25"></i></div>
+                            {% trans "لا توجد حركات مخزون." %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
 
         {% if is_paginated %}
         <div class="card-footer bg-white py-3">
-            <nav aria-label="Page navigation">
+            <nav>
                 <ul class="pagination justify-content-center mb-0">
                     {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link border-0 text-secondary" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
-                                <i class="bi bi-chevron-right"></i>
-                            </a>
-                        </li>
-                    {% else %}
-                        <li class="page-item disabled">
-                            <span class="page-link border-0"><i class="bi bi-chevron-right"></i></span>
-                        </li>
+                    <li class="page-item">
+                        <a class="page-link border-0 text-secondary" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
                     {% endif %}
 
                     <li class="page-item active">
                         <span class="page-link bg-{{ move_type_color }} border-{{ move_type_color }}">
-                            {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+                            {{ page_obj.number }}
                         </span>
                     </li>
 
                     {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link border-0 text-secondary" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
-                                <i class="bi bi-chevron-left"></i>
-                            </a>
-                        </li>
-                    {% else %}
-                        <li class="page-item disabled">
-                            <span class="page-link border-0"><i class="bi bi-chevron-left"></i></span>
-                        </li>
+                    <li class="page-item">
+                        <a class="page-link border-0 text-secondary" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
                     {% endif %}
                 </ul>
             </nav>
         </div>
         {% endif %}
     </div>
-</div>
 
-<script>
-    // تفعيل Tooltips الخاصة ببوتستراب
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-      return new bootstrap.Tooltip(tooltipTriggerEl)
-    })
-</script>
+</div>
 {% endblock %}

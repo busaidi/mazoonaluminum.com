@@ -1,0 +1,154 @@
+{% load i18n %}
+
+<nav class="navbar navbar-expand-lg bg-white border-bottom shadow-sm">
+  <div class="container-fluid">
+
+    {# شعار / عنوان تطبيق المخزون #}
+    <a class="navbar-brand fw-bold text-primary d-flex align-items-center"
+       href="{% url 'inventory:dashboard' %}">
+      <i class="bi bi-boxes me-2 fs-4"></i>
+      <span>MyERP Inventory</span>
+    </a>
+
+    <button class="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#inventoryNavbar"
+            aria-controls="inventoryNavbar"
+            aria-expanded="false"
+            aria-label="{% trans 'تبديل قائمة المخزون' %}">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="inventoryNavbar">
+      {# روابط يسار / يمين حسب اللغة #}
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+        <li class="nav-item">
+          <a class="nav-link {% if active_section == 'inventory_dashboard' %}active fw-bold text-primary{% endif %}"
+             href="{% url 'inventory:dashboard' %}">
+            <i class="bi bi-speedometer2 d-lg-none me-2"></i>
+            {% trans "لوحة التحكم" %}
+          </a>
+        </li>
+
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle {% if active_section == 'inventory_operations' %}active fw-bold text-primary{% endif %}"
+             href="#"
+             role="button"
+             data-bs-toggle="dropdown"
+             aria-expanded="false">
+            <i class="bi bi-arrow-left-right d-lg-none me-2"></i>
+            {% trans "العمليات" %}
+          </a>
+          <ul class="dropdown-menu shadow-sm border-0 mt-1">
+            <li>
+              <a class="dropdown-item d-flex align-items-center py-2"
+                 href="{% url 'inventory:receipt_list' %}">
+                <span class="badge bg-success bg-opacity-10 text-success rounded-pill me-2" style="width: 45px;">IN</span>
+                <div>
+                  <span class="d-block fw-medium">{% trans "استلام بضاعة" %}</span>
+                  <small class="text-muted" style="font-size: 0.75rem;">
+                    {% trans "مشتريات / توريد" %}
+                  </small>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item d-flex align-items-center py-2"
+                 href="{% url 'inventory:delivery_list' %}">
+                <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill me-2" style="width: 45px;">OUT</span>
+                <div>
+                  <span class="d-block fw-medium">{% trans "أوامر صرف" %}</span>
+                  <small class="text-muted" style="font-size: 0.75rem;">
+                    {% trans "مبيعات / استهلاك" %}
+                  </small>
+                </div>
+              </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <a class="dropdown-item d-flex align-items-center py-2"
+                 href="{% url 'inventory:transfer_list' %}">
+                <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill me-2" style="width: 45px;">TRF</span>
+                <div>
+                  <span class="d-block fw-medium">{% trans "تحويل داخلي" %}</span>
+                  <small class="text-muted" style="font-size: 0.75rem;">
+                    {% trans "نقل بين المستودعات" %}
+                  </small>
+                </div>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle {% if active_section == 'inventory_reports' %}active fw-bold text-primary{% endif %}"
+             href="#"
+             role="button"
+             data-bs-toggle="dropdown"
+             aria-expanded="false">
+            <i class="bi bi-bar-chart-line d-lg-none me-2"></i>
+            {% trans "التقارير" %}
+          </a>
+          <ul class="dropdown-menu shadow-sm border-0 mt-1">
+            <li>
+              <a class="dropdown-item py-2"
+                 href="{% url 'inventory:stock_level_list' %}">
+                <i class="bi bi-list-check me-2 text-secondary"></i>
+                {% trans "أرصدة المخزون" %}
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item py-2"
+                 href="{% url 'inventory:reorder_rule_list' %}">
+                <i class="bi bi-exclamation-triangle me-2 text-secondary"></i>
+                {% trans "قواعد إعادة الطلب" %}
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle {% if active_section == 'inventory_master' %}active fw-bold text-primary{% endif %}"
+             href="#"
+             role="button"
+             data-bs-toggle="dropdown"
+             aria-expanded="false">
+            <i class="bi bi-database d-lg-none me-2"></i>
+            {% trans "البيانات الأساسية" %}
+          </a>
+          <ul class="dropdown-menu shadow-sm border-0 mt-1">
+            <li>
+              <a class="dropdown-item py-2"
+                 href="{% url 'inventory:product_list' %}">
+                <i class="bi bi-box-seam me-2 text-secondary"></i>
+                {% trans "المنتجات" %}
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item py-2"
+                 href="{% url 'inventory:warehouse_list' %}">
+                <i class="bi bi-building me-2 text-secondary"></i>
+                {% trans "المستودعات والمواقع" %}
+              </a>
+            </li>
+          </ul>
+        </li>
+      </ul>
+
+      {# يمين النافبار: فقط إعدادات المخزون بدون يوزر #}
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <a class="nav-link {% if active_section == 'inventory_settings' %}active text-primary{% else %}text-secondary{% endif %}"
+             href="{% url 'inventory:settings' %}"
+             data-bs-toggle="tooltip"
+             data-bs-placement="bottom"
+             title="{% trans 'إعدادات المخزون' %}">
+            <i class="bi bi-gear-fill fs-5"></i>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
