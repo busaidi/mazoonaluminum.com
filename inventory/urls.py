@@ -76,6 +76,11 @@ urlpatterns = [
     path("reorder-rules/<int:pk>/delete/", views.ReorderRuleDeleteView.as_view(), name="reorder_rule_delete"), # ✅ New
     # ...
 
+
+    # Print PDF
+    path("operations/move/<int:pk>/print/", views.stock_move_pdf_view, name="move_print"),
+
+
     # ==============================
     # 4. البيانات الأساسية (Master Data)
     # ==============================

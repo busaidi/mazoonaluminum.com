@@ -48,9 +48,9 @@
                 </form>
             {% endif %}
 
-            <a href="javascript:window.print()" class="btn btn-light border">
-                <i class="bi bi-printer"></i>
-            </a>
+            <a href="{% url 'inventory:move_print' move.pk %}" target="_blank" class="btn btn-outline-dark border shadow-sm" title="{% trans 'طباعة PDF' %}">
+    <i class="bi bi-file-earmark-pdf me-1"></i> {% trans "طباعة" %}
+</a>
         </div>
     </div>
 

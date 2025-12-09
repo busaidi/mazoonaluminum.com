@@ -1,0 +1,171 @@
+{% load i18n humanize static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ doc_title }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* إعدادات الصفحة A4 */
+        @page {
+            size: A4;
+            margin: 1.5cm;
+            @top-right {
+                content: "MyERP System";
+                font-size: 9pt;
+                font-family: 'Cairo', sans-serif;
+            }
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 9pt;
+                font-family: 'Cairo', sans-serif;
+            }
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif; /* مهم جداً للعربية */
+            font-size: 10pt;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        /* ترويسة المستند */
+        .header-table { width: 100%; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .company-info h1 { margin: 0; font-size: 18pt; color: #2c3e50; }
+        .doc-title { text-align: left; }
+        .doc-title h2 { margin: 0; font-size: 16pt; text-transform: uppercase; color: #7f8c8d; }
+        .doc-ref { font-size: 12pt; font-weight: bold; margin-top: 5px; }
+
+        /* معلومات الحركة */
+        .info-grid { display: table; width: 100%; margin-bottom: 20px; }
+        .info-col { display: table-cell; width: 33%; vertical-align: top; }
+        .label { font-weight: bold; color: #7f8c8d; font-size: 9pt; display: block; margin-bottom: 2px; }
+        .value { font-size: 10pt; margin-bottom: 10px; display: block; }
+
+        /* جدول الأصناف */
+        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        .items-table th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #ddd;
+            padding: 8px;
+            text-align: right;
+            font-weight: bold;
+            font-size: 9pt;
+        }
+        .items-table td {
+            border-bottom: 1px solid #eee;
+            padding: 8px;
+            vertical-align: middle;
+        }
+        .text-center { text-align: center; }
+        .text-end { text-align: left; } /* لأن الـ DIR=RTL، اليسار هو النهاية */
+
+        /* التوقيعات */
+        .signatures { width: 100%; margin-top: 50px; page-break-inside: avoid; }
+        .sig-box { width: 45%; float: right; border-top: 1px solid #ccc; padding-top: 10px; margin-left: 5%; }
+        .sig-box:last-child { margin-left: 0; float: left; }
+        .sig-title { font-weight: bold; margin-bottom: 40px; }
+
+    </style>
+</head>
+<body>
+
+    <table class="header-table">
+        <tr>
+            <td class="company-info">
+                <h1>{{ company_name }}</h1>
+                <div style="font-size: 9pt; color: #666;">
+                    سلطنة عمان، مسقط<br>
+                    هاتف: 96812345678+
+                </div>
+            </td>
+            <td class="doc-title">
+                <h2>{{ doc_title }}</h2>
+                <div class="doc-ref"># {{ move.reference|default:move.pk }}</div>
+                <div style="font-size: 9pt;">{{ move.move_date|date:"Y-m-d" }}</div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="info-grid">
+        <div class="info-col">
+            <span class="label">{% trans "المصدر (From)" %}</span>
+            <span class="value">
+                {% if move.from_warehouse %}
+                    {{ move.from_warehouse.name }}<br>
+                    <small>{{ move.from_location.name }}</small>
+                {% else %}
+                    {% trans "جهة خارجية / مورد" %}
+                {% endif %}
+            </span>
+        </div>
+        <div class="info-col">
+            <span class="label">{% trans "الوجهة (To)" %}</span>
+            <span class="value">
+                {% if move.to_warehouse %}
+                    {{ move.to_warehouse.name }}<br>
+                    <small>{{ move.to_location.name }}</small>
+                {% else %}
+                    {% trans "جهة خارجية / عميل" %}
+                {% endif %}
+            </span>
+        </div>
+        <div class="info-col">
+            <span class="label">{% trans "الحالة" %}</span>
+            <span class="value">{{ move.get_status_display }}</span>
+
+            {% if move.note %}
+            <span class="label">{% trans "ملاحظات" %}</span>
+            <span class="value">{{ move.note }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width: 5%;">#</th>
+                <th style="width: 15%;">{% trans "كود الصنف" %}</th>
+                <th style="width: 40%;">{% trans "البيان" %}</th>
+                <th style="width: 15%;" class="text-center">{% trans "الوحدة" %}</th>
+                <th style="width: 15%;" class="text-center">{% trans "الكمية" %}</th>
+                </tr>
+        </thead>
+        <tbody>
+            {% for line in move.lines.all %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td style="font-family: monospace;">{{ line.product.code }}</td>
+                <td>
+                    <b>{{ line.product.name }}</b>
+                    {% if line.product.description %}
+                        <br><small style="color: #666;">{{ line.product.description|truncatechars:50 }}</small>
+                    {% endif %}
+                </td>
+                <td class="text-center">{{ line.uom.name }}</td>
+                <td class="text-center" style="font-weight: bold; font-size: 11pt;">{{ line.quantity|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4" class="text-end" style="padding-top: 10px; font-weight: bold;">{% trans "إجمالي الكميات:" %}</td>
+                <td class="text-center" style="padding-top: 10px; font-weight: bold;">{{ move.total_lines_quantity }}</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="signatures">
+        <div class="sig-box">
+            <div class="sig-title">{% trans "أمين المستودع (المُسلّم)" %}</div>
+            <div>.....................................</div>
+        </div>
+        <div class="sig-box">
+            <div class="sig-title">{% trans "المستلم" %}</div>
+            <div>.....................................</div>
+        </div>
+    </div>
+
+</body>
+</html>

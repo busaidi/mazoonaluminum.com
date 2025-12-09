@@ -1,0 +1,91 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block inventory_title %}{{ page_title }}{% endblock %}
+
+{% block inventory_content %}
+<div class="container py-4" style="max-width: 800px;">
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold text-primary">
+                <i class="bi bi-tag me-2"></i> {{ page_title }}
+            </h5>
+            <a href="{% url 'uom:category_list' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-right"></i> {% trans "رجوع للقائمة" %}
+            </a>
+        </div>
+
+        <div class="card-body p-4">
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-circle-fill me-2"></i>
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">{{ form.code.label }}</label>
+                        {{ form.code }}
+                        {% if form.code.errors %}
+                            <div class="text-danger small mt-1">{{ form.code.errors }}</div>
+                        {% endif %}
+                        <div class="form-text small">{% trans "مثال: length, weight, volume" %}</div>
+                    </div>
+
+                    <div class="col-md-6 d-flex align-items-center pt-md-4">
+                        <div class="form-check form-switch p-2 bg-light border rounded w-100">
+                            {{ form.is_active }}
+                            <label class="form-check-label fw-bold mx-2" for="{{ form.is_active.id_for_label }}">
+                                {{ form.is_active.label }}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4 text-muted opacity-25">
+
+                <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-translate me-2"></i>{% trans "الاسم" %}</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small">{{ form.name_ar.label }}</label>
+                        {{ form.name_ar }}
+                        {% if form.name_ar.errors %}<div class="text-danger small">{{ form.name_ar.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small">{{ form.name_en.label }}</label>
+                        {{ form.name_en }}
+                        {% if form.name_en.errors %}<div class="text-danger small">{{ form.name_en.errors }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-file-text me-2"></i>{% trans "الوصف" %}</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small">{{ form.description_ar.label }}</label>
+                        {{ form.description_ar }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small">{{ form.description_en.label }}</label>
+                        {{ form.description_en }}
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                    <a href="{% url 'uom:category_list' %}" class="btn btn-light border px-4">
+                        {% trans "إلغاء" %}
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4 fw-bold">
+                        <i class="bi bi-save me-2"></i> {% trans "حفظ الفئة" %}
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

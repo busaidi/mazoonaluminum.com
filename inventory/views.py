@@ -3,6 +3,7 @@ from django.urls.base import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, TemplateView, UpdateView
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.utils import timezone
 from django.urls import reverse
 from django.http import Http404
 from django.db import transaction
@@ -12,6 +13,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.views.generic.edit import DeleteView
+from .utils import render_pdf_view
 
 from .models import StockMove, Product, Warehouse, StockLevel, ReorderRule, InventorySettings, StockLocation, \
     ProductCategory, InventoryAdjustment
@@ -671,3 +673,39 @@ class ReorderRuleDeleteView(LoginRequiredMixin, DeleteView):
         context = super().get_context_data(**kwargs)
         context["active_section"] = "inventory_reports"
         return context
+
+
+# ============================================================
+# طباعة المستندات (PDF Generation)
+# ============================================================
+
+@login_required
+def stock_move_pdf_view(request, pk):
+    move = get_object_or_404(StockMove, pk=pk)
+
+    # تحديد عنوان المستند ونوعه بناءً على الحركة
+    doc_type = ""
+    doc_title = ""
+
+    if move.move_type == StockMove.MoveType.IN:
+        doc_type = "GRN"  # Goods Receipt Note
+        doc_title = _("سند استلام مخزني")
+    elif move.move_type == StockMove.MoveType.OUT:
+        doc_type = "DN"  # Delivery Note
+        doc_title = _("إذن صرف بضاعة")
+    elif move.move_type == StockMove.MoveType.TRANSFER:
+        doc_type = "TN"  # Transfer Note
+        doc_title = _("سند تحويل داخلي")
+
+    context = {
+        'move': move,
+        'doc_title': doc_title,
+        'doc_type': doc_type,
+        'company_name': "MyERP Company",  # يمكن جلبها من الإعدادات لاحقاً
+        'print_date': timezone.now(),
+        'user': request.user,
+    }
+
+    filename = f"{doc_type}-{move.reference or move.pk}.pdf"
+
+    return render_pdf_view(request, 'inventory/pdf/stock_move_document.html', context, filename)

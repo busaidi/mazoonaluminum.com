@@ -3,7 +3,6 @@
 <nav class="navbar navbar-expand-lg bg-white border-bottom shadow-sm sticky-top">
   <div class="container-fluid">
 
-    {# شعار / عنوان تطبيق المخزون #}
     <a class="navbar-brand fw-bold text-primary d-flex align-items-center"
        href="{% url 'inventory:dashboard' %}">
       <i class="bi bi-boxes me-2 fs-4"></i>
@@ -98,7 +97,7 @@
           </ul>
         </li>
 
-        <li class="nav-item dropdown">
+       <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle {% if active_section == 'inventory_master' %}active fw-bold text-primary{% endif %}"
                href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-database d-lg-none me-2"></i>
@@ -114,7 +113,7 @@
                 </li>
                 <li>
                     <a class="dropdown-item py-2" href="{% url 'inventory:category_list' %}">
-                        <i class="bi bi-tags me-2 text-primary opacity-75"></i> {% trans "التصنيفات" %}
+                        <i class="bi bi-tags me-2 text-primary opacity-75"></i> {% trans "تصنيفات المنتجات" %}
                     </a>
                 </li>
 
@@ -129,6 +128,20 @@
                 <li>
                     <a class="dropdown-item py-2" href="{% url 'inventory:location_list' %}">
                         <i class="bi bi-geo-alt me-2 text-secondary opacity-75"></i> {% trans "مواقع التخزين" %}
+                    </a>
+                </li>
+
+                <li><hr class="dropdown-divider"></li>
+
+                <li><h6 class="dropdown-header text-uppercase small fw-bold text-muted">{% trans "الإعدادات العامة" %}</h6></li>
+                <li>
+                    <a class="dropdown-item py-2" href="{% url 'uom:unit_list' %}">
+                        <i class="bi bi-rulers me-2 text-secondary opacity-75"></i> {% trans "وحدات القياس" %}
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item py-2" href="{% url 'uom:category_list' %}">
+                        <i class="bi bi-tag me-2 text-secondary opacity-75"></i> {% trans "فئات الوحدات" %}
                     </a>
                 </li>
             </ul>
