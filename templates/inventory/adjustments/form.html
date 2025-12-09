@@ -1,0 +1,61 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block inventory_title %}{{ page_title }}{% endblock %}
+
+{% block inventory_content %}
+<div class="container py-4" style="max-width: 600px;">
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-bold text-primary">
+                <i class="bi bi-clipboard-data me-2"></i> {{ page_title }}
+            </h5>
+        </div>
+        <div class="card-body p-4">
+            <div class="alert alert-info small mb-4">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                {% trans "عند بدء الجرد، سيقوم النظام بأخذ لقطة (Snapshot) للأرصدة الحالية للمنتجات المحددة لمقارنتها مع العد الفعلي لاحقاً." %}
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">{{ form.warehouse.label }}</label>
+                    {{ form.warehouse }}
+                    {{ form.warehouse.errors }}
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">{{ form.category.label }}</label>
+                        {{ form.category }}
+                        <div class="form-text small">{{ form.category.help_text }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">{{ form.location.label }}</label>
+                        {{ form.location }}
+                        <div class="form-text small">{{ form.location.help_text }}</div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">{{ form.note.label }}</label>
+                    {{ form.note }}
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        {% trans "بدء الجرد" %} <i class="bi bi-arrow-left"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

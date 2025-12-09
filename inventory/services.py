@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -17,7 +18,7 @@ from .models import (
     StockMove,
     StockMoveLine,
     InventorySettings,
-    Product
+    Product, InventoryAdjustment, StockLocation, InventoryAdjustmentLine
 )
 
 DECIMAL_ZERO = Decimal("0.000")
@@ -426,3 +427,189 @@ def release_stock(
 
 def apply_stock_move_status_change(*args, **kwargs):
     pass
+
+
+# ============================================================
+# خدمات الجرد (Inventory Adjustment Services)
+# ============================================================
+
+@transaction.atomic
+def create_inventory_session(
+        warehouse,
+        user,
+        category=None,
+        location=None,
+        note=""
+) -> InventoryAdjustment:
+    """
+    إنشاء جلسة جرد جديدة وأخذ لقطة (Snapshot) للأرصدة الحالية.
+    """
+    # 1. تحقق من توافق الموقع مع المستودع
+    if location and location.warehouse_id != warehouse.id:
+        raise ValidationError(_("الموقع المحدد لا يتبع للمستودع المختار."))
+
+    # 2. إنشاء الهيدر
+    adjustment = InventoryAdjustment.objects.create(
+        warehouse=warehouse,
+        category=category,
+        location=location,
+        note=note,
+        status=InventoryAdjustment.Status.DRAFT,
+        created_by=user  # ✅ Enabled: Assuming BaseModel has created_by
+    )
+
+    # 3. تحديد النطاق وجلب الأرصدة (Snapshot Logic)
+    levels = StockLevel.objects.filter(warehouse=warehouse)
+
+    if location:
+        levels = levels.filter(location=location)
+
+    if category:
+        levels = levels.filter(product__category=category)
+
+    # استبعاد الأرصدة الصفرية (Default policy)
+    # يمكن جعلها اختيارية مستقبلاً عبر parameter: include_zero=False
+    levels = levels.exclude(quantity_on_hand=0)
+
+    # 4. إنشاء البنود دفعة واحدة
+    adjustment_lines = []
+    for level in levels.select_related("product", "location"):
+        adjustment_lines.append(
+            InventoryAdjustmentLine(
+                adjustment=adjustment,
+                product=level.product,
+                location=level.location,
+                theoretical_qty=level.quantity_on_hand,  # Snapshot
+                counted_qty=None  # Not counted yet
+            )
+        )
+
+    InventoryAdjustmentLine.objects.bulk_create(adjustment_lines)
+
+    return adjustment
+
+
+@transaction.atomic
+def apply_inventory_adjustment(adjustment: InventoryAdjustment, user) -> None:
+    """
+    ترحيل الجرد:
+    يقوم بحساب الفرق بين (العد الفعلي) و (الرصيد الحي لحظة الترحيل)،
+    لضمان أن الرصيد النهائي يطابق العد الفعلي حتى لو تحرك المخزون أثناء الجرد.
+    """
+    # 1. التحقق من الحالة
+    if adjustment.status == InventoryAdjustment.Status.APPLIED:
+        raise ValidationError(_("تم ترحيل وثيقة الجرد هذه مسبقاً."))
+
+    # 2. تجميع الفروقات حسب الموقع (Smart Logic)
+    grouped_diffs = defaultdict(lambda: {'gain': [], 'loss': []})
+    location_ids = set()
+    has_diffs = False
+
+    # نحتاج لمعرفة الرصيد الحي (Current Stock) لكل بند لحظة الترحيل
+    # لضمان الدقة: New Qty = Counted Qty
+    # Diff = Counted Qty - Current Qty
+
+    for line in adjustment.lines.select_related("product", "location", "product__base_uom").all():
+        if line.counted_qty is None:
+            continue
+
+        # جلب الرصيد الحي (مع Lock لضمان الدقة اللحظية)
+        try:
+            current_level = StockLevel.objects.select_for_update().get(
+                product=line.product,
+                warehouse=adjustment.warehouse,
+                location=line.location
+            )
+            current_qty = current_level.quantity_on_hand
+        except StockLevel.DoesNotExist:
+            current_qty = DECIMAL_ZERO
+
+        # الحساب الذكي: الفرق بناءً على الرصيد الحي
+        real_diff = line.counted_qty - current_qty
+
+        if real_diff == 0:
+            continue
+
+        has_diffs = True
+        loc_id = line.location.id
+        location_ids.add(loc_id)
+
+        # نخزن الفرق الحقيقي (real_diff) في الكائن مؤقتاً لاستخدامه لاحقاً
+        line.real_diff_for_move = real_diff
+
+        if real_diff > 0:
+            grouped_diffs[loc_id]['gain'].append(line)
+        else:
+            grouped_diffs[loc_id]['loss'].append(line)
+
+    # 3. إذا لم توجد فروقات حقيقية
+    if not has_diffs:
+        adjustment.status = InventoryAdjustment.Status.APPLIED
+        adjustment.save()
+        return
+
+    # ✅ Performance: جلب المواقع المطلوبة فقط دفعة واحدة
+    locations_map = {
+        loc.id: loc
+        for loc in StockLocation.objects.filter(id__in=location_ids)
+    }
+
+    # 4. إنشاء الحركات
+    for loc_id, types in grouped_diffs.items():
+        location = locations_map[loc_id]
+
+        # أ) معالجة الزيادة (Gain -> IN)
+        gain_lines = types['gain']
+        if gain_lines:
+            move_in = StockMove.objects.create(
+                move_type=StockMove.MoveType.IN,
+                to_warehouse=adjustment.warehouse,
+                to_location=location,
+                status=StockMove.Status.DRAFT,
+                reference=f"INV-ADJ-IN-{adjustment.pk}-{location.code}",
+                note=_("تسوية جردية - زيادة (وثيقة #%(id)s)") % {'id': adjustment.pk},
+                adjustment=adjustment,
+                created_by=user
+            )
+
+            move_lines_in = []
+            for line in gain_lines:
+                move_lines_in.append(StockMoveLine(
+                    move=move_in,
+                    product=line.product,
+                    quantity=abs(line.real_diff_for_move),  # استخدام الفرق الحي المحسوب
+                    uom=line.product.base_uom,
+                    cost_price=line.product.average_cost
+                ))
+            StockMoveLine.objects.bulk_create(move_lines_in)
+            confirm_stock_move(move_in, user=user)
+
+        # ب) معالجة النقص (Loss -> OUT)
+        loss_lines = types['loss']
+        if loss_lines:
+            move_out = StockMove.objects.create(
+                move_type=StockMove.MoveType.OUT,
+                from_warehouse=adjustment.warehouse,
+                from_location=location,
+                status=StockMove.Status.DRAFT,
+                reference=f"INV-ADJ-OUT-{adjustment.pk}-{location.code}",
+                note=_("تسوية جردية - عجز (وثيقة #%(id)s)") % {'id': adjustment.pk},
+                adjustment=adjustment,
+                created_by=user
+            )
+
+            move_lines_out = []
+            for line in loss_lines:
+                move_lines_out.append(StockMoveLine(
+                    move=move_out,
+                    product=line.product,
+                    quantity=abs(line.real_diff_for_move),  # استخدام الفرق الحي المحسوب
+                    uom=line.product.base_uom,
+                ))
+            StockMoveLine.objects.bulk_create(move_lines_out)
+            confirm_stock_move(move_out, user=user)
+
+    # 5. التحديث النهائي
+    adjustment.status = InventoryAdjustment.Status.APPLIED
+    adjustment.updated_by = user
+    adjustment.save()

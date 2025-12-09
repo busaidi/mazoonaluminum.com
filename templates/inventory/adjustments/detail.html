@@ -1,0 +1,183 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n humanize %}
+
+{% block inventory_title %}{% trans "تفاصيل الجرد" %} #{{ adjustment.pk }}{% endblock %}
+
+{% block inventory_content %}
+<div class="py-3">
+
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h1 class="h3 mb-0 text-gray-800">{% trans "جرد" %} #{{ adjustment.pk }}</h1>
+                {% if adjustment.status == 'draft' %}
+                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{% trans "مسودة" %}</span>
+                {% elif adjustment.status == 'in_progress' %}
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{% trans "بانتظار الاعتماد" %}</span>
+                {% elif adjustment.status == 'applied' %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                        <i class="bi bi-check-circle-fill me-1"></i> {% trans "تم الترحيل" %}
+                    </span>
+                {% endif %}
+            </div>
+            <p class="text-muted small mb-0">
+                <i class="bi bi-building me-1"></i> {{ adjustment.warehouse.name }}
+                <span class="mx-2">|</span>
+                <i class="bi bi-calendar3 me-1"></i> {{ adjustment.date|date:"Y-m-d" }}
+            </p>
+        </div>
+
+        <div class="d-flex gap-2 print-hide">
+            {% if adjustment.status != 'applied' %}
+                <a href="{% url 'inventory:adjustment_count' adjustment.pk %}" class="btn btn-outline-primary">
+                    <i class="bi bi-pencil-square me-1"></i> {% trans "تعديل العد" %}
+                </a>
+
+                <form action="{% url 'inventory:adjustment_apply' adjustment.pk %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success" onclick="return confirm('{% trans "هل أنت متأكد من ترحيل الفروقات؟ سيتم إنشاء حركات مخزون تلقائية." %}')">
+                        <i class="bi bi-check-lg me-1"></i> {% trans "اعتماد وترحيل الفروقات" %}
+                    </button>
+                </form>
+            {% else %}
+                <button class="btn btn-success disabled" disabled>
+                    <i class="bi bi-lock-fill me-1"></i> {% trans "تم الاعتماد" %}
+                </button>
+            {% endif %}
+
+            <button onclick="window.print()" class="btn btn-light border">
+                <i class="bi bi-printer"></i>
+            </button>
+        </div>
+    </div>
+
+    {% if adjustment.note or adjustment.category or adjustment.location %}
+    <div class="card bg-light border-0 mb-4">
+        <div class="card-body py-3">
+            <div class="row">
+                {% if adjustment.category or adjustment.location %}
+                <div class="col-md-6">
+                    <small class="text-uppercase text-muted fw-bold">{% trans "نطاق الجرد" %}:</small>
+                    <div class="mt-1">
+                        {% if adjustment.category %}
+                            <span class="badge bg-white text-dark border me-1">{{ adjustment.category.name }}</span>
+                        {% endif %}
+                        {% if adjustment.location %}
+                            <span class="badge bg-white text-dark border">{{ adjustment.location.name }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if adjustment.note %}
+                <div class="col-md-6">
+                    <small class="text-uppercase text-muted fw-bold">{% trans "ملاحظات" %}:</small>
+                    <p class="mb-0 small text-dark mt-1">{{ adjustment.note }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="h6 mb-0 fw-bold text-primary">{% trans "تفاصيل الجرد والمقارنة" %}</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small text-muted">
+                    <tr>
+                        <th class="ps-4">{% trans "المنتج" %}</th>
+                        <th>{% trans "الموقع" %}</th>
+                        <th class="text-center">{% trans "نظري (النظام)" %}</th>
+                        <th class="text-center table-active border-start border-end">{% trans "العد الفعلي" %}</th>
+                        <th class="text-center">{% trans "الفرق" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for line in adjustment.lines.all %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-bold text-dark">{{ line.product.name }}</div>
+                            <div class="small text-muted font-monospace">{{ line.product.code }}</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ line.location.name }}</span>
+                        </td>
+
+                        <td class="text-center text-muted">
+                            {{ line.theoretical_qty|floatformat:2 }}
+                        </td>
+
+                        <td class="text-center table-active border-start border-end fw-bold">
+                            {% if line.counted_qty is not None %}
+                                {{ line.counted_qty|floatformat:2 }}
+                            {% else %}
+                                <span class="badge bg-secondary text-white opacity-50">{% trans "لم يُعد" %}</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center fw-bold">
+                            {% if line.counted_qty is not None %}
+                                {% with diff=line.difference %}
+                                    {% if diff > 0 %}
+                                        <span class="text-success">+{{ diff|floatformat:2 }}</span>
+                                    {% elif diff < 0 %}
+                                        <span class="text-danger" dir="ltr">{{ diff|floatformat:2 }}</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                {% endwith %}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-4">{% trans "لا توجد بنود." %}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if adjustment.stock_moves.exists %}
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="h6 mb-0 fw-bold text-success">
+                <i class="bi bi-arrow-left-right me-2"></i> {% trans "حركات التسوية الناتجة" %}
+            </h5>
+        </div>
+        <div class="list-group list-group-flush">
+            {% for move in adjustment.stock_moves.all %}
+            <a href="{% url 'inventory:move_detail' move.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-4 py-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="font-monospace fw-bold text-dark">{{ move.reference }}</span>
+                        {% if move.move_type == 'in' %}
+                            <span class="badge bg-success-subtle text-success">IN (زيادة)</span>
+                        {% else %}
+                            <span class="badge bg-danger-subtle text-danger">OUT (عجز)</span>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">
+                        {% if move.move_type == 'in' %}
+                            {% trans "إلى موقع:" %} {{ move.to_location.name }}
+                        {% else %}
+                            {% trans "من موقع:" %} {{ move.from_location.name }}
+                        {% endif %}
+                    </small>
+                </div>
+                <div class="text-end">
+                    <span class="fw-bold d-block">{{ move.total_lines_quantity }} <small class="fw-normal">{% trans "وحدة" %}</small></span>
+                    <small class="text-muted">{{ move.status }}</small>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

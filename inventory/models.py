@@ -475,6 +475,15 @@ class StockMove(BaseModel):
     move_type = models.CharField(
         max_length=20, choices=MoveType.choices, default=MoveType.IN, verbose_name=_("نوع الحركة")
     )
+    adjustment = models.ForeignKey(
+        "inventory.InventoryAdjustment",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stock_moves",
+        verbose_name=_("وثيقة الجرد المرتبطة"),
+        help_text=_("يتم تعبئته آلياً إذا كانت الحركة ناتجة عن تسوية جردية.")
+    )
 
     # المصدر والوجهة
     from_warehouse = models.ForeignKey(Warehouse, on_delete=models.PROTECT, null=True, blank=True,
@@ -856,3 +865,117 @@ class ReorderRule(BaseModel):
         """
         current_stock = self.get_current_stock()
         return current_stock < (self.min_qty or DECIMAL_ZERO)
+
+
+# ============================================================
+# 2. تسوية الجرد (Inventory Adjustment Models)
+# ============================================================
+
+class InventoryAdjustment(BaseModel):
+    class Status(models.TextChoices):
+        DRAFT = 'draft', _('مسودة / قيد العد')
+        IN_PROGRESS = 'in_progress', _('قيد المراجعة')
+        APPLIED = 'applied', _('تم الترحيل')
+        CANCELLED = 'cancelled', _('ملغاة')
+
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        related_name="adjustments",
+        verbose_name=_("المستودع")
+    )
+
+    date = models.DateField(
+        default=timezone.now,
+        verbose_name=_("تاريخ الجرد")
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.DRAFT,
+        verbose_name=_("الحالة")
+    )
+
+    # نطاق الجرد (اختياري للفلترة)
+    category = models.ForeignKey(
+        ProductCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("نطاق التصنيف"),
+        help_text=_("اختياري: لجرد قسم معين فقط.")
+    )
+
+    location = models.ForeignKey(
+        StockLocation,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("نطاق الموقع"),
+        help_text=_("اختياري: لجرد رف/موقع معين فقط.")
+    )
+
+    note = models.TextField(blank=True, verbose_name=_("ملاحظات"))
+
+    # حقل مساعد لمعرفة المستخدم الذي أنشأ الجرد (إذا لم يكن في BaseModel)
+    # created_by = models.ForeignKey(...)
+
+    class Meta:
+        verbose_name = _("وثيقة جرد")
+        verbose_name_plural = _("وثائق الجرد")
+        ordering = ("-date", "-id")
+
+    def __str__(self):
+        return f"INV-ADJ #{self.pk} ({self.warehouse})"
+
+
+class InventoryAdjustmentLine(BaseModel):
+    adjustment = models.ForeignKey(
+        InventoryAdjustment,
+        on_delete=models.CASCADE,
+        related_name="lines",
+        verbose_name=_("وثيقة الجرد")
+    )
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT,
+        verbose_name=_("المنتج")
+    )
+
+    location = models.ForeignKey(
+        StockLocation,
+        on_delete=models.PROTECT,
+        verbose_name=_("الموقع المحدد")
+    )
+
+    # اللقطة (Snapshot)
+    theoretical_qty = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        verbose_name=_("الكمية النظرية (النظام)"),
+        help_text=_("الرصيد المسجل في النظام لحظة إنشاء الوثيقة.")
+    )
+
+    # الواقع (Actual)
+    counted_qty = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        verbose_name=_("الكمية الفعلية (العد)"),
+        help_text=_("ما تم عده فعلياً. اتركه فارغاً إذا لم يتم العد بعد.")
+    )
+
+    class Meta:
+        verbose_name = _("بند جرد")
+        verbose_name_plural = _("بنود الجرد")
+        unique_together = ("adjustment", "product", "location")
+
+    @property
+    def difference(self):
+        """الفرق = الفعلي - النظري"""
+        if self.counted_qty is None:
+            return None
+        return self.counted_qty - self.theoretical_qty

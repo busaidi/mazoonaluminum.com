@@ -13,10 +13,10 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 
 from .models import StockMove, Product, Warehouse, StockLevel, ReorderRule, InventorySettings, StockLocation, \
-    ProductCategory
+    ProductCategory, InventoryAdjustment
 from .forms import ReceiptMoveForm, DeliveryMoveForm, TransferMoveForm, StockMoveLineFormSet, WarehouseForm, \
-    ProductForm, StockLocationForm, ProductCategoryForm
-from .services import confirm_stock_move, cancel_stock_move
+    ProductForm, StockLocationForm, ProductCategoryForm, InventoryCountFormSet, StartInventoryForm
+from .services import confirm_stock_move, cancel_stock_move, apply_inventory_adjustment, create_inventory_session
 
 # ============================================================
 # خريطة إعدادات أنواع الحركات (Configuration Map)
@@ -515,3 +515,117 @@ class StockLocationUpdateView(LoginRequiredMixin, UpdateView):
         context["page_title"] = _("تعديل الموقع: ") + self.object.name
         context["active_section"] = "inventory_master"
         return context
+
+
+# ============================================================
+# إدارة تسوية الجرد (Inventory Adjustment)
+# ============================================================
+
+class InventoryAdjustmentListView(LoginRequiredMixin, ListView):
+    model = InventoryAdjustment
+    template_name = "inventory/adjustments/list.html"
+    context_object_name = "adjustments"
+    paginate_by = 20
+
+    def get_queryset(self):
+        return InventoryAdjustment.objects.select_related("warehouse").order_by("-date", "-id")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_section"] = "inventory_operations"
+        return context
+
+
+class InventoryAdjustmentCreateView(LoginRequiredMixin, CreateView):
+    """بدء جلسة جرد جديدة (Wizard Step 1)"""
+    model = InventoryAdjustment
+    form_class = StartInventoryForm
+    template_name = "inventory/adjustments/form.html"
+
+    def form_valid(self, form):
+        # بدلاً من الحفظ المباشر، نستدعي السيرفس لأخذ اللقطة
+        try:
+            self.object = create_inventory_session(
+                warehouse=form.cleaned_data["warehouse"],
+                user=self.request.user,
+                category=form.cleaned_data["category"],
+                location=form.cleaned_data["location"],
+                note=form.cleaned_data["note"]
+            )
+            messages.success(self.request, _("تم بدء جلسة الجرد بنجاح. يرجى إدخال الكميات الفعلية."))
+            return redirect("inventory:adjustment_count", pk=self.object.pk)
+        except Exception as e:
+            form.add_error(None, str(e))
+            return self.form_invalid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = _("بدء جرد جديد")
+        context["active_section"] = "inventory_operations"
+        return context
+
+
+class InventoryAdjustmentUpdateView(LoginRequiredMixin, UpdateView):
+    """شاشة إدخال العد (Wizard Step 2)"""
+    model = InventoryAdjustment
+    template_name = "inventory/adjustments/count.html"
+    fields = ["note"]  # حقل وهمي لأننا نستخدم Formset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['lines_formset'] = InventoryCountFormSet(self.request.POST, instance=self.object)
+        else:
+            # عرض الأسطر مرتبة بالموقع ثم المنتج لتسهيل العد
+            # ملاحظة: Formset يستخدم الـ Manager الافتراضي، للترتيب قد نحتاج override queryset في الـ formset،
+            # ولكن للتبسيط الآن سيعرضهم حسب الإنشاء.
+            context['lines_formset'] = InventoryCountFormSet(instance=self.object)
+
+        context["active_section"] = "inventory_operations"
+        return context
+
+    def form_valid(self, form):
+        context = self.get_context_data()
+        lines_formset = context['lines_formset']
+
+        if lines_formset.is_valid():
+            lines_formset.save()
+            # تحديث الحالة إلى "قيد المراجعة" إذا كانت مسودة
+            if self.object.status == InventoryAdjustment.Status.DRAFT:
+                self.object.status = InventoryAdjustment.Status.IN_PROGRESS
+                self.object.save(update_fields=["status"])
+
+            messages.success(self.request, _("تم حفظ الكميات المجرودة."))
+            return redirect("inventory:adjustment_detail", pk=self.object.pk)
+
+        return self.render_to_response(self.get_context_data(form=form))
+
+
+class InventoryAdjustmentDetailView(LoginRequiredMixin, DetailView):
+    """شاشة المراجعة والتنفيذ (Wizard Step 3)"""
+    model = InventoryAdjustment
+    template_name = "inventory/adjustments/detail.html"
+    context_object_name = "adjustment"
+
+    def get_queryset(self):
+        return super().get_queryset().select_related("warehouse")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_section"] = "inventory_operations"
+        return context
+
+
+@require_POST
+@login_required
+def apply_adjustment_view(request, pk):
+    adjustment = get_object_or_404(InventoryAdjustment, pk=pk)
+    try:
+        apply_inventory_adjustment(adjustment, user=request.user)
+        messages.success(request, _("تم ترحيل الجرد وتعديل الأرصدة بنجاح."))
+    except ValidationError as e:
+        messages.error(request, " ".join(e.messages))
+    except Exception as e:
+        messages.error(request, _("حدث خطأ غير متوقع: ") + str(e))
+
+    return redirect("inventory:adjustment_detail", pk=pk)

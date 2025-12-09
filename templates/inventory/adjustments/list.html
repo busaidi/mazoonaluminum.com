@@ -1,0 +1,127 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block inventory_title %}{% trans "جلسات الجرد" %}{% endblock %}
+
+{% block inventory_content %}
+<div class="py-3">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h4 mb-1 text-gray-800">
+                <i class="bi bi-clipboard-data me-2 text-primary"></i>
+                {% trans "جلسات الجرد" %}
+            </h1>
+            <p class="text-muted small mb-0">{% trans "مراجعة وتتبع عمليات تسوية المخزون." %}</p>
+        </div>
+        <div>
+            <a href="{% url 'inventory:adjustment_create' %}" class="btn btn-primary shadow-sm">
+                <i class="bi bi-plus-lg me-1"></i> {% trans "بدء جرد جديد" %}
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-uppercase small text-muted">
+                    <tr>
+                        <th class="ps-4">{% trans "رقم الجرد" %}</th>
+                        <th>{% trans "التاريخ" %}</th>
+                        <th>{% trans "المستودع" %}</th>
+                        <th>{% trans "النطاق (تصنيف/موقع)" %}</th>
+                        <th class="text-center">{% trans "الحالة" %}</th>
+                        <th class="text-end pe-4">{% trans "إجراءات" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for adj in adjustments %}
+                    <tr>
+                        <td class="ps-4 fw-bold font-monospace">
+                            <a href="{% url 'inventory:adjustment_detail' adj.pk %}" class="text-decoration-none">
+                                #{{ adj.pk }}
+                            </a>
+                        </td>
+                        <td class="text-muted small">
+                            {{ adj.date|date:"Y-m-d" }}
+                        </td>
+                        <td>
+                            <span class="fw-medium text-dark">{{ adj.warehouse.name }}</span>
+                        </td>
+                        <td class="small text-muted">
+                            {% if adj.category %}
+                                <span class="badge bg-light text-dark border me-1">{{ adj.category.name }}</span>
+                            {% endif %}
+                            {% if adj.location %}
+                                <span class="badge bg-light text-dark border">{{ adj.location.name }}</span>
+                            {% endif %}
+                            {% if not adj.category and not adj.location %}
+                                <span>{% trans "شامل" %}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if adj.status == 'draft' %}
+                                <span class="badge bg-secondary-subtle text-secondary rounded-pill">
+                                    {% trans "مسودة" %}
+                                </span>
+                            {% elif adj.status == 'in_progress' %}
+                                <span class="badge bg-primary-subtle text-primary rounded-pill">
+                                    {% trans "قيد المراجعة" %}
+                                </span>
+                            {% elif adj.status == 'applied' %}
+                                <span class="badge bg-success-subtle text-success rounded-pill">
+                                    <i class="bi bi-check2"></i> {% trans "مرحّل" %}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            <div class="btn-group">
+                                {% if adj.status != 'applied' %}
+                                    <a href="{% url 'inventory:adjustment_count' adj.pk %}" class="btn btn-sm btn-outline-primary" title="{% trans 'إدخال العد' %}">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                {% endif %}
+                                <a href="{% url 'inventory:adjustment_detail' adj.pk %}" class="btn btn-sm btn-light border" title="{% trans 'التفاصيل' %}">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <div class="mb-2"><i class="bi bi-clipboard-x fs-1 opacity-25"></i></div>
+                            {% trans "لا توجد جلسات جرد سابقة." %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if is_paginated %}
+        <div class="card-footer bg-white py-3">
+            <nav>
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link border-0 text-secondary" href="?page={{ page_obj.previous_page_number }}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link border-0 text-secondary" href="?page={{ page_obj.next_page_number }}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

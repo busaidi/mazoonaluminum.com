@@ -5,7 +5,8 @@ from django.forms import inlineformset_factory
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
-from .models import StockMove, StockMoveLine, Product, StockLocation, Warehouse, ProductCategory
+from .models import StockMove, StockMoveLine, Product, StockLocation, Warehouse, ProductCategory, InventoryAdjustment, \
+    InventoryAdjustmentLine
 
 
 # ============================================================
@@ -231,3 +232,47 @@ class StockLocationForm(forms.ModelForm):
                 field.widget.attrs.setdefault("class", "form-check-input")
 
         self.fields["warehouse"].empty_label = _("اختر المستودع التابع له...")
+
+
+class StartInventoryForm(forms.ModelForm):
+    """نموذج بدء جلسة جرد جديدة"""
+
+    class Meta:
+        model = InventoryAdjustment
+        fields = ["warehouse", "category", "location", "note"]
+        widgets = {
+            "note": forms.Textarea(attrs={"rows": 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Bootstrap styling
+        for field in self.fields.values():
+            if isinstance(field.widget, (forms.TextInput, forms.Textarea, forms.Select)):
+                field.widget.attrs.setdefault("class", "form-control")
+
+        self.fields["warehouse"].empty_label = _("اختر المستودع...")
+        self.fields["category"].empty_label = _("الكل (جميع التصنيفات)")
+        self.fields["location"].empty_label = _("الكل (جميع المواقع)")
+
+
+class InventoryLineCountForm(forms.ModelForm):
+    """نموذج إدخال العد لسطر واحد"""
+
+    class Meta:
+        model = InventoryAdjustmentLine
+        fields = ["counted_qty"]
+        widgets = {
+            "counted_qty": forms.NumberInput(attrs={"class": "form-control form-control-sm", "step": "0.001"}),
+        }
+
+
+# Formset لإدخال العد لعدة أسطر في نفس الوقت
+InventoryCountFormSet = forms.inlineformset_factory(
+    InventoryAdjustment,
+    InventoryAdjustmentLine,
+    form=InventoryLineCountForm,
+    fields=["counted_qty"],
+    extra=0,  # لا نريد أسطر جديدة فارغة، نعدل الموجود فقط
+    can_delete=False,  # لا نحذف أسطر من اللقطة
+)

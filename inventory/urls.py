@@ -94,6 +94,15 @@ urlpatterns = [
     path("locations/create/", views.StockLocationCreateView.as_view(), name="location_create"),
     path("locations/<int:pk>/edit/", views.StockLocationUpdateView.as_view(), name="location_update"),
 
+
+    # Inventory Adjustments (الجرد)
+    path("adjustments/", views.InventoryAdjustmentListView.as_view(), name="adjustment_list"),
+    path("adjustments/start/", views.InventoryAdjustmentCreateView.as_view(), name="adjustment_create"),
+    path("adjustments/<int:pk>/count/", views.InventoryAdjustmentUpdateView.as_view(), name="adjustment_count"),
+    path("adjustments/<int:pk>/", views.InventoryAdjustmentDetailView.as_view(), name="adjustment_detail"),
+    path("adjustments/<int:pk>/apply/", views.apply_adjustment_view, name="adjustment_apply"),
+    # ...
+
     # ==============================
     # 5. الإعدادات (Settings)
     # ==============================
