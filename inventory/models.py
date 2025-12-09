@@ -18,7 +18,8 @@ from inventory.managers import (
     StockLocationManager,
     StockMoveManager,
     StockLevelManager,
-    WarehouseManager, ReorderRuleManager,
+    WarehouseManager, ReorderRuleManager, StockMoveLineManager, InventoryAdjustmentManager,
+    InventoryAdjustmentLineManager,
 )
 from uom.models import UnitOfMeasure
 
@@ -589,12 +590,16 @@ class StockMoveLine(BaseModel):
     cost_price = models.DecimalField(max_digits=12, decimal_places=3, default=DECIMAL_ZERO,
                                      verbose_name=_("تكلفة الوحدة"))
 
+
+    objects = StockMoveLineManager()
+
     class Meta:
         verbose_name = _("بند حركة")
         verbose_name_plural = _("بنود الحركة")
         indexes = [
             models.Index(fields=["product", "move"], name="stockmoveline_prod_move_idx"),
         ]
+
 
     def clean(self):
         super().clean()
@@ -850,9 +855,10 @@ class ReorderRule(BaseModel):
         يحسب الكمية المقترحة للطلب.
         Uses ROUND_UP correctly from decimal module.
         """
-        current_stock = self.get_current_stock
-        diff = Decimal(self.target_qty or DECIMAL_ZERO) - (current_stock or DECIMAL_ZERO)
+        target = self.target_qty or DECIMAL_ZERO
+        current = self.get_current_stock or DECIMAL_ZERO  # استخدام الـ Property مباشرة
 
+        diff = target - current
         if diff <= 0:
             return DECIMAL_ZERO
 
@@ -933,13 +939,15 @@ class InventoryAdjustment(BaseModel):
 
     note = models.TextField(blank=True, verbose_name=_("ملاحظات"))
 
-    # حقل مساعد لمعرفة المستخدم الذي أنشأ الجرد (إذا لم يكن في BaseModel)
-    # created_by = models.ForeignKey(...)
+
+    objects = InventoryAdjustmentManager()
 
     class Meta:
         verbose_name = _("وثيقة جرد")
         verbose_name_plural = _("وثائق الجرد")
         ordering = ("-date", "-id")
+
+
 
     def __str__(self):
         return f"INV-ADJ #{self.pk} ({self.warehouse})"
@@ -982,6 +990,8 @@ class InventoryAdjustmentLine(BaseModel):
         verbose_name=_("الكمية الفعلية (العد)"),
         help_text=_("ما تم عده فعلياً. اتركه فارغاً إذا لم يتم العد بعد.")
     )
+
+    objects = InventoryAdjustmentLineManager()
 
     class Meta:
         verbose_name = _("بند جرد")

@@ -1,4 +1,5 @@
 # inventory/views.py
+
 from django.urls.base import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, TemplateView, UpdateView
 from django.shortcuts import get_object_or_404, redirect, render
@@ -19,11 +20,20 @@ from tablib import Dataset
 from .resources import ProductResource
 from .utils import render_pdf_view
 
-from .models import StockMove, Product, Warehouse, StockLevel, ReorderRule, InventorySettings, StockLocation, \
-    ProductCategory, InventoryAdjustment
-from .forms import ReceiptMoveForm, DeliveryMoveForm, TransferMoveForm, StockMoveLineFormSet, WarehouseForm, \
-    ProductForm, StockLocationForm, ProductCategoryForm, InventoryCountFormSet, StartInventoryForm, ReorderRuleForm
-from .services import confirm_stock_move, cancel_stock_move, apply_inventory_adjustment, create_inventory_session
+from .models import (
+    StockMove, Product, Warehouse, StockLevel, ReorderRule,
+    InventorySettings, StockLocation, ProductCategory, InventoryAdjustment,
+    StockMoveLine, InventoryAdjustmentLine
+)
+from .forms import (
+    ReceiptMoveForm, DeliveryMoveForm, TransferMoveForm, StockMoveLineFormSet,
+    WarehouseForm, ProductForm, StockLocationForm, ProductCategoryForm,
+    InventoryCountFormSet, StartInventoryForm, ReorderRuleForm
+)
+from .services import (
+    confirm_stock_move, cancel_stock_move, apply_inventory_adjustment,
+    create_inventory_session
+)
 
 # ============================================================
 # خريطة إعدادات أنواع الحركات (Configuration Map)
@@ -80,7 +90,7 @@ class StockMoveContextMixin:
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # تحديد النوع الحالي (إما من الرابط أو من الكائن نفسه في صفحة التفاصيل)
+        # تحديد النوع الحالي
         current_type = self.move_type
         if not current_type and hasattr(self, 'object') and self.object:
             current_type = self.object.move_type
@@ -97,7 +107,7 @@ class StockMoveContextMixin:
             })
 
         context["current_move_type"] = current_type
-        context["active_section"] = "inventory_operations"  # لتظليل النافبار
+        context["active_section"] = "inventory_operations"
         return context
 
 
@@ -112,10 +122,9 @@ class StockMoveListView(LoginRequiredMixin, StockMoveContextMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        # ✅ الأداء: جلب العلاقات + استبعاد الملغاة + الترتيب الأحدث أولاً
+        # ✅ الأداء: جلب العلاقات + الترتيب الأحدث أولاً
         qs = super().get_queryset().with_related().order_by("-move_date", "-id")
 
-        # الفلترة حسب النوع الممرر في الرابط
         if self.move_type == StockMove.MoveType.IN:
             return qs.incoming()
         elif self.move_type == StockMove.MoveType.OUT:
@@ -131,13 +140,11 @@ class StockMoveCreateView(LoginRequiredMixin, StockMoveContextMixin, CreateView)
     template_name = "inventory/stock_move/form.html"
 
     def get_form_class(self):
-        # اختيار الفورم المناسب ديناميكياً
         meta = MOVE_TYPE_META.get(self.move_type)
         return meta["form_class"] if meta else ReceiptMoveForm
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # تهيئة Formset للبنود
         if self.request.POST:
             context['lines_formset'] = StockMoveLineFormSet(self.request.POST)
         else:
@@ -148,18 +155,15 @@ class StockMoveCreateView(LoginRequiredMixin, StockMoveContextMixin, CreateView)
         context = self.get_context_data()
         lines_formset = context['lines_formset']
 
-        # 1. حقن نوع الحركة تلقائياً
         form.instance.move_type = self.move_type
 
-        # 2. التحقق من صحة البنود
         if not lines_formset.is_valid():
             return self.render_to_response(self.get_context_data(form=form))
 
-        # 3. الحفظ داخل معاملة ذرية (Transaction)
         with transaction.atomic():
-            self.object = form.save()  # حفظ الهيدر
-            lines_formset.instance = self.object  # ربط البنود بالهيدر
-            lines_formset.save()  # حفظ البنود
+            self.object = form.save()
+            lines_formset.instance = self.object
+            lines_formset.save()
 
         messages.success(self.request, _("تم إنشاء الحركة بنجاح كمسودة."))
         return redirect(self.get_success_url())
@@ -189,12 +193,9 @@ def confirm_move_view(request, pk):
     try:
         confirm_stock_move(move, user=request.user)
         messages.success(request, _("تم تأكيد حركة المخزون وتحديث الأرصدة بنجاح."))
-
     except ValidationError as e:
-        # أخطاء منطقية (مثل: رصيد غير كافٍ)
         messages.error(request, " ".join(e.messages))
     except Exception:
-        # أخطاء غير متوقعة
         messages.error(request, _("حدث خطأ غير متوقع أثناء المعالجة."))
 
     return redirect("inventory:move_detail", pk=pk)
@@ -207,7 +208,6 @@ def cancel_move_view(request, pk):
     try:
         cancel_stock_move(move, user=request.user)
         messages.warning(request, _("تم إلغاء حركة المخزون."))
-
     except ValidationError as e:
         messages.error(request, " ".join(e.messages))
     except Exception:
@@ -227,12 +227,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         context["active_section"] = "inventory_dashboard"
 
-        # إحصائيات سريعة
         context["total_products"] = Product.objects.active().count()
         context["low_stock_count"] = StockLevel.objects.below_min().count()
         context["draft_moves_count"] = StockMove.objects.draft().count()
 
-        # آخر 5 حركات (غير ملغاة)
         context["latest_moves"] = (
             StockMove.objects
             .with_related()
@@ -249,19 +247,12 @@ class StockLevelListView(LoginRequiredMixin, ListView):
     paginate_by = 50
 
     def get_queryset(self):
-        # 1. القائمة الأساسية (استبعاد الأصفار + جلب العلاقات)
         qs = StockLevel.objects.with_related().exclude(
             quantity_on_hand=0, quantity_reserved=0
         )
-
-        # 2. ✅ (Bonus) دعم الفلترة حسب المستودع من الرابط
-        # الرابط يأتي كـ: ?warehouse=3
         warehouse_id = self.request.GET.get("warehouse")
         if warehouse_id:
             qs = qs.filter(warehouse_id=warehouse_id)
-
-        # 3. ✅ (Fix) حل مشكلة الترتيب UnorderedObjectListWarning
-        # نرتب حسب اسم المستودع أولاً ثم اسم المنتج
         return qs.order_by("warehouse__name", "product__name")
 
     def get_context_data(self, **kwargs):
@@ -292,14 +283,10 @@ class ProductListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        # استخدام المانجر: active + summary + category relation
         qs = Product.objects.with_stock_summary().with_category().active()
-
-        # دعم البحث البسيط
         query = self.request.GET.get("q")
         if query:
             qs = qs.search(query)
-
         return qs.order_by("name")
 
     def get_context_data(self, **kwargs):
@@ -316,7 +303,6 @@ class ProductDetailView(LoginRequiredMixin, DetailView):
     def get_object(self, queryset=None):
         if queryset is None:
             queryset = self.get_queryset()
-        # البحث بالكود (Code)
         code = self.kwargs.get("code")
         return get_object_or_404(
             queryset.with_stock_summary().with_category(),
@@ -326,8 +312,6 @@ class ProductDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_section"] = "inventory_master"
-
-        # آخر 10 حركات لهذا المنتج
         context["recent_moves"] = (
             StockMove.objects
             .for_product(self.object)
@@ -356,7 +340,7 @@ class InventorySettingsView(LoginRequiredMixin, UpdateView):
     model = InventorySettings
     template_name = "inventory/settings.html"
     fields = ["allow_negative_stock", "stock_move_in_prefix", "stock_move_out_prefix", "stock_move_transfer_prefix"]
-    success_url = "."  # البقاء في نفس الصفحة
+    success_url = "."
 
     def get_object(self, queryset=None):
         return InventorySettings.get_solo()
@@ -390,8 +374,6 @@ class ProductUpdateView(LoginRequiredMixin, UpdateView):
     model = Product
     form_class = ProductForm
     template_name = "inventory/products/form.html"
-
-    # لأننا نستخدم code في الرابط بدلاً من pk
     slug_field = "code"
     slug_url_kwarg = "code"
 
@@ -413,7 +395,7 @@ class WarehouseCreateView(LoginRequiredMixin, CreateView):
     model = Warehouse
     form_class = WarehouseForm
     template_name = "inventory/warehouse/form.html"
-    success_url = "/inventory/warehouses/"  # أو استخدام reverse_lazy
+    success_url = "/inventory/warehouses/"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -486,7 +468,6 @@ class StockLocationListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         qs = StockLocation.objects.select_related("warehouse").all()
-        # فلترة حسب المستودع إذا تم تمريره
         wh_id = self.request.GET.get("warehouse")
         if wh_id:
             qs = qs.filter(warehouse_id=wh_id)
@@ -544,13 +525,11 @@ class InventoryAdjustmentListView(LoginRequiredMixin, ListView):
 
 
 class InventoryAdjustmentCreateView(LoginRequiredMixin, CreateView):
-    """بدء جلسة جرد جديدة (Wizard Step 1)"""
     model = InventoryAdjustment
     form_class = StartInventoryForm
     template_name = "inventory/adjustments/form.html"
 
     def form_valid(self, form):
-        # بدلاً من الحفظ المباشر، نستدعي السيرفس لأخذ اللقطة
         try:
             self.object = create_inventory_session(
                 warehouse=form.cleaned_data["warehouse"],
@@ -573,21 +552,16 @@ class InventoryAdjustmentCreateView(LoginRequiredMixin, CreateView):
 
 
 class InventoryAdjustmentUpdateView(LoginRequiredMixin, UpdateView):
-    """شاشة إدخال العد (Wizard Step 2)"""
     model = InventoryAdjustment
     template_name = "inventory/adjustments/count.html"
-    fields = ["note"]  # حقل وهمي لأننا نستخدم Formset
+    fields = ["note"]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.request.POST:
             context['lines_formset'] = InventoryCountFormSet(self.request.POST, instance=self.object)
         else:
-            # عرض الأسطر مرتبة بالموقع ثم المنتج لتسهيل العد
-            # ملاحظة: Formset يستخدم الـ Manager الافتراضي، للترتيب قد نحتاج override queryset في الـ formset،
-            # ولكن للتبسيط الآن سيعرضهم حسب الإنشاء.
             context['lines_formset'] = InventoryCountFormSet(instance=self.object)
-
         context["active_section"] = "inventory_operations"
         return context
 
@@ -597,7 +571,6 @@ class InventoryAdjustmentUpdateView(LoginRequiredMixin, UpdateView):
 
         if lines_formset.is_valid():
             lines_formset.save()
-            # تحديث الحالة إلى "قيد المراجعة" إذا كانت مسودة
             if self.object.status == InventoryAdjustment.Status.DRAFT:
                 self.object.status = InventoryAdjustment.Status.IN_PROGRESS
                 self.object.save(update_fields=["status"])
@@ -609,7 +582,6 @@ class InventoryAdjustmentUpdateView(LoginRequiredMixin, UpdateView):
 
 
 class InventoryAdjustmentDetailView(LoginRequiredMixin, DetailView):
-    """شاشة المراجعة والتنفيذ (Wizard Step 3)"""
     model = InventoryAdjustment
     template_name = "inventory/adjustments/detail.html"
     context_object_name = "adjustment"
@@ -686,35 +658,29 @@ class ReorderRuleDeleteView(LoginRequiredMixin, DeleteView):
 @login_required
 def stock_move_pdf_view(request, pk):
     move = get_object_or_404(StockMove, pk=pk)
-
-    # تحديد عنوان المستند ونوعه بناءً على الحركة
     doc_type = ""
     doc_title = ""
 
     if move.move_type == StockMove.MoveType.IN:
-        doc_type = "GRN"  # Goods Receipt Note
+        doc_type = "GRN"
         doc_title = _("سند استلام مخزني")
     elif move.move_type == StockMove.MoveType.OUT:
-        doc_type = "DN"  # Delivery Note
+        doc_type = "DN"
         doc_title = _("إذن صرف بضاعة")
     elif move.move_type == StockMove.MoveType.TRANSFER:
-        doc_type = "TN"  # Transfer Note
+        doc_type = "TN"
         doc_title = _("سند تحويل داخلي")
 
     context = {
         'move': move,
         'doc_title': doc_title,
         'doc_type': doc_type,
-        'company_name': "MyERP Company",  # يمكن جلبها من الإعدادات لاحقاً
+        'company_name': "MyERP Company",
         'print_date': timezone.now(),
         'user': request.user,
     }
-
     filename = f"{doc_type}-{move.reference or move.pk}.pdf"
-
     return render_pdf_view(request, 'inventory/pdf/stock_move_document.html', context, filename)
-
-
 
 
 class InventoryValuationView(LoginRequiredMixin, ListView):
@@ -724,46 +690,33 @@ class InventoryValuationView(LoginRequiredMixin, ListView):
     paginate_by = 50
 
     def get_queryset(self):
-        # 1. الأساس: استبعاد الكميات الصفرية وجلب البيانات المرتبطة
         qs = StockLevel.objects.select_related("product", "warehouse", "product__category",
                                                "product__base_uom").exclude(quantity_on_hand=0)
-
-        # 2. الفلترة (حسب المستودع أو التصنيف)
         self.warehouse_id = self.request.GET.get("warehouse")
         self.category_id = self.request.GET.get("category")
 
         if self.warehouse_id:
             qs = qs.filter(warehouse_id=self.warehouse_id)
-
         if self.category_id:
             qs = qs.filter(product__category_id=self.category_id)
 
-        # 3. الحساب: إضافة حقل وهمي 'valuation' = الكمية * التكلفة
-        # نستخدم F expression للحساب داخل الداتابيز (أسرع بكثير)
         qs = qs.annotate(
             valuation=F('quantity_on_hand') * F('product__average_cost')
         )
-
-        return qs.order_by("-valuation")  # ترتيب حسب القيمة الأعلى (الأغلى)
+        return qs.order_by("-valuation")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_section"] = "inventory_reports"
-
-        # قوائم الفلترة
         context["warehouses"] = Warehouse.objects.active()
         context["categories"] = ProductCategory.objects.all()
 
-        # حساب الإجماليات (Grand Totals) للفوتر والملخص
-        # نستخدم الكويري ست الحالية (بعد الفلترة) لحساب المجموع
         aggregates = self.get_queryset().aggregate(
             total_qty=Sum("quantity_on_hand"),
             total_value=Sum("valuation", output_field=DecimalField())
         )
-
         context["total_qty"] = aggregates["total_qty"] or 0
         context["total_value"] = aggregates["total_value"] or 0
-
         return context
 
 
@@ -776,20 +729,15 @@ def export_products_view(request):
     """تصدير المنتجات إلى ملف Excel"""
     product_resource = ProductResource()
     dataset = product_resource.export()
-
     response = HttpResponse(dataset.xlsx,
                             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename="products_export.xlsx"'
     return response
 
 
-# inventory/views.py
-
-# inventory/views.py
-
 @login_required
 def import_products_view(request):
-    """صفحة استيراد المنتجات من Excel مع عرض تفاصيل الأخطاء (مصحح)"""
+    """صفحة استيراد المنتجات من Excel مع عرض تفاصيل الأخطاء"""
     errors = []
 
     if request.method == 'POST':
@@ -809,24 +757,22 @@ def import_products_view(request):
         try:
             imported_data = dataset.load(new_products.read(), format='xlsx')
 
-            # 1. تجربة الاستيراد (Dry Run)
+            # 1. Dry Run
             result = product_resource.import_data(dataset, dry_run=True)
 
             if not result.has_errors():
-                # 2. لا توجد أخطاء -> تنفيذ الحفظ الحقيقي
+                # 2. Save
                 product_resource.import_data(dataset, dry_run=False)
                 messages.success(request, _("تم استيراد المنتجات بنجاح!"))
                 return redirect('inventory:product_list')
             else:
-                # 3. استخراج الأخطاء (مصحح باستخدام enumerate)
-                # i يبدأ من 0، ونضيف 2 (واحد لأن الإندكس يبدأ بصفر، وواحد لسطر الهيدر في الإكسل)
+                # 3. Collect Errors
                 for i, row in enumerate(result.rows):
                     if row.errors:
                         for err in row.errors:
                             line_num = i + 2
                             err_msg = str(err.error)
 
-                            # تحسين رسائل الخطأ الشائعة ليفهمها المستخدم
                             if "matching query does not exist" in err_msg:
                                 if "ProductCategory" in err_msg:
                                     err_msg = _("التصنيف غير موجود. تأكد من تطابق الاسم.")
@@ -838,7 +784,6 @@ def import_products_view(request):
                 messages.error(request, _("فشلت العملية. يرجى مراجعة قائمة الأخطاء أدناه."))
 
         except Exception as e:
-            # طباعة الخطأ في الكونسول للمطور للمساعدة في التتبع
             print(f"Import Error: {e}")
             messages.error(request, f"حدث خطأ غير متوقع: {str(e)}")
 
