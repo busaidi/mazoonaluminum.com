@@ -68,7 +68,13 @@ urlpatterns = [
     # 3. التقارير والمخزون (Reporting)
     # ==============================
     path("stock-levels/", views.StockLevelListView.as_view(), name="stock_level_list"),
+
+    # Reorder Rules
     path("reorder-rules/", views.ReorderRuleListView.as_view(), name="reorder_rule_list"),
+    path("reorder-rules/create/", views.ReorderRuleCreateView.as_view(), name="reorder_rule_create"), # ✅ New
+    path("reorder-rules/<int:pk>/edit/", views.ReorderRuleUpdateView.as_view(), name="reorder_rule_update"), # ✅ New
+    path("reorder-rules/<int:pk>/delete/", views.ReorderRuleDeleteView.as_view(), name="reorder_rule_delete"), # ✅ New
+    # ...
 
     # ==============================
     # 4. البيانات الأساسية (Master Data)

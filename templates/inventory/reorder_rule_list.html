@@ -14,9 +14,13 @@
             </h1>
             <p class="text-muted small mb-0">{% trans "مراقبة الحدود الدنيا واقتراحات الشراء." %}</p>
         </div>
-        <div>
-            <button class="btn btn-primary btn-sm disabled" title="قريباً">
-                <i class="bi bi-cart-plus me-1"></i> {% trans "إنشاء أوامر شراء" %}
+        <div class="d-flex gap-2">
+            <a href="{% url 'inventory:reorder_rule_create' %}" class="btn btn-primary shadow-sm">
+                <i class="bi bi-plus-lg me-1"></i> {% trans "قاعدة جديدة" %}
+            </a>
+
+            <button class="btn btn-outline-secondary shadow-sm disabled" title="{% trans 'ميزة قادمة: إنشاء أوامر شراء تلقائياً' %}">
+                <i class="bi bi-cart-plus"></i>
             </button>
         </div>
     </div>
@@ -31,12 +35,12 @@
                         <th class="text-center">{% trans "الحدود (أدنى / هدف)" %}</th>
                         <th class="text-center text-primary">{% trans "الرصيد الحالي" %}</th>
                         <th class="text-center">{% trans "الحالة" %}</th>
-                        <th class="text-end pe-4">{% trans "المقترح للطلب" %}</th>
-                    </tr>
+                        <th class="text-center">{% trans "المقترح للطلب" %}</th>
+                        <th class="text-end pe-4"></th> </tr>
                 </thead>
                 <tbody>
                     {% for rule in rules %}
-                    {# التحقق مما إذا كان المخزون منخفضاً لتلوين الصف #}
+                    {# تلوين الصف إذا كان المخزون منخفضاً #}
                     <tr class="{% if rule.is_below_min %}table-danger{% endif %}">
 
                         <td class="ps-4">
@@ -57,10 +61,10 @@
 
                         <td class="text-center small">
                             <div class="d-flex justify-content-center gap-2">
-                                <span class="badge bg-white text-danger border border-danger-subtle" title="Min">
+                                <span class="badge bg-white text-danger border border-danger-subtle" title="Min Qty">
                                     <i class="bi bi-arrow-down-short"></i> {{ rule.min_qty|floatformat:0 }}
                                 </span>
-                                <span class="badge bg-white text-success border border-success-subtle" title="Target">
+                                <span class="badge bg-white text-success border border-success-subtle" title="Target Qty">
                                     <i class="bi bi-arrow-up-short"></i> {{ rule.target_qty|floatformat:0 }}
                                 </span>
                             </div>
@@ -82,7 +86,7 @@
                             {% endif %}
                         </td>
 
-                        <td class="text-end pe-4 fw-bold">
+                        <td class="text-center fw-bold">
                             {% with to_order=rule.get_recommended_qty %}
                                 {% if to_order > 0 %}
                                     <span class="text-primary">{{ to_order|floatformat:2 }}</span>
@@ -92,12 +96,28 @@
                                 {% endif %}
                             {% endwith %}
                         </td>
+
+                        <td class="text-end pe-4">
+                            <div class="btn-group">
+                                <a href="{% url 'inventory:reorder_rule_update' rule.pk %}" class="btn btn-sm btn-light border" title="{% trans 'تعديل' %}">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'inventory:reorder_rule_delete' rule.pk %}" class="btn btn-sm btn-outline-danger border-0" title="{% trans 'حذف' %}">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center py-5 text-muted">
+                        <td colspan="7" class="text-center py-5 text-muted">
                             <div class="mb-2"><i class="bi bi-clipboard-check fs-1 opacity-25"></i></div>
                             {% trans "لم يتم تعريف قواعد إعادة طلب بعد." %}
+                            <div class="mt-2">
+                                <a href="{% url 'inventory:reorder_rule_create' %}" class="btn btn-sm btn-outline-primary">
+                                    {% trans "إضافة قاعدة جديدة" %}
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}

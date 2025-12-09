@@ -1,0 +1,33 @@
+{% extends "inventory/base_inventory.html" %}
+{% load i18n %}
+
+{% block inventory_title %}{% trans "تأكيد الحذف" %}{% endblock %}
+
+{% block inventory_content %}
+<div class="container py-5" style="max-width: 500px;">
+    <div class="card shadow border-0">
+        <div class="card-body p-4 text-center">
+            <div class="text-danger mb-3">
+                <i class="bi bi-exclamation-circle fs-1"></i>
+            </div>
+            <h4 class="mb-3">{% trans "هل أنت متأكد؟" %}</h4>
+            <p class="text-muted mb-4">
+                {% trans "أنت على وشك حذف قاعدة إعادة الطلب للمنتج:" %} <br>
+                <strong>{{ object.product.name }}</strong>
+            </p>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="d-grid gap-2 d-flex justify-content-center">
+                    <a href="{% url 'inventory:reorder_rule_list' %}" class="btn btn-light border px-4">
+                        {% trans "إلغاء" %}
+                    </a>
+                    <button type="submit" class="btn btn-danger px-4">
+                        {% trans "نعم، احذف" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

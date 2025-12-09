@@ -819,31 +819,38 @@ class ReorderRule(BaseModel):
     # دوال مساعدة
     # ============================
 
-    def get_current_stock(self) -> Decimal:
+    @property
+    def get_current_stock(self):
         """
-        يرجع الرصيد الحالي لهذا المنتج في هذا المستودع/الموقع
-        بوحدة الكمية الأساسية (من StockLevel).
+        حساب الرصيد الحالي بناءً على النطاق (مستودع كامل أو موقع محدد).
         """
-        qs = StockLevel.objects.filter(
-            product=self.product,
-            warehouse=self.warehouse,
-        )
+        if self.location:
+            # حالة موقع محدد
+            try:
+                level = StockLevel.objects.get(
+                    product=self.product,
+                    warehouse=self.warehouse,
+                    location=self.location
+                )
+                return level.quantity_on_hand
+            except StockLevel.DoesNotExist:
+                return DECIMAL_ZERO
+        else:
+            # حالة المستودع بالكامل (تجميع كل المواقع)
+            total = StockLevel.objects.filter(
+                product=self.product,
+                warehouse=self.warehouse
+            ).aggregate(t=models.Sum("quantity_on_hand"))["t"]
 
-        if self.location_id:
-            qs = qs.filter(location=self.location)
-
-        # agg = qs.aggregate(total=Sum("quantity_on_hand"))
-        # return agg["total"] or DECIMAL_ZERO
-        agg = qs.aggregate(
-            total=Sum("quantity_on_hand") - Sum("quantity_reserved")
-        )
+            # ✅ الإصلاح هنا: Aggregate ترجع None إذا لم توجد سجلات
+            return total if total is not None else DECIMAL_ZERO
 
     def get_recommended_qty(self) -> Decimal:
         """
         يحسب الكمية المقترحة للطلب.
         Uses ROUND_UP correctly from decimal module.
         """
-        current_stock = self.get_current_stock()
+        current_stock = self.get_current_stock
         diff = Decimal(self.target_qty or DECIMAL_ZERO) - (current_stock or DECIMAL_ZERO)
 
         if diff <= 0:
@@ -859,12 +866,20 @@ class ReorderRule(BaseModel):
 
         return diff
 
-    def is_below_min(self) -> bool:
-        """
-        هل الرصيد الحالي أقل من الحد الأدنى المحدد في القاعدة؟
-        """
-        current_stock = self.get_current_stock()
-        return current_stock < (self.min_qty or DECIMAL_ZERO)
+    @property
+    def is_below_min(self):
+        """هل الرصيد أقل من الحد الأدنى؟"""
+        # ✅ الإصلاح هنا أيضاً لزيادة الأمان
+        current = self.get_current_stock
+        if current is None:
+            current = DECIMAL_ZERO
+
+        minimum = self.min_qty or DECIMAL_ZERO
+
+        return current < minimum
+
+
+
 
 
 # ============================================================

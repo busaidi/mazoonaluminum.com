@@ -6,7 +6,7 @@ from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
 from .models import StockMove, StockMoveLine, Product, StockLocation, Warehouse, ProductCategory, InventoryAdjustment, \
-    InventoryAdjustmentLine
+    InventoryAdjustmentLine, ReorderRule
 
 
 # ============================================================
@@ -276,3 +276,40 @@ InventoryCountFormSet = forms.inlineformset_factory(
     extra=0,  # لا نريد أسطر جديدة فارغة، نعدل الموجود فقط
     can_delete=False,  # لا نحذف أسطر من اللقطة
 )
+
+
+class ReorderRuleForm(forms.ModelForm):
+    class Meta:
+        model = ReorderRule
+        fields = ["product", "warehouse", "location", "min_qty", "target_qty", "is_active"]
+        widgets = {
+            "min_qty": forms.NumberInput(attrs={"step": "1"}),
+            "target_qty": forms.NumberInput(attrs={"step": "1"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            if isinstance(field.widget, (forms.TextInput, forms.NumberInput, forms.Select)):
+                field.widget.attrs.setdefault("class", "form-control")
+            elif isinstance(field.widget, (forms.CheckboxInput,)):
+                field.widget.attrs.setdefault("class", "form-check-input")
+
+        self.fields["product"].empty_label = _("اختر المنتج...")
+        self.fields["warehouse"].empty_label = _("اختر المستودع...")
+        self.fields["location"].empty_label = _("كل المواقع (افتراضي)")
+
+        # تحسين النصوص المساعدة
+        self.fields["min_qty"].help_text = _("عندما يصل المخزون لهذا الرقم (أو أقل)، سيقترح النظام الشراء.")
+        self.fields["target_qty"].help_text = _("الكمية التي نريد الوصول إليها بعد الشراء (الحد الأقصى).")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        min_qty = cleaned_data.get("min_qty")
+        target_qty = cleaned_data.get("target_qty")
+
+        if min_qty is not None and target_qty is not None:
+            if target_qty <= min_qty:
+                raise forms.ValidationError(_("الكمية المستهدفة (Target) يجب أن تكون أكبر من الحد الأدنى (Min)."))
+
+        return cleaned_data

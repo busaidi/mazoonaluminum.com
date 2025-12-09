@@ -1,5 +1,5 @@
 # inventory/views.py
-
+from django.urls.base import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, TemplateView, UpdateView
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -11,11 +11,12 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.views.generic.edit import DeleteView
 
 from .models import StockMove, Product, Warehouse, StockLevel, ReorderRule, InventorySettings, StockLocation, \
     ProductCategory, InventoryAdjustment
 from .forms import ReceiptMoveForm, DeliveryMoveForm, TransferMoveForm, StockMoveLineFormSet, WarehouseForm, \
-    ProductForm, StockLocationForm, ProductCategoryForm, InventoryCountFormSet, StartInventoryForm
+    ProductForm, StockLocationForm, ProductCategoryForm, InventoryCountFormSet, StartInventoryForm, ReorderRuleForm
 from .services import confirm_stock_move, cancel_stock_move, apply_inventory_adjustment, create_inventory_session
 
 # ============================================================
@@ -629,3 +630,44 @@ def apply_adjustment_view(request, pk):
         messages.error(request, _("حدث خطأ غير متوقع: ") + str(e))
 
     return redirect("inventory:adjustment_detail", pk=pk)
+
+
+# ============================================================
+# إدارة قواعد إعادة الطلب (Reorder Rules CRUD)
+# ============================================================
+
+class ReorderRuleCreateView(LoginRequiredMixin, CreateView):
+    model = ReorderRule
+    form_class = ReorderRuleForm
+    template_name = "inventory/reorder_rules/form.html"
+    success_url = reverse_lazy("inventory:reorder_rule_list")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = _("إضافة قاعدة إعادة طلب")
+        context["active_section"] = "inventory_reports"
+        return context
+
+
+class ReorderRuleUpdateView(LoginRequiredMixin, UpdateView):
+    model = ReorderRule
+    form_class = ReorderRuleForm
+    template_name = "inventory/reorder_rules/form.html"
+    success_url = reverse_lazy("inventory:reorder_rule_list")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = _("تعديل القاعدة لـ: ") + self.object.product.name
+        context["active_section"] = "inventory_reports"
+        return context
+
+
+class ReorderRuleDeleteView(LoginRequiredMixin, DeleteView):
+    model = ReorderRule
+    template_name = "inventory/reorder_rules/confirm_delete.html"
+    success_url = reverse_lazy("inventory:reorder_rule_list")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_section"] = "inventory_reports"
+        return context
