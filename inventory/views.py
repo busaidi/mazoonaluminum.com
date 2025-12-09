@@ -98,7 +98,7 @@ class StockMoveContextMixin:
 
 class StockMoveListView(LoginRequiredMixin, StockMoveContextMixin, ListView):
     model = StockMove
-    template_name = "inventory/stock_move_list.html"
+    template_name = "inventory/stock_move/list.html"
     context_object_name = "moves"
     paginate_by = 20
 
@@ -119,7 +119,7 @@ class StockMoveListView(LoginRequiredMixin, StockMoveContextMixin, ListView):
 
 class StockMoveCreateView(LoginRequiredMixin, StockMoveContextMixin, CreateView):
     model = StockMove
-    template_name = "inventory/stock_move_form.html"
+    template_name = "inventory/stock_move/form.html"
 
     def get_form_class(self):
         # اختيار الفورم المناسب ديناميكياً
@@ -162,7 +162,7 @@ class StockMoveCreateView(LoginRequiredMixin, StockMoveContextMixin, CreateView)
 
 class StockMoveDetailView(LoginRequiredMixin, StockMoveContextMixin, DetailView):
     model = StockMove
-    template_name = "inventory/stock_move_detail.html"
+    template_name = "inventory/stock_move/detail.html"
     context_object_name = "move"
 
     def get_queryset(self):
@@ -268,7 +268,7 @@ class ReorderRuleListView(LoginRequiredMixin, ListView):
 
 class ProductListView(LoginRequiredMixin, ListView):
     model = Product
-    template_name = "inventory/product_list.html"
+    template_name = "inventory/products/list.html"
     context_object_name = "products"
     paginate_by = 20
 
@@ -291,7 +291,7 @@ class ProductListView(LoginRequiredMixin, ListView):
 
 class ProductDetailView(LoginRequiredMixin, DetailView):
     model = Product
-    template_name = "inventory/product_detail.html"
+    template_name = "inventory/products/detail.html"
     context_object_name = "product"
 
     def get_object(self, queryset=None):
@@ -321,7 +321,7 @@ class ProductDetailView(LoginRequiredMixin, DetailView):
 
 class WarehouseListView(LoginRequiredMixin, ListView):
     model = Warehouse
-    template_name = "inventory/warehouse_list.html"
+    template_name = "inventory/warehouse/list.html"
     context_object_name = "warehouses"
 
     def get_queryset(self):
