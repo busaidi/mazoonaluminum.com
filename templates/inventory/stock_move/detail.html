@@ -92,7 +92,7 @@
           </form>
         {% endif %}
 
-        <a href="{% url 'inventory:move_print' move.pk %}"
+        <a href="{% url 'inventory:move_pdf' move.pk %}"
            target="_blank"
            class="btn btn-outline-dark d-inline-flex align-items-center"
            title="{% trans 'طباعة PDF' %}">

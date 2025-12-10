@@ -14,17 +14,6 @@ from core.models import AuditLog
 
 
 class AuditLogListView(LoginRequiredMixin, ListView):
-    """
-    عرض قائمة سجلات التدقيق (Audit Log):
-
-    يدعم الفلترة حسب:
-    - action
-    - actor (نص حر)
-    - q (بحث في الرسالة)
-    - target_model + target_id
-    - date_from / date_to
-    - section: تبويب عام / مبيعات / حسابات
-    """
     model = AuditLog
     template_name = "core/audit/audit_log_list.html"
     context_object_name = "logs"
@@ -37,13 +26,12 @@ class AuditLogListView(LoginRequiredMixin, ListView):
             .order_by("-created_at")
         )
 
-        # لو عندك soft delete
         if hasattr(AuditLog, "is_deleted"):
             qs = qs.filter(is_deleted=False)
 
         request = self.request
 
-        # قيم الفلتر من الـ GET
+        # الفلاتر
         action = request.GET.get("action") or ""
         actor_query = request.GET.get("actor") or ""
         q = request.GET.get("q") or ""
@@ -51,13 +39,15 @@ class AuditLogListView(LoginRequiredMixin, ListView):
         target_id = request.GET.get("target_id") or ""
         date_from = request.GET.get("date_from") or ""
         date_to = request.GET.get("date_to") or ""
-        section = request.GET.get("section") or ""  # "", "sales", "accounting"
+        section = request.GET.get("section") or ""
 
-        # 1) section tabs: عام / مبيعات / حسابات
+        # 1) section tabs: تمت إضافة المخزون (inventory) هنا
         if section == "sales":
             qs = qs.filter(target_content_type__app_label="sales")
         elif section == "accounting":
             qs = qs.filter(target_content_type__app_label="accounting")
+        elif section == "inventory":  # ✅ التعديل الأول: دعم فلتر المخزون
+            qs = qs.filter(target_content_type__app_label="inventory")
 
         # 2) نوع العملية
         if action:
@@ -78,12 +68,15 @@ class AuditLogListView(LoginRequiredMixin, ListView):
         # 5) نوع الهدف
         if target_model:
             try:
-                app_label, model_name = target_model.split(".")
-                ct = ContentType.objects.get(
-                    app_label=app_label,
-                    model=model_name.lower(),
-                )
-                qs = qs.filter(target_content_type=ct)
+                # يتوقع الصيغة: app_label.ModelName
+                parts = target_model.split(".")
+                if len(parts) == 2:
+                    app_label, model_name = parts
+                    ct = ContentType.objects.get(
+                        app_label=app_label,
+                        model=model_name.lower(),
+                    )
+                    qs = qs.filter(target_content_type=ct)
             except (ValueError, ContentType.DoesNotExist):
                 pass
 
@@ -91,7 +84,7 @@ class AuditLogListView(LoginRequiredMixin, ListView):
         if target_id:
             qs = qs.filter(target_object_id=str(target_id))
 
-        # 7) نطاق التاريخ
+        # 7) التاريخ
         if date_from:
             qs = qs.filter(created_at__date__gte=date_from)
         if date_to:
@@ -118,73 +111,51 @@ class AuditLogListView(LoginRequiredMixin, ListView):
         ctx["current_filters"] = current_filters
         ctx["current_section"] = current_filters["section"]
 
-        # ---------------- base_query لعلامات الترقيم والفلترة ----------------
+        # Base Query
         base_params = {}
         for key, value in request.GET.items():
-            if key == "page":
-                continue
-            if value in ("", None):
-                continue
+            if key == "page": continue
+            if value in ("", None): continue
             base_params[key] = value
 
         ctx["base_query"] = urlencode(base_params)
 
-        # ---------------- Presets حسب المستند ----------------
+        # Presets
         target_model = current_filters["target_model"]
         target_id = current_filters["target_id"]
 
-        # هذا المستند فقط
         if target_model and target_id:
-            params_doc = {
-                "target_model": target_model,
-                "target_id": target_id,
-            }
+            params_doc = {"target_model": target_model, "target_id": target_id}
             ctx["preset_this_document_query"] = urlencode(params_doc)
         else:
             ctx["preset_this_document_query"] = ""
 
-        # كل مستندات المبيعات
-        params_sales = {
-            "target_model": "sales.SalesDocument",
-        }
-        ctx["preset_sales_documents_query"] = urlencode(params_sales)
-
-        # ---------------- Presets زمنية: آخر ٧ أيام / اليوم / آخر ٣٠ يوم ----------------
+        # Dates Presets
         today = timezone.localdate()
-        seven_days_ago = today - timedelta(days=7)
-        thirty_days_ago = today - timedelta(days=30)
 
-        # آخر ٧ أيام (نحافظ على بقية الفلاتر الحالية)
-        params_last7 = base_params.copy()
-        params_last7["date_from"] = seven_days_ago.isoformat()
-        params_last7["date_to"] = today.isoformat()
-        ctx["preset_last7_query"] = urlencode(params_last7)
+        # Helper لنسخ البراميتر وتحديث التاريخ فقط
+        def _date_query(days_ago):
+            p = base_params.copy()
+            p["date_from"] = (today - timedelta(days=days_ago)).isoformat()
+            p["date_to"] = today.isoformat()
+            return urlencode(p)
 
-        # اليوم فقط
-        params_today = base_params.copy()
-        params_today["date_from"] = today.isoformat()
-        params_today["date_to"] = today.isoformat()
-        ctx["preset_today_query"] = urlencode(params_today)
+        ctx["preset_last7_query"] = _date_query(7)
+        ctx["preset_today_query"] = _date_query(0)
+        ctx["preset_last30_query"] = _date_query(30)
 
-        # آخر ٣٠ يوم
-        params_last30 = base_params.copy()
-        params_last30["date_from"] = thirty_days_ago.isoformat()
-        params_last30["date_to"] = today.isoformat()
-        ctx["preset_last30_query"] = urlencode(params_last30)
-
-        # ---------------- Tabs: عام / مبيعات / حسابات ----------------
-        # تبويب "عام" = بدون section + نفضي target_model/target_id
-        params_all = {
-            k: v
-            for k, v in base_params.items()
-            if k not in ("section", "target_model", "target_id")
-        }
+        # ---------------- Tabs ----------------
+        # 1. الكل (مسح section)
+        params_all = {k: v for k, v in base_params.items() if k not in ("section", "target_model", "target_id")}
         ctx["tab_all_query"] = urlencode(params_all)
 
-        # تبويب "مبيعات" = section=sales فقط (بداية نظيفة)
+        # 2. مبيعات
         ctx["tab_sales_query"] = urlencode({"section": "sales"})
 
-        # تبويب "حسابات" = section=accounting فقط
+        # 3. حسابات
         ctx["tab_accounting_query"] = urlencode({"section": "accounting"})
+
+        # 4. مخزون (✅ التعديل الثاني: إضافة رابط لتبويب المخزون)
+        ctx["tab_inventory_query"] = urlencode({"section": "inventory"})
 
         return ctx

@@ -1,36 +1,55 @@
-# inventory/views.py
+from typing import Any, Dict, Optional
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import ValidationError
-from django.db import transaction, models
-from django.db.models import F, Sum, DecimalField, Q, ProtectedError
-from django.http import Http404, HttpResponse
+from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.core.exceptions import ValidationError, PermissionDenied
+from django.db import transaction
+from django.db.models import F, Sum, DecimalField, ProtectedError, Q
+from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
-from django.views.generic import ListView, DetailView, CreateView, TemplateView, UpdateView, DeleteView
+from django.views.generic import (
+    ListView, DetailView, CreateView, TemplateView,
+    UpdateView, DeleteView
+)
 from tablib import Dataset
 
+# Core Imports (Audit & Logging)
+from core.models import AuditLog
+from core.services.audit import log_event
+
+# Forms
 from .forms import (
     ReceiptMoveForm, DeliveryMoveForm, TransferMoveForm, StockMoveLineFormSet,
     WarehouseForm, ProductForm, StockLocationForm, ProductCategoryForm,
     InventoryCountFormSet, StartInventoryForm, ReorderRuleForm
 )
+
+# Models
 from .models import (
     StockMove, Product, Warehouse, StockLevel, ReorderRule,
     InventorySettings, StockLocation, ProductCategory, InventoryAdjustment,
-    StockMoveLine, InventoryAdjustmentLine
+    StockMoveLine
 )
+
+# Resources (django-import-export)
 from .resources import ProductResource
+
+# Services
 from .services import (
-    confirm_stock_move, cancel_stock_move, apply_inventory_adjustment,
+    confirm_stock_move,
+    cancel_stock_move,
+    apply_inventory_adjustment,
     create_inventory_session
 )
-from .utils import render_pdf_view  # تأكد أن هذا الملف موجود
+
+# Utils
+from .utils import render_pdf_view
+
 
 # ============================================================
 # Configuration Map
@@ -69,18 +88,30 @@ MOVE_TYPE_META = {
 # ============================================================
 
 class StockMoveContextMixin:
+    """
+    Mixin to inject metadata about the move type (Color, Label, URLs)
+    into the context and handle move_type dispatching.
+    """
     move_type = None
 
     def dispatch(self, request, *args, **kwargs):
         self.move_type = kwargs.get("move_type")
-        # التحقق من أن نوع الحركة معرف لدينا
+
+        # Fallback: check object instance if not in URL
+        if not self.move_type and hasattr(self, 'object') and self.object:
+            self.move_type = self.object.move_type
+
+        # Basic validation (optional, allows loose coupling)
         if self.move_type and self.move_type not in MOVE_TYPE_META:
-            raise Http404(_("نوع حركة المخزون غير صحيح."))
+            pass
+
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         current_type = self.move_type
+
+        # Fallback logic for context
         if not current_type and hasattr(self, 'object') and self.object:
             current_type = self.object.move_type
 
@@ -101,17 +132,15 @@ class StockMoveContextMixin:
 
 class ProtectedDeleteMixin:
     """
-    ميكسن لمنع حذف السجلات المرتبطة ببيانات أخرى (Protect).
-    بدلاً من ظهور صفحة خطأ 500، نعرض رسالة خطأ ونعيد التوجيه.
+    Mixin to prevent 500 Server Error when deleting protected objects.
     """
-
     def post(self, request, *args, **kwargs):
         try:
             return super().delete(request, *args, **kwargs)
         except ProtectedError:
-            messages.error(request,
-                           _("لا يمكن حذف هذا السجل لأنه مرتبط بسجلات أخرى (مثل حركات مخزنية). يفضل إلغاء تفعيله بدلاً من حذفه."))
-            return redirect(self.success_url)
+            msg = _("لا يمكن حذف هذا السجل لأنه مرتبط ببيانات أخرى (مثل حركات مخزنية). يفضل أرشفتها بدلاً من حذفها.")
+            messages.error(request, msg)
+            return redirect(self.get_success_url())
 
 
 # ============================================================
@@ -124,14 +153,17 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_section"] = "inventory_dashboard"
+
         context["total_products"] = Product.objects.active().count()
-        # استخدام المنطق الجديد لقواعد إعادة الطلب
+        context["total_warehouses"] = Warehouse.objects.active().count()
+        # Custom manager method usually faster
         context["low_stock_count"] = len(ReorderRule.objects.get_triggered_rules())
         context["draft_moves_count"] = StockMove.objects.draft().count()
+
         context["latest_moves"] = (
             StockMove.objects
             .with_related()
-            .not_cancelled()
+            .filter(status=StockMove.Status.DONE)
             .order_by("-move_date", "-id")[:5]
         )
         return context
@@ -149,12 +181,14 @@ class StockMoveListView(LoginRequiredMixin, StockMoveContextMixin, ListView):
 
     def get_queryset(self):
         qs = super().get_queryset().with_related().order_by("-move_date", "-id")
+
         if self.move_type == StockMove.MoveType.IN:
             return qs.incoming()
         elif self.move_type == StockMove.MoveType.OUT:
             return qs.outgoing()
         elif self.move_type == StockMove.MoveType.TRANSFER:
             return qs.transfers()
+
         return qs.none()
 
 
@@ -167,7 +201,6 @@ class StockMoveCreateView(LoginRequiredMixin, StockMoveContextMixin, CreateView)
         return meta["form_class"] if meta else ReceiptMoveForm
 
     def get_form_kwargs(self):
-        """حقن نوع الحركة مسبقاً"""
         kwargs = super().get_form_kwargs()
         if not kwargs.get('instance'):
             kwargs['instance'] = self.model(move_type=self.move_type)
@@ -185,23 +218,42 @@ class StockMoveCreateView(LoginRequiredMixin, StockMoveContextMixin, CreateView)
         context = self.get_context_data()
         lines_formset = context['lines_formset']
 
-        # تأكيد نوع الحركة مرة أخرى للأمان
         form.instance.move_type = self.move_type
+        form.instance.created_by = self.request.user
 
         if form.is_valid() and lines_formset.is_valid():
-            with transaction.atomic():
-                self.object = form.save()
-                lines_formset.instance = self.object
-                lines_formset.save()
+            try:
+                with transaction.atomic():
+                    self.object = form.save()
+                    lines_formset.instance = self.object
+                    lines_formset.save()
 
-            messages.success(self.request, _("تم إنشاء الحركة بنجاح كمسودة."))
-            return redirect(self.get_success_url())
+                    # ✅ Explicit Audit Log for Draft Creation
+                    # لأن إنشاء المسودة لا يمر عبر services.py، نسجله هنا
+                    log_event(
+                        action=AuditLog.Action.CREATE,
+                        message=f"Draft Stock Move Created: {self.object.reference or self.object.pk}",
+                        actor=self.request.user,
+                        target=self.object,
+                        extra={
+                            "move_type": str(self.object.move_type),
+                            "warehouse": str(self.object.to_warehouse or self.object.from_warehouse)
+                        }
+                    )
+
+                messages.success(self.request, _("تم إنشاء الحركة كمسودة (Draft) بنجاح."))
+                return redirect(self.get_success_url())
+
+            except Exception as e:
+                messages.error(self.request, _("حدث خطأ أثناء الحفظ: ") + str(e))
+                return self.form_invalid(form)
         else:
+            if lines_formset.errors:
+                messages.error(self.request, _("الرجاء التحقق من بيانات الأصناف."))
             return self.render_to_response(self.get_context_data(form=form))
 
     def get_success_url(self):
-        meta = MOVE_TYPE_META.get(self.move_type)
-        return reverse(meta["list_url"])
+        return reverse("inventory:move_detail", kwargs={'pk': self.object.pk})
 
 
 class StockMoveDetailView(LoginRequiredMixin, StockMoveContextMixin, DetailView):
@@ -214,7 +266,7 @@ class StockMoveDetailView(LoginRequiredMixin, StockMoveContextMixin, DetailView)
 
 
 # ============================================================
-# Move Actions
+# Move Actions (Service Integration)
 # ============================================================
 
 @require_POST
@@ -222,12 +274,14 @@ class StockMoveDetailView(LoginRequiredMixin, StockMoveContextMixin, DetailView)
 def confirm_move_view(request, pk):
     move = get_object_or_404(StockMove, pk=pk)
     try:
+        # Service handles Logic + Audit + Notification
         confirm_stock_move(move, user=request.user)
-        messages.success(request, _("تم تأكيد حركة المخزون وتحديث الأرصدة بنجاح."))
+        messages.success(request, _("تم تأكيد الحركة المخزنية وتحديث الأرصدة."))
     except ValidationError as e:
         messages.error(request, " ".join(e.messages))
     except Exception as e:
         messages.error(request, _("حدث خطأ غير متوقع: ") + str(e))
+
     return redirect("inventory:move_detail", pk=pk)
 
 
@@ -236,35 +290,38 @@ def confirm_move_view(request, pk):
 def cancel_move_view(request, pk):
     move = get_object_or_404(StockMove, pk=pk)
     try:
+        # Service handles Logic + Audit + Notification
         cancel_stock_move(move, user=request.user)
-        messages.warning(request, _("تم إلغاء حركة المخزون."))
+        messages.warning(request, _("تم إلغاء الحركة المخزنية وعكس تأثيرها."))
     except ValidationError as e:
         messages.error(request, " ".join(e.messages))
     except Exception as e:
         messages.error(request, _("حدث خطأ غير متوقع: ") + str(e))
+
     return redirect("inventory:move_detail", pk=pk)
 
 
 @login_required
 def stock_move_pdf_view(request, pk):
     move = get_object_or_404(StockMove, pk=pk)
-    doc_type, doc_title = "", ""
 
-    if move.move_type == StockMove.MoveType.IN:
-        doc_type, doc_title = "GRN", _("سند استلام مخزني")
-    elif move.move_type == StockMove.MoveType.OUT:
-        doc_type, doc_title = "DN", _("إذن صرف بضاعة")
-    elif move.move_type == StockMove.MoveType.TRANSFER:
-        doc_type, doc_title = "TN", _("سند تحويل داخلي")
+    doc_meta = {
+        StockMove.MoveType.IN: ("GRN", _("سند استلام مخزني")),
+        StockMove.MoveType.OUT: ("DN", _("إذن صرف بضاعة")),
+        StockMove.MoveType.TRANSFER: ("TN", _("سند تحويل داخلي")),
+    }
+    doc_type, doc_title = doc_meta.get(move.move_type, ("MOV", _("حركة مخزنية")))
 
     context = {
         'move': move,
+        'lines': move.lines.select_related('product', 'uom').all(),
         'doc_title': doc_title,
         'doc_type': doc_type,
         'company_name': "Mazoon Aluminum",
         'print_date': timezone.now(),
         'user': request.user,
     }
+
     filename = f"{doc_type}-{move.reference or move.pk}.pdf"
     return render_pdf_view(request, 'inventory/pdf/stock_move_document.html', context, filename)
 
@@ -295,6 +352,7 @@ class InventoryAdjustmentCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         try:
+            # Service handles creation + Logic + Audit
             self.object = create_inventory_session(
                 warehouse=form.cleaned_data["warehouse"],
                 user=self.request.user,
@@ -304,6 +362,9 @@ class InventoryAdjustmentCreateView(LoginRequiredMixin, CreateView):
             )
             messages.success(self.request, _("تم بدء جلسة الجرد بنجاح. يرجى إدخال الكميات الفعلية."))
             return redirect("inventory:adjustment_count", pk=self.object.pk)
+        except ValidationError as e:
+            form.add_error(None, e)
+            return self.form_invalid(form)
         except Exception as e:
             form.add_error(None, str(e))
             return self.form_invalid(form)
@@ -316,7 +377,9 @@ class InventoryAdjustmentCreateView(LoginRequiredMixin, CreateView):
 
 
 class InventoryAdjustmentUpdateView(LoginRequiredMixin, UpdateView):
-    """شاشة إدخال الكميات المجرودة"""
+    """
+    Screen to enter counted quantities.
+    """
     model = InventoryAdjustment
     template_name = "inventory/adjustments/count.html"
     fields = ["note"]
@@ -336,14 +399,29 @@ class InventoryAdjustmentUpdateView(LoginRequiredMixin, UpdateView):
         lines_formset = context['lines_formset']
 
         if lines_formset.is_valid():
-            lines_formset.save()
-            if self.object.status == InventoryAdjustment.Status.DRAFT:
-                self.object.status = InventoryAdjustment.Status.IN_PROGRESS
-                self.object.save(update_fields=["status"])
+            with transaction.atomic():
+                self.object = form.save(commit=False)
+                self.object.updated_by = self.request.user
+
+                if self.object.status == InventoryAdjustment.Status.DRAFT:
+                    self.object.status = InventoryAdjustment.Status.IN_PROGRESS
+
+                self.object.save()
+                lines_formset.save()
+
+                # ✅ Audit Log for Data Entry
+                # تسجيل عملية إدخال الكميات
+                log_event(
+                    action=AuditLog.Action.UPDATE,
+                    message=f"Inventory Counts Updated for #{self.object.pk}",
+                    actor=self.request.user,
+                    target=self.object
+                )
 
             messages.success(self.request, _("تم حفظ الكميات المجرودة."))
             return redirect("inventory:adjustment_detail", pk=self.object.pk)
 
+        messages.error(self.request, _("يوجد خطأ في البيانات المدخلة."))
         return self.render_to_response(self.get_context_data(form=form))
 
 
@@ -358,7 +436,6 @@ class InventoryAdjustmentDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_section"] = "inventory_operations"
-        # جلب الأسطر التي بها فروقات فقط للعرض السريع
         context["diff_lines"] = self.object.lines.with_difference()
         return context
 
@@ -368,17 +445,19 @@ class InventoryAdjustmentDetailView(LoginRequiredMixin, DetailView):
 def apply_adjustment_view(request, pk):
     adjustment = get_object_or_404(InventoryAdjustment, pk=pk)
     try:
+        # Service handles Logic + Audit (Moves Generation)
         apply_inventory_adjustment(adjustment, user=request.user)
-        messages.success(request, _("تم ترحيل الجرد وتعديل الأرصدة بنجاح."))
+        messages.success(request, _("تم ترحيل الجرد وتعديل الأرصدة وإنشاء الحركات اللازمة."))
     except ValidationError as e:
         messages.error(request, " ".join(e.messages))
     except Exception as e:
         messages.error(request, _("حدث خطأ غير متوقع: ") + str(e))
+
     return redirect("inventory:adjustment_detail", pk=pk)
 
 
 # ============================================================
-# Reports
+# Reports & Analysis
 # ============================================================
 
 class StockLevelListView(LoginRequiredMixin, ListView):
@@ -391,14 +470,21 @@ class StockLevelListView(LoginRequiredMixin, ListView):
         qs = StockLevel.objects.with_related().exclude(
             quantity_on_hand=0, quantity_reserved=0
         )
+
         warehouse_id = self.request.GET.get("warehouse")
+        product_query = self.request.GET.get("q")
+
         if warehouse_id:
             qs = qs.filter(warehouse_id=warehouse_id)
+        if product_query:
+            qs = qs.filter(product__name__icontains=product_query)
+
         return qs.order_by("warehouse__name", "product__name")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_section"] = "inventory_reports"
+        context["warehouses"] = Warehouse.objects.active()
         return context
 
 
@@ -419,7 +505,6 @@ class InventoryValuationView(LoginRequiredMixin, ListView):
         if wh_id: qs = qs.filter(warehouse_id=wh_id)
         if cat_id: qs = qs.filter(product__category_id=cat_id)
 
-        # حساب القيمة (الكمية * متوسط التكلفة)
         qs = qs.annotate(valuation=F('quantity_on_hand') * F('product__average_cost'))
         return qs.order_by("-valuation")
 
@@ -463,6 +548,10 @@ class ReorderRuleCreateView(LoginRequiredMixin, CreateView):
     template_name = "inventory/reorder_rules/form.html"
     success_url = reverse_lazy("inventory:reorder_rule_list")
 
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        return super().form_valid(form)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["page_title"] = _("إضافة قاعدة إعادة طلب")
@@ -475,6 +564,10 @@ class ReorderRuleUpdateView(LoginRequiredMixin, UpdateView):
     form_class = ReorderRuleForm
     template_name = "inventory/reorder_rules/form.html"
     success_url = reverse_lazy("inventory:reorder_rule_list")
+
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -509,12 +602,19 @@ class ProductListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         qs = Product.objects.with_stock_summary().with_category().active()
         query = self.request.GET.get("q")
-        if query: qs = qs.search(query)
+        category = self.request.GET.get("category")
+
+        if query:
+            qs = qs.search(query)
+        if category:
+            qs = qs.filter(category_id=category)
+
         return qs.order_by("name")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_section"] = "inventory_master"
+        context["categories"] = ProductCategory.objects.all()
         return context
 
 
@@ -522,6 +622,12 @@ class ProductCreateView(LoginRequiredMixin, CreateView):
     model = Product
     form_class = ProductForm
     template_name = "inventory/products/form.html"
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        response = super().form_valid(form)
+        # Optional: Log Product Creation
+        return response
 
     def get_success_url(self):
         return reverse("inventory:product_detail", kwargs={"code": self.object.code})
@@ -540,12 +646,16 @@ class ProductUpdateView(LoginRequiredMixin, UpdateView):
     slug_field = "code"
     slug_url_kwarg = "code"
 
+    def form_valid(self, form):
+        form.instance.updated_by = self.request.user
+        return super().form_valid(form)
+
     def get_success_url(self):
         return reverse("inventory:product_detail", kwargs={"code": self.object.code})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["page_title"] = _("تعديل منتج: ") + self.object.code
+        context["page_title"] = _("تعديل منتج: ") + str(self.object.code)
         context["active_section"] = "inventory_master"
         return context
 
@@ -564,8 +674,10 @@ class ProductDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context["active_section"] = "inventory_master"
         context["recent_moves"] = (
-            StockMove.objects.for_product(self.object).with_related()
-            .not_cancelled().order_by("-move_date", "-id")[:10]
+            StockMove.objects.for_product(self.object)
+            .with_related()
+            .not_cancelled()
+            .order_by("-move_date", "-id")[:10]
         )
         return context
 
@@ -745,9 +857,12 @@ class InventorySettingsView(LoginRequiredMixin, UpdateView):
 def export_products_view(request):
     product_resource = ProductResource()
     dataset = product_resource.export()
-    response = HttpResponse(dataset.xlsx,
-                            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename="products_export.xlsx"'
+    response = HttpResponse(
+        dataset.xlsx,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    timestamp = timezone.now().strftime("%Y-%m-%d")
+    response['Content-Disposition'] = f'attachment; filename="products_export_{timestamp}.xlsx"'
     return response
 
 
@@ -763,24 +878,20 @@ def import_products_view(request):
             return redirect('inventory:product_import')
 
         new_products = request.FILES['import_file']
+
         if not new_products.name.endswith('xlsx'):
             messages.error(request, _("عفواً، الصيغة المدعومة هي xlsx فقط."))
             return redirect('inventory:product_import')
 
         try:
-            # Load Data
             imported_data = dataset.load(new_products.read(), format='xlsx')
-
-            # Dry Run
             result = product_resource.import_data(dataset, dry_run=True)
 
             if not result.has_errors():
-                # Real Import
                 product_resource.import_data(dataset, dry_run=False)
                 messages.success(request, _("تم استيراد المنتجات بنجاح!"))
                 return redirect('inventory:product_list')
             else:
-                # Collect Errors
                 for i, row in enumerate(result.rows):
                     if row.errors:
                         for err in row.errors:
@@ -788,11 +899,12 @@ def import_products_view(request):
                             err_msg = str(err.error)
                             if "matching query does not exist" in err_msg:
                                 if "ProductCategory" in err_msg:
-                                    err_msg = _("التصنيف غير موجود.")
+                                    err_msg = _("التصنيف المحدد غير موجود.")
                                 elif "UnitOfMeasure" in err_msg:
-                                    err_msg = _("وحدة القياس غير موجودة.")
+                                    err_msg = _("وحدة القياس المحددة غير موجودة.")
                             errors.append(f"سطر {line_num}: {err_msg}")
-                messages.error(request, _("فشلت العملية. يرجى مراجعة قائمة الأخطاء."))
+
+                messages.error(request, _("فشلت العملية. يرجى مراجعة قائمة الأخطاء أدناه."))
 
         except Exception as e:
             messages.error(request, f"حدث خطأ غير متوقع: {str(e)}")

@@ -21,13 +21,21 @@
     </div>
   </div>
 
-  {# ========================= Tabs: عام / مبيعات / حسابات ========================= #}
+  {# ========================= Tabs: عام / مخزون / مبيعات / حسابات ========================= #}
   <ul class="nav nav-tabs mb-3">
 
     <li class="nav-item">
       <a class="nav-link {% if not current_section %}active{% endif %}"
          href="?{% if tab_all_query %}{{ tab_all_query }}{% endif %}">
         {% trans "عام" %}
+      </a>
+    </li>
+
+    {# ✅ تمت إضافة هذا التبويب للمخزون #}
+    <li class="nav-item">
+      <a class="nav-link {% if current_section == 'inventory' %}active{% endif %}"
+         href="?{{ tab_inventory_query }}">
+        {% trans "مخزون" %}
       </a>
     </li>
 
@@ -53,47 +61,23 @@
     {# -------- Presets جاهزة (أعلى الفورم) -------- #}
     <div class="d-flex flex-wrap gap-2 mb-3">
 
-      {# هذا المستند فقط #}
+      {# هذا المستند فقط (يظهر فقط إذا تم تحديده مسبقاً) #}
       {% if preset_this_document_query %}
         <a href="?{{ preset_this_document_query }}"
            class="btn btn-outline-primary btn-sm">
           <i class="bi bi-target ms-1"></i>
           {% trans "هذا المستند فقط" %}
         </a>
-      {% else %}
-        <button type="button"
-                class="btn btn-outline-secondary btn-sm"
-                disabled>
-          <i class="bi bi-target ms-1"></i>
-          {% trans "هذا المستند فقط" %}
-        </button>
       {% endif %}
 
-      {# كل مستندات المبيعات #}
-      <a href="?{{ preset_sales_documents_query }}"
-         class="btn btn-outline-primary btn-sm">
-        <i class="bi bi-file-earmark-text ms-1"></i>
-        {% trans "كل مستندات المبيعات" %}
+      {#Presets الزمنية #}
+      <a href="?{{ preset_today_query }}" class="btn btn-outline-secondary btn-sm">
+        {% trans "اليوم" %}
       </a>
-
-      {# آخر ٧ أيام #}
-      <a href="?{{ preset_last7_query }}"
-         class="btn btn-outline-primary btn-sm">
-        <i class="bi bi-calendar-week ms-1"></i>
+      <a href="?{{ preset_last7_query }}" class="btn btn-outline-secondary btn-sm">
         {% trans "آخر ٧ أيام" %}
       </a>
-
-      {# اليوم فقط #}
-      <a href="?{{ preset_today_query }}"
-         class="btn btn-outline-primary btn-sm">
-        <i class="bi bi-calendar-day ms-1"></i>
-        {% trans "اليوم فقط" %}
-      </a>
-
-      {# آخر ٣٠ يوم #}
-      <a href="?{{ preset_last30_query }}"
-         class="btn btn-outline-primary btn-sm">
-        <i class="bi bi-calendar-range ms-1"></i>
+      <a href="?{{ preset_last30_query }}" class="btn btn-outline-secondary btn-sm">
         {% trans "آخر ٣٠ يوم" %}
       </a>
 
@@ -105,14 +89,14 @@
       {# نص البحث في الرسالة #}
       <div class="col-md-3">
         <label class="form-label small mb-1" for="id_q">
-          {% trans "نص الرسالة" %}
+          {% trans "بحث في الرسالة" %}
         </label>
         <input type="text"
                name="q"
                id="id_q"
                class="form-control form-control-sm"
                value="{{ current_filters.q }}"
-               placeholder="{% trans 'ابحث في وصف الحدث...' %}">
+               placeholder="...">
       </div>
 
       {# نوع العملية #}
@@ -171,20 +155,17 @@
       <div class="col-md-1 d-grid">
         <button type="submit" class="btn btn-primary btn-sm">
           <i class="bi bi-search"></i>
-          {% trans "بحث" %}
         </button>
       </div>
     </div>
 
-    {# نحافظ على فلترة المستند (لو جاي من السيلز) #}
+    {# الحفاظ على الفلاتر المخفية (مثل section و target_model) #}
     {% if current_filters.target_model %}
       <input type="hidden" name="target_model" value="{{ current_filters.target_model }}">
     {% endif %}
     {% if current_filters.target_id %}
       <input type="hidden" name="target_id" value="{{ current_filters.target_id }}">
     {% endif %}
-
-    {# نحافظ على الـ section الحالي حتى مع إعادة البحث #}
     {% if current_filters.section %}
       <input type="hidden" name="section" value="{{ current_filters.section }}">
     {% endif %}
@@ -196,86 +177,96 @@
     <div class="card-body p-0">
       {% if logs %}
         <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0">
+          <table class="table table-sm align-middle mb-0 table-hover">
             <thead class="table-light">
               <tr>
-                <th class="small text-muted text-nowrap">{% trans "التاريخ والوقت" %}</th>
-                <th class="small text-muted text-nowrap">{% trans "نوع العملية" %}</th>
-                <th class="small text-muted text-nowrap">{% trans "المستخدم" %}</th>
-                <th class="small text-muted text-nowrap">{% trans "الهدف" %}</th>
-                <th class="small text-muted">{% trans "الرسالة" %}</th>
-                <th class="small text-muted text-nowrap">{% trans "بيانات إضافية" %}</th>
+                <th class="small text-muted text-nowrap p-2">{% trans "الوقت" %}</th>
+                <th class="small text-muted text-nowrap p-2">{% trans "العملية" %}</th>
+                <th class="small text-muted text-nowrap p-2">{% trans "المستخدم" %}</th>
+                <th class="small text-muted text-nowrap p-2">{% trans "الهدف" %}</th>
+                <th class="small text-muted w-50 p-2">{% trans "الوصف" %}</th>
+                <th class="small text-muted text-nowrap p-2">{% trans "تفاصيل" %}</th>
               </tr>
             </thead>
             <tbody>
               {% for log in logs %}
                 <tr>
                   {# التاريخ والوقت #}
-                  <td class="small text-nowrap">
-                    {{ log.created_at|date:"Y-m-d H:i" }}
+                  <td class="small text-nowrap p-2">
+                    <div class="fw-bold">{{ log.created_at|date:"Y-m-d" }}</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">{{ log.created_at|date:"H:i" }}</div>
                   </td>
 
-                  {# نوع العملية كبادج ملوّن حسب الـ action #}
-                  <td class="small text-nowrap">
-                    {# جدول ألوان بسيط للأنواع الشائعة #}
+                  {# نوع العملية #}
+                  <td class="small text-nowrap p-2">
                     {% if log.action == "create" %}
-                      <span class="badge bg-success-subtle text-success-emphasis">
+                      <span class="badge bg-success-subtle text-success-emphasis rounded-pill">
                         {{ log.get_action_display }}
                       </span>
                     {% elif log.action == "update" %}
-                      <span class="badge bg-info-subtle text-info-emphasis">
+                      <span class="badge bg-info-subtle text-info-emphasis rounded-pill">
                         {{ log.get_action_display }}
                       </span>
                     {% elif log.action == "status_change" %}
-                      <span class="badge bg-warning-subtle text-warning-emphasis">
+                      <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill">
                         {{ log.get_action_display }}
                       </span>
                     {% elif log.action == "delete" %}
-                      <span class="badge bg-danger-subtle text-danger-emphasis">
+                      <span class="badge bg-danger-subtle text-danger-emphasis rounded-pill">
                         {{ log.get_action_display }}
                       </span>
                     {% elif log.action == "notification" %}
-                      <span class="badge bg-primary-subtle text-primary-emphasis">
+                      <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill">
                         {{ log.get_action_display }}
                       </span>
                     {% else %}
-                      <span class="badge bg-secondary-subtle text-secondary-emphasis">
+                      <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill">
                         {{ log.get_action_display }}
                       </span>
                     {% endif %}
                   </td>
 
                   {# المستخدم #}
-                  <td class="small text-nowrap">
+                  <td class="small text-nowrap p-2">
                     {% if log.actor %}
-                      {{ log.actor.get_username }}
+                      <i class="bi bi-person me-1 text-muted"></i>{{ log.actor.get_username }}
                     {% else %}
                       <span class="text-muted">—</span>
                     {% endif %}
                   </td>
 
                   {# الهدف #}
-                  <td class="small text-nowrap">
+                  <td class="small text-nowrap p-2">
                     {% if log.target %}
-                      {{ log.target }}
+                      <span class="d-inline-block text-truncate" style="max-width: 150px;" title="{{ log.target }}">
+                        {{ log.target }}
+                      </span>
                     {% elif log.target_content_type %}
-                      {{ log.target_content_type.app_label }}.{{ log.target_content_type.model }}#{{ log.target_object_id }}
+                      <span class="badge bg-light text-dark border">
+                        {{ log.target_content_type.model|upper }} #{{ log.target_object_id }}
+                      </span>
                     {% else %}
                       <span class="text-muted">—</span>
                     {% endif %}
                   </td>
 
                   {# الرسالة #}
-                  <td class="small">
+                  <td class="small p-2">
                     {{ log.message|default:"—" }}
                   </td>
 
-                  {# بيانات إضافية (extra) مختصرة #}
-                  <td class="small text-muted">
+                  {# بيانات إضافية (extra) #}
+                  <td class="small text-muted p-2">
                     {% if log.extra %}
-                      <code class="small d-block text-truncate" style="max-width: 220px;">
-                        {{ log.extra }}
-                      </code>
+                      <button type="button"
+                              class="btn btn-link btn-sm p-0 text-decoration-none"
+                              data-bs-toggle="popover"
+                              data-bs-trigger="focus"
+                              data-bs-placement="left"
+                              data-bs-title="{% trans 'بيانات إضافية' %}"
+                              data-bs-content="{{ log.extra }}">
+                        <i class="bi bi-info-circle"></i>
+                      </button>
                     {% else %}
                       <span class="text-muted">—</span>
                     {% endif %}
@@ -287,10 +278,14 @@
         </div>
 
       {% else %}
-        <div class="p-3">
-          <p class="text-muted small mb-0">
-            {% trans "لا توجد سجلات تدقيق مطابقة لمعايير البحث الحالية." %}
+        <div class="p-5 text-center">
+          <i class="bi bi-journal-x text-muted display-4 mb-3"></i>
+          <p class="text-muted mb-0">
+            {% trans "لا توجد سجلات مطابقة لمعايير البحث الحالية." %}
           </p>
+          {% if current_section == 'inventory' %}
+             <small class="text-muted">{% trans "تأكد من وجود حركات مخزنية مسجلة." %}</small>
+          {% endif %}
         </div>
       {% endif %}
     </div>
@@ -298,56 +293,53 @@
 
   {# ========================= الترقيم (Pagination) ========================= #}
   {% if is_paginated %}
-    <nav class="mt-3" aria-label="{% trans 'ترقيم سجلات التدقيق' %}">
-      <ul class="pagination pagination-sm justify-content-center mb-0">
-
-        {# Previous #}
+    <nav class="mt-4" aria-label="Pagination">
+      <ul class="pagination pagination-sm justify-content-center">
         {% if page_obj.has_previous %}
           <li class="page-item">
-            <a class="page-link"
-               href="?{% if base_query %}{{ base_query }}&{% endif %}page={{ page_obj.previous_page_number }}">
+            <a class="page-link" href="?{% if base_query %}{{ base_query }}&{% endif %}page={{ page_obj.previous_page_number }}">
               &laquo;
             </a>
           </li>
         {% else %}
-          <li class="page-item disabled">
-            <span class="page-link">&laquo;</span>
-          </li>
+          <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
         {% endif %}
 
-        {# أرقام الصفحات حول الصفحة الحالية فقط (من -2 إلى +2) #}
         {% for num in paginator.page_range %}
           {% if num == page_obj.number %}
-            <li class="page-item active">
-              <span class="page-link">{{ num }}</span>
-            </li>
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
           {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
             <li class="page-item">
-              <a class="page-link"
-                 href="?{% if base_query %}{{ base_query }}&{% endif %}page={{ num }}">
+              <a class="page-link" href="?{% if base_query %}{{ base_query }}&{% endif %}page={{ num }}">
                 {{ num }}
               </a>
             </li>
           {% endif %}
         {% endfor %}
 
-        {# Next #}
         {% if page_obj.has_next %}
           <li class="page-item">
-            <a class="page-link"
-               href="?{% if base_query %}{{ base_query }}&{% endif %}page={{ page_obj.next_page_number }}">
+            <a class="page-link" href="?{% if base_query %}{{ base_query }}&{% endif %}page={{ page_obj.next_page_number }}">
               &raquo;
             </a>
           </li>
         {% else %}
-          <li class="page-item disabled">
-            <span class="page-link">&raquo;</span>
-          </li>
+          <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
         {% endif %}
-
       </ul>
     </nav>
   {% endif %}
 
 </div>
+
+{# تفعيل Popover للبيانات الإضافية #}
+<script>
+  document.addEventListener("DOMContentLoaded", function(){
+    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+    var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+      return new bootstrap.Popover(popoverTriggerEl)
+    })
+  });
+</script>
+
 {% endblock %}
