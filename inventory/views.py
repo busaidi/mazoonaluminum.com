@@ -242,7 +242,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
 class StockLevelListView(LoginRequiredMixin, ListView):
     model = StockLevel
-    template_name = "inventory/stock_level_list.html"
+    template_name = "inventory/stock_level/list.html"
     context_object_name = "levels"
     paginate_by = 50
 
@@ -263,7 +263,7 @@ class StockLevelListView(LoginRequiredMixin, ListView):
 
 class ReorderRuleListView(LoginRequiredMixin, ListView):
     model = ReorderRule
-    template_name = "inventory/reorder_rule_list.html"
+    template_name = "inventory/reorder_rules/list.html"
     context_object_name = "rules"
     paginate_by = 50
 
@@ -338,7 +338,7 @@ class WarehouseListView(LoginRequiredMixin, ListView):
 
 class InventorySettingsView(LoginRequiredMixin, UpdateView):
     model = InventorySettings
-    template_name = "inventory/settings.html"
+    template_name = "inventory/settings/settings.html"
     fields = ["allow_negative_stock", "stock_move_in_prefix", "stock_move_out_prefix", "stock_move_transfer_prefix"]
     success_url = "."
 
@@ -642,7 +642,7 @@ class ReorderRuleUpdateView(LoginRequiredMixin, UpdateView):
 
 class ReorderRuleDeleteView(LoginRequiredMixin, DeleteView):
     model = ReorderRule
-    template_name = "inventory/reorder_rules/confirm_delete.html"
+    template_name = "inventory/reorder_rules/delete.html"
     success_url = reverse_lazy("inventory:reorder_rule_list")
 
     def get_context_data(self, **kwargs):
