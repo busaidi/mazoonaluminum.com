@@ -6,13 +6,16 @@
 {% block inventory_content %}
 <div class="py-3">
 
+    {# ===================== Header ===================== #}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h4 mb-1 text-gray-800">
                 <i class="bi bi-file-earmark-plus me-2 text-{{ move_type_color }}"></i>
                 {{ page_title }}
             </h1>
-            <p class="text-muted small mb-0">{% trans "إنشاء مستند جديد وتحديد البنود." %}</p>
+            <p class="text-muted small mb-0">
+                {% trans "إنشاء مستند جديد وتحديد البنود." %}
+            </p>
         </div>
         <div>
             <a href="{{ list_url }}" class="btn btn-outline-secondary">
@@ -21,13 +24,14 @@
         </div>
     </div>
 
+    {# ===================== Form ===================== #}
     <form method="post" id="stock-move-form" novalidate>
         {% csrf_token %}
 
         <div class="card shadow-sm mb-4 border-top border-4 border-{{ move_type_color }}-subtle">
             <div class="card-body">
 
-                {# عرض الأخطاء العامة للفورم إن وجدت #}
+                {# أخطاء عامة للفورم #}
                 {% if form.non_field_errors %}
                     <div class="alert alert-danger" role="alert">
                         <i class="bi bi-exclamation-circle-fill me-2"></i>
@@ -37,78 +41,134 @@
 
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label fw-bold small text-secondary">{{ form.reference.label }}</label>
+                        <label class="form-label fw-bold small text-secondary">
+                            {{ form.reference.label }}
+                        </label>
                         {{ form.reference }}
-                        {{ form.reference.errors }}
+                        {% if form.reference.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.reference.errors|join:", " }}
+                            </div>
+                        {% endif %}
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label fw-bold small text-secondary">{{ form.move_date.label }}</label>
+                        <label class="form-label fw-bold small text-secondary">
+                            {{ form.move_date.label }}
+                        </label>
                         {{ form.move_date }}
-                        {{ form.move_date.errors }}
+                        {% if form.move_date.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.move_date.errors|join:", " }}
+                            </div>
+                        {% endif %}
                     </div>
 
+                    {# من (المصدر) - لحركات OUT / TRANSFER #}
                     {% if form.from_warehouse %}
-                    <div class="col-12"><hr class="my-1 text-muted opacity-25"></div>
-                    <div class="col-md-6">
-                        <div class="p-3 bg-light rounded-3 border">
-                            <h6 class="text-primary mb-3 small fw-bold text-uppercase">
-                                <i class="bi bi-box-arrow-right me-1"></i> {% trans "من (المصدر)" %}
-                            </h6>
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <label class="form-label small text-muted">{{ form.from_warehouse.label }}</label>
-                                    {{ form.from_warehouse }}
-                                    {{ form.from_warehouse.errors }}
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small text-muted">{{ form.from_location.label }}</label>
-                                    {{ form.from_location }}
-                                    {{ form.from_location.errors }}
+                        <div class="col-12">
+                            <hr class="my-1 text-muted opacity-25">
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border">
+                                <h6 class="text-primary mb-3 small fw-bold text-uppercase">
+                                    <i class="bi bi-box-arrow-right me-1"></i>
+                                    {% trans "من (المصدر)" %}
+                                </h6>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label small text-muted">
+                                            {{ form.from_warehouse.label }}
+                                        </label>
+                                        {{ form.from_warehouse }}
+                                        {% if form.from_warehouse.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ form.from_warehouse.errors|join:", " }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small text-muted">
+                                            {{ form.from_location.label }}
+                                        </label>
+                                        {{ form.from_location }}
+                                        {% if form.from_location.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ form.from_location.errors|join:", " }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
                     {% endif %}
 
+                    {# إلى (الوجهة) - لحركات IN / TRANSFER #}
                     {% if form.to_warehouse %}
-                    {% if not form.from_warehouse %}<div class="col-12"><hr class="my-1 text-muted opacity-25"></div>{% endif %}
-                    <div class="col-md-6">
-                        <div class="p-3 bg-light rounded-3 border">
-                            <h6 class="text-success mb-3 small fw-bold text-uppercase">
-                                <i class="bi bi-box-arrow-in-left me-1"></i> {% trans "إلى (الوجهة)" %}
-                            </h6>
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <label class="form-label small text-muted">{{ form.to_warehouse.label }}</label>
-                                    {{ form.to_warehouse }}
-                                    {{ form.to_warehouse.errors }}
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small text-muted">{{ form.to_location.label }}</label>
-                                    {{ form.to_location }}
-                                    {{ form.to_location.errors }}
+                        {% if not form.from_warehouse %}
+                            <div class="col-12">
+                                <hr class="my-1 text-muted opacity-25">
+                            </div>
+                        {% endif %}
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border">
+                                <h6 class="text-success mb-3 small fw-bold text-uppercase">
+                                    <i class="bi bi-box-arrow-in-left me-1"></i>
+                                    {% trans "إلى (الوجهة)" %}
+                                </h6>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label small text-muted">
+                                            {{ form.to_warehouse.label }}
+                                        </label>
+                                        {{ form.to_warehouse }}
+                                        {% if form.to_warehouse.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ form.to_warehouse.errors|join:", " }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small text-muted">
+                                            {{ form.to_location.label }}
+                                        </label>
+                                        {{ form.to_location }}
+                                        {% if form.to_location.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ form.to_location.errors|join:", " }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
                     {% endif %}
 
                     <div class="col-12">
-                        <label class="form-label fw-bold small text-secondary">{{ form.note.label }}</label>
+                        <label class="form-label fw-bold small text-secondary">
+                            {{ form.note.label }}
+                        </label>
                         {{ form.note }}
+                        {% if form.note.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.note.errors|join:", " }}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
 
+        {# ===================== Lines Card ===================== #}
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-body d-flex justify-content-between align-items-center py-3">
                 <h5 class="h6 mb-0 fw-bold text-primary">
-                    <i class="bi bi-list-check me-2"></i> {% trans "بنود الحركة" %}
+                    <i class="bi bi-list-check me-2"></i>
+                    {% trans "بنود الحركة" %}
                 </h5>
                 <button type="button" class="btn btn-sm btn-primary" id="add-line-btn">
-                    <i class="bi bi-plus-lg me-1"></i> {% trans "إضافة منتج" %}
+                    <i class="bi bi-plus-lg me-1"></i>
+                    {% trans "إضافة منتج" %}
                 </button>
             </div>
 
@@ -132,8 +192,19 @@
                     </thead>
                     <tbody id="lines-body">
                         {% for line_form in lines_formset %}
+                            {# أخطاء عامة للسطر الواحد (لو أضفت clean على الفورم) #}
+                            {% if line_form.non_field_errors %}
+                                <tr>
+                                    <td colspan="4">
+                                        <div class="text-danger small mb-2">
+                                            {{ line_form.non_field_errors|join:", " }}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endif %}
+
                             <tr class="line-row">
-                                {# الحقول المخفية (مثل ID عند التعديل) #}
+                                {# الحقول المخفية (ID, DELETE hidden, ..) #}
                                 {% for hidden in line_form.hidden_fields %}
                                     {{ hidden }}
                                 {% endfor %}
@@ -141,29 +212,40 @@
                                 <td class="p-2">
                                     {{ line_form.product }}
                                     {% if line_form.product.errors %}
-                                        <div class="text-danger small mt-1">{{ line_form.product.errors|join:", " }}</div>
+                                        <div class="text-danger small mt-1">
+                                            {{ line_form.product.errors|join:", " }}
+                                        </div>
                                     {% endif %}
                                 </td>
                                 <td class="p-2">
                                     {{ line_form.quantity }}
                                     {% if line_form.quantity.errors %}
-                                        <div class="text-danger small mt-1">{{ line_form.quantity.errors|join:", " }}</div>
+                                        <div class="text-danger small mt-1">
+                                            {{ line_form.quantity.errors|join:", " }}
+                                        </div>
                                     {% endif %}
                                 </td>
                                 <td class="p-2">
                                     {{ line_form.uom }}
                                     {% if line_form.uom.errors %}
-                                        <div class="text-danger small mt-1">{{ line_form.uom.errors|join:", " }}</div>
+                                        <div class="text-danger small mt-1">
+                                            {{ line_form.uom.errors|join:", " }}
+                                        </div>
                                     {% endif %}
                                 </td>
                                 <td class="text-center p-2">
                                     {% if line_form.instance.pk %}
                                         <div class="form-check d-flex justify-content-center">
                                             {{ line_form.DELETE }}
-                                            <label class="form-check-label ms-1 text-muted small" for="{{ line_form.DELETE.id_for_label }}">{% trans "حذف" %}</label>
+                                            <label class="form-check-label ms-1 text-muted small"
+                                                   for="{{ line_form.DELETE.id_for_label }}">
+                                                {% trans "حذف" %}
+                                            </label>
                                         </div>
                                     {% else %}
-                                        <button type="button" class="btn btn-sm btn-outline-danger border-0 remove-row-btn" title="{% trans 'حذف السطر' %}">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger border-0 remove-row-btn"
+                                                title="{% trans 'حذف السطر' %}">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     {% endif %}
@@ -175,21 +257,33 @@
             </div>
         </div>
 
+        {# ===================== Footer Actions ===================== #}
         <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-5">
             <button type="submit" class="btn btn-{{ move_type_color }} px-5 py-2 fw-bold">
-                <i class="bi bi-check-lg me-2"></i> {% trans "حفظ المسودة" %}
+                <i class="bi bi-check-lg me-2"></i>
+                {% trans "حفظ المسودة" %}
             </button>
         </div>
 
     </form>
 
-    {# قالب مخفي لنسخ الصفوف الجديدة عبر JS #}
+    {# ===================== Empty Row Template ===================== #}
     <table style="display: none;">
         <tbody id="empty-form-row">
             <tr class="line-row">
-                <td class="p-2">{{ lines_formset.empty_form.product }}</td>
-                <td class="p-2">{{ lines_formset.empty_form.quantity }}</td>
-                <td class="p-2">{{ lines_formset.empty_form.uom }}</td>
+                {# مهم: الحقول المخفية للـ empty_form (مثلاً id أو ORDER إن وجد) #}
+                {% for hidden in lines_formset.empty_form.hidden_fields %}
+                    {{ hidden }}
+                {% endfor %}
+                <td class="p-2">
+                    {{ lines_formset.empty_form.product }}
+                </td>
+                <td class="p-2">
+                    {{ lines_formset.empty_form.quantity }}
+                </td>
+                <td class="p-2">
+                    {{ lines_formset.empty_form.uom }}
+                </td>
                 <td class="text-center p-2">
                     <button type="button" class="btn btn-sm btn-outline-danger border-0 remove-row-btn">
                         <i class="bi bi-trash"></i>
@@ -201,17 +295,24 @@
 
 </div>
 
-{# JavaScript بسيط لإدارة الصفوف #}
+{# ===================== JavaScript لإدارة الصفوف ===================== #}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const addBtn = document.getElementById('add-line-btn');
         const tableBody = document.getElementById('lines-body');
-        const emptyRow = document.getElementById('empty-form-row').firstElementChild;
-        const totalFormsInput = document.getElementById('id_stock_move_lines-TOTAL_FORMS');
+        const emptyRow = document.getElementById('empty-form-row')?.firstElementChild;
+        const totalFormsInput = document.querySelector(
+            'input[name="{{ lines_formset.prefix }}-TOTAL_FORMS"]'
+        );
 
-        // دالة إضافة سطر جديد
+        // حماية بسيطة لو في عنصر ناقص
+        if (!addBtn || !tableBody || !emptyRow || !totalFormsInput) {
+            return;
+        }
+
+        // إضافة سطر جديد
         addBtn.addEventListener('click', function() {
-            const formCount = parseInt(totalFormsInput.value);
+            const formCount = parseInt(totalFormsInput.value, 10) || 0;
             const newRow = emptyRow.cloneNode(true);
 
             // استبدال __prefix__ بالرقم الحالي للفورم
@@ -221,12 +322,15 @@
             totalFormsInput.value = formCount + 1;
         });
 
-        // دالة حذف سطر (للصفوف الجديدة فقط التي لم تحفظ بعد)
+        // حذف سطر (للصفوف الجديدة غير المحفوظة)
         tableBody.addEventListener('click', function(e) {
-            if (e.target.closest('.remove-row-btn')) {
-                const row = e.target.closest('tr');
-                row.remove();
-                // ملاحظة: لا ننقص TOTAL_FORMS لأن جانغو يتعامل مع الفجوات في الأرقام
+            const btn = e.target.closest('.remove-row-btn');
+            if (btn) {
+                const row = btn.closest('tr');
+                if (row) {
+                    row.remove();
+                }
+                // لا نقلل TOTAL_FORMS، جانغو يتعامل مع الفجوات
             }
         });
     });

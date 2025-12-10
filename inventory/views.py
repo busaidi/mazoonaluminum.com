@@ -135,6 +135,8 @@ class StockMoveListView(LoginRequiredMixin, StockMoveContextMixin, ListView):
         return qs.none()
 
 
+# inventory/views.py
+
 class StockMoveCreateView(LoginRequiredMixin, StockMoveContextMixin, CreateView):
     model = StockMove
     template_name = "inventory/stock_move/form.html"
@@ -142,6 +144,19 @@ class StockMoveCreateView(LoginRequiredMixin, StockMoveContextMixin, CreateView)
     def get_form_class(self):
         meta = MOVE_TYPE_META.get(self.move_type)
         return meta["form_class"] if meta else ReceiptMoveForm
+
+    # ✅ الإضافة الجديدة والمهمة جداً
+    def get_form_kwargs(self):
+        """
+        نحقن نوع الحركة في الـ Instance قبل معالجة الفورم.
+        هذا يمنع الموديل من استخدام القيمة الافتراضية (IN) أثناء التحقق.
+        """
+        kwargs = super().get_form_kwargs()
+        # إذا كانت عملية إنشاء جديدة (لا يوجد instance ممرر)
+        if not kwargs.get('instance'):
+            # ننشئ instance مبدئي ونحدد نوعه فوراً
+            kwargs['instance'] = self.model(move_type=self.move_type)
+        return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -155,6 +170,7 @@ class StockMoveCreateView(LoginRequiredMixin, StockMoveContextMixin, CreateView)
         context = self.get_context_data()
         lines_formset = context['lines_formset']
 
+        # (تم نقل تحديد النوع إلى get_form_kwargs، لكن لا يضر بقاؤه هنا للتأكيد)
         form.instance.move_type = self.move_type
 
         if not lines_formset.is_valid():
