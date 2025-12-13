@@ -1,97 +1,495 @@
 {% extends "inventory/base_inventory.html" %}
 {% load i18n %}
 
-{% block inventory_title %}{{ page_title }}{% endblock %}
+{% block inventory_title %}
+  {% if form.instance.pk %}
+    {% trans "تعديل منتج" %}: {{ form.instance.code }}
+  {% else %}
+    {% trans "إضافة منتج جديد" %}
+  {% endif %}
+{% endblock %}
 
 {% block inventory_content %}
-<div class="container py-4" style="max-width: 900px;">
+<div class="py-3">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h4 mb-0 text-gray-800">{{ page_title }}</h1>
-        <a href="{% url 'inventory:product_list' %}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-right"></i> {% trans "رجوع للقائمة" %}
+  {# =========================
+     Header
+     ========================= #}
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+      <h1 class="h4 mb-1">
+        {% if form.instance.pk %}
+          <i class="bi bi-pencil-square me-2 text-primary"></i>{% trans "تعديل منتج" %}
+        {% else %}
+          <i class="bi bi-box-seam me-2 text-primary"></i>{% trans "إضافة منتج جديد" %}
+        {% endif %}
+      </h1>
+      <div class="text-muted small">
+        {% trans "أدخل بيانات المنتج وحدد نوعه ووحدات القياس والتسعير." %}
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      {% if cancel_url %}
+        <a class="btn btn-outline-secondary" href="{{ cancel_url }}">
+          <i class="bi bi-x-lg me-1"></i>{% trans "إلغاء" %}
         </a>
+      {% else %}
+        <a class="btn btn-outline-secondary" href="{% url 'inventory:product_list' %}">
+          <i class="bi bi-x-lg me-1"></i>{% trans "إلغاء" %}
+        </a>
+      {% endif %}
     </div>
+  </div>
 
-    <div class="card shadow-sm border-0">
-        <div class="card-body p-4">
-            <form method="post">
-                {% csrf_token %}
-
-                {% if form.non_field_errors %}
-                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
-                {% endif %}
-
-                <div class="row g-3">
-                    <div class="col-12">
-                        <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">{% trans "بيانات التعريف" %}</h6>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">{{ form.code.label }}</label>
-                        {{ form.code }}
-                        {{ form.code.errors }}
-                    </div>
-                    <div class="col-md-8">
-                        <label class="form-label">{{ form.name.label }}</label>
-                        {{ form.name }}
-                        {{ form.name.errors }}
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">{{ form.category.label }}</label>
-                        {{ form.category }}
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">{{ form.barcode.label }}</label>
-                        {{ form.barcode }}
-                    </div>
-
-                    <div class="col-12 mt-4">
-                        <h6 class="text-success fw-bold mb-3 border-bottom pb-2">{% trans "المخزون والتسعير" %}</h6>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">{{ form.product_type.label }}</label>
-                        {{ form.product_type }}
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">{{ form.base_uom.label }}</label>
-                        {{ form.base_uom }}
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">{{ form.default_sale_price.label }}</label>
-                        {{ form.default_sale_price }}
-                    </div>
-
-                    <div class="col-12 mt-3">
-                        <div class="form-check form-switch">
-                            {{ form.is_stock_item }}
-                            <label class="form-check-label" for="{{ form.is_stock_item.id_for_label }}">
-                                {{ form.is_stock_item.label }}
-                            </label>
-                        </div>
-                        <div class="form-check form-switch mt-2">
-                            {{ form.is_active }}
-                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-                                {{ form.is_active.label }}
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="col-12 mt-4">
-                        <label class="form-label">{{ form.description.label }}</label>
-                        {{ form.description }}
-                    </div>
-                </div>
-
-                <div class="d-flex justify-content-end mt-4 pt-3 border-top">
-                    <button type="submit" class="btn btn-primary px-4">
-                        <i class="bi bi-save me-2"></i> {% trans "حفظ البيانات" %}
-                    </button>
-                </div>
-            </form>
+{% comment %}  {# =========================
+     Global form errors
+     ========================= #}{% endcomment %}
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger d-flex gap-2 align-items-start">
+      <i class="bi bi-exclamation-triangle"></i>
+      <div>
+        <div class="fw-semibold">{% trans "تأكد من البيانات" %}</div>
+        <div class="small">
+          {{ form.non_field_errors }}
         </div>
+      </div>
     </div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+
+    <div class="row g-3">
+  {% comment %}    {# =========================
+         Left: Main form (tabs)
+         ========================= #}{% endcomment %}
+      <div class="col-lg-8">
+
+        <div class="card shadow-sm border-0">
+          <div class="card-body p-3 p-md-4">
+
+            {# --- Quick identity row --- #}
+            <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+              <span class="badge text-bg-light border">
+                {% trans "SKU" %}: <span class="fw-semibold">{{ form.instance.code|default:"—" }}</span>
+              </span>
+
+              {% if form.instance.pk %}
+                <span class="badge text-bg-light border">
+                  {% trans "ID" %}: <span class="fw-semibold">{{ form.instance.pk }}</span>
+                </span>
+              {% endif %}
+
+              {# Optional badges from instance #}
+              {% if form.instance.pk %}
+                {% if form.instance.product_type == "service" %}
+                  <span class="badge text-bg-info">{% trans "خدمة" %}</span>
+                {% elif form.instance.product_type == "consumable" %}
+                  <span class="badge text-bg-warning">{% trans "مستهلك" %}</span>
+                {% else %}
+                  <span class="badge text-bg-primary">{% trans "مخزني" %}</span>
+                {% endif %}
+              {% endif %}
+            </div>
+
+   {% comment %}         {# =========================
+               Tabs header
+               ========================= #}{% endcomment %}
+            <ul class="nav nav-tabs" id="productFormTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="tab-basic" data-bs-toggle="tab" data-bs-target="#pane-basic" type="button" role="tab">
+                  <i class="bi bi-ui-checks-grid me-1"></i>{% trans "أساسي" %}
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-translation" data-bs-toggle="tab" data-bs-target="#pane-translation" type="button" role="tab">
+                  <i class="bi bi-translate me-1"></i>{% trans "الترجمة" %}
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-uom" data-bs-toggle="tab" data-bs-target="#pane-uom" type="button" role="tab">
+                  <i class="bi bi-arrows-expand me-1"></i>{% trans "الوحدات" %}
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-weight" data-bs-toggle="tab" data-bs-target="#pane-weight" type="button" role="tab">
+                  <i class="bi bi-speedometer2 me-1"></i>{% trans "الوزن" %}
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-pricing" data-bs-toggle="tab" data-bs-target="#pane-pricing" type="button" role="tab">
+                  <i class="bi bi-cash-coin me-1"></i>{% trans "التسعير" %}
+                </button>
+              </li>
+            </ul>
+
+{% comment %}            {# =========================
+               Tabs content
+               ========================= #}{% endcomment %}
+            <div class="tab-content pt-3">
+
+              {# -------- Basic -------- #}
+              <div class="tab-pane fade show active" id="pane-basic" role="tabpanel" aria-labelledby="tab-basic">
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label class="form-label">{{ form.code.label }}</label>
+                    {{ form.code }}
+                    {% if form.code.errors %}<div class="invalid-feedback d-block">{{ form.code.errors|striptags }}</div>{% endif %}
+                    {% if form.code.help_text %}<div class="form-text">{{ form.code.help_text }}</div>{% endif %}
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">{{ form.barcode.label }}</label>
+                    {{ form.barcode }}
+                    {% if form.barcode.errors %}<div class="invalid-feedback d-block">{{ form.barcode.errors|striptags }}</div>{% endif %}
+                    {% if form.barcode.help_text %}<div class="form-text">{{ form.barcode.help_text }}</div>{% endif %}
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">{{ form.product_type.label }}</label>
+                    {{ form.product_type }}
+                    {% if form.product_type.errors %}<div class="invalid-feedback d-block">{{ form.product_type.errors|striptags }}</div>{% endif %}
+                    <div class="form-text">
+                      {% trans "الخدمة لا تتبع في المخزون، وسيتم تعطيل الوزن والوحدة البديلة." %}
+                    </div>
+                  </div>
+
+                  <div class="col-md-12">
+                    <label class="form-label">{{ form.category.label }}</label>
+                    {{ form.category }}
+                    {% if form.category.errors %}<div class="invalid-feedback d-block">{{ form.category.errors|striptags }}</div>{% endif %}
+                  </div>
+                </div>
+              </div>
+
+              {# -------- Translation -------- #}
+              <div class="tab-pane fade" id="pane-translation" role="tabpanel" aria-labelledby="tab-translation">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <div class="p-3 border rounded-3 bg-light bg-opacity-50">
+                      <div class="fw-semibold mb-2"><i class="bi bi-flag me-1"></i>{% trans "عربي" %}</div>
+
+                      <label class="form-label">{{ form.name_ar.label }}</label>
+                      {{ form.name_ar }}
+                      {% if form.name_ar.errors %}<div class="invalid-feedback d-block">{{ form.name_ar.errors|striptags }}</div>{% endif %}
+
+                      <div class="mt-3">
+                        <label class="form-label">{{ form.short_description_ar.label }}</label>
+                        {{ form.short_description_ar }}
+                        {% if form.short_description_ar.errors %}<div class="invalid-feedback d-block">{{ form.short_description_ar.errors|striptags }}</div>{% endif %}
+                      </div>
+
+                      <div class="mt-3">
+                        <label class="form-label">{{ form.description_ar.label }}</label>
+                        {{ form.description_ar }}
+                        {% if form.description_ar.errors %}<div class="invalid-feedback d-block">{{ form.description_ar.errors|striptags }}</div>{% endif %}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6">
+                    <div class="p-3 border rounded-3 bg-light bg-opacity-50">
+                      <div class="fw-semibold mb-2"><i class="bi bi-flag-fill me-1"></i>{% trans "English" %}</div>
+
+                      <label class="form-label">{{ form.name_en.label }}</label>
+                      {{ form.name_en }}
+                      {% if form.name_en.errors %}<div class="invalid-feedback d-block">{{ form.name_en.errors|striptags }}</div>{% endif %}
+
+                      <div class="mt-3">
+                        <label class="form-label">{{ form.short_description_en.label }}</label>
+                        {{ form.short_description_en }}
+                        {% if form.short_description_en.errors %}<div class="invalid-feedback d-block">{{ form.short_description_en.errors|striptags }}</div>{% endif %}
+                      </div>
+
+                      <div class="mt-3">
+                        <label class="form-label">{{ form.description_en.label }}</label>
+                        {{ form.description_en }}
+                        {% if form.description_en.errors %}<div class="invalid-feedback d-block">{{ form.description_en.errors|striptags }}</div>{% endif %}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {# -------- UOM -------- #}
+              <div class="tab-pane fade" id="pane-uom" role="tabpanel" aria-labelledby="tab-uom">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">{{ form.base_uom.label }}</label>
+                    {{ form.base_uom }}
+                    {% if form.base_uom.errors %}<div class="invalid-feedback d-block">{{ form.base_uom.errors|striptags }}</div>{% endif %}
+                  </div>
+
+                  <div class="col-md-6">
+                    <div class="alert alert-light border mb-0">
+                      <div class="small text-muted">
+                        {% trans "الوحدة البديلة مفيدة عندما تريد البيع أو الشراء بوحدة مختلفة عن الوحدة الأساسية (مثال: بار ↔ متر)." %}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6" data-service-disable>
+                    <label class="form-label">{{ form.alt_uom.label }}</label>
+                    {{ form.alt_uom }}
+                    {% if form.alt_uom.errors %}<div class="invalid-feedback d-block">{{ form.alt_uom.errors|striptags }}</div>{% endif %}
+                  </div>
+
+                  <div class="col-md-6" data-service-disable>
+                    <label class="form-label">{{ form.alt_factor.label }}</label>
+                    {{ form.alt_factor }}
+                    {% if form.alt_factor.errors %}<div class="invalid-feedback d-block">{{ form.alt_factor.errors|striptags }}</div>{% endif %}
+                    <div class="form-text">
+                      {% trans "كم تساوي 1 وحدة بديلة من الوحدة الأساسية." %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {# -------- Weight -------- #}
+              <div class="tab-pane fade" id="pane-weight" role="tabpanel" aria-labelledby="tab-weight">
+                <div class="row g-3">
+                  <div class="col-md-6" data-service-disable>
+                    <label class="form-label">{{ form.weight_uom.label }}</label>
+                    {{ form.weight_uom }}
+                    {% if form.weight_uom.errors %}<div class="invalid-feedback d-block">{{ form.weight_uom.errors|striptags }}</div>{% endif %}
+                  </div>
+
+                  <div class="col-md-6" data-service-disable>
+                    <label class="form-label">{{ form.weight_per_base.label }}</label>
+                    {{ form.weight_per_base }}
+                    {% if form.weight_per_base.errors %}<div class="invalid-feedback d-block">{{ form.weight_per_base.errors|striptags }}</div>{% endif %}
+                  </div>
+
+                  <div class="col-12">
+                    <div class="alert alert-light border mb-0">
+                      <div class="small text-muted">
+                        {% trans "الوزن يُستخدم للتقارير والشحن وتقدير التكلفة. يمكن تركه فارغًا إذا غير مطلوب." %}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {# -------- Pricing -------- #}
+              <div class="tab-pane fade" id="pane-pricing" role="tabpanel" aria-labelledby="tab-pricing">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">{{ form.default_sale_price.label }}</label>
+                    <div class="input-group">
+                      {{ form.default_sale_price }}
+                      <span class="input-group-text">OMR</span>
+                    </div>
+                    {% if form.default_sale_price.errors %}<div class="invalid-feedback d-block">{{ form.default_sale_price.errors|striptags }}</div>{% endif %}
+                    <div class="form-text">
+                      {% trans "هذا السعر يُستخدم كقيمة افتراضية في سطر المبيعات ويمكن تغييره في الفاتورة/الطلب." %}
+                    </div>
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label">{{ form.image.label }}</label>
+                    {{ form.image }}
+                    {% if form.image.errors %}<div class="invalid-feedback d-block">{{ form.image.errors|striptags }}</div>{% endif %}
+                    {% if form.instance.image %}
+                      <div class="mt-2 d-flex align-items-center gap-2">
+                        <img src="{{ form.instance.image.url }}" alt="" class="rounded border" style="width:56px;height:56px;object-fit:cover;">
+                        <div class="small text-muted">
+                          {% trans "صورة حالية" %}
+                        </div>
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+
+            </div> {# /tab-content #}
+
+          </div>
+
+          {# Sticky actions (footer) #}
+          <div class="card-footer bg-white border-0 pt-0 pb-3 px-3 px-md-4">
+            <div class="d-flex justify-content-end gap-2">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check2-circle me-1"></i>
+                {% if form.instance.pk %}{% trans "حفظ التعديلات" %}{% else %}{% trans "حفظ المنتج" %}{% endif %}
+              </button>
+              {% if cancel_url %}
+                <a class="btn btn-outline-secondary" href="{{ cancel_url }}">
+                  {% trans "إلغاء" %}
+                </a>
+              {% else %}
+                <a class="btn btn-outline-secondary" href="{% url 'inventory:product_list' %}">
+                  {% trans "إلغاء" %}
+                </a>
+              {% endif %}
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+{% comment %}      {# =========================
+         Right: Side summary
+         ========================= #}{% endcomment %}
+      <div class="col-lg-4">
+        <div class="card shadow-sm border-0">
+          <div class="card-body p-3 p-md-4">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="fw-semibold">{% trans "ملخص سريع" %}</div>
+              <span class="badge bg-light text-dark border" id="js-type-badge">{% trans "نوع المنتج" %}</span>
+            </div>
+
+            <div class="small text-muted mb-3">
+              {% trans "هذا الملخص يساعدك على التأكد من الإعدادات قبل الحفظ." %}
+            </div>
+
+            <div class="vstack gap-2 small">
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">{% trans "يتابع في المخزون" %}</span>
+                <span class="fw-semibold" id="js-stock-flag">—</span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">{% trans "الوحدة الأساسية" %}</span>
+                <span class="fw-semibold" id="js-base-uom">—</span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">{% trans "وحدة بديلة" %}</span>
+                <span class="fw-semibold" id="js-alt-uom">—</span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span class="text-muted">{% trans "الوزن" %}</span>
+                <span class="fw-semibold" id="js-weight">—</span>
+              </div>
+            </div>
+
+            <hr class="my-3">
+
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="text-muted small">{% trans "الحالة" %}</span>
+              <div class="d-flex gap-2 align-items-center">
+                <div class="form-check form-switch m-0">
+                  {{ form.is_active }}
+                  <label class="form-check-label small ms-1" for="{{ form.is_active.id_for_label }}">
+                    {% trans "نشط" %}
+                  </label>
+                </div>
+                <div class="form-check form-switch m-0">
+                  {{ form.is_published }}
+                  <label class="form-check-label small ms-1" for="{{ form.is_published.id_for_label }}">
+                    {% trans "منشور" %}
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {% if form.is_active.errors %}<div class="invalid-feedback d-block">{{ form.is_active.errors|striptags }}</div>{% endif %}
+            {% if form.is_published.errors %}<div class="invalid-feedback d-block">{{ form.is_published.errors|striptags }}</div>{% endif %}
+          </div>
+        </div>
+
+        <div class="alert alert-light border mt-3 mb-0">
+          <div class="d-flex gap-2">
+            <i class="bi bi-lightbulb"></i>
+            <div class="small text-muted">
+              {% trans "ملاحظة: السعر النهائي يُثبت في سطر المبيعات (SalesLine) بينما هذا الحقل هو سعر افتراضي للمنتج." %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </form>
 </div>
+
+<script>
+(function() {
+  function qs(id){ return document.getElementById(id); }
+  function getSelectText(selectEl) {
+    if (!selectEl) return "—";
+    const opt = selectEl.options[selectEl.selectedIndex];
+    return opt ? (opt.text || "—") : "—";
+  }
+
+  const productType = qs("{{ form.product_type.id_for_label }}");
+  const baseUom = qs("{{ form.base_uom.id_for_label }}");
+  const altUom = qs("{{ form.alt_uom.id_for_label }}");
+  const altFactor = qs("{{ form.alt_factor.id_for_label }}");
+  const weightUom = qs("{{ form.weight_uom.id_for_label }}");
+  const weightPerBase = qs("{{ form.weight_per_base.id_for_label }}");
+
+  const badge = qs("js-type-badge");
+  const stockFlag = qs("js-stock-flag");
+  const baseUomTxt = qs("js-base-uom");
+  const altUomTxt = qs("js-alt-uom");
+  const weightTxt = qs("js-weight");
+
+  function isService() {
+    return productType && productType.value === "service";
+  }
+
+  function setDisabledForService(disabled) {
+    const blocks = document.querySelectorAll("[data-service-disable]");
+    blocks.forEach(function(block) {
+      const inputs = block.querySelectorAll("input, select, textarea");
+      inputs.forEach(function(el) {
+        el.disabled = disabled;
+      });
+      block.classList.toggle("opacity-50", disabled);
+    });
+  }
+
+  function updateSummary() {
+    const pt = productType ? productType.value : "";
+    if (badge) {
+      if (pt === "service") badge.textContent = "{% trans 'خدمة' %}";
+      else if (pt === "consumable") badge.textContent = "{% trans 'مستهلك' %}";
+      else badge.textContent = "{% trans 'مخزني' %}";
+    }
+
+    if (stockFlag) {
+      stockFlag.textContent = (pt === "service") ? "{% trans 'لا' %}" : "{% trans 'نعم' %}";
+    }
+
+    if (baseUomTxt) baseUomTxt.textContent = getSelectText(baseUom);
+
+    if (altUomTxt) {
+      const au = getSelectText(altUom);
+      const af = altFactor ? altFactor.value : "";
+      altUomTxt.textContent = (au !== "—" && au) ? (af ? (au + " (" + af + ")") : au) : "—";
+    }
+
+    if (weightTxt) {
+      const wu = getSelectText(weightUom);
+      const wp = weightPerBase ? weightPerBase.value : "";
+      weightTxt.textContent = (wu !== "—" && wu && wp) ? (wp + " " + wu) : "—";
+    }
+  }
+
+  function onTypeChange() {
+    const service = isService();
+    setDisabledForService(service);
+
+    // optional UX: clear values when switching to service (won't submit anyway due to disabled)
+    if (service) {
+      if (altUom) altUom.value = "";
+      if (altFactor) altFactor.value = "";
+      if (weightUom) weightUom.value = "";
+      if (weightPerBase) weightPerBase.value = "";
+    }
+    updateSummary();
+  }
+
+  // Bind events
+  [productType, baseUom, altUom, altFactor, weightUom, weightPerBase].forEach(function(el){
+    if (!el) return;
+    el.addEventListener("change", updateSummary);
+    el.addEventListener("keyup", updateSummary);
+  });
+
+  if (productType) productType.addEventListener("change", onTypeChange);
+
+  // init
+  onTypeChange();
+})();
+</script>
 {% endblock %}

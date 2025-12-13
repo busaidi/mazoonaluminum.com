@@ -6,266 +6,383 @@
 {% block inventory_content %}
 <div class="py-3">
 
-    <div class="d-flex justify-content-between align-items-start mb-4">
-        <div class="d-flex align-items-center">
-            <div class="me-3">
-                {% if product.image %}
-                    <img src="{{ product.image.url }}" class="rounded shadow-sm border"
-                         alt="{{ product.name }}" style="width: 64px; height: 64px; object-fit: cover;">
-                {% else %}
-                    <div class="rounded bg-white border d-flex align-items-center justify-content-center text-muted shadow-sm"
-                         style="width: 64px; height: 64px;">
-                        <i class="bi bi-box-seam fs-2 opacity-50"></i>
-                    </div>
-                {% endif %}
+{% comment %}  {# =========================
+     Header / Identity
+     ========================= #}{% endcomment %}
+  <div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-3 p-md-4">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+
+        <div class="d-flex align-items-center gap-3">
+          <div>
+            {% if product.image %}
+              <img src="{{ product.image.url }}" class="rounded border shadow-sm"
+                   alt="{{ product.name }}" style="width:72px;height:72px;object-fit:cover;">
+            {% else %}
+              <div class="rounded bg-white border d-flex align-items-center justify-content-center text-muted shadow-sm"
+                   style="width:72px;height:72px;">
+                <i class="bi bi-box-seam fs-2 opacity-50"></i>
+              </div>
+            {% endif %}
+          </div>
+
+          <div>
+            <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+              <h1 class="h4 mb-0">{{ product.name }}</h1>
+
+              {% if product.is_active %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
+                  {% trans "نشط" %}
+                </span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill">
+                  {% trans "مؤرشف" %}
+                </span>
+              {% endif %}
+
+              {% if product.product_type == "service" %}
+                <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill">
+                  {% trans "خدمة" %}
+                </span>
+              {% elif product.product_type == "consumable" %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill">
+                  {% trans "مستهلك" %}
+                </span>
+              {% else %}
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">
+                  {% trans "مخزني" %}
+                </span>
+              {% endif %}
             </div>
 
-            <div>
-                <div class="d-flex align-items-center gap-2 mb-1">
-                    <h1 class="h3 mb-0 text-gray-800">{{ product.name }}</h1>
-                    {% if product.is_active %}
-                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small">
-                            {% trans "نشط" %}
-                        </span>
-                    {% else %}
-                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill small">
-                            {% trans "مؤرشف" %}
-                        </span>
-                    {% endif %}
-                </div>
-                <div class="d-flex gap-3 text-muted small font-monospace">
-                    <span><i class="bi bi-upc-scan me-1"></i> {{ product.code }}</span>
-                    {% if product.barcode %}
-                        <span class="border-start ps-3"><i class="bi bi-qr-code me-1"></i> {{ product.barcode }}</span>
-                    {% endif %}
-                </div>
+            <div class="d-flex flex-wrap gap-3 text-muted small font-monospace">
+              <span class="d-inline-flex align-items-center gap-1">
+                <i class="bi bi-upc-scan"></i> {{ product.code }}
+              </span>
+
+              {% if product.barcode %}
+                <span class="d-inline-flex align-items-center gap-1 border-start ps-3">
+                  <i class="bi bi-qr-code"></i> {{ product.barcode }}
+                </span>
+              {% endif %}
             </div>
+
+            {% if product.short_description %}
+              <div class="text-muted small mt-2">
+                {{ product.short_description }}
+              </div>
+            {% endif %}
+          </div>
         </div>
 
         <div class="d-flex gap-2 print-hide">
-            <button class="btn btn-light border shadow-sm" onclick="window.print()" title="{% trans 'طباعة بطاقة الصنف' %}">
-                <i class="bi bi-printer"></i>
-            </button>
-            <a href="{% url 'inventory:product_update' product.code %}" class="btn btn-outline-primary shadow-sm">
-                <i class="bi bi-pencil-square me-1"></i> {% trans "تعديل" %}
-            </a>
-        </div>
-    </div>
+          <button type="button"
+                  class="btn btn-light border shadow-sm"
+                  onclick="window.print()"
+                  title="{% trans 'طباعة بطاقة الصنف' %}">
+            <i class="bi bi-printer"></i>
+          </button>
 
-    {% if product.product_type == 'stockable' %}
+          <a href="{% url 'inventory:product_edit' product.code %}" class="btn btn-outline-primary shadow-sm">
+            <i class="bi bi-pencil-square me-1"></i> {% trans "تعديل" %}
+          </a>
+
+          <a href="{% url 'inventory:product_list' %}" class="btn btn-outline-secondary shadow-sm">
+            <i class="bi bi-arrow-return-right me-1"></i> {% trans "الرجوع للقائمة" %}
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+{% comment %}  {# =========================
+     KPI cards (only for tracked-in-stock items)
+     NOTE: الأفضل ربطها بخصيصة is_stock_item (property) إن كانت موجودة
+     ========================= #}{% endcomment %}
+  {% if product.product_type != "service" %}
     <div class="row g-3 mb-4">
-
-        <div class="col-md-3 col-sm-6">
-            <div class="card shadow-sm border-0 h-100 bg-primary bg-opacity-10">
-                <div class="card-body">
-                    <h6 class="text-primary text-uppercase small fw-bold mb-2">{% trans "الرصيد الإجمالي" %}</h6>
-                    <div class="d-flex align-items-baseline">
-                        <span class="h3 fw-bold mb-0 text-gray-800">{{ product.total_qty|floatformat:2 }}</span>
-                        <span class="ms-1 small text-muted">{{ product.base_uom.name }}</span>
-                    </div>
-                </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="card shadow-sm border-0 h-100 bg-primary bg-opacity-10">
+          <div class="card-body">
+            <div class="text-primary text-uppercase small fw-bold mb-2">{% trans "الرصيد الإجمالي" %}</div>
+            <div class="d-flex align-items-baseline">
+              <span class="h3 fw-bold mb-0">{{ product.total_qty|default:0|floatformat:2 }}</span>
+              <span class="ms-2 small text-muted">{{ product.base_uom.name }}</span>
             </div>
+          </div>
         </div>
+      </div>
 
-        <div class="col-md-3 col-sm-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <h6 class="text-success text-uppercase small fw-bold mb-2">{% trans "المتاح للبيع" %}</h6>
-                    <div class="d-flex align-items-baseline">
-                        {# نستخدم Property المحسوبة أو الحساب المباشر هنا #}
-                        <span class="h3 fw-bold mb-0 text-success">
-                            {{ product.calculated_available_qty|floatformat:2 }}
-                        </span>
-                        <span class="ms-1 small text-muted">{{ product.base_uom.name }}</span>
-                    </div>
-                </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <div class="text-success text-uppercase small fw-bold mb-2">{% trans "المتاح للبيع" %}</div>
+            <div class="d-flex align-items-baseline">
+              <span class="h3 fw-bold mb-0 text-success">
+                {{ product.calculated_available_qty|default:0|floatformat:2 }}
+              </span>
+              <span class="ms-2 small text-muted">{{ product.base_uom.name }}</span>
             </div>
+          </div>
         </div>
+      </div>
 
-        <div class="col-md-3 col-sm-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <h6 class="text-warning text-uppercase small fw-bold mb-2">{% trans "محجوز" %}</h6>
-                    <div class="d-flex align-items-baseline">
-                        <span class="h3 fw-bold mb-0 text-dark">{{ product.total_reserved|floatformat:2 }}</span>
-                        <span class="ms-1 small text-muted">{{ product.base_uom.name }}</span>
-                    </div>
-                </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <div class="text-warning text-uppercase small fw-bold mb-2">{% trans "محجوز" %}</div>
+            <div class="d-flex align-items-baseline">
+              <span class="h3 fw-bold mb-0">{{ product.total_reserved|default:0|floatformat:2 }}</span>
+              <span class="ms-2 small text-muted">{{ product.base_uom.name }}</span>
             </div>
+          </div>
         </div>
+      </div>
 
-        <div class="col-md-3 col-sm-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <h6 class="text-info text-dark-emphasis text-uppercase small fw-bold mb-2">{% trans "متوسط التكلفة" %}</h6>
-                    <div class="d-flex align-items-baseline">
-                        <span class="h3 fw-bold mb-0 text-dark">{{ product.average_cost|floatformat:3 }}</span>
-                        <span class="ms-1 small text-muted">OMR</span>
-                    </div>
-                </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <div class="text-dark-emphasis text-uppercase small fw-bold mb-2">{% trans "متوسط التكلفة" %}</div>
+            <div class="d-flex align-items-baseline">
+              <span class="h3 fw-bold mb-0">{{ product.average_cost|default:0|floatformat:3 }}</span>
+              <span class="ms-2 small text-muted">OMR</span>
             </div>
+          </div>
         </div>
+      </div>
     </div>
-    {% endif %}
+  {% endif %}
 
-    <div class="row g-4">
+  <div class="row g-4">
 
-        <div class="col-lg-4">
+{% comment %}    {# =========================
+       Left: Product info & stock distribution
+       ========================= #}{% endcomment %}
+    <div class="col-lg-4">
 
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white py-3">
-                    <h6 class="mb-0 fw-bold text-secondary">{% trans "البيانات الأساسية" %}</h6>
-                </div>
-                <ul class="list-group list-group-flush small">
-                    <li class="list-group-item d-flex justify-content-between py-3">
-                        <span class="text-muted">{% trans "التصنيف" %}</span>
-                        <span class="fw-medium">{{ product.category.full_path|default:"-" }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between py-3">
-                        <span class="text-muted">{% trans "نوع المنتج" %}</span>
-                        <span class="fw-medium">{{ product.get_product_type_display }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between py-3">
-                        <span class="text-muted">{% trans "وحدة القياس الأساسية" %}</span>
-                        <span class="fw-bold text-primary">{{ product.base_uom.name }} ({{ product.base_uom.code }})</span>
-                    </li>
-                    {% if product.alt_uom %}
-                    <li class="list-group-item d-flex justify-content-between py-3">
-                        <span class="text-muted">{% trans "الوحدة البديلة" %}</span>
-                        <span>1 {{ product.alt_uom.code }} = {{ product.alt_factor }} {{ product.base_uom.code }}</span>
-                    </li>
-                    {% endif %}
-                    <li class="list-group-item d-flex justify-content-between py-3">
-                        <span class="text-muted">{% trans "سعر البيع الافتراضي" %}</span>
-                        <span class="fw-bold">{{ product.default_sale_price|floatformat:3 }} OMR</span>
-                    </li>
-                </ul>
-            </div>
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3">
+          <h6 class="mb-0 fw-bold text-secondary">{% trans "البيانات الأساسية" %}</h6>
+        </div>
 
-            {% if product.product_type == 'stockable' %}
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 fw-bold text-secondary">{% trans "توزيع المخزون" %}</h6>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle mb-0 small">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="ps-3">{% trans "الموقع" %}</th>
-                                <th class="text-end pe-3">{% trans "الكمية" %}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for level in product.stock_levels.all %}
-                                {% if level.quantity_on_hand != 0 %}
-                                <tr>
-                                    <td class="ps-3">
-                                        <div class="fw-bold text-dark">{{ level.warehouse.name }}</div>
-                                        <div class="text-muted">{{ level.location.name }}</div>
-                                    </td>
-                                    <td class="text-end pe-3">
-                                        <div class="fw-bold">{{ level.quantity_on_hand|floatformat:2 }}</div>
-                                        {% if level.quantity_reserved > 0 %}
-                                            <div class="text-warning" style="font-size: 0.75rem;">
-                                                <i class="bi bi-lock-fill"></i> {{ level.quantity_reserved|floatformat:2 }}
-                                            </div>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endif %}
-                            {% empty %}
-                                <tr>
-                                    <td colspan="2" class="text-center py-3 text-muted">
-                                        {% trans "لا يوجد رصيد في أي مستودع." %}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        <ul class="list-group list-group-flush small">
+          <li class="list-group-item d-flex justify-content-between py-3">
+            <span class="text-muted">{% trans "التصنيف" %}</span>
+            <span class="fw-medium text-end">{{ product.category.full_path|default:"-" }}</span>
+          </li>
+
+          <li class="list-group-item d-flex justify-content-between py-3">
+            <span class="text-muted">{% trans "نوع المنتج" %}</span>
+            <span class="fw-medium">{{ product.get_product_type_display }}</span>
+          </li>
+
+          <li class="list-group-item d-flex justify-content-between py-3">
+            <span class="text-muted">{% trans "الوحدة الأساسية" %}</span>
+            <span class="fw-bold text-primary">
+              {{ product.base_uom.name }} <span class="text-muted">({{ product.base_uom.code }})</span>
+            </span>
+          </li>
+
+          {% if product.alt_uom %}
+            <li class="list-group-item d-flex justify-content-between py-3">
+              <span class="text-muted">{% trans "الوحدة البديلة" %}</span>
+              <span class="text-end">
+                <span class="fw-semibold">1 {{ product.alt_uom.code }}</span>
+                <span class="text-muted">=</span>
+                <span class="fw-semibold">{{ product.alt_factor }}</span>
+                <span class="text-muted">{{ product.base_uom.code }}</span>
+              </span>
+            </li>
+          {% endif %}
+
+          {% if product.weight_per_base and product.weight_uom %}
+            <li class="list-group-item d-flex justify-content-between py-3">
+              <span class="text-muted">{% trans "الوزن" %}</span>
+              <span class="fw-medium text-end">
+                {{ product.weight_per_base }} {{ product.weight_uom.code }}
+                <span class="text-muted">/</span> {{ product.base_uom.code }}
+              </span>
+            </li>
+          {% endif %}
+
+          <li class="list-group-item d-flex justify-content-between py-3">
+            <span class="text-muted">{% trans "سعر البيع الافتراضي" %}</span>
+            <span class="fw-bold">{{ product.default_sale_price|default:0|floatformat:3 }} OMR</span>
+          </li>
+
+          <li class="list-group-item d-flex justify-content-between py-3">
+            <span class="text-muted">{% trans "النشر" %}</span>
+            {% if product.is_published %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle">{% trans "منشور" %}</span>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{% trans "غير منشور" %}</span>
             {% endif %}
+          </li>
+        </ul>
+      </div>
 
+      {% if product.product_type != "service" %}
+        <div class="card shadow-sm border-0 mb-4">
+          <div class="card-header bg-white py-3">
+            <h6 class="mb-0 fw-bold text-secondary">{% trans "توزيع المخزون" %}</h6>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0 small">
+              <thead class="table-light">
+                <tr>
+                  <th class="ps-3">{% trans "الموقع" %}</th>
+                  <th class="text-end pe-3">{% trans "الكمية" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for level in product.stock_levels.all %}
+                  {% if level.quantity_on_hand != 0 %}
+                    <tr>
+                      <td class="ps-3">
+                        <div class="fw-semibold">{{ level.warehouse.name }}</div>
+                        <div class="text-muted">{{ level.location.name }}</div>
+                      </td>
+                      <td class="text-end pe-3">
+                        <div class="fw-bold">{{ level.quantity_on_hand|floatformat:2 }}</div>
+                        {% if level.quantity_reserved > 0 %}
+                          <div class="text-warning" style="font-size: 0.75rem;">
+                            <i class="bi bi-lock-fill"></i> {{ level.quantity_reserved|floatformat:2 }}
+                          </div>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endif %}
+                {% empty %}
+                  <tr>
+                    <td colspan="2" class="text-center py-3 text-muted">
+                      {% trans "لا يوجد رصيد في أي مستودع." %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
+      {% endif %}
 
-        <div class="col-lg-8">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 fw-bold text-primary">
-                        <i class="bi bi-clock-history me-2"></i> {% trans "حركة الصنف (آخر 10 حركات)" %}
-                    </h6>
-                    <a href="{% url 'inventory:receipt_list' %}?q={{ product.code }}" class="btn btn-sm btn-link text-decoration-none">
-                        {% trans "بحث متقدم" %} <i class="bi bi-chevron-left"></i>
-                    </a>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light text-muted small text-uppercase">
-                            <tr>
-                                <th class="ps-4">{% trans "التاريخ" %}</th>
-                                <th>{% trans "المرجع" %}</th>
-                                <th>{% trans "نوع الحركة" %}</th>
-                                <th>{% trans "المستودع المعني" %}</th>
-                                <th class="text-end pe-4">{% trans "الكمية" %}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for move in recent_moves %}
-                            <tr>
-                                <td class="ps-4 text-muted small">{{ move.move_date|date:"Y-m-d" }}</td>
-                                <td>
-                                    <a href="{% url 'inventory:move_detail' move.pk %}" class="fw-bold text-dark text-decoration-none font-monospace small">
-                                        {{ move.reference|default:move.pk }}
-                                    </a>
-                                </td>
-                                <td>
-                                    {% if move.move_type == 'in' %}
-                                        <span class="badge bg-success-subtle text-success">IN</span>
-                                    {% elif move.move_type == 'out' %}
-                                        <span class="badge bg-primary-subtle text-primary">OUT</span>
-                                    {% else %}
-                                        <span class="badge bg-warning-subtle text-warning">TRF</span>
-                                    {% endif %}
-                                </td>
-                                <td class="small">
-                                    {% if move.move_type == 'in' %}
-                                        {{ move.to_warehouse.name }}
-                                    {% elif move.move_type == 'out' %}
-                                        {{ move.from_warehouse.name }}
-                                    {% else %}
-                                        <span class="text-muted">{{ move.from_warehouse.code }} <i class="bi bi-arrow-left small"></i> {{ move.to_warehouse.code }}</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-end pe-4">
-                                    {# نحتاج هنا تكرار بسيط للبحث عن الـ line الخاص بالمنتج لعرض كميته #}
-                                    {# بما أن الـ QuerySet معقد، سنعرض إجمالي الحركة أو نبحث في البنود #}
-                                    {# الأفضل في الـ View تجهيز هذه البيانات، لكن للتبسيط: #}
-
-                                    {% for line in move.lines.all %}
-                                        {% if line.product_id == product.id %}
-                                            <span class="fw-bold {% if move.move_type == 'in' %}text-success{% elif move.move_type == 'out' %}text-danger{% endif %}">
-                                                {% if move.move_type == 'out' %}-{% else %}+{% endif %}
-                                                {{ line.quantity|floatformat:2 }}
-                                            </span>
-                                        {% endif %}
-                                    {% endfor %}
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="5" class="text-center py-5 text-muted">
-                                    <div class="mb-2"><i class="bi bi-wind fs-1 opacity-25"></i></div>
-                                    {% trans "لا توجد حركات سابقة لهذا المنتج." %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+      {% if product.description %}
+        <div class="card shadow-sm border-0">
+          <div class="card-header bg-white py-3">
+            <h6 class="mb-0 fw-bold text-secondary">{% trans "وصف" %}</h6>
+          </div>
+          <div class="card-body small text-muted">
+            {{ product.description|linebreaksbr }}
+          </div>
         </div>
+      {% endif %}
 
     </div>
+
+{% comment %}    {# =========================
+       Right: Recent moves (only for tracked-in-stock items)
+       ========================= #}{% endcomment %}
+    <div class="col-lg-8">
+
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h6 class="mb-0 fw-bold text-primary">
+            <i class="bi bi-clock-history me-2"></i> {% trans "حركة الصنف (آخر 10 حركات)" %}
+          </h6>
+
+          <a href="{% url 'inventory:receipt_list' %}?q={{ product.code }}"
+             class="btn btn-sm btn-outline-secondary">
+            {% trans "بحث متقدم" %} <i class="bi bi-chevron-left"></i>
+          </a>
+        </div>
+
+        {% if product.product_type == "service" %}
+          <div class="card-body py-5 text-center text-muted">
+            <div class="mb-2"><i class="bi bi-info-circle fs-1 opacity-25"></i></div>
+            {% trans "هذا المنتج من نوع خدمة ولا توجد حركة مخزون مرتبطة به." %}
+          </div>
+        {% else %}
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light text-muted small text-uppercase">
+                <tr>
+                  <th class="ps-4">{% trans "التاريخ" %}</th>
+                  <th>{% trans "المرجع" %}</th>
+                  <th>{% trans "نوع الحركة" %}</th>
+                  <th>{% trans "المستودع المعني" %}</th>
+                  <th class="text-end pe-4">{% trans "الكمية" %}</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {% for move in recent_moves %}
+                  <tr>
+                    <td class="ps-4 text-muted small">{{ move.move_date|date:"Y-m-d" }}</td>
+
+                    <td>
+                      <a href="{% url 'inventory:move_detail' move.pk %}"
+                         class="fw-semibold text-dark text-decoration-none font-monospace small">
+                        {{ move.reference|default:move.pk }}
+                      </a>
+                    </td>
+
+                    <td>
+                      {% if move.move_type == 'in' %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">IN</span>
+                      {% elif move.move_type == 'out' %}
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">OUT</span>
+                      {% else %}
+                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle">TRF</span>
+                      {% endif %}
+                    </td>
+
+                    <td class="small">
+                      {% if move.move_type == 'in' %}
+                        {{ move.to_warehouse.name }}
+                      {% elif move.move_type == 'out' %}
+                        {{ move.from_warehouse.name }}
+                      {% else %}
+                        <span class="text-muted">
+                          {{ move.from_warehouse.code }}
+                          <i class="bi bi-arrow-left small"></i>
+                          {{ move.to_warehouse.code }}
+                        </span>
+                      {% endif %}
+                    </td>
+
+                    <td class="text-end pe-4">
+                      {# أفضل ممارسة: جهّز qty الخاصة بالمنتج في الـ View.
+                         حالياً سنعرض أول line يطابق المنتج (وإن تكرر سيعرض عدة أسطر).
+                      #}
+                      {% with shown=0 %}
+                        {% for line in move.lines.all %}
+                          {% if line.product_id == product.id %}
+                            <span class="fw-bold d-inline-block {% if move.move_type == 'in' %}text-success{% elif move.move_type == 'out' %}text-danger{% else %}text-dark{% endif %}">
+                              {% if move.move_type == 'out' %}-{% else %}+{% endif %}
+                              {{ line.quantity|floatformat:2 }}
+                            </span>
+                          {% endif %}
+                        {% endfor %}
+                      {% endwith %}
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="5" class="text-center py-5 text-muted">
+                      <div class="mb-2"><i class="bi bi-wind fs-1 opacity-25"></i></div>
+                      {% trans "لا توجد حركات سابقة لهذا المنتج." %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
 
 </div>
 {% endblock %}

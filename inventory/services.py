@@ -1,189 +1,172 @@
-# inventory/services.py
+# /home/ubuntu/PycharmProjects/mazoonaluminum.com/inventory/services.py
 
 from __future__ import annotations
 
 from collections import defaultdict
 from decimal import Decimal
-from typing import TYPE_CHECKING, Optional, Dict, Any
+from typing import Any, Optional, TYPE_CHECKING
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import F, Sum
 from django.utils.translation import gettext as _
 
-# ✅ الاستيراد الموحد كما في ملف Sales
 from core.models import AuditLog, Notification
 from core.services.audit import log_event
+from core.services.notifications import create_notification
 
 from .models import (
-    StockLevel,
-    StockMove,
-    StockMoveLine,
+    InventoryAdjustment,
+    InventoryAdjustmentLine,
     InventorySettings,
     Product,
-    InventoryAdjustment,
+    StockLevel,
     StockLocation,
-    InventoryAdjustmentLine
+    StockMove,
+    StockMoveLine,
 )
 
 if TYPE_CHECKING:
     from django.contrib.auth import get_user_model
-
     User = get_user_model()
 
 DECIMAL_ZERO = Decimal("0.000")
+DECIMAL_ONE = Decimal("1.000")
+DECIMAL_MINUS_ONE = Decimal("-1.000")
 
 
 # ============================================================
-# 1. Internal Helpers (Audit & Notifications)
+# Notifications (Unified helper)
 # ============================================================
 
-def _notify_user(
-        recipient: User,
-        verb: str,
-        level: str,
-        target_obj=None,
-        url: str = "",
+def _notify(
+    *,
+    recipient: Optional["User"],
+    verb: str,
+    target: Optional[Any] = None,
+    level: str = Notification.Levels.INFO,
+    url: str | None = None,
 ) -> None:
-    """إنشاء إشعار للمستخدم."""
-    if not recipient or not recipient.is_active:
+    """
+    Create a notification using core service.
+    Uses Notification.Levels.* enums for level.
+    """
+    if recipient is None:
+        return
+    if not getattr(recipient, "is_active", True):
         return
 
-    Notification.objects.create(
+    create_notification(
         recipient=recipient,
         verb=verb,
+        target=target,
         level=level,
-        target=target_obj,
         url=url,
     )
 
 
-def _build_move_audit_extra(move: StockMove, *, factor: Decimal | None = None) -> Dict[str, Any]:
-    """
-    بناء بيانات JSON إضافية.
-    ⚠️ يتم تحويل Decimal إلى str لتجنب مشاكل JSON Serialization.
-    """
+# ============================================================
+# Audit "extra" builders (JSON-safe)
+# ============================================================
+
+def _build_move_audit_extra(move: StockMove, *, factor: Decimal | None = None) -> dict[str, Any]:
     try:
+        totals = move.lines.aggregate(
+            lines_count=Sum(1),  # not supported; fallback below
+        )
+        # Django doesn't support Sum(1) like this. We'll compute separately:
         lines_count = move.lines.count()
-        total_qty = move.lines.aggregate(t=Sum("quantity"))["t"] or 0
+        total_qty = move.lines.aggregate(t=Sum("quantity"))["t"] or DECIMAL_ZERO
     except Exception:
         lines_count = 0
-        total_qty = 0
+        total_qty = DECIMAL_ZERO
 
-    extra = {
+    extra: dict[str, Any] = {
         "move_type": str(move.move_type),
         "status": str(move.status),
         "reference": str(move.reference or ""),
-        "lines_count": lines_count,
+        "lines_count": int(lines_count),
         "total_quantity": str(total_qty),
     }
 
     if move.from_warehouse_id:
-        extra["from_warehouse"] = move.from_warehouse.name
+        extra["from_warehouse"] = str(move.from_warehouse.code)
+    if move.from_location_id:
+        extra["from_location"] = str(move.from_location.code)
     if move.to_warehouse_id:
-        extra["to_warehouse"] = move.to_warehouse.name
+        extra["to_warehouse"] = str(move.to_warehouse.code)
+    if move.to_location_id:
+        extra["to_location"] = str(move.to_location.code)
+
     if factor is not None:
         extra["factor"] = str(factor)
 
     return extra
 
 
-def _build_reservation_audit_extra(stock_level: StockLevel, delta: Decimal) -> Dict[str, Any]:
+def _build_reservation_audit_extra(level: StockLevel, delta: Decimal) -> dict[str, Any]:
     return {
-        "product": stock_level.product.code,
-        "warehouse": stock_level.warehouse.name,
-        "location": stock_level.location.name,
+        "product": str(level.product.code),
+        "warehouse": str(level.warehouse.code),
+        "location": str(level.location.code),
         "delta_reserved": str(delta),
-        "current_reserved": str(stock_level.quantity_reserved),
+        "current_reserved": str(level.quantity_reserved),
     }
 
 
 # ============================================================
-# 2. Domain Logic (Costing & Stock Calculations)
+# Stock level core primitive (locked)
 # ============================================================
 
-def _update_product_average_cost(move: StockMove) -> None:
-    """تحديث متوسط التكلفة (Weighted Average)."""
-    if move.move_type != StockMove.MoveType.IN:
-        return
-
-    # استخدام iterator للأداء العالي
-    for line in move.lines.select_related("product").iterator():
-        if line.product.product_type != Product.ProductType.STOCKABLE:
-            continue
-
-        incoming_qty = line.get_base_quantity()
-        incoming_cost = line.cost_price or DECIMAL_ZERO
-
-        if incoming_qty <= 0:
-            continue
-
-        # 🔒 Locking
-        product = Product.objects.select_for_update().get(pk=line.product_id)
-
-        current_total_qty = product.total_on_hand
-        current_avg_cost = product.average_cost or DECIMAL_ZERO
-
-        # Logic: إذا الرصيد الحالي <= 0، السعر الجديد هو سعر الشراء فقط (لمنع تشوه المتوسط)
-        if current_total_qty <= 0:
-            new_avg_cost = incoming_cost
-        else:
-            current_total_value = current_total_qty * current_avg_cost
-            incoming_total_value = incoming_qty * incoming_cost
-            new_total_qty = current_total_qty + incoming_qty
-
-            if new_total_qty > 0:
-                new_avg_cost = (current_total_value + incoming_total_value) / new_total_qty
-            else:
-                new_avg_cost = incoming_cost
-
-        # تحديث فقط عند التغير
-        if abs(product.average_cost - new_avg_cost) > Decimal("0.0001"):
-            product.average_cost = new_avg_cost
-            product.save(update_fields=["average_cost"])
-
-
-def _snapshot_out_cost(move: StockMove) -> None:
-    """تثبيت التكلفة للحركات الصادرة."""
-    if move.move_type != StockMove.MoveType.OUT:
-        return
-
-    updates = []
-    for line in move.lines.select_related("product").all():
-        if line.cost_price == DECIMAL_ZERO and line.product.average_cost > 0:
-            line.cost_price = line.product.average_cost
-            updates.append(line)
-
-    if updates:
-        StockMoveLine.objects.bulk_update(updates, ["cost_price"])
-
-
-def _adjust_stock_level(
-        *, product: Product, warehouse, location, delta: Decimal
+def _get_or_create_level_locked(
+    *,
+    product_id: int,
+    warehouse_id: int,
+    location_id: int,
 ) -> StockLevel:
-    """تعديل الرصيد المخزني مع القفل (Locking)."""
-
+    """
+    Select-for-update + get_or_create for StockLevel.
+    Ensures row-level lock on PostgreSQL; SQLite locks database.
+    """
     level, _ = StockLevel.objects.select_for_update().get_or_create(
-        product=product,
-        warehouse=warehouse,
-        location=location,
+        product_id=product_id,
+        warehouse_id=warehouse_id,
+        location_id=location_id,
         defaults={
             "quantity_on_hand": DECIMAL_ZERO,
             "quantity_reserved": DECIMAL_ZERO,
             "min_stock": DECIMAL_ZERO,
         },
     )
-
-    if delta != 0:
-        level.quantity_on_hand = F("quantity_on_hand") + delta
-        level.save(update_fields=["quantity_on_hand"])
-        level.refresh_from_db(fields=["quantity_on_hand"])
-
     return level
 
 
+def _adjust_on_hand_locked(
+    *,
+    product_id: int,
+    warehouse_id: int,
+    location_id: int,
+    delta: Decimal,
+) -> StockLevel:
+    level = _get_or_create_level_locked(
+        product_id=product_id,
+        warehouse_id=warehouse_id,
+        location_id=location_id,
+    )
+
+    if delta == 0:
+        return level
+
+    StockLevel.objects.filter(pk=level.pk).update(quantity_on_hand=F("quantity_on_hand") + delta)
+    level.refresh_from_db(fields=["quantity_on_hand"])
+    return level
+
+
+# ============================================================
+# Negative stock validation
+# ============================================================
+
 def _validate_negative_stock(move: StockMove) -> None:
-    """التحقق من الرصيد السالب قبل التنفيذ."""
     settings = InventorySettings.get_solo()
     if settings.allow_negative_stock:
         return
@@ -191,87 +174,165 @@ def _validate_negative_stock(move: StockMove) -> None:
     if move.move_type == StockMove.MoveType.IN:
         return
 
-    source_wh = move.from_warehouse
-    source_loc = move.from_location
-
-    if not source_wh or not source_loc:
+    # OUT and TRANSFER: validate source
+    source_wh_id = move.from_warehouse_id
+    source_loc_id = move.from_location_id
+    if not source_wh_id or not source_loc_id:
         return
 
-    requirements = defaultdict(Decimal)
-    product_names = {}
+    # Requirements per product in base UOM
+    requirements: dict[int, Decimal] = defaultdict(Decimal)
+    product_names: dict[int, str] = {}
 
-    for line in move.lines.select_related("product").all():
-        key = (line.product_id, source_wh.id, source_loc.id)
-        qty = line.get_base_quantity()
-        requirements[key] += qty
+    for line in move.lines.select_related("product", "uom").all():
+        if not getattr(line.product, "is_stock_item", True):
+            continue
+        requirements[line.product_id] += line.get_base_quantity()
         product_names[line.product_id] = line.product.name
 
-    for (prod_id, wh_id, loc_id), required_qty in requirements.items():
-        try:
-            level = StockLevel.objects.select_for_update().get(
-                product_id=prod_id, warehouse_id=wh_id, location_id=loc_id
-            )
-            current_qty = level.quantity_on_hand
-        except StockLevel.DoesNotExist:
-            current_qty = DECIMAL_ZERO
+    # Lock levels and validate
+    for prod_id, required_qty in requirements.items():
+        level = StockLevel.objects.select_for_update().filter(
+            product_id=prod_id,
+            warehouse_id=source_wh_id,
+            location_id=source_loc_id,
+        ).values("quantity_on_hand").first()
 
+        current_qty = level["quantity_on_hand"] if level else DECIMAL_ZERO
         if current_qty < required_qty:
             prod_name = product_names.get(prod_id, _("Unknown Product"))
             raise ValidationError(
                 _("الرصيد غير كافٍ للمنتج '%(prod)s'. المتاح: %(curr)s، المطلوب: %(req)s.") % {
                     "prod": prod_name,
                     "curr": current_qty,
-                    "req": required_qty
+                    "req": required_qty,
                 }
             )
 
 
+# ============================================================
+# Costing
+# ============================================================
+
+def _update_product_average_cost(move: StockMove) -> None:
+    """
+    Weighted average cost update for IN moves.
+    Updates Product.average_cost for STOCKABLE items only.
+    """
+    if move.move_type != StockMove.MoveType.IN:
+        return
+
+    # Iterate for memory safety
+    for line in move.lines.select_related("product", "uom").iterator():
+        product = line.product
+        if product.product_type != Product.ProductType.STOCKABLE:
+            continue
+
+        incoming_qty = line.get_base_quantity()
+        if incoming_qty <= 0:
+            continue
+
+        incoming_cost = line.cost_price or DECIMAL_ZERO
+
+        # Lock product row
+        locked_product = Product.objects.select_for_update().get(pk=product.pk)
+
+        current_qty = locked_product.total_on_hand
+        current_avg = locked_product.average_cost or DECIMAL_ZERO
+
+        if current_qty <= 0:
+            new_avg = incoming_cost
+        else:
+            current_value = current_qty * current_avg
+            incoming_value = incoming_qty * incoming_cost
+            new_total_qty = current_qty + incoming_qty
+            new_avg = (current_value + incoming_value) / new_total_qty if new_total_qty > 0 else incoming_cost
+
+        # Save only if changed meaningfully
+        if (locked_product.average_cost or DECIMAL_ZERO) != new_avg:
+            locked_product.average_cost = new_avg
+            locked_product.save(update_fields=["average_cost"])
+
+
+def _snapshot_out_cost(move: StockMove) -> None:
+    """
+    For OUT moves, fill cost_price from product.average_cost if cost_price is zero.
+    """
+    if move.move_type != StockMove.MoveType.OUT:
+        return
+
+    updates: list[StockMoveLine] = []
+    for line in move.lines.select_related("product").all():
+        if (line.cost_price or DECIMAL_ZERO) == DECIMAL_ZERO and (line.product.average_cost or DECIMAL_ZERO) > 0:
+            line.cost_price = line.product.average_cost
+            updates.append(line)
+
+    if updates:
+        StockMoveLine.objects.bulk_update(updates, ["cost_price"])
+
+
+# ============================================================
+# Apply move deltas (stock levels)
+# ============================================================
+
 def _apply_move_delta(move: StockMove, *, factor: Decimal) -> None:
-    """تطبيق الحركة على الأرصدة."""
+    """
+    Apply move lines to stock levels.
+    factor:
+      +1  confirm
+      -1  reverse
+    """
     for line in move.lines.select_related("product", "uom").iterator():
         if not getattr(line.product, "is_stock_item", True):
             continue
 
-        qty = line.get_base_quantity() * factor
-        if qty == 0:
+        base_qty = line.get_base_quantity()
+        if base_qty == 0:
             continue
 
+        qty = base_qty * factor
+
         if move.move_type == StockMove.MoveType.IN:
-            _adjust_stock_level(
-                product=line.product,
-                warehouse=move.to_warehouse,
-                location=move.to_location,
-                delta=qty
+            _adjust_on_hand_locked(
+                product_id=line.product_id,
+                warehouse_id=move.to_warehouse_id,
+                location_id=move.to_location_id,
+                delta=qty,
             )
+
         elif move.move_type == StockMove.MoveType.OUT:
-            _adjust_stock_level(
-                product=line.product,
-                warehouse=move.from_warehouse,
-                location=move.from_location,
-                delta=-qty
+            _adjust_on_hand_locked(
+                product_id=line.product_id,
+                warehouse_id=move.from_warehouse_id,
+                location_id=move.from_location_id,
+                delta=-qty,  # OUT reduces; note qty already includes factor
             )
-        elif move.move_type == StockMove.MoveType.TRANSFER:
-            _adjust_stock_level(
-                product=line.product,
-                warehouse=move.from_warehouse,
-                location=move.from_location,
-                delta=-qty
+
+        else:  # TRANSFER
+            _adjust_on_hand_locked(
+                product_id=line.product_id,
+                warehouse_id=move.from_warehouse_id,
+                location_id=move.from_location_id,
+                delta=-qty,
             )
-            _adjust_stock_level(
-                product=line.product,
-                warehouse=move.to_warehouse,
-                location=move.to_location,
-                delta=qty
+            _adjust_on_hand_locked(
+                product_id=line.product_id,
+                warehouse_id=move.to_warehouse_id,
+                location_id=move.to_location_id,
+                delta=qty,
             )
 
 
 # ============================================================
-# 3. Public Services (Transactional)
+# Public Services
 # ============================================================
 
 @transaction.atomic
-def confirm_stock_move(move: StockMove, user: Optional[User] = None) -> StockMove:
-    """DRAFT -> DONE"""
+def confirm_stock_move(move: StockMove, user: Optional["User"] = None) -> StockMove:
+    """
+    Confirm a stock move:
+    DRAFT -> DONE
+    """
     move = StockMove.objects.select_for_update().get(pk=move.pk)
 
     if move.status == StockMove.Status.DONE:
@@ -280,46 +341,52 @@ def confirm_stock_move(move: StockMove, user: Optional[User] = None) -> StockMov
     if move.status != StockMove.Status.DRAFT:
         raise ValidationError(_("يجب أن تكون الحالة مسودة لتأكيد الحركة."))
 
-    # 1. Validation
+    # Validate negative stock first
     _validate_negative_stock(move)
 
-    # 2. Cost Updates
+    # Costing
     if move.move_type == StockMove.MoveType.IN:
         _update_product_average_cost(move)
     elif move.move_type == StockMove.MoveType.OUT:
         _snapshot_out_cost(move)
 
-    # 3. Update Stock Levels
-    _apply_move_delta(move, factor=Decimal("1"))
+    # Apply stock
+    _apply_move_delta(move, factor=DECIMAL_ONE)
 
-    # 4. Update Status
+    # Update status
     move.status = StockMove.Status.DONE
-    move.save(update_fields=["status"])
+    if user is not None and getattr(user, "is_authenticated", False):
+        move.updated_by = user
+    move.save(update_fields=["status", "updated_by"])
 
-    # 5. Audit Log (Inside transaction)
+    # Audit
     log_event(
         action=AuditLog.Action.STATUS_CHANGE,
-        message=f"Stock Move confirmed: {move.reference}",
+        message=_("Stock move confirmed."),
         actor=user,
         target=move,
-        extra=_build_move_audit_extra(move, factor=Decimal("1"))
+        extra=_build_move_audit_extra(move, factor=DECIMAL_ONE),
     )
 
-    # 6. Notification
-    if move.created_by and move.created_by != user:
-        _notify_user(
+    # Notify creator (if different)
+    if move.created_by_id and (user is None or move.created_by_id != getattr(user, "id", None)):
+        _notify(
             recipient=move.created_by,
-            verb=_("تم تأكيد الحركة المخزنية رقم %(ref)s") % {"ref": move.reference},
+            verb=_("تم تأكيد الحركة المخزنية رقم %(ref)s") % {"ref": move.reference or str(move.pk)},
             level=Notification.Levels.SUCCESS,
-            target_obj=move
+            target=move,
         )
 
     return move
 
 
 @transaction.atomic
-def cancel_stock_move(move: StockMove, user: Optional[User] = None) -> StockMove:
-    """DONE/DRAFT -> CANCELLED"""
+def cancel_stock_move(move: StockMove, user: Optional["User"] = None) -> StockMove:
+    """
+    Cancel a stock move:
+    - DRAFT -> CANCELLED
+    - DONE  -> CANCELLED (reverse stock)
+    """
     move = StockMove.objects.select_for_update().get(pk=move.pk)
 
     if move.status == StockMove.Status.CANCELLED:
@@ -327,29 +394,31 @@ def cancel_stock_move(move: StockMove, user: Optional[User] = None) -> StockMove
 
     was_done = (move.status == StockMove.Status.DONE)
 
-    # إذا كانت منفذة، نعكس الكميات
     if was_done:
-        _apply_move_delta(move, factor=Decimal("-1"))
+        # Reverse stock
+        _apply_move_delta(move, factor=DECIMAL_MINUS_ONE)
 
     move.status = StockMove.Status.CANCELLED
-    move.save(update_fields=["status"])
+    if user is not None and getattr(user, "is_authenticated", False):
+        move.updated_by = user
+    move.save(update_fields=["status", "updated_by"])
 
     # Audit
     log_event(
         action=AuditLog.Action.STATUS_CHANGE,
-        message=f"Stock Move cancelled: {move.reference}",
+        message=_("Stock move cancelled."),
         actor=user,
         target=move,
-        extra=_build_move_audit_extra(move, factor=Decimal("-1") if was_done else None)
+        extra=_build_move_audit_extra(move, factor=DECIMAL_MINUS_ONE if was_done else None),
     )
 
-    # Notification
-    if move.created_by and move.created_by != user:
-        _notify_user(
+    # Notify creator
+    if move.created_by_id and (user is None or move.created_by_id != getattr(user, "id", None)):
+        _notify(
             recipient=move.created_by,
-            verb=_("تم إلغاء الحركة المخزنية رقم %(ref)s") % {"ref": move.reference},
+            verb=_("تم إلغاء الحركة المخزنية رقم %(ref)s") % {"ref": move.reference or str(move.pk)},
             level=Notification.Levels.WARNING,
-            target_obj=move,
+            target=move,
         )
 
     return move
@@ -357,40 +426,45 @@ def cancel_stock_move(move: StockMove, user: Optional[User] = None) -> StockMove
 
 @transaction.atomic
 def reserve_stock(
-        product: Product,
-        warehouse,
-        location,
-        quantity: Decimal,
-        check_availability: bool = True,
-        user: Optional[User] = None
+    *,
+    product: Product,
+    warehouse,
+    location,
+    quantity: Decimal,
+    check_availability: bool = True,
+    user: Optional["User"] = None,
 ) -> StockLevel:
-    """حجز كمية."""
-    if quantity <= 0:
+    """
+    Reserve stock quantity (in base UOM).
+    """
+    if quantity is None or quantity <= 0:
         raise ValidationError(_("الكمية يجب أن تكون موجبة."))
 
-    level = _adjust_stock_level(
-        product=product, warehouse=warehouse, location=location, delta=0
+    level = _get_or_create_level_locked(
+        product_id=product.pk,
+        warehouse_id=warehouse.pk,
+        location_id=location.pk,
     )
 
     if check_availability:
-        current_avail = level.quantity_on_hand - level.quantity_reserved
+        current_avail = (level.quantity_on_hand or DECIMAL_ZERO) - (level.quantity_reserved or DECIMAL_ZERO)
         if current_avail < quantity:
             raise ValidationError(
-                _("الكمية المتاحة (%(avail)s) غير كافية للحجز (%(req)s).") %
-                {"avail": current_avail, "req": quantity}
+                _("الكمية المتاحة (%(avail)s) غير كافية للحجز (%(req)s).") % {
+                    "avail": current_avail,
+                    "req": quantity,
+                }
             )
 
-    level.quantity_reserved = F("quantity_reserved") + quantity
-    level.save(update_fields=["quantity_reserved"])
+    StockLevel.objects.filter(pk=level.pk).update(quantity_reserved=F("quantity_reserved") + quantity)
     level.refresh_from_db(fields=["quantity_reserved"])
 
-    # Audit
     log_event(
         action=AuditLog.Action.UPDATE,
-        message=f"Reserved stock: {quantity} for {product.code}",
+        message=_("Stock reserved."),
         actor=user,
         target=level,
-        extra=_build_reservation_audit_extra(level, quantity)
+        extra=_build_reservation_audit_extra(level, quantity),
     )
 
     return level
@@ -398,34 +472,37 @@ def reserve_stock(
 
 @transaction.atomic
 def release_stock(
-        product: Product,
-        warehouse,
-        location,
-        quantity: Decimal,
-        user: Optional[User] = None
+    *,
+    product: Product,
+    warehouse,
+    location,
+    quantity: Decimal,
+    user: Optional["User"] = None,
 ) -> StockLevel:
-    """فك حجز."""
-    if quantity <= 0:
+    """
+    Release reserved stock (in base UOM).
+    """
+    if quantity is None or quantity <= 0:
         raise ValidationError(_("الكمية يجب أن تكون موجبة."))
 
     level = StockLevel.objects.select_for_update().get(
-        product=product, warehouse=warehouse, location=location
+        product=product,
+        warehouse=warehouse,
+        location=location,
     )
 
-    if level.quantity_reserved < quantity:
+    if (level.quantity_reserved or DECIMAL_ZERO) < quantity:
         raise ValidationError(_("لا يمكن فك حجز أكبر من الكمية المحجوزة."))
 
-    level.quantity_reserved = F("quantity_reserved") - quantity
-    level.save(update_fields=["quantity_reserved"])
+    StockLevel.objects.filter(pk=level.pk).update(quantity_reserved=F("quantity_reserved") - quantity)
     level.refresh_from_db(fields=["quantity_reserved"])
 
-    # Audit
     log_event(
         action=AuditLog.Action.UPDATE,
-        message=f"Released stock: {quantity} for {product.code}",
+        message=_("Stock reservation released."),
         actor=user,
         target=level,
-        extra=_build_reservation_audit_extra(level, -quantity)
+        extra=_build_reservation_audit_extra(level, -quantity),
     )
 
     return level
@@ -433,13 +510,16 @@ def release_stock(
 
 @transaction.atomic
 def create_inventory_session(
-        warehouse,
-        user: User,
-        category=None,
-        location=None,
-        note: str = ""
+    *,
+    warehouse: "StockLocation" | Any,
+    user: "User",
+    category=None,
+    location=None,
+    note: str = "",
 ) -> InventoryAdjustment:
-    """إنشاء وثيقة جرد."""
+    """
+    Create an inventory adjustment session and snapshot current quantities.
+    """
     if location and location.warehouse_id != warehouse.id:
         raise ValidationError(_("الموقع لا يتبع المستودع المختار."))
 
@@ -450,96 +530,105 @@ def create_inventory_session(
         note=note,
         status=InventoryAdjustment.Status.DRAFT,
         created_by=user,
+        updated_by=user,
     )
 
-    # Snapshot
     levels = StockLevel.objects.filter(warehouse=warehouse).exclude(quantity_on_hand=0)
     if location:
         levels = levels.filter(location=location)
     if category:
         levels = levels.filter(product__category=category)
 
-    lines_to_create = [
+    lines = [
         InventoryAdjustmentLine(
             adjustment=adjustment,
-            product=level.product,
-            location=level.location,
+            product_id=level.product_id,
+            location_id=level.location_id,
             theoretical_qty=level.quantity_on_hand,
-            counted_qty=None
+            counted_qty=None,
+            created_by=user,
+            updated_by=user,
         )
         for level in levels.select_related("product", "location")
     ]
-    InventoryAdjustmentLine.objects.bulk_create(lines_to_create)
+    InventoryAdjustmentLine.objects.bulk_create(lines)
 
-    # Audit
     log_event(
         action=AuditLog.Action.CREATE,
-        message=f"Inventory Session Started",
+        message=_("Inventory session started."),
         actor=user,
         target=adjustment,
-        extra={"lines_count": len(lines_to_create), "warehouse": warehouse.name}
+        extra={
+            "lines_count": len(lines),
+            "warehouse": str(getattr(warehouse, "code", getattr(warehouse, "name", ""))),
+        },
     )
 
     return adjustment
 
 
 @transaction.atomic
-def apply_inventory_adjustment(adjustment: InventoryAdjustment, user: User) -> None:
-    """ترحيل الجرد وإنشاء حركات التسوية."""
+def apply_inventory_adjustment(adjustment: InventoryAdjustment, user: "User") -> None:
+    """
+    Apply inventory adjustment:
+    - Create IN moves for gains and OUT moves for losses (grouped per location)
+    - Confirm generated moves
+    - Mark adjustment as APPLIED
+    """
     adjustment = InventoryAdjustment.objects.select_for_update().get(pk=adjustment.pk)
 
     if adjustment.status == InventoryAdjustment.Status.APPLIED:
         raise ValidationError(_("تم ترحيل الجرد مسبقاً."))
 
-    grouped_diffs = defaultdict(lambda: {'gain': [], 'loss': []})
-    location_ids = set()
-    has_diffs = False
+    # Build diffs grouped by location
+    grouped: dict[int, dict[str, list[tuple[int, Decimal]]]] = defaultdict(lambda: {"gain": [], "loss": []})
+    location_ids: set[int] = set()
+    product_ids: set[int] = set()
 
-    # حساب الفروقات
+    # Preload current levels for this warehouse for performance
+    # Key: (product_id, location_id) -> qty
+    current_levels = {
+        (row["product_id"], row["location_id"]): (row["quantity_on_hand"] or DECIMAL_ZERO)
+        for row in StockLevel.objects.select_for_update()
+        .filter(warehouse=adjustment.warehouse)
+        .values("product_id", "location_id", "quantity_on_hand")
+    }
+
     for line in adjustment.lines.select_related("product", "location").all():
         if line.counted_qty is None:
             continue
 
-        try:
-            current_level = StockLevel.objects.select_for_update().get(
-                product=line.product,
-                warehouse=adjustment.warehouse,
-                location=line.location
-            )
-            current_qty = current_level.quantity_on_hand
-        except StockLevel.DoesNotExist:
-            current_qty = DECIMAL_ZERO
+        current_qty = current_levels.get((line.product_id, line.location_id), DECIMAL_ZERO)
+        diff = (line.counted_qty or DECIMAL_ZERO) - current_qty
 
-        real_diff = line.counted_qty - current_qty
-
-        if real_diff == 0:
+        if diff == 0:
             continue
 
-        has_diffs = True
-        line.real_diff_for_move = real_diff
-        location_ids.add(line.location.id)
+        location_ids.add(line.location_id)
+        product_ids.add(line.product_id)
 
-        if real_diff > 0:
-            grouped_diffs[line.location.id]['gain'].append(line)
+        if diff > 0:
+            grouped[line.location_id]["gain"].append((line.product_id, diff))
         else:
-            grouped_diffs[line.location.id]['loss'].append(line)
+            grouped[line.location_id]["loss"].append((line.product_id, abs(diff)))
 
-    # إذا لم توجد فروقات، نغلق الجرد فقط
-    if not has_diffs:
+    if not grouped:
         adjustment.status = InventoryAdjustment.Status.APPLIED
         adjustment.updated_by = user
         adjustment.save(update_fields=["status", "updated_by"])
         return
 
-    # إنشاء الحركات
+    # Maps
     locations_map = {loc.id: loc for loc in StockLocation.objects.filter(id__in=location_ids)}
-    moves_count = 0
+    products_map = {p.id: p for p in Product.objects.filter(id__in=product_ids).select_related("base_uom")}
 
-    for loc_id, types in grouped_diffs.items():
+    moves_created = 0
+
+    for loc_id, buckets in grouped.items():
         location = locations_map[loc_id]
 
-        # 1. زيادة (Gain)
-        if types['gain']:
+        # Gains -> IN
+        if buckets["gain"]:
             move_in = StockMove.objects.create(
                 move_type=StockMove.MoveType.IN,
                 to_warehouse=adjustment.warehouse,
@@ -548,22 +637,31 @@ def apply_inventory_adjustment(adjustment: InventoryAdjustment, user: User) -> N
                 reference=f"ADJ-IN-{adjustment.pk}-{location.code}",
                 note=_("تسوية جردية - زيادة"),
                 adjustment=adjustment,
-                created_by=user
+                created_by=user,
+                updated_by=user,
             )
-            StockMoveLine.objects.bulk_create([
-                StockMoveLine(
-                    move=move_in,
-                    product=l.product,
-                    quantity=abs(l.real_diff_for_move),
-                    uom=l.product.base_uom,
-                    cost_price=l.product.average_cost
-                ) for l in types['gain']
-            ])
-            confirm_stock_move(move_in, user=user)
-            moves_count += 1
 
-        # 2. عجز (Loss)
-        if types['loss']:
+            lines = []
+            for prod_id, qty in buckets["gain"]:
+                prod = products_map[prod_id]
+                lines.append(
+                    StockMoveLine(
+                        move=move_in,
+                        product=prod,
+                        quantity=qty,
+                        uom=prod.base_uom,
+                        cost_price=prod.average_cost or DECIMAL_ZERO,
+                        created_by=user,
+                        updated_by=user,
+                    )
+                )
+            StockMoveLine.objects.bulk_create(lines)
+
+            confirm_stock_move(move_in, user=user)
+            moves_created += 1
+
+        # Loss -> OUT
+        if buckets["loss"]:
             move_out = StockMove.objects.create(
                 move_type=StockMove.MoveType.OUT,
                 from_warehouse=adjustment.warehouse,
@@ -572,36 +670,45 @@ def apply_inventory_adjustment(adjustment: InventoryAdjustment, user: User) -> N
                 reference=f"ADJ-OUT-{adjustment.pk}-{location.code}",
                 note=_("تسوية جردية - عجز"),
                 adjustment=adjustment,
-                created_by=user
+                created_by=user,
+                updated_by=user,
             )
-            StockMoveLine.objects.bulk_create([
-                StockMoveLine(
-                    move=move_out,
-                    product=l.product,
-                    quantity=abs(l.real_diff_for_move),
-                    uom=l.product.base_uom
-                ) for l in types['loss']
-            ])
+
+            lines = []
+            for prod_id, qty in buckets["loss"]:
+                prod = products_map[prod_id]
+                lines.append(
+                    StockMoveLine(
+                        move=move_out,
+                        product=prod,
+                        quantity=qty,
+                        uom=prod.base_uom,
+                        cost_price=DECIMAL_ZERO,  # will snapshot on confirm
+                        created_by=user,
+                        updated_by=user,
+                    )
+                )
+            StockMoveLine.objects.bulk_create(lines)
+
             confirm_stock_move(move_out, user=user)
-            moves_count += 1
+            moves_created += 1
 
     adjustment.status = InventoryAdjustment.Status.APPLIED
     adjustment.updated_by = user
     adjustment.save(update_fields=["status", "updated_by"])
 
-    # Audit
     log_event(
         action=AuditLog.Action.STATUS_CHANGE,
-        message=f"Inventory Adjustment Applied #{adjustment.pk}",
+        message=_("Inventory adjustment applied."),
         actor=user,
         target=adjustment,
-        extra={"moves_created": moves_count}
+        extra={"moves_created": moves_created},
     )
 
-    if adjustment.created_by and adjustment.created_by != user:
-        _notify_user(
+    if adjustment.created_by_id and adjustment.created_by_id != getattr(user, "id", None):
+        _notify(
             recipient=adjustment.created_by,
-            verb=_("تم ترحيل وثيقة الجرد رقم %(id)s") % {'id': adjustment.pk},
+            verb=_("تم ترحيل وثيقة الجرد رقم %(id)s") % {"id": adjustment.pk},
             level=Notification.Levels.INFO,
-            target_obj=adjustment
+            target=adjustment,
         )
